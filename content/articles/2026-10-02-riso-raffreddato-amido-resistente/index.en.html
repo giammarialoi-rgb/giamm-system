@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cooled rice and resistant starch: how much it matters | Nurvan</title>
+<meta name="description" content="Cooling rice raises resistant starch and lowers blood sugar, but by how much? The real numbers, the halved-calories myth, and what actually matters.">
+<link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="en" href="index.en.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:3/2;object-fit:cover}
+html{background:var(--bg)}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Nutrition</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Get the app</a></div></header>
+<main class="wrap" lang="en">
+<div class="crumb">Blog · Nutrition · Carbohydrates</div>
+<h1>Cooled rice and resistant starch: how much actually changes</h1>
+<p class="lede">Cook rice, chill it, reheat it the next day: it has become standard advice for blood sugar. The mechanism is real, but the numbers are smaller than the ones going around, and the grain you choose matters more than the fridge.</p>
+<div class="meta"><span>2 October 2026</span><span><b>8</b> min read</span><span><b>5</b> studies cited</span></div>
+<figure class="cover"><img alt="A white bowl of cooked basmati rice on a table with other dishes blurred around it" src="images/cover.jpg" width="1600" height="1067"/><figcaption class="cap">Photo by Pille R. Priske on Unsplash (Unsplash License).</figcaption></figure>
+<div class="box"><h2>The short version</h2><ul><li>Cooling cooked white rice raises resistant starch from 0.64 to 1.65 g per 100 g after 24 hours at 4 °C and reheating. The rise is real, but in absolute terms it is about one gram.</li><li>In the same study the glycemic response fell by roughly 18% against freshly cooked rice, in 15 participants.</li><li>It only works with high-amylose grains: in a 2024 trial, chilled non-glutinous rice and millet cut blood glucose by 24-30%, while glutinous varieties showed no difference at all.</li><li>Freshly cooked millet beat its chilled version at the next meal (-39% against fresh rice), and the credit went to slowly digestible starch, not to the trip through the fridge.</li><li>The idea that cooling halves the calories comes from a 2015 conference presentation that was never published as a study, so there is nothing to verify.</li></ul></div>
+<h2>What actually happens as rice cools</h2>
+<p>Starch in grains is made of two molecules. Amylose is a straight chain; amylopectin is branched. Cooking in water swells the granules and unwinds the chains: that is gelatinisation, and it is what makes starch easy for digestive enzymes to attack.</p>
+<p>As the dish cools, some of those chains reorganise into tighter crystalline structures. The process is called retrogradation, and it produces type 3 resistant starch: resistant because enzymes in the small intestine can no longer take it apart completely, so it reaches the colon, where bacteria ferment it into short-chain fatty acids such as butyrate.</p>
+<p>Amylose is the part that reorganises best, because straight chains line up easily. That is why the trick works with basmati and other long-grain rice, which are rich in amylose, and not with glutinous rice or very sticky varieties, where branched amylopectin dominates.</p>
+<p>A study in healthy adults measured exactly how much. In freshly cooked white rice, resistant starch was 0.64 g per 100 g; after 10 hours at room temperature it rose to 1.30; after 24 hours in the fridge at 4 °C and reheating it reached 1.65.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 300" role="img" aria-label="Bar chart of resistant starch in white rice: 0.64 g per 100 g freshly cooked, 1.30 after 10 hours at room temperature, 1.65 after 24 hours at 4 degrees and reheating.">
+<rect width="620" height="300" fill="#0c0c0c"/>
+<text x="24" y="26" fill="#f0f0f0" font-family="sans-serif" font-size="16" font-weight="700">Resistant starch in cooked white rice</text>
+<text x="24" y="46" fill="#a0a0a0" font-family="sans-serif" font-size="12">Grams per 100 g of rice</text>
+<line x1="24" y1="201.1" x2="596" y2="201.1" stroke="#262626" stroke-width="1.5"/>
+<rect x="65.9" y="156.8" width="106.8" height="44.3" fill="#aa8a2e" rx="3"/>
+<text x="119.3" y="147.8" fill="#f3e5ab" font-family="monospace" font-size="13" text-anchor="middle">0.64</text>
+<text x="119.3" y="246.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">Freshly cooked</text>
+<rect x="256.6" y="111.1" width="106.8" height="90.0" fill="#aa8a2e" rx="3"/>
+<text x="310.0" y="102.1" fill="#f3e5ab" font-family="monospace" font-size="13" text-anchor="middle">1.30</text>
+<text x="310.0" y="246.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">Cooled 10 h</text>
+<text x="310.0" y="261.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">at room temperature</text>
+<rect x="447.3" y="86.9" width="106.8" height="114.3" fill="#d4af37" rx="3"/>
+<text x="500.7" y="77.9" fill="#f3e5ab" font-family="monospace" font-size="13" text-anchor="middle">1.65</text>
+<text x="500.7" y="246.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">24 h at 4 °C</text>
+<text x="500.7" y="261.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">then reheated</text>
+<text x="24" y="286" fill="#a0a0a0" font-family="sans-serif" font-size="11">Data: Sonia et al. 2015, Asia Pac J Clin Nutr (PMID 26693746). Chart by Nurvan.</text>
+</svg></div><figcaption class="cap">Data: Sonia et al. 2015, Asia Pac J Clin Nutr (PMID 26693746). Chart by Nurvan.</figcaption></figure>
+<p>Two things to notice. Reheating does not undo the effect: the highest value belongs to the rice that was chilled and then reheated. And the increase, while nearly threefold in relative terms, amounts to about one gram per 100 g of rice.</p>
+<h2>How far blood sugar actually drops</h2>
+<p>In the same study, fifteen healthy adults ate freshly cooked rice and chilled-then-reheated rice in random order. The area under the glucose curve was 125 versus 152 mmol·min/L: about 18% lower, statistically significant but only just.</p>
+<p>A 2024 trial in eighteen healthy women made a more useful comparison, because it included different varieties. Each test meal contained 50 g of carbohydrate, and the grains were served either freshly cooked or after 24 hours at 4 °C.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 300" role="img" aria-label="Bar chart: against freshly cooked rice, chilled non-glutinous rice lowers the glucose area by 24.4%, chilled non-glutinous millet by 29.5%, while glutinous grains show no significant difference.">
+<rect width="620" height="300" fill="#0c0c0c"/>
+<text x="24" y="26" fill="#f0f0f0" font-family="sans-serif" font-size="16" font-weight="700">Post-meal glucose: change against freshly cooked rice</text>
+<text x="24" y="46" fill="#a0a0a0" font-family="sans-serif" font-size="12">Area under the glucose curve over 4 hours, 50 g of carbohydrate per meal</text>
+<line x1="24" y1="86.9" x2="596" y2="86.9" stroke="#262626" stroke-width="1.5"/>
+<rect x="65.9" y="86.9" width="106.8" height="94.5" fill="#d4af37" rx="3"/>
+<text x="119.3" y="198.4" fill="#f3e5ab" font-family="monospace" font-size="13" text-anchor="middle">-24.4%</text>
+<text x="119.3" y="246.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">Chilled non-glutinous</text>
+<text x="119.3" y="261.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">rice</text>
+<rect x="256.6" y="86.9" width="106.8" height="114.3" fill="#d4af37" rx="3"/>
+<text x="310.0" y="218.1" fill="#f3e5ab" font-family="monospace" font-size="13" text-anchor="middle">-29.5%</text>
+<text x="310.0" y="246.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">Chilled non-glutinous</text>
+<text x="310.0" y="261.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">millet</text>
+<rect x="447.3" y="86.9" width="106.8" height="1.0" fill="#aa8a2e" rx="3"/>
+<text x="500.7" y="77.9" fill="#f3e5ab" font-family="monospace" font-size="13" text-anchor="middle">≈ 0</text>
+<text x="500.7" y="246.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">Glutinous grains</text>
+<text x="500.7" y="261.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">(rice and millet):</text>
+<text x="500.7" y="276.0" fill="#a0a0a0" font-family="sans-serif" font-size="12" text-anchor="middle">no difference</text>
+<text x="24" y="286" fill="#a0a0a0" font-family="sans-serif" font-size="11">Data: Peng et al. 2024, Nutrients (PMID 39683424). Chart by Nurvan.</text>
+</svg></div><figcaption class="cap">Data: Peng et al. 2024, Nutrients (PMID 39683424). Chart by Nurvan.</figcaption></figure>
+<p>Chilled non-glutinous rice cut the four-hour glucose area by 24.4% against fresh rice, and chilled non-glutinous millet by 29.5%. For the glutinous versions there was no significant difference in either glucose or insulin: chilling them achieved nothing.</p>
+<p>The most interesting result comes later. Measuring blood glucose after a standard lunch, freshly cooked non-glutinous millet produced a glucose area 39.1% lower than fresh rice, and the credit went not to resistant starch but to slowly digestible starch, which made up 64.8% of that sample. The chilled version of the same millet did not produce that effect.</p>
+<p>In plain terms: choosing the right grain can matter more than managing the temperature of the wrong one.</p>
+<h2>The halved-calories myth</h2>
+<p>The viral version of the advice says something else: that cooking rice with a teaspoon of coconut oil and chilling it cuts up to 60% of the calories you absorb. That number has a specific history. In 2015 a research group in Sri Lanka announced it in a presentation to the American Chemical Society, and the press picked it up widely.</p>
+<p>That work was never published as a peer-reviewed study, and no measurement of calorie absorption in humans was made available. A figure announced at a meeting and never published is not a result anyone can check.</p>
+<p>There is also an order-of-magnitude problem. If chilling buys you about one gram of resistant starch per 100 g of cooked rice, and resistant starch yields less energy than digestible starch because it is fermented rather than absorbed, the saving on a normal portion stays in the range of a few calories. Not half the plate.</p>
+<h2>The doses that matter in resistant starch research</h2>
+<p>It helps to separate two questions. One is the acute effect on blood glucose after a single meal; the other is the effect on glycemic control over time.</p>
+<p>A meta-analysis of nineteen randomised trials found that resistant starch lowers fasting blood glucose modestly (-0.09 mmol/L), and that the effect becomes clearer above 28 g a day of resistant starch or beyond 8 weeks of intake. There was also an improvement in insulin resistance estimated with the HOMA index.</p>
+<p>Twenty-eight grams a day is not something cooled rice reaches on its own: you would need almost two kilograms of cooked rice. People who hit those doses do it with isolated resistant starches or with legumes, oats and whole grains, not by reheating leftovers.</p>
+<p>Another systematic review, in people with type 2 diabetes or prediabetes, compared resistant starch types and found clear effects for type 1 (locked inside the cell walls of legumes and intact grains) and type 2 (high-amylose), concluding that type 3, the kind that forms on cooling, is still understudied and needs more research. That is exactly the type the viral posts are about.</p>
+<h2>Storage: the practical part the posts skip</h2>
+<p>Cooked rice left at room temperature is one of the foods health authorities are most insistent about, because it can favour the growth of bacteria and their toxins. The glycemic gain here is a few percentage points: not worth earning by leaving a pot out all day.</p>
+<p>The sensible practice is the usual one: cool quickly in a shallow container, refrigerate straight away, eat within a few days, and reheat thoroughly until the dish is hot all the way through. The resistant starch that formed survives reheating, so you lose nothing by heating it properly.</p>
+<h2>What the research actually says</h2><div class="verdict">
+<div class="v"><span class="pill ok">Confirmed</span><p><b>Cooling cooked rice raises resistant starch.</b><br>From 0.64 g per 100 g in freshly cooked rice to 1.30 after 10 hours at room temperature and 1.65 after 24 hours in the fridge plus reheating. Nearly threefold in relative terms; about one gram in absolute terms.</p></div>
+<div class="v"><span class="pill ok">Confirmed</span><p><b>Chilled and reheated rice lowers the glycemic response.</b><br>About 18% less area under the curve than fresh rice in fifteen healthy adults, and 24.4% less over the first four hours in a later trial in eighteen women. A real and modest effect.</p></div>
+<div class="v"><span class="pill ok">Confirmed</span><p><b>It only works with the right grains.</b><br>In the 2024 trial, chilling lowered blood glucose only in non-glutinous, high-amylose grains. For glutinous rice and millet there was no significant difference in glucose or insulin.</p></div>
+<div class="v"><span class="pill no">Not supported</span><p><b>Cooling rice halves the calories.</b><br>The up-to-60% figure comes from a 2015 presentation at an American Chemical Society meeting that was never published as a peer-reviewed study. The measured rise in resistant starch, about one gram per 100 g, cannot shift the calories of a portion on that scale.</p></div>
+<div class="v"><span class="pill part">Needs context</span><p><b>Resistant starch improves glycemic control.</b><br>Yes, at the doses used in the studies. The meta-analysis of nineteen trials finds a modest effect on fasting glucose, clearer above 28 g a day or beyond 8 weeks. Cooled rice alone does not come close to those amounts.</p></div>
+<div class="v"><span class="pill part">Needs context</span><p><b>Yesterday&#x27;s rice beats fresh rice.</b><br>It depends on the comparison. At the following meal, freshly cooked non-glutinous millet outperformed its chilled version thanks to slowly digestible starch. The variety you choose weighs as much as the temperature, and sometimes more.</p></div>
+</div>
+<h2>How to use this</h2><ol class="steps"><li>If you want to use the trick, use it with basmati, long-grain rice or pasta: these are the high-amylose foods where retrogradation works. With glutinous rice or very sticky varieties nothing changes.</li><li>Cool quickly in a shallow container, refrigerate straight away, and reheat thoroughly before eating: the resistant starch survives the heat, bacteria do not.</li><li>Do not count on the fridge to cut calories. The real saving is a few grams of starch per portion, not half a plate.</li><li>If blood sugar is the goal, pull the big levers first: portion size, fibre, protein and fat in the same meal, and a walk afterwards.</li><li>To reach resistant starch amounts comparable to the studies, look to legumes, oats, barley and whole grains, not reheated leftovers.</li><li>Test it on yourself: if you already use a glucose meter for your own reasons, compare the same meal fresh and chilled on different days. Any clinical question, though, belongs with your doctor.</li></ol>
+<aside class="app"><div><h3>See what your meals actually do, not just the theory</h3><p>In Nurvan you keep a food diary with portions and macros and set it alongside your training, measurements and lab reports. If you work with a coach, they see the same data and can adjust the plan around the meals you really eat rather than the ideal ones.</p></div><a class="cta" href="https://nurvan.app">Try Nurvan</a></aside>
+<h2>Frequently asked questions</h2>
+<details><summary>Does it work for pasta and potatoes too?</summary><p>The mechanism is the same and applies to any high-amylose starch, so pasta and firm potatoes are included. The human studies cited here measured rice and millet, so for other foods the principle is plausible but the exact numbers are not these.</p></details>
+<details><summary>Does reheating destroy the resistant starch?</summary><p>No. In the 2015 study the highest resistant starch value belonged to the rice chilled for 24 hours and then reheated. Reheating thoroughly is also the safer choice from a food hygiene standpoint.</p></details>
+<details><summary>How much cooled rice would 28 g of resistant starch take?</summary><p>At about 1.65 g per 100 g of cooked rice chilled and reheated, you would need almost two kilograms of cooked rice. That is why the doses in long-term studies come from isolated resistant starches or from legumes and whole grains, not from leftovers.</p></details>
+<details><summary>Do I need coconut oil while cooking?</summary><p>That is the ingredient from the viral version of the advice, which came from a 2015 conference presentation that was never published as a study. In the peer-reviewed studies cited here, the rice was cooked normally, with no added fat.</p></details>
+<h2>Sources</h2><ol class="refs">
+<li>Sonia S, Witjaksono F, Ridwan R, 2015. Effect of cooling of cooked white rice on resistant starch content and glycemic response. <em>Asia Pac J Clin Nutr</em> 24(4):620-625. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/26693746/">PMID 26693746</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.6133/apjcn.2015.24.4.13">DOI 10.6133/apjcn.2015.24.4.13</a></li>
+<li>Peng X, Fan Z, Wei J et al., 2024. Fresh-cooked but not cold-stored millet exhibited remarkable second meal effect independent of resistant starch: a randomized crossover trial. <em>Nutrients</em> 16(23):4030. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/39683424/">PMID 39683424</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.3390/nu16234030">DOI 10.3390/nu16234030</a></li>
+<li>Pugh JE, Cai M, Altieri N, Frost G, 2023. A comparison of the effects of resistant starch types on glycemic response in individuals with type 2 diabetes or prediabetes: a systematic review and meta-analysis. <em>Front Nutr</em> 10:1118229. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/37051127/">PMID 37051127</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.3389/fnut.2023.1118229">DOI 10.3389/fnut.2023.1118229</a></li>
+<li>Xiong K, Wang J, Kang T, Xu F, Ma A, 2020. Effects of resistant starch on glycaemic control: a systematic review and meta-analysis. <em>Br J Nutr</em> 125(11):1260-1269. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/32959735/">PMID 32959735</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1017/S0007114520003700">DOI 10.1017/S0007114520003700</a></li>
+<li>Chen Z, Liang N, Zhang H et al., 2024. Resistant starch and the gut microbiome: exploring beneficial interactions and dietary impacts. <em>Food Chem X</em> 21:101118. <a rel="noopener" target="_blank" href="https://pubmed.ncbi.nlm.nih.gov/38282825/">PMID 38282825</a> · <a rel="noopener" target="_blank" href="https://doi.org/10.1016/j.fochx.2024.101118">DOI 10.1016/j.fochx.2024.101118</a></li>
+<li>Smithsonian Magazine, 2015. <em>Why would cooling rice make it less caloric?</em> Report on Sudhair James's presentation to the American Chemical Society: a claimed calorie reduction of up to 60%, announced at a meeting and never published as a peer-reviewed study. <a rel="noopener" target="_blank" href="https://www.smithsonianmag.com/smart-news/why-would-cooling-rice-make-it-less-caloric-1-180954765/">smithsonianmag.com</a></li>
+</ol>
+<p class="cap">This article was inspired by a post from <a href="https://www.instagram.com/p/DdG7bRRkSUN/">Dr William Wallace (@dr.williamwallace)</a>. Sources retrieved through PubMed.</p>
+<p class="note">Note: educational content. It does not replace advice from a doctor or qualified professional.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

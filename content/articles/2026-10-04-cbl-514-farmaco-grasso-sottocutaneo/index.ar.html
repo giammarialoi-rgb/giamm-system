@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CBL-514: ما الذي تفعله حقنة إذابة الدهون فعلًا | Nurvan</title>
+<meta name="description" content="يقتل CBL-514 الخلايا الدهنية بحقنة واحدة. ما الذي تُظهره تجارب المرحلة 2 و2b فعلًا، وأين حدودها، ولماذا لم يثبت بعد أثره على الدهون الحشوية.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">التدريب</a><a href="#">التغذية</a><a href="#">المكمّلات</a><a href="#" class="on">المدونة</a></nav><a class="cta" href="https://nurvan.app">حمّل التطبيق</a></div></header>
+<main class="wrap" lang="ar">
+<div class="crumb">المدونة · الصحة · تركيب الجسم</div>
+<h1>CBL-514، الدواء الذي يقتل الخلايا الدهنية: ما الثابت وما غير الثابت</h1>
+<p class="lede">في أواخر سبتمبر 2026، عُرض في المؤتمر الأوروبي للسكري دواء تجريبي يقتل الخلايا الدهنية بحقنة. تحدثت العناوين عن «شفط دهون في محقنة» وعن دواء جديد لإنقاص الوزن. التجارب المنشورة تقول شيئًا أدق، وفي بعضه مختلفًا.</p>
+<div class="meta"><span>4 أكتوبر 2026</span><span><b>10</b> دقيقة قراءة</span><span><b>6</b> دراسة مذكورة</span><span>بقلم <a href="/autore/giammaria-loi">Giammaria Loi</a> · حُدِّث في 4 أكتوبر 2026</span></div>
+<div class="box"><h2>باختصار</h2><ul><li>يُحقن CBL-514 تحت الجلد فيحفّز الاستماتة، أي الموت المبرمج، في الخلايا الشحمية التي تخزّن الدهون. وهو غير مرخّص في أي بلد: ما زال قيد البحث.</li><li>أرقام التجارب على البشر حقيقية ومنشورة. في المرحلة 2 فقد 69.6% من المعالَجين ما لا يقل عن 150 مل من دهون البطن مقابل 0% في الدواء الوهمي. وفي المرحلة 2b تحسّن 76.7% بدرجة واحدة على الأقل على مقياس الطبيب مقابل 18.9%، مع انخفاض متوسط في حجم الدهون بنسبة 20.3% بالرنين المغناطيسي.</li><li><strong>ليس دواءً لإنقاص الوزن.</strong> عالجت التجارب البطن لدى أشخاص مؤشر كتلة جسمهم بين 22 و30 غالبًا، وكانت النهايات الأساسية مقاييس تقييم دهون البطن، لا وزن الجسم.</li><li>رقم الدهون الحشوية (−12% مقابل +6% للدواء الوهمي) جاء من عرض في مؤتمر على 40 مشاركًا ولم يخضع بعد لمراجعة الأقران: تعامل معه كنتيجة أولية.</li><li>فكرة أن إزالة الخلايا الدهنية تمنع استعادة الوزن لم تُلاحظ إلا في الفئران. لم تُختبر في البشر، وتظهر مراجعة تحليلية أن ما يحمي الكتلة النشطة فعلًا أثناء العجز هو التمرين: نحو نصف كيلوغرام أو أكثر مقارنة بالحمية وحدها.</li></ul></div>
+<figure class="cover"><img alt="عاملة صحية تقيس نسبة الدهون في جسم رجل بجهاز المقاومة الكهربائية الحيوية." src="images/cover.jpg" loading="lazy"/>
+<figcaption class="cap">قياس تركيب الجسم. الصورة: U.S. Marine Corps، ملكية عامة.</figcaption></figure>
+<h2>ما هو CBL-514 وكيف يعمل</h2>
+<p>CBL-514 جزيء صغير طوّرته شركة Caliway Biopharmaceuticals التايوانية. يُحقن مباشرة في الدهون تحت الجلد، أي الطبقة بين الجلد والعضلة.</p>
+<p>الآلية المعلنة هي الاستماتة الانتقائية: يدفع الدواء الخلية الدهنية إلى الموت بشكل منظم، دون النخر الذي يضرّ الأنسجة المحيطة. في التجارب المنشورة لم يُلاحظ نخر ولا إصابات عصبية، وكانت أكثر الآثار الجانبية شيوعًا تفاعلات في موضع الحقن — ألم واحمرار وتورم — خفيفة إلى متوسطة ومؤقتة.</p>
+<figure><img alt="نسيج دهني تحت المجهر: تبدو الخلايا كفجوات دائرية كبيرة بجدران رقيقة." src="images/cellule-adipose-microscopio.jpg" loading="lazy"/>
+<figcaption class="cap">النسيج الدهني تحت المجهر: الخلايا الشحمية هي الخلايا الدائرية الكبيرة. الصورة: Veeresh likhitha، Wikimedia Commons، CC BY-SA 4.0.</figcaption></figure>
+<p>وهناك رقم لا تكاد تذكره العناوين. أظهرت دراسة كلاسيكية نُشرت في <em>Nature</em> عام 2008 أن <strong>عدد الخلايا الشحمية لدى البالغ ثابت عمليًا</strong>: يبقى كما هو عند النحيفين والمصابين بالسمنة، حتى بعد فقدان وزن كبير، لأنه يتحدد في الطفولة والمراهقة. ومع ذلك يتجدد نحو 10% من هذه الخلايا سنويًا. لهذا اقتُرح تدميرها كهدف دوائي — ولهذا أيضًا فإن الأثر ليس دائمًا تلقائيًا: التجدد السنوي بنسبة 10% مستمر.</p>
+<h2>أرقام التجارب على البشر</h2>
+<p>تجربتان عشوائيتان، نُشرتا كلتاهما في <em>Aesthetic Surgery Journal</em>، اختبرتا الدواء على البطن.</p>
+<figure><div class="chart"><svg aria-label="رسم بياني بالأعمدة: في المرحلة 2 فقد 69.6% من مجموعة CBL-514 ما لا يقل عن 150 مل دهون مقابل 0% للدواء الوهمي؛ وفي المرحلة 2b تحسّن 76.7% بدرجة واحدة على الأقل مقابل 18.9%." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="500" fill="#0c0c0c"/>
+<text x="72" y="36" fill="#f0f0f0" font-size="21" font-weight="700">كم من المشاركين استجابوا لـ CBL-514</text>
+<rect x="72" y="54" width="13" height="13" fill="#d4af37"/><text x="92" y="65" fill="#a0a0a0" font-size="13">CBL-514</text>
+<rect x="192" y="54" width="13" height="13" fill="#aa8a2e" opacity="0.55"/><text x="212" y="65" fill="#a0a0a0" font-size="13">دواء وهمي</text>
+<line x1="72" y1="382.0" x2="832" y2="382.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="386.0" fill="#a0a0a0" font-size="12" text-anchor="end">0%</text>
+<line x1="72" y1="322.8" x2="832" y2="322.8" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="326.8" fill="#a0a0a0" font-size="12" text-anchor="end">20%</text>
+<line x1="72" y1="263.6" x2="832" y2="263.6" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="267.6" fill="#a0a0a0" font-size="12" text-anchor="end">40%</text>
+<line x1="72" y1="204.4" x2="832" y2="204.4" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="208.4" fill="#a0a0a0" font-size="12" text-anchor="end">60%</text>
+<line x1="72" y1="145.2" x2="832" y2="145.2" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="149.2" fill="#a0a0a0" font-size="12" text-anchor="end">80%</text>
+<line x1="72" y1="86.0" x2="832" y2="86.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="90.0" fill="#a0a0a0" font-size="12" text-anchor="end">100%</text>
+<text x="18" y="234" fill="#a0a0a0" font-size="12" text-anchor="middle" transform="rotate(-90 18 234)">نسبة المشاركين %</text>
+<rect x="179.0" y="176.0" width="74" height="206.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="216.0" y="167.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">69.6%</text>
+<text x="308.0" y="373.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">0.0%</text>
+<text x="262.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">المرحلة 2 — فقدان ≥150 مل</text>
+<text x="262.0" y="423" fill="#f0f0f0" font-size="13" text-anchor="middle">دهن</text>
+<rect x="559.0" y="155.0" width="74" height="227.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="596.0" y="146.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">76.7%</text>
+<rect x="651.0" y="326.1" width="74" height="55.9" fill="#aa8a2e" opacity="0.55" rx="3"/>
+<text x="688.0" y="317.1" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">18.9%</text>
+<text x="642.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">المرحلة 2b — تحسن ≥درجة</text>
+<text x="642.0" y="423" fill="#f0f0f0" font-size="13" text-anchor="middle">واحدة</text>
+<line x1="72" y1="382" x2="832" y2="382" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="72" y="468" fill="#a0a0a0" font-size="11">البيانات: Gold et al. 2025 و Lorenc et al. 2026، Aesthetic Surgery Journal. رسم Nurvan.</text>
+</svg></div>
+<figcaption class="cap">الاستجابة لـ CBL-514 في تجربتي المرحلة 2 و2b — البيانات: Gold et al. 2025 و Lorenc et al. 2026. رسم Nurvan.</figcaption></figure>
+<p>في تجربة <strong>المرحلة 2</strong> (76 مشاركًا، توزيع عشوائي 2:1، حتى أربع جلسات كل أربعة أسابيع)، وبعد ثمانية أسابيع من الجلسة الأخيرة، فقد 69.6% من مجموعة الدواء ما لا يقل عن 150 مل من الدهون تحت الجلد بقياس الموجات فوق الصوتية، مقابل لا أحد في مجموعة الدواء الوهمي. وتجاوز 60.9% عتبة 200 مل، وبلغ 12 من أصل 28 مستجيبًا الهدف بعد جلسة واحدة.</p>
+<p>وفي تجربة <strong>المرحلة 2b</strong> (108 بالغين لديهم دهون بطن متوسطة إلى شديدة، توزيع عشوائي 1:1، حتى أربع جلسات بفاصل ثلاثة أسابيع)، تحسّن 76.7% من مجموعة الدواء بدرجة واحدة على الأقل على المقياس الذي يقيّمه الطبيب، مقابل 18.9% للدواء الوهمي. وقدّر الرنين المغناطيسي انخفاضًا متوسطًا في حجم دهون البطن قدره 152.9 مل، أي 20.3%.</p>
+<p>ملاحظتان تغيّران القراءة. الأولى أن التجربتين <strong>مفردتا التعمية</strong>: المشاركون لم يعرفوا ما تلقّوه، لكن الباحثين عرفوا — وهو تصميم أضعف من التعمية المزدوجة حين تكون النتيجة مقياس تقييم بصريًا. والثانية أن عدة مؤلفين موظفون في Caliway، الشركة المطوّرة للدواء والممولة للدراستين. هذه ليست تهمة بل السياق المعتاد لدواء قيد التطوير: يعني أن التأكيد يحتاج دراسات أكبر ومستقلة.</p>
+<p>وبخصوص الدراسات الأكبر: قال خبر أواخر سبتمبر إن المرحلة 3 «قيد التصميم». <strong>لقد بدأت بالفعل.</strong> في 23 سبتمبر 2026 أعلنت Caliway عن أول مريض عولج في SUPREME-01، وهي تجربة محورية عالمية عشوائية مزدوجة التعمية على نحو 320 مشاركًا في الولايات المتحدة وكندا. لا نتائج بعد.</p>
+<h2>بيانات الدهون الحشوية</h2>
+<p>ما عُرض في ميلانو بمؤتمر الجمعية الأوروبية لدراسة السكري، بين 28 سبتمبر و2 أكتوبر 2026، دراسة مختلفة: 40 مشاركًا بمؤشر كتلة جسم بين 22 و30، بجرعات حتى 600 ملغ، مع التركيز على الدهون الحشوية — تلك المحيطة بالأعضاء والأوثق ارتباطًا بخطر القلب والأوعية ومقاومة الإنسولين.</p>
+<p>بعد شهر، انخفضت الدهون الحشوية بمتوسط 12% في مجموعة الدواء وارتفعت 6% في الدواء الوهمي؛ وفي المتابعة اللاحقة كان الانخفاض نحو 10% مقابل ارتفاع يقارب 12%.</p>
+<p>أرقام مثيرة للاهتمام، لكن اقرأها كما هي: <strong>بيانات مؤتمر، على 40 شخصًا، دون مراجعة أقران بعد.</strong> ملخص المؤتمر لم يمرّ بالمرشح نفسه الذي يمرّ به مقال المجلة، وكثيرًا ما تتغير الأرقام في النسخة النهائية. حتى ذلك الحين هي إشارة واعدة، لا نتيجة ثابتة.</p>
+<h2>ما تقوله الأبحاث فعلًا</h2>
+<div class="verdict">
+<div class="v"><span class="pill no">غير صحيح</span><p><strong>«إنه دواء لإنقاص الوزن.»</strong> تستهدف التجارب المنشورة خفض الدهون تحت الجلد في البطن ومقاييس تقييم جمالية، لدى أشخاص مؤشر كتلة جسمهم طبيعي أو مرتفع قليلًا في معظمه. وزن الجسم ليس النتيجة المقاسة. هو دواء للدهون الموضعية، لا للسمنة.</p></div>
+<div class="v"><span class="pill ok">مؤكد</span><p><strong>«نحو 70% يفقدون 150 مل دهون على الأقل مقابل 0% للدواء الوهمي.»</strong> ، في تجربة المرحلة 2 المنشورة عام 2025.</p></div>
+<div class="v"><span class="pill ok">مؤكد</span><p><strong>«أكثر من 75% يتحسنون بدرجة واحدة على الأقل على مقياس دهون البطن.»</strong> ، في المرحلة 2b: 76.7% مقابل 18.9%.</p></div>
+<div class="v"><span class="pill part">تدقيق</span><p><strong>«أثره كشفط الدهون.»</strong> متوسط انخفاض الحجم بالرنين هو 20.3% في المنطقة المعالجة: حقيقي، لكنه من رتبة مختلفة عن الجراحة، ومحصور في البطن، ويتحقق عبر عدة جلسات. ولم تقارن أي تجربة الدواء بشفط الدهون مباشرة.</p></div>
+<div class="v"><span class="pill nv">غير قابل للتحقق</span><p><strong>«يخفض الدهون الحشوية أيضًا.»</strong> البيانات موجودة لكنها من مؤتمر، على 40 شخصًا، دون نشر خاضع لمراجعة الأقران.</p></div>
+<div class="v"><span class="pill part">تدقيق</span><p><strong>«يمنع استعادة الوزن بعد التوقف عن أدوية GLP-1.»</strong> لم يُختبر في البشر. وما نعرفه عن البشر يشير إلى العكس: في تجربة SURMOUNT-4 المنشورة في <em>JAMA</em>، استعاد من أوقفوا تيرزيباتيد 14% من وزنهم وسطيًا خلال 52 أسبوعًا، بينما فقد المستمرون 5.5% إضافية.</p></div>
+<div class="v"><span class="pill nv">قديم</span><p><strong>«المرحلة 3 لم تبدأ بعد.»</strong> بدأت في 23 سبتمبر 2026.</p></div>
+</div>
+<h2>كيف تطبّق ذلك</h2>
+<p>CBL-514 غير متاح للشراء وغير مرخّص ولا يخص أي قرار يمكنك اتخاذه اليوم. السؤال المفيد مختلف: في هذه الأثناء، ما الذي ينفع لتركيب الجسم؟</p>
+<figure><img alt="رجل يؤدي رفعة الأرض بالبار في النادي." src="images/stacco-palestra-forza.jpg" loading="lazy"/>
+<figcaption class="cap">تدريب القوة هو المتغير الذي يحمي الكتلة النشطة عند خفض السعرات. الصورة: Nenad Stojkovic، Wikimedia Commons، CC BY 2.0.</figcaption></figure>
+<ol class="steps" start="1"><li><strong>تمرّن أثناء خفض السعرات، لا بعده فقط.</strong> قارنت مراجعة تحليلية شبكية لعام 2026 شملت 34 تجربة عشوائية و1455 مشاركًا بين تقييد السعرات وحده وتقييدها مع التمرين: منع التمرين وسطيًا 45.7% من فقدان الكتلة الخالية من الدهون. وكان الأثر الأكبر للتدريب المختلط (قوة مع كارديو، +1.20 كجم مقارنة بالحمية وحدها)، يليه تدريب القوة وحده (+0.83 كجم).</li></ol>
+<figure><div class="chart"><svg aria-label="رسم بياني بالأعمدة: مقارنة بالحمية وحدها، يحفظ التدريب المختلط 1.20 كجم كتلة نشطة إضافية، والقوة وحدها 0.83 كجم، والكارديو وحده 0.51 كجم (غير دال)." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="420" fill="#0c0c0c"/>
+<text x="24" y="36" fill="#f0f0f0" font-size="21" font-weight="700">الكتلة النشطة التي يحفظها التدريب</text>
+<line x1="150.0" y1="78" x2="150.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="150.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.0</text>
+<line x1="241.4" y1="78" x2="241.4" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="241.4" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.2</text>
+<line x1="332.9" y1="78" x2="332.9" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="332.9" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.4</text>
+<line x1="424.3" y1="78" x2="424.3" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="424.3" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.6</text>
+<line x1="515.7" y1="78" x2="515.7" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="515.7" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.8</text>
+<line x1="607.1" y1="78" x2="607.1" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="607.1" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.0</text>
+<line x1="698.6" y1="78" x2="698.6" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="698.6" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.2</text>
+<line x1="790.0" y1="78" x2="790.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="790.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.4</text>
+<rect x="150" y="105.0" width="548.6" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="133.0" fill="#f0f0f0" font-size="14" text-anchor="end">قوة + كارديو</text>
+<text x="708.6" y="133.0" fill="#f3e5ab" font-size="16" font-weight="700">+1.20 kg</text>
+<rect x="150" y="178.0" width="379.4" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="206.0" fill="#f0f0f0" font-size="14" text-anchor="end">قوة فقط</text>
+<text x="539.4" y="206.0" fill="#f3e5ab" font-size="16" font-weight="700">+0.83 kg</text>
+<rect x="150" y="251.0" width="233.1" height="46" fill="#aa8a2e" opacity="0.5" rx="3"/>
+<text x="138" y="279.0" fill="#f0f0f0" font-size="14" text-anchor="end">كارديو فقط</text>
+<text x="393.1" y="279.0" fill="#f3e5ab" font-size="16" font-weight="700">+0.51 kg</text>
+<text x="393.1" y="296.0" fill="#a0a0a0" font-size="11">غير دال</text>
+<line x1="150" y1="78" x2="150" y2="324" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="470" y="368" fill="#a0a0a0" font-size="12" text-anchor="middle">كج كتلة نشطة إضافية مقارنة بالحمية وحدها</text>
+<text x="24" y="394" fill="#a0a0a0" font-size="11">البيانات: Deller et al. 2026، تحليل شبكي لـ 34 تجربة عشوائية، 1455 مشاركًا. رسم Nurvan.</text>
+</svg></div>
+<figcaption class="cap">الكتلة النشطة المحفوظة مقارنة بتقييد السعرات وحده — البيانات: Deller et al. 2026. رسم Nurvan.</figcaption></figure>
+<ol class="steps" start="2"><li><strong>لا تبالغ في العجز.</strong> قدّرت مراجعة انحدارية لتدريب المقاومة تحت تقييد الطاقة أن عجزًا بنحو 500 سعرة يوميًا هو الحد الذي تتوقف بعده زيادة الكتلة النشطة حتى مع التدريب. من يريد بناء العضلة فليتجنب العجز الطويل، ومن يريد الحفاظ عليها فليبقَ تحت هذا الخط.</li><li><strong>أبقِ البروتين مرتفعًا.</strong> هو الأداة الغذائية الأقوى دليلًا عند خفض السعرات: تناولناها بالتفصيل في مقال <a href="/blog/protein-intake-cutting">البروتين أثناء التجفيف</a>.</li><li><strong>قِس ولا تقدّر بالنظر.</strong> الوزن والمحيطات والأثقال المرفوعة عبر الوقت تخبرك إن كنت تفقد دهونًا أم عضلًا أيضًا. في المرآة يختلط الأمران.</li><li><strong>الدهون الموضعية لا تُختار.</strong> لا يوجد تمرين يحرق دهون المنطقة التي يدرّبها. وأين تفقد أولًا يعتمد إلى حد كبير على الجينات والهرمونات — وهو موضوع تناولناه في مقال <a href="/blog/genetics-high-low-responders">المستجيبون الضعفاء والأقوياء</a>.</li></ol>
+<p>الأرقام أعلاه نطاقات ومتوسطات رُصدت في الدراسات، وليست وصفة علاجية. إن كانت لديك أمراض أو تتناول أدوية أو تتبع حمية بتعليمات طبية، فاستشر طبيبك قبل أي تغيير.</p>
+<div class="app"><div><h3>Nurvan — تركيب الجسم يُقرأ عبر الزمن</h3><p>نقصان كيلوغرامين قد يكون دهونًا أو ماءً أو عضلًا: لا تعرف إلا بقراءة الوزن والمحيطات والأثقال معًا عبر الوقت. يسجّل Nurvan المحيطات والوزن إلى جانب الحمل والتكرارات وRIR لكل حصة، ويعتمد قسم التغذية على قاعدة بيانات الأغذية الرسمية CREA — فترى إن كان العجز يأخذ منك دهونًا أم قوة أيضًا.</p></div><a class="cta" href="https://nurvan.app">جرّب Nurvan</a></div>
+<h2>أسئلة شائعة</h2>
+<details><summary>هل CBL-514 متاح في الأسواق؟</summary><p>لا. غير مرخّص في أي بلد، وما زال في التجارب: دراستا المرحلة 2 و2b منشورتان، وتجربة المرحلة 3 SUPREME-01 عالجت أول مريض في 23 سبتمبر 2026.</p></details>
+<details><summary>هل ينقص CBL-514 الوزن؟</summary><p>ليس هذا غرضه. تقيس التجارب المنشورة انخفاض الدهون تحت الجلد في البطن لدى أشخاص بوزن طبيعي أو مرتفع قليلًا، لا فقدان وزن الجسم.</p></details>
+<details><summary>ما الفرق بينه وبين أوزمبيك أو مونجارو؟</summary><p>تعمل أدوية GLP-1 على الشهية والأيض وتخفّض الوزن في الجسم كله؛ أما CBL-514 فيُحقن في منطقة ويعمل موضعيًا على خلاياها الدهنية. فئتان مختلفتان باستطبابات ومخاطر ومستويات أدلة مختلفة.</p></details>
+<details><summary>إذا ماتت الخلايا الدهنية، هل النتيجة دائمة؟</summary><p>غير معروف. عدد الخلايا الشحمية ثابت لدى البالغين، لكن نحو 10% منها يتجدد سنويًا، ولم تتابع أي دراسة منشورة المرضى مدة كافية للإجابة. وقد أعلنت Caliway عن دراسة مرحلة 3 مخصّصة للمتابعة طويلة الأمد.</p></details>
+<details><summary>هل يغني عن التغذية والتدريب؟</summary><p>لا توجد بيانات تشير إلى ذلك. تغطي التجارب منطقة واحدة من الجسم وبضعة أسابيع، بينما يعتمد الوزن وتركيب الجسم على المدى المتوسط على التغذية وتدريب القوة والاستمرارية.</p></details>
+<h2>اقرأ أيضًا</h2>
+<ul><li><a href="/blog/protein-intake-cutting">البروتين أثناء التجفيف: كم تحتاج منه فعلًا؟</a> — النطاق الذي يحمي الكتلة النشطة عند خفض السعرات.</li><li><a href="/blog/aruz-mubarrad-nasha-muqawim">الأرز المبرّد: كم يساوي النشا المقاوم فعلًا</a> — الأرقام الحقيقية خلف حيلة منتشرة.</li><li><a href="/blog/genetics-high-low-responders">المستجيبون الضعفاء: ما مدى تأثير الجينات في العضلات؟</a> — لماذا يعطي البرنامج نفسه نتائج مختلفة لأشخاص مختلفين.</li></ul>
+<h2>المصادر</h2>
+<ol class="refs"><li>Gold M, Schlessinger J, Goodman GJ, Dayan S, DuBois J, Ling YF, Sheu AY, Ho WWS, Chou YC, 2025. <em>Efficacy and Safety of CBL-514 Injection in Reducing Abdominal Subcutaneous Fat: A Randomized, Single-Blind, Placebo-Controlled Phase II Study.</em> Aesthetic Surgery Journal 45(6):611-620. PMID 40037659 — <a href="https://doi.org/10.1093/asj/sjaf032">DOI</a></li><li>Lorenc ZP, Gold M, Schlessinger J, Lain ET, Smith S, Downie J, Cox SE, Ling YF, Sheu AY, Lu CY, Chou YC, 2026. <em>Randomized Phase 2b Trial of CBL-514 Injection for Abdominal Subcutaneous Fat Reduction With Clinician- and Patient-reported Outcomes and MRI Assessment.</em> Aesthetic Surgery Journal. PMID 42159040 — <a href="https://doi.org/10.1093/asj/sjag092">DOI</a></li><li>Spalding KL, Arner E, Westermark PO, Bernard S, Buchholz BA, Bergmann O, Blomqvist L, Hoffstedt J, Näslund E, Britton T, Concha H, Hassan M, Rydén M, Frisén J, Arner P, 2008. <em>Dynamics of fat cell turnover in humans.</em> Nature 453(7196):783-787. PMID 18454136 — <a href="https://doi.org/10.1038/nature06902">DOI</a></li><li>Aronne LJ, Sattar N, Horn DB, Bays HE, Wharton S, Lin WY, Ahmad NN, Zhang S, Liao R, Bunck MC, Jouravskaya I, Murphy MA, 2024. <em>Continued Treatment With Tirzepatide for Maintenance of Weight Reduction in Adults With Obesity: The SURMOUNT-4 Randomized Clinical Trial.</em> JAMA 331(1):38-48. PMID 38078870 — <a href="https://doi.org/10.1001/jama.2023.24945">DOI</a></li><li>Deller M, Weiershaus J, Held S, Brinkmann C, 2026. <em>Effects of Calorie Restriction With and Without Strength, Endurance or Mixed Training on Fat-Free and Skeletal Muscle Mass in Overweight or Obese Individuals — A Systematic Review With Pairwise Meta-Analysis and Network Meta-Analysis of Randomized Controlled Studies.</em> Diabetes, Obesity and Metabolism 28(8):6810-6823. PMID 42144246 — <a href="https://doi.org/10.1111/dom.70873">DOI</a></li><li>Murphy C, Koehler K, 2022. <em>Energy deficiency impairs resistance training gains in lean mass but not strength: A meta-analysis and meta-regression.</em> Scandinavian Journal of Medicine &amp; Science in Sports 32(1):125-137. PMID 34623696 — <a href="https://doi.org/10.1111/sms.14075">DOI</a></li></ol>
+<p>المصادر العلمية مستخرجة من PubMed. جرى التحقق من حالة تجربة المرحلة 3 SUPREME-01 من <a href="https://www.caliwaybiopharma.com/en/news-detail/-CBL-514-SUPREME-01-FPI-ObesityWeek-2026-ENG/">البيان الرسمي لشركة Caliway Biopharmaceuticals بتاريخ 23 سبتمبر 2026</a>، تمت المراجعة في 4 أكتوبر 2026. بيانات الدهون الحشوية من عرض في مؤتمر EASD بميلانو (28 سبتمبر – 2 أكتوبر 2026) ولم تُنشر بعد في مجلة خاضعة لمراجعة الأقران.</p>
+<p>نقطة الانطلاق: مقال لـ Andrea Centini على <a href="https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/">Fanpage</a>، 2 أكتوبر 2026. نص هذا المقال وبنيته وتحققه من الوقائع أصلية.</p>
+<p><strong>Giammaria Loi</strong> هو مؤسس Nurvan. يتدرب بالأثقال منذ 2012، ويعمل مدربًا شخصيًا ومدرب أداء معتمدًا من FIPE منذ 2013، ويشارك في منافسات رفع الأثقال القوة على المستوى الوطني منذ 2018. كل مقال يوقّعه ينطلق من الدراسات العلمية وينتهي إلى ما ينفع فعلًا في النادي.</p>
+<p class="note">ملاحظة: محتوى معلوماتي لا يغني عن رأي طبيب أو مختص. CBL-514 دواء تجريبي غير مرخّص: لا شيء في هذا المقال يُفهم كنصيحة علاجية.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

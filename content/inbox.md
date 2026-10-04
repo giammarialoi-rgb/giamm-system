@@ -6,9 +6,8 @@ Per decidere: sposta una riga in **PRIORITÀ** (in cima) per farla uscire per pr
 In ogni sezione le righe sono già ordinate: in alto i temi più cercati e più vicini a Nurvan (programmazione: serie, ripetizioni, recupero), in basso i temi di nicchia.
 Le righe con "poco contenuto" sono promo o meme: probabilmente non vale la pena farne un articolo.
 
-## PRIORITÀ — ordine di uscita, alternando gli argomenti (12)
+## PRIORITÀ — ordine di uscita, alternando gli argomenti (11)
 
-* \[ ] https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/ — Farmaco sperimentale CBL-514 contro il grasso sottocutaneo: fase 2b, notizia da verificare sullo studio originale (articolo di giornale, tema sensibile, tono prudente) (Fanpage) — VERIFICATO 03/10: dati sottocutanei confermati su PubMed (fase 2 PMID 40037659: 69,6% ≥150 mL vs 0% placebo; fase 2b PMID 42159040, Aesthet Surg J 2026: 76,7% vs 18,9%, MRI −20,3% volume, trial single-blind, 108 adulti, sponsor Caliway, autori con affiliazione Caliway). Dato sul grasso viscerale (−12% vs +6%) solo da congresso, NON ancora peer-reviewed: scriverlo come preliminare. Farmaco non approvato; fase 3 in progettazione. ANGOLO: articolo informativo (meccanismo, fase 2/2b, limiti, sponsor Caliway, non approvato) + aggancio Nurvan sul fatto che la composizione corporea a lungo termine dipende da alimentazione, forza e costanza e che l'app aiuta a seguire il piano; VIETATO promettere risultati migliori del farmaco o confronti con farmaci; niente consigli sul titolo in borsa
 * \[ ] https://www.instagram.com/p/DdL7UjGG2wg/ + https://www.instagram.com/p/Ddon1AtEWJb/ + https://www.instagram.com/p/DdRXFzGkTrY/ + https://www.instagram.com/p/Dc6T7q5iJCr/ — UNITI: ripetizioni, serie e recupero per l'ipertrofia — il range 8-12 è un mito? Linee guida NSCA aggiornate, 25-35 ripetizioni, serie vicine al cedimento (Van Volkenburg, Casturo, Poulos, Azegra)
 * \[ ] https://www.instagram.com/p/Dd_OSqQiFfi/ — Carboidrati e aumento di peso: sono davvero il problema? (italiano, tabelle nutrizionali) (Andrea Biasci)
 * \[ ] https://www.instagram.com/p/DdtXZsPxbYU/ — Somatotipo (ecto/meso) e crescita muscolare: nuovo studio su 40 uomini (Brad Schoenfeld)
@@ -55,6 +54,8 @@ Le righe con "poco contenuto" sono promo o meme: probabilmente non vale la pena 
 Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da meno di 7 giorni, o inizia entro 5 giorni, la task scrive prima l'articolo sull'evento (anteprima o resoconto) e poi riprende la coda. Massimo un articolo di evento a settimana.
 
 * Mr. Olympia 2026 — Las Vegas, 24-27 settembre 2026: concluso, resoconto PUBBLICATO il 2026-10-03 (slug mr-olympia-2026-nick-walker-risultati). Prossimo articolo di evento non prima del 2026-10-10.
+* Mondiali IPF Classic & Equipped Masters — Reno, Nevada (USA), 14-25 ottobre 2026 (aggiunto dalla task il 2026-10-04, fonte: calendario ufficiale IPF)
+* Mondiali IPF Open Equipped — Istanbul, Turchia, 9-15 novembre 2026 (aggiunto dalla task il 2026-10-04, fonte: calendario ufficiale IPF)
 * Europei giovanili e junior Classic (EPF) — Kranjska Gora, Slovenia, 3-13 dicembre 2026
 * Europei Masters Classic (EPF) — St Julians, Malta, 31 gennaio-7 febbraio 2027
 * Europei Open Classic (EPF) — Malmö, Svezia, 8-14 marzo 2027
@@ -67,7 +68,7 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 
 ## SCARTATI
 
-## GIÀ PUBBLICATI (9)
+## GIÀ PUBBLICATI (10)
 
 * \[x] https://www.instagram.com/p/Ddf-0MRF7p0/ (2026-09-30, genetica-high-low-responder)
 * \[x] https://www.instagram.com/p/Dd6ncPLF7mI/ (2026-10-01, proteine-in-definizione)
@@ -78,3 +79,4 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 * \[x] https://www.instagram.com/p/Dd1cvUmkUS7/ (2026-10-02, creatina-senza-allenamento-over-45)
 * \[x] https://www.instagram.com/p/DdG7bRRkSUN/ (2026-10-02, riso-raffreddato-amido-resistente)
 * \[x] tema: EVENTO Mr. Olympia 2026 (2026-10-03, mr-olympia-2026-nick-walker-risultati)
+* \[x] https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/ (2026-10-04, cbl-514-farmaco-grasso-sottocutaneo)

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CBL-514: what the fat-dissolving injection really does | Nurvan</title>
+<meta name="description" content="CBL-514 kills fat cells with an injection. Here is what the published phase 2 and 2b trials actually show, the limits, and what is still unproven.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Nutrition</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Get the app</a></div></header>
+<main class="wrap" lang="en">
+<div class="crumb">Blog · Health · Body composition</div>
+<h1>CBL-514, the drug that kills fat cells: what is proven and what is not</h1>
+<p class="lede">In late September 2026, an experimental drug that destroys fat cells with an injection was presented at Europe&#x27;s main diabetes congress. Headlines called it liposuction in a syringe and a new weight-loss drug. The published trials say something more specific, and in part something different.</p>
+<div class="meta"><span>4 October 2026</span><span><b>11</b> min read</span><span><b>6</b> studies cited</span><span>By <a href="/autore/giammaria-loi">Giammaria Loi</a> · updated 4 October 2026</span></div>
+<div class="box"><h2>In short</h2><ul><li>CBL-514 is injected under the skin and triggers apoptosis — programmed death — in adipocytes, the cells that store fat. It is not approved anywhere: it is still experimental.</li><li>The human numbers are real and published. In the phase 2 trial, 69.6% of treated participants lost at least 150 mL of abdominal fat versus 0% on placebo. In phase 2b, 76.7% improved by at least one grade on the clinician scale versus 18.9% on placebo, with a mean 20.3% reduction in fat volume on MRI.</li><li><strong>It is not a weight-loss drug.</strong> The trials treated the abdomen in people with a BMI mostly between 22 and 30, and the primary endpoints were abdominal fat rating scales, not body weight.</li><li>The visceral fat figure (−12% versus +6% on placebo) comes from a conference presentation in 40 participants and has not been peer reviewed yet. Treat it as preliminary.</li><li>The idea that removing fat cells prevents weight regain has only been seen in mice. In humans it is untested, and a meta-analysis shows what actually protects lean mass during a cut is training — roughly half a kilo or more of lean mass kept compared with dieting alone.</li></ul></div>
+<figure class="cover"><img alt="A health worker measuring a man&#x27;s body fat percentage with a bioelectrical impedance device." src="images/cover.jpg" loading="lazy"/>
+<figcaption class="cap">Body composition measurement. Photo: U.S. Marine Corps, public domain.</figcaption></figure>
+<h2>What CBL-514 is and how it works</h2>
+<p>CBL-514 is a small molecule developed by the Taiwanese company Caliway Biopharmaceuticals. It is injected straight into subcutaneous fat, the layer between skin and muscle.</p>
+<p>The stated mechanism is selective apoptosis: the drug pushes the fat cell to die in an orderly way, without the necrosis that would damage surrounding tissue. Across the published trials no necrosis or nerve injury was observed, and the most common side effects were injection-site reactions — pain, redness, swelling — mild to moderate and temporary.</p>
+<figure><img alt="Adipose tissue under the microscope: the cells appear as large round vacuoles with thin walls." src="images/cellule-adipose-microscopio.jpg" loading="lazy"/>
+<figcaption class="cap">Adipose tissue under the microscope: adipocytes are the large round cells. Photo: Veeresh likhitha, Wikimedia Commons, CC BY-SA 4.0.</figcaption></figure>
+<p>One number almost no headline carries. A landmark 2008 <em>Nature</em> paper showed that <strong>the number of fat cells in an adult is essentially fixed</strong>: it stays constant in lean and obese people alike, even after major weight loss, because it is set during childhood and adolescence. About 10% of those cells are renewed every year, though. That is why destroying them was proposed as a drug target — and also why the effect is not automatically permanent, since the 10% annual turnover carries on.</p>
+<h2>The human trial numbers</h2>
+<p>Two randomised trials, both published in <em>Aesthetic Surgery Journal</em>, tested the drug on the abdomen.</p>
+<figure><div class="chart"><svg aria-label="Bar chart: in phase 2, 69.6% of CBL-514 participants lost at least 150 mL of fat versus 0% on placebo; in phase 2b, 76.7% improved by at least one grade versus 18.9% on placebo." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="500" fill="#0c0c0c"/>
+<text x="72" y="36" fill="#f0f0f0" font-size="21" font-weight="700">How many participants responded to CBL-514</text>
+<rect x="72" y="54" width="13" height="13" fill="#d4af37"/><text x="92" y="65" fill="#a0a0a0" font-size="13">CBL-514</text>
+<rect x="192" y="54" width="13" height="13" fill="#aa8a2e" opacity="0.55"/><text x="212" y="65" fill="#a0a0a0" font-size="13">Placebo</text>
+<line x1="72" y1="382.0" x2="832" y2="382.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="386.0" fill="#a0a0a0" font-size="12" text-anchor="end">0%</text>
+<line x1="72" y1="322.8" x2="832" y2="322.8" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="326.8" fill="#a0a0a0" font-size="12" text-anchor="end">20%</text>
+<line x1="72" y1="263.6" x2="832" y2="263.6" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="267.6" fill="#a0a0a0" font-size="12" text-anchor="end">40%</text>
+<line x1="72" y1="204.4" x2="832" y2="204.4" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="208.4" fill="#a0a0a0" font-size="12" text-anchor="end">60%</text>
+<line x1="72" y1="145.2" x2="832" y2="145.2" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="149.2" fill="#a0a0a0" font-size="12" text-anchor="end">80%</text>
+<line x1="72" y1="86.0" x2="832" y2="86.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="90.0" fill="#a0a0a0" font-size="12" text-anchor="end">100%</text>
+<text x="18" y="234" fill="#a0a0a0" font-size="12" text-anchor="middle" transform="rotate(-90 18 234)">% of participants</text>
+<rect x="179.0" y="176.0" width="74" height="206.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="216.0" y="167.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">69.6%</text>
+<text x="308.0" y="373.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">0.0%</text>
+<text x="262.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">Phase 2 — ≥150 mL fat loss</text>
+<rect x="559.0" y="155.0" width="74" height="227.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="596.0" y="146.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">76.7%</text>
+<rect x="651.0" y="326.1" width="74" height="55.9" fill="#aa8a2e" opacity="0.55" rx="3"/>
+<text x="688.0" y="317.1" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">18.9%</text>
+<text x="642.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">Phase 2b — ≥1 grade</text>
+<text x="642.0" y="423" fill="#f0f0f0" font-size="13" text-anchor="middle">improvement</text>
+<line x1="72" y1="382" x2="832" y2="382" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="72" y="468" fill="#a0a0a0" font-size="11">Data: Gold et al. 2025 (phase 2, n=76) and Lorenc et al. 2026 (phase 2b, n=108), Aesthetic</text>
+<text x="72" y="482" fill="#a0a0a0" font-size="11">Surgery Journal. Nurvan chart.</text>
+</svg></div>
+<figcaption class="cap">Response to CBL-514 in the phase 2 and 2b trials — Data: Gold et al. 2025 and Lorenc et al. 2026. Nurvan chart.</figcaption></figure>
+<p>In the <strong>phase 2</strong> trial (76 participants, randomised 2:1, up to four treatments every four weeks), at eight weeks after the final treatment 69.6% of the drug group had lost at least 150 mL of subcutaneous fat on ultrasound, compared with nobody on placebo. Another 60.9% cleared the 200 mL threshold, and 12 of 28 responders got there after a single treatment.</p>
+<p>In the <strong>phase 2b</strong> trial (108 adults with moderate to severe abdominal fat, randomised 1:1, up to four treatments three weeks apart), 76.7% of the drug group improved by at least one grade on the clinician-reported scale versus 18.9% on placebo. MRI estimated a mean reduction in abdominal fat volume of 152.9 mL, or 20.3%.</p>
+<p>Two caveats change how you read this. First, both trials are <strong>single blind</strong>: participants did not know what they received, but investigators did — a weaker design than double blind when the outcome is a visual rating scale. Second, several authors are employees of Caliway, the company developing the drug, which also sponsored the studies. That is not an accusation, it is the standard setting for a drug in development: it means larger, independent confirmation is still needed.</p>
+<p>On larger trials: the late-September news reported that phase 3 was &quot;being designed&quot;. <strong>It has already started.</strong> On 23 September 2026 Caliway announced the first patient dosed in SUPREME-01, a global pivotal randomised double-blind trial in roughly 320 participants across the United States and Canada. No results yet.</p>
+<h2>The visceral fat finding</h2>
+<p>What was presented in Milan at the European Association for the Study of Diabetes congress, between 28 September and 2 October 2026, is a different study: 40 participants with a BMI of 22 to 30, dosed up to 600 mg, with the focus on visceral fat — the fat around the organs, the one most tied to cardiovascular risk and insulin resistance.</p>
+<p>After a month, visceral fat was down an average 12% in the treated group and up 6% on placebo; at the later check the reduction was around 10% against an increase of almost 12%.</p>
+<p>Interesting numbers, but read them for what they are: <strong>conference data, in 40 people, not yet peer reviewed.</strong> A congress abstract has not passed the same filter as a journal article, and figures routinely shift in the final version. Until then it is a promising signal, not an established result.</p>
+<h2>What the research actually says</h2>
+<div class="verdict">
+<div class="v"><span class="pill no">Busted</span><p><strong>&quot;It is a weight-loss drug.&quot;</strong> The published trials target abdominal subcutaneous fat reduction and aesthetic rating scales, in people whose BMI is mostly normal or slightly high. Body weight is not the measured outcome. This is a drug for localised fat, not for obesity.</p></div>
+<div class="v"><span class="pill ok">Confirmed</span><p><strong>&quot;Around 70% lost at least 150 mL of fat versus 0% on placebo.&quot;</strong> , in the phase 2 trial published in 2025.</p></div>
+<div class="v"><span class="pill ok">Confirmed</span><p><strong>&quot;More than 75% improved by at least one grade on the abdominal fat scale.&quot;</strong> , in phase 2b: 76.7% versus 18.9%.</p></div>
+<div class="v"><span class="pill part">Nuance</span><p><strong>&quot;It works like liposuction.&quot;</strong> The mean volume reduction on MRI is 20.3% in the treated area: real, but a different order of magnitude from surgery, confined to the abdomen and spread over several sessions. No trial has compared the drug with liposuction head to head.</p></div>
+<div class="v"><span class="pill nv">Not verifiable</span><p><strong>&quot;It also cuts visceral fat.&quot;</strong> The data exist but come from a congress, in 40 people, without peer-reviewed publication.</p></div>
+<div class="v"><span class="pill part">Nuance</span><p><strong>&quot;It stops weight regain after you quit GLP-1 drugs.&quot;</strong> It has not been tested in humans. What we do know in humans points the other way: in SURMOUNT-4, published in <em>JAMA</em>, people who stopped tirzepatide regained an average 14% of body weight over 52 weeks, while those who continued lost a further 5.5%.</p></div>
+<div class="v"><span class="pill nv">Out of date</span><p><strong>&quot;Phase 3 has yet to begin.&quot;</strong> It began on 23 September 2026.</p></div>
+</div>
+<h2>How to apply this</h2>
+<p>CBL-514 is not on sale, not approved, and not part of any decision you can make today. The useful question is a different one: what works in the meantime for body composition?</p>
+<figure><img alt="A man performing a barbell deadlift in a gym." src="images/stacco-palestra-forza.jpg" loading="lazy"/>
+<figcaption class="cap">Strength work is the variable that protects lean mass when calories drop. Photo: Nenad Stojkovic, Wikimedia Commons, CC BY 2.0.</figcaption></figure>
+<ol class="steps" start="1"><li><strong>Train while you cut, not just afterwards.</strong> A 2026 network meta-analysis of 34 randomised trials and 1,455 participants compared calorie restriction alone with calorie restriction plus exercise: training prevented an average 45.7% of the fat-free mass that would otherwise be lost. The largest effect came from mixed training (strength plus cardio, +1.20 kg over diet alone), followed by strength alone (+0.83 kg).</li></ol>
+<figure><div class="chart"><svg aria-label="Bar chart: compared with diet alone, mixed training keeps 1.20 kg more lean mass, strength alone 0.83 kg, cardio alone 0.51 kg (not significant)." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="420" fill="#0c0c0c"/>
+<text x="24" y="36" fill="#f0f0f0" font-size="21" font-weight="700">Lean mass saved by training in a calorie deficit</text>
+<line x1="150.0" y1="78" x2="150.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="150.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.0</text>
+<line x1="241.4" y1="78" x2="241.4" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="241.4" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.2</text>
+<line x1="332.9" y1="78" x2="332.9" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="332.9" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.4</text>
+<line x1="424.3" y1="78" x2="424.3" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="424.3" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.6</text>
+<line x1="515.7" y1="78" x2="515.7" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="515.7" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.8</text>
+<line x1="607.1" y1="78" x2="607.1" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="607.1" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.0</text>
+<line x1="698.6" y1="78" x2="698.6" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="698.6" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.2</text>
+<line x1="790.0" y1="78" x2="790.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="790.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.4</text>
+<rect x="150" y="105.0" width="548.6" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="133.0" fill="#f0f0f0" font-size="14" text-anchor="end">Strength + cardio</text>
+<text x="708.6" y="133.0" fill="#f3e5ab" font-size="16" font-weight="700">+1.20 kg</text>
+<rect x="150" y="178.0" width="379.4" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="206.0" fill="#f0f0f0" font-size="14" text-anchor="end">Strength only</text>
+<text x="539.4" y="206.0" fill="#f3e5ab" font-size="16" font-weight="700">+0.83 kg</text>
+<rect x="150" y="251.0" width="233.1" height="46" fill="#aa8a2e" opacity="0.5" rx="3"/>
+<text x="138" y="279.0" fill="#f0f0f0" font-size="14" text-anchor="end">Cardio only</text>
+<text x="393.1" y="279.0" fill="#f3e5ab" font-size="16" font-weight="700">+0.51 kg</text>
+<text x="393.1" y="296.0" fill="#a0a0a0" font-size="11">not significant</text>
+<line x1="150" y1="78" x2="150" y2="324" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="470" y="368" fill="#a0a0a0" font-size="12" text-anchor="middle">kg of lean mass gained over diet alone</text>
+<text x="24" y="394" fill="#a0a0a0" font-size="11">Data: Deller et al. 2026, network meta-analysis of 34 randomised trials, 1,455 participants.</text>
+<text x="24" y="408" fill="#a0a0a0" font-size="11">Nurvan chart.</text>
+</svg></div>
+<figcaption class="cap">Lean mass kept compared with calorie restriction alone — Data: Deller et al. 2026. Nurvan chart.</figcaption></figure>
+<ol class="steps" start="2"><li><strong>Do not overshoot the deficit.</strong> A meta-regression of resistance training under energy restriction estimated that a deficit of around 500 kcal per day is the point beyond which you stop gaining lean mass even while lifting. If you are building, avoid prolonged deficits; if you are only preserving, stay under that line.</li><li><strong>Keep protein high.</strong> It is the nutrition lever with the most support when calories drop — covered in detail in our article on <a href="/blog/protein-intake-cutting">protein intake while cutting</a>.</li><li><strong>Measure, do not eyeball.</strong> Weight, girths and the loads you lift over time tell you whether you are losing fat or muscle too. In the mirror the two blur together.</li><li><strong>You do not get to choose where the fat goes.</strong> No exercise burns the fat over the muscle it trains. Where you lose first is largely genetics and hormones — a theme we covered in <a href="/blog/genetics-high-low-responders">high and low responders</a>.</li></ol>
+<p>The figures above are ranges and averages observed in studies, not a prescription. If you have a medical condition, take medication or follow a diet on medical advice, talk to your doctor before changing anything.</p>
+<div class="app"><div><h3>Nurvan — body composition shows up in the time series</h3><p>Two kilos down can be fat, water or muscle: you only know by reading weight, measurements and loads together over time. Nurvan logs measurements and body weight alongside the load, reps and RIR of every session, and the nutrition side runs on the official CREA food database — so you can see whether your deficit is costing you fat or strength.</p></div><a class="cta" href="https://nurvan.app">Try Nurvan</a></div>
+<h2>Frequently asked questions</h2>
+<details><summary>Is CBL-514 available yet?</summary><p>No. It is not approved in any country. It is still in trials: the phase 2 and 2b studies are published, and the phase 3 SUPREME-01 trial dosed its first patient on 23 September 2026.</p></details>
+<details><summary>Does CBL-514 make you lose weight?</summary><p>That is not its purpose. The published trials measure abdominal subcutaneous fat reduction in people of normal or slightly elevated weight, not body weight loss.</p></details>
+<details><summary>How is it different from Ozempic or Mounjaro?</summary><p>GLP-1 drugs act on appetite and metabolism and reduce weight across the whole body; CBL-514 is injected into one area and acts locally on the fat cells there. Different categories, with different indications, risks and levels of evidence.</p></details>
+<details><summary>If the fat cells die, is the result permanent?</summary><p>Nobody knows. Adipocyte numbers are stable in adults, but about 10% are renewed every year, and no published trial has followed patients long enough to answer. Caliway has announced a dedicated long-term follow-up phase 3 study.</p></details>
+<details><summary>Can it replace diet and training?</summary><p>No data suggests so. The trials cover one area of the body over a few weeks, while weight and body composition over the medium term depend on nutrition, strength work and consistency.</p></details>
+<h2>Read next</h2>
+<ul><li><a href="/blog/protein-intake-cutting">Protein intake while cutting: how much you actually need</a> — the range that protects lean mass when calories drop.</li><li><a href="/blog/cooled-rice-resistant-starch">Cooled rice and resistant starch: how much it really saves</a> — the real numbers behind a viral trick.</li><li><a href="/blog/genetics-high-low-responders">High and low responders: how much genetics decides</a> — why the same programme gives different people different results.</li></ul>
+<h2>Sources</h2>
+<ol class="refs"><li>Gold M, Schlessinger J, Goodman GJ, Dayan S, DuBois J, Ling YF, Sheu AY, Ho WWS, Chou YC, 2025. <em>Efficacy and Safety of CBL-514 Injection in Reducing Abdominal Subcutaneous Fat: A Randomized, Single-Blind, Placebo-Controlled Phase II Study.</em> Aesthetic Surgery Journal 45(6):611-620. PMID 40037659 — <a href="https://doi.org/10.1093/asj/sjaf032">DOI</a></li><li>Lorenc ZP, Gold M, Schlessinger J, Lain ET, Smith S, Downie J, Cox SE, Ling YF, Sheu AY, Lu CY, Chou YC, 2026. <em>Randomized Phase 2b Trial of CBL-514 Injection for Abdominal Subcutaneous Fat Reduction With Clinician- and Patient-reported Outcomes and MRI Assessment.</em> Aesthetic Surgery Journal. PMID 42159040 — <a href="https://doi.org/10.1093/asj/sjag092">DOI</a></li><li>Spalding KL, Arner E, Westermark PO, Bernard S, Buchholz BA, Bergmann O, Blomqvist L, Hoffstedt J, Näslund E, Britton T, Concha H, Hassan M, Rydén M, Frisén J, Arner P, 2008. <em>Dynamics of fat cell turnover in humans.</em> Nature 453(7196):783-787. PMID 18454136 — <a href="https://doi.org/10.1038/nature06902">DOI</a></li><li>Aronne LJ, Sattar N, Horn DB, Bays HE, Wharton S, Lin WY, Ahmad NN, Zhang S, Liao R, Bunck MC, Jouravskaya I, Murphy MA, 2024. <em>Continued Treatment With Tirzepatide for Maintenance of Weight Reduction in Adults With Obesity: The SURMOUNT-4 Randomized Clinical Trial.</em> JAMA 331(1):38-48. PMID 38078870 — <a href="https://doi.org/10.1001/jama.2023.24945">DOI</a></li><li>Deller M, Weiershaus J, Held S, Brinkmann C, 2026. <em>Effects of Calorie Restriction With and Without Strength, Endurance or Mixed Training on Fat-Free and Skeletal Muscle Mass in Overweight or Obese Individuals — A Systematic Review With Pairwise Meta-Analysis and Network Meta-Analysis of Randomized Controlled Studies.</em> Diabetes, Obesity and Metabolism 28(8):6810-6823. PMID 42144246 — <a href="https://doi.org/10.1111/dom.70873">DOI</a></li><li>Murphy C, Koehler K, 2022. <em>Energy deficiency impairs resistance training gains in lean mass but not strength: A meta-analysis and meta-regression.</em> Scandinavian Journal of Medicine &amp; Science in Sports 32(1):125-137. PMID 34623696 — <a href="https://doi.org/10.1111/sms.14075">DOI</a></li></ol>
+<p>Scientific sources retrieved from PubMed. The status of the SUPREME-01 phase 3 trial was verified against <a href="https://www.caliwaybiopharma.com/en/news-detail/-CBL-514-SUPREME-01-FPI-ObesityWeek-2026-ENG/">Caliway Biopharmaceuticals&#x27; official release of 23 September 2026</a>, accessed 4 October 2026. The visceral fat figures come from a presentation at the EASD congress in Milan (28 September–2 October 2026) and have not yet been published in a peer-reviewed journal.</p>
+<p>Starting point: an article by Andrea Centini on <a href="https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/">Fanpage</a>, 2 October 2026. The text, structure and fact-checking in this article are original.</p>
+<p><strong>Giammaria Loi</strong> is the founder of Nurvan. He has been lifting since 2012, has worked as a FIPE-certified personal trainer and coach since 2013, and has competed in powerlifting at national level since 2018. Every article he writes starts from the research and ends with what actually works in the gym.</p>
+<p class="note">Note: this is educational content and does not replace medical advice. CBL-514 is an unapproved experimental drug: nothing here should be read as a treatment recommendation.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

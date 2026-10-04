@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CBL-514: что на самом деле делает укол от жира | Nurvan</title>
+<meta name="description" content="CBL-514 разрушает жировые клетки инъекцией. Что показали исследования фазы 2 и 2b, где их границы и почему данные по висцеральному жиру пока не доказаны.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Здоровье · Состав тела</div>
+<h1>CBL-514, препарат, который убивает жировые клетки: что доказано, а что нет</h1>
+<p class="lede">В конце сентября 2026 года на европейском конгрессе по диабету представили экспериментальный препарат, который убивает жировые клетки инъекцией. Заголовки заговорили о липосакции в шприце и новом средстве для похудения. Опубликованные исследования говорят точнее — и отчасти другое.</p>
+<div class="meta"><span>4 октября 2026</span><span><b>10</b> мин чтения</span><span><b>6</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 4 октября 2026</span></div>
+<div class="box"><h2>Коротко</h2><ul><li>CBL-514 вводят под кожу, он запускает апоптоз — запрограммированную гибель адипоцитов, клеток, которые хранят жир. Препарат нигде не одобрен: он всё ещё в разработке.</li><li>Цифры по людям реальны и опубликованы. В фазе 2 69,6% получавших препарат потеряли не менее 150 мл жира на животе против 0% в группе плацебо. В фазе 2b 76,7% улучшились минимум на одну степень по врачебной шкале против 18,9% на плацебо, при среднем снижении объёма жира на 20,3% по МРТ.</li><li><strong>Это не препарат для похудения.</strong> В исследованиях лечили живот у людей с ИМТ в основном от 22 до 30, а главными конечными точками были шкалы оценки абдоминального жира, а не масса тела.</li><li>Данные по висцеральному жиру (−12% против +6% на плацебо) получены из доклада на конгрессе на 40 участниках и ещё не прошли рецензирование: считайте их предварительными.</li><li>Идею, что удаление жировых клеток мешает вернуть вес, пока видели только у мышей. У людей это не проверено, а метаанализ показывает: на дефиците сухую массу реально защищает тренировка — около полкилограмма сухой массы и больше по сравнению с одной диетой.</li></ul></div>
+<figure class="cover"><img alt="Медицинский работник измеряет процент жира у мужчины прибором биоимпедансного анализа." src="images/cover.jpg" loading="lazy"/>
+<figcaption class="cap">Измерение состава тела. Фото: U.S. Marine Corps, общественное достояние.</figcaption></figure>
+<h2>Что такое CBL-514 и как он работает</h2>
+<p>CBL-514 — малая молекула, разработанная тайваньской компанией Caliway Biopharmaceuticals. Её вводят прямо в подкожный жир, слой между кожей и мышцей.</p>
+<p>Заявленный механизм — избирательный апоптоз: препарат заставляет жировую клетку погибнуть «упорядоченно», без некроза, который повредил бы окружающие ткани. В опубликованных исследованиях не наблюдали ни некроза, ни повреждений нервов, а самыми частыми нежелательными явлениями были реакции в месте укола — боль, покраснение, отёк — лёгкие или умеренные и временные.</p>
+<figure><img alt="Жировая ткань под микроскопом: клетки выглядят как крупные круглые вакуоли с тонкими стенками." src="images/cellule-adipose-microscopio.jpg" loading="lazy"/>
+<figcaption class="cap">Жировая ткань под микроскопом: адипоциты — это крупные круглые клетки. Фото: Veeresh likhitha, Wikimedia Commons, CC BY-SA 4.0.</figcaption></figure>
+<p>Есть цифра, которую почти не выносят в заголовки. Классическая работа в <em>Nature</em> 2008 года показала, что <strong>число адипоцитов у взрослого практически постоянно</strong>: оно одинаково стабильно у худых и у людей с ожирением, даже после заметного похудения, потому что задаётся в детстве и подростковом возрасте. При этом около 10% этих клеток обновляется каждый год. Именно поэтому их разрушение предложили как мишень для препарата — и именно поэтому эффект не обязательно вечен: обновление 10% в год продолжается.</p>
+<h2>Цифры исследований на людях</h2>
+<p>Два рандомизированных исследования, оба опубликованные в <em>Aesthetic Surgery Journal</em>, проверяли препарат на животе.</p>
+<figure><div class="chart"><svg aria-label="Столбчатая диаграмма: в фазе 2 69,6% получавших CBL-514 потеряли не менее 150 мл жира против 0% на плацебо; в фазе 2b 76,7% улучшились минимум на одну степень против 18,9% на плацебо." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="500" fill="#0c0c0c"/>
+<text x="72" y="36" fill="#f0f0f0" font-size="21" font-weight="700">Сколько участников ответили на CBL-514</text>
+<rect x="72" y="54" width="13" height="13" fill="#d4af37"/><text x="92" y="65" fill="#a0a0a0" font-size="13">CBL-514</text>
+<rect x="192" y="54" width="13" height="13" fill="#aa8a2e" opacity="0.55"/><text x="212" y="65" fill="#a0a0a0" font-size="13">Плацебо</text>
+<line x1="72" y1="382.0" x2="832" y2="382.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="386.0" fill="#a0a0a0" font-size="12" text-anchor="end">0%</text>
+<line x1="72" y1="322.8" x2="832" y2="322.8" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="326.8" fill="#a0a0a0" font-size="12" text-anchor="end">20%</text>
+<line x1="72" y1="263.6" x2="832" y2="263.6" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="267.6" fill="#a0a0a0" font-size="12" text-anchor="end">40%</text>
+<line x1="72" y1="204.4" x2="832" y2="204.4" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="208.4" fill="#a0a0a0" font-size="12" text-anchor="end">60%</text>
+<line x1="72" y1="145.2" x2="832" y2="145.2" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="149.2" fill="#a0a0a0" font-size="12" text-anchor="end">80%</text>
+<line x1="72" y1="86.0" x2="832" y2="86.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="90.0" fill="#a0a0a0" font-size="12" text-anchor="end">100%</text>
+<text x="18" y="234" fill="#a0a0a0" font-size="12" text-anchor="middle" transform="rotate(-90 18 234)">% участников</text>
+<rect x="179.0" y="176.0" width="74" height="206.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="216.0" y="167.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">69,6%</text>
+<text x="308.0" y="373.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">0,0%</text>
+<text x="262.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">Фаза 2 — потеря ≥150 мл</text>
+<text x="262.0" y="423" fill="#f0f0f0" font-size="13" text-anchor="middle">жира</text>
+<rect x="559.0" y="155.0" width="74" height="227.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="596.0" y="146.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">76,7%</text>
+<rect x="651.0" y="326.1" width="74" height="55.9" fill="#aa8a2e" opacity="0.55" rx="3"/>
+<text x="688.0" y="317.1" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">18,9%</text>
+<text x="642.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">Фаза 2b — улучшение ≥1</text>
+<text x="642.0" y="423" fill="#f0f0f0" font-size="13" text-anchor="middle">степени</text>
+<line x1="72" y1="382" x2="832" y2="382" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="72" y="468" fill="#a0a0a0" font-size="11">Данные: Gold et al. 2025 (фаза 2, n=76) и Lorenc et al. 2026 (фаза 2b, n=108), Aesthetic Surgery</text>
+<text x="72" y="482" fill="#a0a0a0" font-size="11">Journal. График Nurvan.</text>
+</svg></div>
+<figcaption class="cap">Ответ на CBL-514 в исследованиях фазы 2 и 2b — Данные: Gold et al. 2025 и Lorenc et al. 2026. График Nurvan.</figcaption></figure>
+<p>В исследовании <strong>фазы 2</strong> (76 участников, рандомизация 2:1, до четырёх процедур каждые четыре недели) через восемь недель после последней процедуры 69,6% группы препарата потеряли не менее 150 мл подкожного жира по УЗИ — в группе плацебо никто. Ещё 60,9% перешли порог в 200 мл, а 12 из 28 ответивших добились результата после одной процедуры.</p>
+<p>В исследовании <strong>фазы 2b</strong> (108 взрослых с умеренным и выраженным абдоминальным жиром, рандомизация 1:1, до четырёх процедур с интервалом в три недели) 76,7% группы препарата улучшились минимум на одну степень по шкале, оцениваемой врачом, против 18,9% на плацебо. МРТ оценила среднее снижение объёма абдоминального жира в 152,9 мл, то есть 20,3%.</p>
+<p>Две оговорки меняют прочтение. Первая: оба исследования <strong>простые слепые</strong> — участники не знали, что получают, а исследователи знали. Это более слабый дизайн, чем двойное ослепление, когда исход измеряется визуальной шкалой. Вторая: несколько авторов работают в Caliway, компании-разработчике, которая и финансировала исследования. Это не обвинение, а обычный контекст препарата в разработке: нужны более крупные и независимые подтверждения.</p>
+<p>Кстати о более крупных исследованиях: новость конца сентября сообщала, что фаза 3 «планируется». <strong>Она уже началась.</strong> 23 сентября 2026 года Caliway объявила о первом пролеченном пациенте в SUPREME-01 — глобальном регистрационном рандомизированном двойном слепом исследовании примерно на 320 участников в США и Канаде. Результатов пока нет.</p>
+<h2>Данные по висцеральному жиру</h2>
+<p>То, что представили в Милане на конгрессе European Association for the Study of Diabetes с 28 сентября по 2 октября 2026 года, — другое исследование: 40 участников с ИМТ от 22 до 30, дозы до 600 мг, фокус на висцеральном жире — том, что окружает органы и сильнее всего связан с сердечно-сосудистым риском и инсулинорезистентностью.</p>
+<p>Через месяц висцеральный жир в среднем снизился на 12% в группе препарата и вырос на 6% на плацебо; на более позднем контроле снижение составляло около 10% против роста почти на 12%.</p>
+<p>Цифры интересные, но читать их надо как есть: <strong>данные конгресса, на 40 людях, ещё без рецензирования.</strong> Тезисы доклада не прошли тот же фильтр, что статья в журнале, и числа регулярно меняются в финальной версии. До тех пор это многообещающий сигнал, а не установленный результат.</p>
+<h2>Что на самом деле говорит наука</h2>
+<div class="verdict">
+<div class="v"><span class="pill no">Опровергнуто</span><p><strong>«Это препарат для похудения».</strong> Опубликованные исследования нацелены на уменьшение подкожного жира живота и на эстетические шкалы оценки, у людей с преимущественно нормальным или слегка повышенным ИМТ. Масса тела не измеряемый исход. Это препарат для локального жира, а не для ожирения.</p></div>
+<div class="v"><span class="pill ok">Подтверждено</span><p><strong>«Около 70% теряют не менее 150 мл жира против 0% на плацебо».</strong> в исследовании фазы 2, опубликованном в 2025 году.</p></div>
+<div class="v"><span class="pill ok">Подтверждено</span><p><strong>«Больше 75% улучшаются минимум на одну степень по шкале абдоминального жира».</strong> в фазе 2b: 76,7% против 18,9%.</p></div>
+<div class="v"><span class="pill part">Уточнение</span><p><strong>«Эффект как от липосакции».</strong> Среднее снижение объёма по МРТ — 20,3% в обработанной зоне: реально, но это другой порядок величины по сравнению с операцией, ограничено животом и достигается за несколько процедур. Прямого сравнения препарата с липосакцией не делал никто.</p></div>
+<div class="v"><span class="pill nv">Не проверено</span><p><strong>«Он снижает и висцеральный жир».</strong> Данные есть, но они с конгресса, на 40 людях, без рецензируемой публикации.</p></div>
+<div class="v"><span class="pill part">Уточнение</span><p><strong>«Он мешает вернуть вес после отмены GLP-1».</strong> У людей это не проверяли. То, что мы знаем о людях, говорит об обратном: в исследовании SURMOUNT-4, опубликованном в <em>JAMA</em>, те, кто прекратил тирзепатид, за 52 недели вернули в среднем 14% массы тела, а продолжившие потеряли ещё 5,5%.</p></div>
+<div class="v"><span class="pill nv">Устарело</span><p><strong>«Фаза 3 ещё не начата».</strong> Она началась 23 сентября 2026 года.</p></div>
+</div>
+<h2>Как это применить</h2>
+<p>CBL-514 нельзя купить, он не одобрен и не касается ни одного решения, которое вы можете принять сегодня. Полезный вопрос другой: что работает для состава тела прямо сейчас?</p>
+<figure><img alt="Мужчина выполняет становую тягу со штангой в зале." src="images/stacco-palestra-forza.jpg" loading="lazy"/>
+<figcaption class="cap">Силовая работа — та переменная, которая защищает сухую массу при снижении калорий. Фото: Nenad Stojkovic, Wikimedia Commons, CC BY 2.0.</figcaption></figure>
+<ol class="steps" start="1"><li><strong>Тренируйтесь во время дефицита, а не только после.</strong> Сетевой метаанализ 2026 года по 34 рандомизированным исследованиям и 1455 участникам сравнил одну только ограничительную диету с диетой плюс тренировки: тренировки предотвратили в среднем 45,7% потери безжировой массы. Самый большой эффект у смешанных тренировок (сила плюс кардио, +1,20 кг по сравнению с одной диетой), затем только сила (+0,83 кг).</li></ol>
+<figure><div class="chart"><svg aria-label="Столбчатая диаграмма: по сравнению с одной диетой смешанные тренировки сохраняют на 1,20 кг больше сухой массы, только сила — 0,83 кг, только кардио — 0,51 кг (незначимо)." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="420" fill="#0c0c0c"/>
+<text x="24" y="36" fill="#f0f0f0" font-size="21" font-weight="700">Сколько сухой массы сохраняет тренировка</text>
+<line x1="150.0" y1="78" x2="150.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="150.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0,0</text>
+<line x1="241.4" y1="78" x2="241.4" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="241.4" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0,2</text>
+<line x1="332.9" y1="78" x2="332.9" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="332.9" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0,4</text>
+<line x1="424.3" y1="78" x2="424.3" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="424.3" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0,6</text>
+<line x1="515.7" y1="78" x2="515.7" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="515.7" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0,8</text>
+<line x1="607.1" y1="78" x2="607.1" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="607.1" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1,0</text>
+<line x1="698.6" y1="78" x2="698.6" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="698.6" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1,2</text>
+<line x1="790.0" y1="78" x2="790.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="790.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1,4</text>
+<rect x="150" y="105.0" width="548.6" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="133.0" fill="#f0f0f0" font-size="14" text-anchor="end">Сила + кардио</text>
+<text x="708.6" y="133.0" fill="#f3e5ab" font-size="16" font-weight="700">+1,20 kg</text>
+<rect x="150" y="178.0" width="379.4" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="206.0" fill="#f0f0f0" font-size="14" text-anchor="end">Только сила</text>
+<text x="539.4" y="206.0" fill="#f3e5ab" font-size="16" font-weight="700">+0,83 kg</text>
+<rect x="150" y="251.0" width="233.1" height="46" fill="#aa8a2e" opacity="0.5" rx="3"/>
+<text x="138" y="279.0" fill="#f0f0f0" font-size="14" text-anchor="end">Только кардио</text>
+<text x="393.1" y="279.0" fill="#f3e5ab" font-size="16" font-weight="700">+0,51 kg</text>
+<text x="393.1" y="296.0" fill="#a0a0a0" font-size="11">незначимо</text>
+<line x1="150" y1="78" x2="150" y2="324" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="470" y="368" fill="#a0a0a0" font-size="12" text-anchor="middle">кг сухой массы сверх одной диеты</text>
+<text x="24" y="394" fill="#a0a0a0" font-size="11">Данные: Deller et al. 2026, сетевой метаанализ 34 РКИ, 1455 участников. График Nurvan.</text>
+</svg></div>
+<figcaption class="cap">Сохранённая сухая масса по сравнению с одной ограничительной диетой — Данные: Deller et al. 2026. График Nurvan.</figcaption></figure>
+<ol class="steps" start="2"><li><strong>Не перебарщивайте с дефицитом.</strong> Метарегрессия по силовым тренировкам при ограничении энергии оценила, что дефицит около 500 ккал в день — та граница, за которой сухая масса перестаёт расти даже при тренировках. Хотите набирать мышцы — избегайте длительных дефицитов; хотите только сохранить — держитесь ниже этой линии.</li><li><strong>Держите белок высоким.</strong> Это нутритивный рычаг с лучшей доказательной базой при снижении калорий: подробно в статье о <a href="/blog/belok-na-sushke">белке на сушке</a>.</li><li><strong>Измеряйте, а не оценивайте на глаз.</strong> Вес, обхваты и поднимаемые веса во времени покажут, теряете ли вы жир или ещё и мышцы. В зеркале эти два процесса сливаются.</li><li><strong>Локальный жир не выбирают.</strong> Ни одно упражнение не сжигает жир над мышцей, которую тренирует. Где вы теряете первым, во многом зависит от генетики и гормонов — об этом мы писали в материале о <a href="/blog/genetika-high-low-responder">high и low responder</a>.</li></ol>
+<p>Цифры выше — диапазоны и средние из исследований, а не назначение. Если у вас есть заболевания, вы принимаете лекарства или соблюдаете диету по назначению врача, обсудите изменения с врачом.</p>
+<div class="app"><div><h3>Nurvan — состав тела виден в динамике</h3><p>Минус два килограмма — это может быть жир, вода или мышцы: понять можно, только сопоставляя вес, замеры и рабочие веса во времени. Nurvan записывает замеры и вес рядом с нагрузкой, повторениями и RIR каждой тренировки, а раздел питания работает на официальной базе продуктов CREA — так видно, забирает ли дефицит жир или ещё и силу.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>CBL-514 уже продаётся?</summary><p>Нет. Он не одобрен ни в одной стране. Он всё ещё в исследованиях: работы фазы 2 и 2b опубликованы, а в исследовании фазы 3 SUPREME-01 первого пациента пролечили 23 сентября 2026 года.</p></details>
+<details><summary>CBL-514 помогает похудеть?</summary><p>Это не его задача. Опубликованные исследования измеряют уменьшение подкожного жира живота у людей с нормальным или слегка повышенным весом, а не потерю массы тела.</p></details>
+<details><summary>Чем он отличается от «Оземпика» или «Мунджаро»?</summary><p>Препараты GLP-1 действуют на аппетит и обмен и снижают вес по всему телу; CBL-514 вводят в одну зону, и он действует локально на жировые клетки этой зоны. Это разные категории с разными показаниями, рисками и уровнем доказательности.</p></details>
+<details><summary>Если жировые клетки погибли, результат навсегда?</summary><p>Неизвестно. Число адипоцитов у взрослых стабильно, но около 10% обновляется каждый год, и ни одно опубликованное исследование не наблюдало пациентов достаточно долго. Caliway объявила об отдельном исследовании фазы 3 для долгосрочного наблюдения.</p></details>
+<details><summary>Может ли он заменить питание и тренировки?</summary><p>Данных об этом нет. Исследования охватывают одну зону тела и несколько недель, тогда как вес и состав тела в среднесрочной перспективе зависят от питания, силовой работы и постоянства.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/blog/belok-na-sushke">Белок на сушке: сколько нужно на самом деле</a> — диапазон, который защищает сухую массу при снижении калорий.</li><li><a href="/blog/ohlazhdennyy-ris-rezistentnyy-krahmal">Охлаждённый рис: сколько даёт резистентный крахмал</a> — реальные цифры за вирусным лайфхаком.</li><li><a href="/blog/genetika-high-low-responder">Low responder: насколько генетика определяет рост мышц</a> — почему одна и та же программа даёт разным людям разный результат.</li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>Gold M, Schlessinger J, Goodman GJ, Dayan S, DuBois J, Ling YF, Sheu AY, Ho WWS, Chou YC, 2025. <em>Efficacy and Safety of CBL-514 Injection in Reducing Abdominal Subcutaneous Fat: A Randomized, Single-Blind, Placebo-Controlled Phase II Study.</em> Aesthetic Surgery Journal 45(6):611-620. PMID 40037659 — <a href="https://doi.org/10.1093/asj/sjaf032">DOI</a></li><li>Lorenc ZP, Gold M, Schlessinger J, Lain ET, Smith S, Downie J, Cox SE, Ling YF, Sheu AY, Lu CY, Chou YC, 2026. <em>Randomized Phase 2b Trial of CBL-514 Injection for Abdominal Subcutaneous Fat Reduction With Clinician- and Patient-reported Outcomes and MRI Assessment.</em> Aesthetic Surgery Journal. PMID 42159040 — <a href="https://doi.org/10.1093/asj/sjag092">DOI</a></li><li>Spalding KL, Arner E, Westermark PO, Bernard S, Buchholz BA, Bergmann O, Blomqvist L, Hoffstedt J, Näslund E, Britton T, Concha H, Hassan M, Rydén M, Frisén J, Arner P, 2008. <em>Dynamics of fat cell turnover in humans.</em> Nature 453(7196):783-787. PMID 18454136 — <a href="https://doi.org/10.1038/nature06902">DOI</a></li><li>Aronne LJ, Sattar N, Horn DB, Bays HE, Wharton S, Lin WY, Ahmad NN, Zhang S, Liao R, Bunck MC, Jouravskaya I, Murphy MA, 2024. <em>Continued Treatment With Tirzepatide for Maintenance of Weight Reduction in Adults With Obesity: The SURMOUNT-4 Randomized Clinical Trial.</em> JAMA 331(1):38-48. PMID 38078870 — <a href="https://doi.org/10.1001/jama.2023.24945">DOI</a></li><li>Deller M, Weiershaus J, Held S, Brinkmann C, 2026. <em>Effects of Calorie Restriction With and Without Strength, Endurance or Mixed Training on Fat-Free and Skeletal Muscle Mass in Overweight or Obese Individuals — A Systematic Review With Pairwise Meta-Analysis and Network Meta-Analysis of Randomized Controlled Studies.</em> Diabetes, Obesity and Metabolism 28(8):6810-6823. PMID 42144246 — <a href="https://doi.org/10.1111/dom.70873">DOI</a></li><li>Murphy C, Koehler K, 2022. <em>Energy deficiency impairs resistance training gains in lean mass but not strength: A meta-analysis and meta-regression.</em> Scandinavian Journal of Medicine &amp; Science in Sports 32(1):125-137. PMID 34623696 — <a href="https://doi.org/10.1111/sms.14075">DOI</a></li></ol>
+<p>Научные источники найдены в PubMed. Статус исследования фазы 3 SUPREME-01 проверен по <a href="https://www.caliwaybiopharma.com/en/news-detail/-CBL-514-SUPREME-01-FPI-ObesityWeek-2026-ENG/">официальному сообщению Caliway Biopharmaceuticals от 23 сентября 2026 года</a>, просмотрено 4 октября 2026 года. Данные по висцеральному жиру получены из доклада на конгрессе EASD в Милане (28 сентября — 2 октября 2026) и ещё не опубликованы в рецензируемом журнале.</p>
+<p>Отправная точка: статья Andrea Centini на <a href="https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/">Fanpage</a>, 2 октября 2026 года. Текст, структура и проверка фактов в этой статье оригинальные.</p>
+<p><strong>Giammaria Loi</strong> — основатель Nurvan. Занимается с отягощениями с 2012 года, работает персональным тренером и коучем с сертификацией FIPE с 2013 года и выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных работ и заканчивается тем, что действительно работает в зале.</p>
+<p class="note">Примечание: материал носит информационный характер и не заменяет консультацию врача или профильного специалиста. CBL-514 — неодобренный экспериментальный препарат: ничто в этой статье не является рекомендацией по лечению.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="hi" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CBL-514: चर्बी गलाने वाला इंजेक्शन असल में क्या करता है | Nurvan</title>
+<meta name="description" content="CBL-514 एक इंजेक्शन से फैट सेल्स को मारता है। फेज़ 2 और 2b ट्रायल असल में क्या दिखाते हैं, उनकी सीमाएँ क्या हैं और विसरल फैट पर दावा अब तक क्यों साबित नहीं।">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">ट्रेनिंग</a><a href="#">पोषण</a><a href="#">सप्लीमेंट</a><a href="#" class="on">ब्लॉग</a></nav><a class="cta" href="https://nurvan.app">ऐप डाउनलोड करें</a></div></header>
+<main class="wrap" lang="hi">
+<div class="crumb">ब्लॉग · सेहत · बॉडी कंपोज़िशन</div>
+<h1>CBL-514, वह दवा जो फैट सेल्स को मार देती है: क्या साबित है और क्या नहीं</h1>
+<p class="lede">सितंबर 2026 के आख़िर में यूरोप के डायबिटीज़ कॉन्ग्रेस में एक प्रयोगात्मक दवा पेश हुई जो इंजेक्शन से फैट सेल्स को मार देती है। हेडलाइनों ने इसे &quot;सिरिंज में लाइपोसक्शन&quot; और नई वज़न घटाने वाली दवा कहा। प्रकाशित ट्रायल इससे ज़्यादा सटीक और कुछ जगह अलग बात कहते हैं।</p>
+<div class="meta"><span>4 अक्टूबर 2026</span><span><b>12</b> मिनट पढ़ाई</span><span><b>6</b> अध्ययन</span><span>लेखक: <a href="/autore/giammaria-loi">Giammaria Loi</a> · अपडेट 4 अक्टूबर 2026</span></div>
+<div class="box"><h2>संक्षेप में</h2><ul><li>CBL-514 त्वचा के नीचे लगाया जाता है और एडिपोसाइट्स — यानी चर्बी जमा करने वाली कोशिकाओं — में एपोप्टोसिस, यानी नियोजित कोशिका मृत्यु, शुरू करता है। यह किसी भी देश में स्वीकृत नहीं है: अभी परीक्षण के चरण में है।</li><li>इंसानों पर मिले आँकड़े असली और प्रकाशित हैं। फेज़ 2 में 69.6% लोगों ने पेट की कम से कम 150 mL चर्बी घटाई, जबकि प्लेसीबो में 0%। फेज़ 2b में 76.7% ने डॉक्टर के स्केल पर कम से कम एक ग्रेड सुधार दिखाया, प्लेसीबो में 18.9%, और MRI पर फैट वॉल्यूम औसतन 20.3% घटा।</li><li><strong>यह वज़न घटाने की दवा नहीं है।</strong> ट्रायल में पेट का इलाज हुआ, प्रतिभागियों का BMI ज़्यादातर 22 से 30 के बीच था, और मुख्य मापदंड पेट की चर्बी के रेटिंग स्केल थे, शरीर का वज़न नहीं।</li><li>विसरल फैट वाला आँकड़ा (−12% बनाम प्लेसीबो +6%) एक कॉन्फ्रेंस प्रस्तुति से आया है, 40 प्रतिभागियों पर, और अभी पीयर-रिव्यू नहीं हुआ: इसे प्रारंभिक मानें।</li><li>&quot;फैट सेल्स हटा दो तो वज़न वापस नहीं आएगा&quot; यह बात अब तक सिर्फ़ चूहों में देखी गई है। इंसानों में जाँची नहीं गई, और एक मेटा-विश्लेषण बताता है कि कैलोरी घटाते समय लीन मास को असल में ट्रेनिंग बचाती है — सिर्फ़ डाइट की तुलना में लगभग आधा किलो या उससे ज़्यादा लीन मास।</li></ul></div>
+<figure class="cover"><img alt="एक स्वास्थ्यकर्मी बायोइलेक्ट्रिकल इम्पीडेंस उपकरण से एक पुरुष का बॉडी फैट प्रतिशत माप रही है।" src="images/cover.jpg" loading="lazy"/>
+<figcaption class="cap">बॉडी कंपोज़िशन की माप। फोटो: U.S. Marine Corps, सार्वजनिक डोमेन।</figcaption></figure>
+<h2>CBL-514 क्या है और कैसे काम करता है</h2>
+<p>CBL-514 ताइवान की कंपनी Caliway Biopharmaceuticals द्वारा विकसित एक छोटा अणु है। इसे सीधे सबक्यूटेनियस फैट में लगाया जाता है, यानी त्वचा और मांसपेशी के बीच की परत में।</p>
+<p>बताया गया तंत्र चयनात्मक एपोप्टोसिस है: दवा फैट सेल को व्यवस्थित ढंग से मरने के लिए प्रेरित करती है, बिना उस नेक्रोसिस के जो आसपास के ऊतक को नुकसान पहुँचाती। प्रकाशित ट्रायल में न नेक्रोसिस मिला न तंत्रिका क्षति, और सबसे आम दुष्प्रभाव इंजेक्शन वाली जगह की प्रतिक्रियाएँ थीं — दर्द, लाली, सूजन — हल्की से मध्यम और अस्थायी।</p>
+<figure><img alt="माइक्रोस्कोप के नीचे वसा ऊतक: कोशिकाएँ पतली दीवारों वाली बड़ी गोल रिक्तिकाओं जैसी दिखती हैं।" src="images/cellule-adipose-microscopio.jpg" loading="lazy"/>
+<figcaption class="cap">माइक्रोस्कोप के नीचे वसा ऊतक: बड़ी गोल कोशिकाएँ ही एडिपोसाइट्स हैं। फोटो: Veeresh likhitha, Wikimedia Commons, CC BY-SA 4.0।</figcaption></figure>
+<p>एक आँकड़ा ऐसा है जो लगभग किसी हेडलाइन में नहीं आता। <em>Nature</em> में 2008 में छपे एक अब क्लासिक अध्ययन ने दिखाया कि <strong>वयस्क में फैट सेल्स की संख्या लगभग तय होती है</strong>: दुबले और मोटे दोनों में स्थिर रहती है, भारी वज़न घटाने के बाद भी, क्योंकि यह बचपन और किशोरावस्था में तय हो जाती है। फिर भी हर साल इनमें से लगभग 10% कोशिकाएँ नई बनती हैं। इसी वजह से इन्हें नष्ट करना दवा का लक्ष्य बनाया गया — और इसी वजह से असर अपने आप स्थायी नहीं होता: 10% सालाना नवीनीकरण चलता रहता है।</p>
+<h2>इंसानों पर हुए ट्रायल के आँकड़े</h2>
+<p>दो रैंडमाइज़्ड ट्रायल, दोनों <em>Aesthetic Surgery Journal</em> में प्रकाशित, ने दवा को पेट पर परखा।</p>
+<figure><div class="chart"><svg aria-label="बार ग्राफ: फेज़ 2 में CBL-514 लेने वालों में 69.6% ने कम से कम 150 mL चर्बी घटाई बनाम प्लेसीबो 0%; फेज़ 2b में 76.7% ने कम से कम एक ग्रेड सुधार दिखाया बनाम 18.9%।" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="500" fill="#0c0c0c"/>
+<text x="72" y="36" fill="#f0f0f0" font-size="21" font-weight="700">CBL-514 पर कितने प्रतिभागियों ने प्रतिक्रिया दी</text>
+<rect x="72" y="54" width="13" height="13" fill="#d4af37"/><text x="92" y="65" fill="#a0a0a0" font-size="13">CBL-514</text>
+<rect x="192" y="54" width="13" height="13" fill="#aa8a2e" opacity="0.55"/><text x="212" y="65" fill="#a0a0a0" font-size="13">प्लेसीबो</text>
+<line x1="72" y1="382.0" x2="832" y2="382.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="386.0" fill="#a0a0a0" font-size="12" text-anchor="end">0%</text>
+<line x1="72" y1="322.8" x2="832" y2="322.8" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="326.8" fill="#a0a0a0" font-size="12" text-anchor="end">20%</text>
+<line x1="72" y1="263.6" x2="832" y2="263.6" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="267.6" fill="#a0a0a0" font-size="12" text-anchor="end">40%</text>
+<line x1="72" y1="204.4" x2="832" y2="204.4" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="208.4" fill="#a0a0a0" font-size="12" text-anchor="end">60%</text>
+<line x1="72" y1="145.2" x2="832" y2="145.2" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="149.2" fill="#a0a0a0" font-size="12" text-anchor="end">80%</text>
+<line x1="72" y1="86.0" x2="832" y2="86.0" stroke="#2a2a2a" stroke-width="1"/>
+<text x="62" y="90.0" fill="#a0a0a0" font-size="12" text-anchor="end">100%</text>
+<text x="18" y="234" fill="#a0a0a0" font-size="12" text-anchor="middle" transform="rotate(-90 18 234)">प्रतिभागियों का %</text>
+<rect x="179.0" y="176.0" width="74" height="206.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="216.0" y="167.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">69.6%</text>
+<text x="308.0" y="373.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">0.0%</text>
+<text x="262.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">ब्रड़ ०२ — ≥150 mL वसा कमी</text>
+<rect x="559.0" y="155.0" width="74" height="227.0" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="596.0" y="146.0" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">76.7%</text>
+<rect x="651.0" y="326.1" width="74" height="55.9" fill="#aa8a2e" opacity="0.55" rx="3"/>
+<text x="688.0" y="317.1" fill="#f3e5ab" font-size="16" font-weight="700" text-anchor="middle">18.9%</text>
+<text x="642.0" y="406" fill="#f0f0f0" font-size="13" text-anchor="middle">ब्रड़ 2b — ≥1 ग्रेड सुधार</text>
+<line x1="72" y1="382" x2="832" y2="382" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="72" y="468" fill="#a0a0a0" font-size="11">डेटा: Gold et al. 2025 (n=76) और Lorenc et al. 2026 (n=108), Aesthetic Surgery Journal। Nurvan</text>
+<text x="72" y="482" fill="#a0a0a0" font-size="11">ग्राय़फ़।</text>
+</svg></div>
+<figcaption class="cap">फेज़ 2 और 2b ट्रायल में CBL-514 पर प्रतिक्रिया — डेटा: Gold et al. 2025 और Lorenc et al. 2026। Nurvan ग्राफ़।</figcaption></figure>
+<p><strong>फेज़ 2</strong> ट्रायल में (76 प्रतिभागी, 2:1 रैंडमाइज़ेशन, हर चार हफ़्ते पर अधिकतम चार सत्र), आख़िरी सत्र के आठ हफ़्ते बाद दवा वाले समूह के 69.6% लोगों ने अल्ट्रासाउंड पर कम से कम 150 mL सबक्यूटेनियस फैट घटाया, जबकि प्लेसीबो में कोई नहीं। 60.9% ने 200 mL की सीमा भी पार की, और 28 में से 12 प्रतिक्रियाशील लोगों ने यह एक ही सत्र के बाद हासिल किया।</p>
+<p><strong>फेज़ 2b</strong> ट्रायल में (मध्यम से गंभीर पेट की चर्बी वाले 108 वयस्क, 1:1 रैंडमाइज़ेशन, तीन हफ़्ते के अंतर पर अधिकतम चार सत्र), दवा वाले समूह के 76.7% ने डॉक्टर द्वारा आँके गए स्केल पर कम से कम एक ग्रेड सुधार दिखाया, बनाम प्लेसीबो के 18.9%। MRI ने पेट की चर्बी के आयतन में औसतन 152.9 mL यानी 20.3% की कमी आँकी।</p>
+<p>दो बातें पढ़ने का तरीका बदल देती हैं। पहली: दोनों ट्रायल <strong>सिंगल-ब्लाइंड</strong> हैं — प्रतिभागियों को नहीं पता था कि उन्हें क्या मिल रहा है, पर शोधकर्ताओं को पता था। जब नतीजा एक विज़ुअल रेटिंग स्केल हो, तो यह डबल-ब्लाइंड से कमज़ोर डिज़ाइन है। दूसरी: कई लेखक Caliway के कर्मचारी हैं, यानी उसी कंपनी के जो दवा बना रही है और जिसने अध्ययनों को फंड किया। यह आरोप नहीं, विकासाधीन दवा का सामान्य संदर्भ है: इसका मतलब है कि बड़े और स्वतंत्र अध्ययनों से पुष्टि बाकी है।</p>
+<p>बड़े अध्ययनों की बात करें तो: सितंबर के आख़िर की ख़बर कहती थी कि फेज़ 3 &quot;डिज़ाइन हो रहा है&quot;। <strong>वह शुरू हो चुका है।</strong> 23 सितंबर 2026 को Caliway ने SUPREME-01 में पहले मरीज़ को खुराक देने की घोषणा की — यह एक वैश्विक, रैंडमाइज़्ड, डबल-ब्लाइंड पिवोटल ट्रायल है जिसमें अमेरिका और कनाडा में लगभग 320 प्रतिभागी शामिल हैं। नतीजे अभी नहीं आए।</p>
+<h2>विसरल फैट वाला आँकड़ा</h2>
+<p>28 सितंबर से 2 अक्टूबर 2026 के बीच मिलान में European Association for the Study of Diabetes के कॉन्ग्रेस में जो पेश हुआ, वह अलग अध्ययन है: 22 से 30 BMI वाले 40 प्रतिभागी, अधिकतम 600 mg खुराक, और ध्यान विसरल फैट पर — वह चर्बी जो अंगों को घेरती है और हृदय रोग के जोखिम तथा इंसुलिन प्रतिरोध से सबसे ज़्यादा जुड़ी है।</p>
+<p>एक महीने बाद दवा वाले समूह में विसरल फैट औसतन 12% घटा और प्लेसीबो में 6% बढ़ा; अगली जाँच में कमी लगभग 10% थी, जबकि प्लेसीबो में बढ़त क़रीब 12%।</p>
+<p>आँकड़े दिलचस्प हैं, पर उन्हें जो हैं वही मानकर पढ़ें: <strong>कॉन्फ्रेंस डेटा, 40 लोगों पर, अभी पीयर-रिव्यू नहीं।</strong> कॉन्फ्रेंस का सार जर्नल लेख जैसी जाँच से नहीं गुज़रा होता, और अंतिम संस्करण में आँकड़े अक्सर बदलते हैं। तब तक यह एक आशाजनक संकेत है, स्थापित नतीजा नहीं।</p>
+<h2>शोध असल में क्या कहता है</h2>
+<div class="verdict">
+<div class="v"><span class="pill no">ग़लत</span><p><strong>&quot;यह वज़न घटाने की दवा है।&quot;</strong> प्रकाशित ट्रायल का लक्ष्य पेट की सबक्यूटेनियस चर्बी घटाना और सौंदर्य रेटिंग स्केल हैं, और प्रतिभागियों का BMI ज़्यादातर सामान्य या थोड़ा ज़्यादा था। शरीर का वज़न मापा गया नतीजा नहीं है। यह स्थानीय चर्बी की दवा है, मोटापे की नहीं।</p></div>
+<div class="v"><span class="pill ok">पुष्ट</span><p><strong>&quot;लगभग 70% ने कम से कम 150 mL चर्बी घटाई बनाम प्लेसीबो 0%।&quot;</strong> , 2025 में प्रकाशित फेज़ 2 ट्रायल में।</p></div>
+<div class="v"><span class="pill ok">पुष्ट</span><p><strong>&quot;75% से ज़्यादा ने पेट की चर्बी के स्केल पर कम से कम एक ग्रेड सुधार दिखाया।&quot;</strong> , फेज़ 2b में: 76.7% बनाम 18.9%।</p></div>
+<div class="v"><span class="pill part">स्पष्ट करें</span><p><strong>&quot;असर लाइपोसक्शन जैसा है।&quot;</strong> MRI पर इलाज वाले हिस्से में औसत आयतन कमी 20.3% है: असली, पर सर्जरी से अलग स्तर की, सिर्फ़ पेट तक सीमित और कई सत्रों में हासिल। किसी ट्रायल ने दवा की सीधी तुलना लाइपोसक्शन से नहीं की।</p></div>
+<div class="v"><span class="pill nv">अप्रमाणित</span><p><strong>&quot;यह विसरल फैट भी घटाता है।&quot;</strong> आँकड़ा मौजूद है पर कॉन्फ्रेंस से, 40 लोगों पर, बिना पीयर-रिव्यू प्रकाशन के।</p></div>
+<div class="v"><span class="pill part">स्पष्ट करें</span><p><strong>&quot;GLP-1 दवाएँ बंद करने के बाद वज़न लौटने से रोकता है।&quot;</strong> इंसानों में जाँचा नहीं गया। इंसानों के बारे में जो हम जानते हैं वह उलटा इशारा करता है: <em>JAMA</em> में छपे SURMOUNT-4 ट्रायल में जिन लोगों ने टिरज़ेपेटाइड बंद किया उन्होंने 52 हफ़्तों में औसतन 14% वज़न वापस पाया, जबकि जारी रखने वालों का 5.5% और घटा।</p></div>
+<div class="v"><span class="pill nv">पुराना</span><p><strong>&quot;फेज़ 3 अभी शुरू होना बाक़ी है।&quot;</strong> यह 23 सितंबर 2026 को शुरू हो चुका है।</p></div>
+</div>
+<h2>इसे कैसे लागू करें</h2>
+<p>CBL-514 न ख़रीदा जा सकता है, न स्वीकृत है, और न ही आज आपके किसी फ़ैसले से जुड़ा है। काम का सवाल दूसरा है: तब तक बॉडी कंपोज़िशन के लिए क्या काम करता है?</p>
+<figure><img alt="जिम में एक पुरुष बारबेल से डेडलिफ्ट कर रहा है।" src="images/stacco-palestra-forza.jpg" loading="lazy"/>
+<figcaption class="cap">कैलोरी घटने पर लीन मास की रक्षा करने वाला कारक स्ट्रेंथ ट्रेनिंग है। फोटो: Nenad Stojkovic, Wikimedia Commons, CC BY 2.0।</figcaption></figure>
+<ol class="steps" start="1"><li><strong>कटिंग के दौरान ट्रेन करें, सिर्फ़ बाद में नहीं।</strong> 34 रैंडमाइज़्ड ट्रायल और 1,455 प्रतिभागियों पर 2026 के एक नेटवर्क मेटा-विश्लेषण ने अकेली कैलोरी कटौती की तुलना कैलोरी कटौती प्लस व्यायाम से की: ट्रेनिंग ने औसतन 45.7% फैट-फ्री मास की हानि रोकी। सबसे बड़ा असर मिश्रित ट्रेनिंग का रहा (स्ट्रेंथ प्लस कार्डियो, अकेली डाइट से +1.20 किग्रा), उसके बाद अकेली स्ट्रेंथ (+0.83 किग्रा)।</li></ol>
+<figure><div class="chart"><svg aria-label="बार ग्राफ: अकेली डाइट की तुलना में मिश्रित ट्रेनिंग 1.20 किग्रा ज़्यादा लीन मास बचाती है, अकेली स्ट्रेंथ 0.83 किग्रा, अकेला कार्डियो 0.51 किग्रा (असार्थक)।" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" role="img">
+<rect width="860" height="420" fill="#0c0c0c"/>
+<text x="24" y="36" fill="#f0f0f0" font-size="21" font-weight="700">कैलोरी कमी में ट्रेनिंग से बचती लीन मास</text>
+<line x1="150.0" y1="78" x2="150.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="150.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.0</text>
+<line x1="241.4" y1="78" x2="241.4" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="241.4" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.2</text>
+<line x1="332.9" y1="78" x2="332.9" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="332.9" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.4</text>
+<line x1="424.3" y1="78" x2="424.3" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="424.3" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.6</text>
+<line x1="515.7" y1="78" x2="515.7" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="515.7" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+0.8</text>
+<line x1="607.1" y1="78" x2="607.1" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="607.1" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.0</text>
+<line x1="698.6" y1="78" x2="698.6" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="698.6" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.2</text>
+<line x1="790.0" y1="78" x2="790.0" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text x="790.0" y="344" fill="#a0a0a0" font-size="12" text-anchor="middle">+1.4</text>
+<rect x="150" y="105.0" width="548.6" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="133.0" fill="#f0f0f0" font-size="14" text-anchor="end">स्ट्रेंग्थ + कार्डियो</text>
+<text x="708.6" y="133.0" fill="#f3e5ab" font-size="16" font-weight="700">+1.20 kg</text>
+<rect x="150" y="178.0" width="379.4" height="46" fill="#d4af37" opacity="1.0" rx="3"/>
+<text x="138" y="206.0" fill="#f0f0f0" font-size="14" text-anchor="end">केवल स्ट्रेंग्थ</text>
+<text x="539.4" y="206.0" fill="#f3e5ab" font-size="16" font-weight="700">+0.83 kg</text>
+<rect x="150" y="251.0" width="233.1" height="46" fill="#aa8a2e" opacity="0.5" rx="3"/>
+<text x="138" y="279.0" fill="#f0f0f0" font-size="14" text-anchor="end">केवल कार्डियो</text>
+<text x="393.1" y="279.0" fill="#f3e5ab" font-size="16" font-weight="700">+0.51 kg</text>
+<text x="393.1" y="296.0" fill="#a0a0a0" font-size="11">असार्थक</text>
+<line x1="150" y1="78" x2="150" y2="324" stroke="#a0a0a0" stroke-width="1.2"/>
+<text x="470" y="368" fill="#a0a0a0" font-size="12" text-anchor="middle">केवल डायट की तुलना में अतिरिक्त लीन मास (kg)</text>
+<text x="24" y="394" fill="#a0a0a0" font-size="11">डेटा: Deller et al. 2026, 34 RCT और 1,455 प्रतिभागियों का नेटवर्क मेटा-विश्लेषण। Nurvan ग्राय़फ़।</text>
+</svg></div>
+<figcaption class="cap">अकेली कैलोरी कटौती की तुलना में बची हुई लीन मास — डेटा: Deller et al. 2026। Nurvan ग्राफ़।</figcaption></figure>
+<ol class="steps" start="2"><li><strong>डेफ़िसिट ज़्यादा न रखें।</strong> ऊर्जा कटौती के दौरान रेज़िस्टेंस ट्रेनिंग पर हुए एक मेटा-रिग्रेशन ने आँका कि रोज़ाना लगभग 500 kcal का डेफ़िसिट वह सीमा है जिसके बाद ट्रेनिंग करते हुए भी लीन मास बढ़ना रुक जाता है। मसल बनाना है तो लंबे डेफ़िसिट से बचें; सिर्फ़ बचाना है तो इस रेखा के नीचे रहें।</li><li><strong>प्रोटीन ऊँचा रखें।</strong> कैलोरी घटने पर यह सबसे मज़बूत प्रमाण वाला पोषण उपाय है: विस्तार से हमने <a href="/blog/protein-for-fat-loss-phase">कटिंग में प्रोटीन</a> वाले लेख में लिखा है।</li><li><strong>मापें, अंदाज़ा न लगाएँ।</strong> वज़न, घेरे और समय के साथ उठाया गया भार बताते हैं कि आप चर्बी घटा रहे हैं या मांसपेशी भी। आईने में दोनों एक जैसे दिखते हैं।</li><li><strong>स्थानीय चर्बी चुनी नहीं जाती।</strong> कोई व्यायाम उस मांसपेशी के ऊपर की चर्बी नहीं जलाता जिसे वह ट्रेन करता है। पहले कहाँ घटेगा यह काफ़ी हद तक जेनेटिक्स और हार्मोन पर निर्भर है — इस विषय पर हमने <a href="/blog/genetics-muscle-low-responders">हाई और लो रेस्पॉन्डर</a> वाले लेख में बात की है।</li></ol>
+<p>ऊपर दिए आँकड़े अध्ययनों में देखी गई रेंज और औसत हैं, कोई नुस्ख़ा नहीं। अगर आपको कोई बीमारी है, आप दवा लेते हैं या डॉक्टर की सलाह पर डाइट कर रहे हैं, तो कुछ भी बदलने से पहले अपने डॉक्टर से बात करें।</p>
+<div class="app"><div><h3>Nurvan — बॉडी कंपोज़िशन समय की शृंखला में दिखती है</h3><p>दो किलो की कमी चर्बी, पानी या मांसपेशी हो सकती है: यह सिर्फ़ तब पता चलता है जब वज़न, माप और भार को समय के साथ साथ पढ़ा जाए। Nurvan हर सत्र के भार, रेप्स और RIR के साथ माप और वज़न दर्ज करता है, और न्यूट्रिशन हिस्सा आधिकारिक CREA खाद्य डेटाबेस पर चलता है — तो आप देख पाते हैं कि डेफ़िसिट चर्बी ले रहा है या ताक़त भी।</p></div><a class="cta" href="https://nurvan.app">Nurvan आज़माएँ</a></div>
+<h2>अक्सर पूछे जाने वाले सवाल</h2>
+<details><summary>क्या CBL-514 बाज़ार में उपलब्ध है?</summary><p>नहीं। यह किसी देश में स्वीकृत नहीं है और अभी ट्रायल में है: फेज़ 2 और 2b के अध्ययन प्रकाशित हैं, और फेज़ 3 ट्रायल SUPREME-01 ने 23 सितंबर 2026 को पहले मरीज़ को खुराक दी।</p></details>
+<details><summary>क्या CBL-514 से वज़न घटता है?</summary><p>यह इसका उद्देश्य नहीं है। प्रकाशित ट्रायल सामान्य या थोड़े अधिक वज़न वाले लोगों में पेट की सबक्यूटेनियस चर्बी की कमी मापते हैं, शरीर के वज़न की नहीं।</p></details>
+<details><summary>Ozempic या Mounjaro से इसका फ़र्क़ क्या है?</summary><p>GLP-1 दवाएँ भूख और चयापचय पर असर डालती हैं और पूरे शरीर का वज़न घटाती हैं; CBL-514 एक हिस्से में लगाया जाता है और वहीं की फैट सेल्स पर स्थानीय रूप से काम करता है। ये अलग श्रेणियाँ हैं, जिनके संकेत, जोखिम और प्रमाण-स्तर अलग हैं।</p></details>
+<details><summary>अगर फैट सेल्स मर जाएँ तो क्या नतीजा हमेशा के लिए है?</summary><p>पता नहीं। वयस्कों में एडिपोसाइट्स की संख्या स्थिर रहती है, पर हर साल लगभग 10% नई बनती हैं, और किसी प्रकाशित ट्रायल ने मरीज़ों को इतने लंबे समय तक नहीं देखा कि जवाब मिल सके। Caliway ने दीर्घकालिक फ़ॉलो-अप के लिए एक अलग फेज़ 3 अध्ययन की घोषणा की है।</p></details>
+<details><summary>क्या यह डाइट और ट्रेनिंग की जगह ले सकता है?</summary><p>ऐसा कोई डेटा नहीं है। ट्रायल शरीर के एक हिस्से और कुछ हफ़्तों को कवर करते हैं, जबकि मध्यम अवधि में वज़न और बॉडी कंपोज़िशन खानपान, स्ट्रेंथ ट्रेनिंग और निरंतरता पर निर्भर करते हैं।</p></details>
+<h2>यह भी पढ़ें</h2>
+<ul><li><a href="/blog/protein-for-fat-loss-phase">कटिंग में प्रोटीन: असल में कितना चाहिए</a> — कैलोरी घटाते समय लीन मास बचाने वाली रेंज।</li><li><a href="/blog/thanda-chawal-resistant-starch">ठंडा किया चावल: रेज़िस्टेंट स्टार्च कितना मायने रखता है</a> — एक वायरल तरकीब के पीछे के असली आँकड़े।</li><li><a href="/blog/genetics-muscle-low-responders">लो रेस्पॉन्डर: मांसपेशियों के विकास में जेनेटिक्स की कितनी भूमिका है</a> — वही प्रोग्राम अलग लोगों को अलग नतीजे क्यों देता है।</li></ul>
+<h2>स्रोत</h2>
+<ol class="refs"><li>Gold M, Schlessinger J, Goodman GJ, Dayan S, DuBois J, Ling YF, Sheu AY, Ho WWS, Chou YC, 2025. <em>Efficacy and Safety of CBL-514 Injection in Reducing Abdominal Subcutaneous Fat: A Randomized, Single-Blind, Placebo-Controlled Phase II Study.</em> Aesthetic Surgery Journal 45(6):611-620. PMID 40037659 — <a href="https://doi.org/10.1093/asj/sjaf032">DOI</a></li><li>Lorenc ZP, Gold M, Schlessinger J, Lain ET, Smith S, Downie J, Cox SE, Ling YF, Sheu AY, Lu CY, Chou YC, 2026. <em>Randomized Phase 2b Trial of CBL-514 Injection for Abdominal Subcutaneous Fat Reduction With Clinician- and Patient-reported Outcomes and MRI Assessment.</em> Aesthetic Surgery Journal. PMID 42159040 — <a href="https://doi.org/10.1093/asj/sjag092">DOI</a></li><li>Spalding KL, Arner E, Westermark PO, Bernard S, Buchholz BA, Bergmann O, Blomqvist L, Hoffstedt J, Näslund E, Britton T, Concha H, Hassan M, Rydén M, Frisén J, Arner P, 2008. <em>Dynamics of fat cell turnover in humans.</em> Nature 453(7196):783-787. PMID 18454136 — <a href="https://doi.org/10.1038/nature06902">DOI</a></li><li>Aronne LJ, Sattar N, Horn DB, Bays HE, Wharton S, Lin WY, Ahmad NN, Zhang S, Liao R, Bunck MC, Jouravskaya I, Murphy MA, 2024. <em>Continued Treatment With Tirzepatide for Maintenance of Weight Reduction in Adults With Obesity: The SURMOUNT-4 Randomized Clinical Trial.</em> JAMA 331(1):38-48. PMID 38078870 — <a href="https://doi.org/10.1001/jama.2023.24945">DOI</a></li><li>Deller M, Weiershaus J, Held S, Brinkmann C, 2026. <em>Effects of Calorie Restriction With and Without Strength, Endurance or Mixed Training on Fat-Free and Skeletal Muscle Mass in Overweight or Obese Individuals — A Systematic Review With Pairwise Meta-Analysis and Network Meta-Analysis of Randomized Controlled Studies.</em> Diabetes, Obesity and Metabolism 28(8):6810-6823. PMID 42144246 — <a href="https://doi.org/10.1111/dom.70873">DOI</a></li><li>Murphy C, Koehler K, 2022. <em>Energy deficiency impairs resistance training gains in lean mass but not strength: A meta-analysis and meta-regression.</em> Scandinavian Journal of Medicine &amp; Science in Sports 32(1):125-137. PMID 34623696 — <a href="https://doi.org/10.1111/sms.14075">DOI</a></li></ol>
+<p>वैज्ञानिक स्रोत PubMed से लिए गए। फेज़ 3 ट्रायल SUPREME-01 की स्थिति <a href="https://www.caliwaybiopharma.com/en/news-detail/-CBL-514-SUPREME-01-FPI-ObesityWeek-2026-ENG/">Caliway Biopharmaceuticals की 23 सितंबर 2026 की आधिकारिक विज्ञप्ति</a> से जाँची गई, 4 अक्टूबर 2026 को देखी गई। विसरल फैट के आँकड़े मिलान के EASD कॉन्ग्रेस (28 सितंबर–2 अक्टूबर 2026) की प्रस्तुति से हैं और अभी किसी पीयर-रिव्यूड जर्नल में प्रकाशित नहीं हुए।</p>
+<p>शुरुआती सूत्र: Andrea Centini का <a href="https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/">Fanpage</a> पर लेख, 2 अक्टूबर 2026। इस लेख का पाठ, संरचना और तथ्य-जाँच मौलिक हैं।</p>
+<p><strong>Giammaria Loi</strong> Nurvan के संस्थापक हैं। वे 2012 से वेट ट्रेनिंग करते हैं, 2013 से FIPE-प्रमाणित पर्सनल ट्रेनर और कोच के रूप में काम करते हैं और 2018 से राष्ट्रीय स्तर पर पावरलिफ्टिंग में प्रतिस्पर्धा करते हैं। उनका हर लेख वैज्ञानिक अध्ययनों से शुरू होकर वहाँ पहुँचता है जो जिम में सचमुच काम करता है।</p>
+<p class="note">नोट: यह जानकारीपरक सामग्री है, किसी डॉक्टर या पेशेवर की सलाह का विकल्प नहीं। CBL-514 एक अस्वीकृत प्रयोगात्मक दवा है: इस लेख की कोई भी बात उपचार संबंधी सलाह नहीं मानी जानी चाहिए।</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

@@ -69919,21 +69919,51 @@ function bodyGroupLevels(muscles, selected) {
   });
   return levels;
 }
-// "Generale" lights every group worked in the period (all the finalized sessions of the active program), the same
-// span as the volume written under the figure. With no session finalized yet it falls back on the one in progress.
-function periodMusclesForMap(fallback) {
+// The muscles worked in the period chosen on the statistics page (the zoom: 1W ... Tutto, calendar or program
+// weeks): the same sets the charts below are made of. Per group, the sets that reached it, weighted by whether
+// it was the target or helped. Nothing chosen on a session: the post-workout cards use their own session instead.
+function statsPeriodMuscles() {
   try {
-    const key = (typeof activeProgramKey === 'function') ? activeProgramKey() : null;
-    const total = {};
-    (Array.isArray(store.logs) ? store.logs : []).forEach(function (l) {
-      if (!l || !l.muscles) return;
-      if (key && l.programId && l.programId !== key) return;
-      Object.keys(l.muscles).forEach(function (m) { total[m] = (total[m] || 0) + (Number(l.muscles[m]) || 0); });
+    const TAE = window.TrainingAnalyticsEngine;
+    if (!TAE || !TAE.build) return null;
+    const a = TAE.build(store, DATA, {
+      axis: statsAxis(),
+      zoomWeeks: statsZoomWeeks(),
+      muscle: 'TOTAL',
+      exercise: '',
+      includeIncompleteWeeks: !!(store.prefs && store.prefs.includeIncompleteWeeks),
+      currentWeek: (typeof currentWeek === 'number') ? currentWeek : (store.trainingWeek || 1),
+      matchMuscle: function () { return true; }
     });
-    return Object.keys(total).length ? total : (fallback || {});
-  } catch (_) { return fallback || {}; }
+    if (!a || !Array.isArray(a.byMuscle)) return null;
+    const out = {};
+    a.byMuscle.forEach(function (g) {
+      const w = Number(g.effectiveWeightedSets) || 0;
+      if (w > 0) out[g.id] = Math.max(1, Math.round(w));
+    });
+    return out;
+  } catch (_) { return null; }
 }
-// The figure at its own size with the lit muscles on it.
+function periodMusclesForMap(fallback) {
+  const m = statsPeriodMuscles();
+  // An empty period is an empty figure; the fallback is only for when the analytics are not there at all.
+  return m ? m : (fallback || {});
+}
+// The period changed (zoom, axis, incomplete weeks): the figure and the counts on the chips follow.
+function refreshStatsMuscleMap() {
+  const m = periodMusclesForMap(null);
+  if (!document.querySelector('canvas.stats-body-canvas')) return;
+  window.__statsBodyMuscles = m || {};
+  document.querySelectorAll('.stats-chip[data-group]').forEach(function (chip) {
+    const id = chip.getAttribute('data-group');
+    const g = STATS_MUSCLE_CHIPS.find(function (x) { return x.id === id; });
+    if (!g) return;
+    const n = statsMuscleVolume(m || {}, id);
+    chip.innerHTML = '<span class="stats-chip-dot" style="background:' + statsMuscleChipColor(id) + ';"></span>' + esc(g.label) + (n ? ' · ' + n : '');
+  });
+  paintStatsBodies();
+}
+window.refreshStatsMuscleMap = refreshStatsMuscleMap;
 function paintBodyHighlight(assets, muscles, selected) {
   const w = assets.w, h = assets.h;
   const c = document.createElement('canvas');
@@ -72126,6 +72156,7 @@ function weekLoadModeLabel(w) {
   return '—';
 }
 function renderStatsData(){
+  try { refreshStatsMuscleMap(); } catch (_) {}
   const selectedGroup = $('stats-muscle-group') ? $('stats-muscle-group').value : 'TOTAL';
   const analytics = buildTrainingAnalytics();
   const slider = $('stats-zoom-slider');
