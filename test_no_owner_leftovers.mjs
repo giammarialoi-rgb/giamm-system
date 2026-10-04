@@ -103,10 +103,9 @@ console.log('');
 console.log('--- i casi trovati, uno per uno ---');
 {
   const ui = fs.readFileSync(path.join(root, 'web/coach-practice-ui.js'), 'utf8');
-  const unlock = ui.slice(ui.indexOf('function showDemoUnlock()'), ui.indexOf('async function confirmDemoUnlock()'));
-  ok('sblocco Coach: l\'intestatario della carta demo e\' chi ha fatto l\'accesso',
-    /const holder = String\(\(store\.accountUser && \(store\.accountUser\.name \|\| store\.accountUser\.email\)\) \|\| ''\)\.trim\(\);/.test(unlock) &&
-    /<label>Intestatario<\/label><input value="' \+ esc\(holder\) \+ '" readonly>/.test(unlock));
+  ok('sblocco Coach: non esiste piu\' la carta finta (si apre col piano, o con la prova)',
+    !/4242 4242|carta finta|PAGA 0,00|SBLOCCO DEMO|showDemoUnlock|confirmDemoUnlock/.test(ui) &&
+    /async function unlockCoachFromPlan\(\)/.test(ui) && /practiceFetch\('\/api\/coach\/unlock'/.test(ui));
   const api = fs.readFileSync(path.join(root, 'coach-api.mjs'), 'utf8');
   ok('il Coach AI si presenta come assistente dell\'app Nurvan', /all'interno dell'app Nurvan\./.test(api));
   const food = fs.readFileSync(path.join(root, 'server/food/index.mjs'), 'utf8');

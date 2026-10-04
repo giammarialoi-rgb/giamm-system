@@ -75,7 +75,7 @@ const fat = clientRow({
 assert(fat.needIntake === true && fat.intake.firstName === "Anna", "detail row includes intake");
 
 const ui = fs.readFileSync(path.join(__dirname, "web/coach-practice-ui.js"), "utf8");
-["bootCoachPractice", "openAddClientWizard", "setAddClientMode", "submitAddClient", "showClientIntake", "submitClientIntake", "showClientTutorial", "showDemoUnlock", "renderCoachHub", "renderClientChat"].forEach((name) => {
+["bootCoachPractice", "openAddClientWizard", "setAddClientMode", "submitAddClient", "showClientIntake", "submitClientIntake", "showClientTutorial", "unlockCoachFromPlan", "renderCoachHub", "renderClientChat"].forEach((name) => {
   assert(ui.includes(name), "UI defines " + name);
 });
 assert(ui.includes("ASSEGNA SCHEDA") && (ui.includes("Consenti massima libertà") || ui.includes("Consenti massima liberta")), "assign + max freedom");
@@ -168,7 +168,7 @@ assert(api.includes("coachPracticeVersion"), "health version");
 assert(api.includes("role"), "JWT has role");
 
 const practice = fs.readFileSync(path.join(__dirname, "coach-practice.mjs"), "utf8");
-["/api/coach/unlock/demo", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom", "/api/webrtc/ice", "TURN_URLS", "anchorExpiryOnFirstWorkout", "/api/coach/inbox/ack", "rotate-invite", "unlock-approve", "unlock-reject", "pending_unlock"].forEach((s) => {
+["/api/coach/unlock", "/api/coach/clients", "/api/client/login", "/api/client/intake", "/c/:token", "intake_mode", "/api/client/ask-coach", "/api/client/change-request", "allow_max_freedom", "/api/webrtc/ice", "TURN_URLS", "anchorExpiryOnFirstWorkout", "/api/coach/inbox/ack", "rotate-invite", "unlock-approve", "unlock-reject", "pending_unlock"].forEach((s) => {
   assert(practice.includes(s), "server has " + s);
 });
 assert(practice.includes("e.payload") || practice.includes("e.payload,"), "coach inbox returns payload");

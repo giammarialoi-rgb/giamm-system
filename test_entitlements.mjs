@@ -279,13 +279,12 @@ function pageContext(entitlement, extra = {}) {
     const next = html.indexOf('data-plan=', at + 12);
     return html.slice(at, next > 0 ? next : html.length);
   };
-  const androidCoach = android.slice(android.indexOf('data-plan="coach"'));
-  ok('Android: no button for Coach and Pro', !/CONTATTACI/.test(androidCoach) && /CONTATTACI/.test(block(android, 'standard')));
-  const coachFree = pageContext({ plan: 'free' }, { isCoachUnlocked: () => true });
+  ok('Android: the store, never «Contattaci» (signed out: the way to sign in)', !/CONTATTACI/.test(android) && /ACCEDI PER ABBONARTI/.test(block(android, 'standard')) && /ACCEDI PER ABBONARTI/.test(block(android, 'coach_pro')));
+  const coachFree = pageContext({ plan: 'free' }, { store: { prefs: {}, logs: [], accountToken: 'tok' } });
   ok('pricing: a coach without trial sees «Prova Coach 14 giorni»', /PROVA COACH 14 GIORNI/.test(cards(coachFree)));
   coachFree.onEntitlementReceived({ plan: 'free', trialUsedAt: iso(Date.now() - 30 * DAY) });
   ok('pricing: trial already used, no button', !/PROVA COACH/.test(cards(coachFree)));
-  ok('pricing: an athlete never sees the trial', !/PROVA COACH/.test(cards(pageContext({ plan: 'free' }, { isAthleteRole: () => true, isCoachUnlocked: () => true }))));
+  ok('pricing: an athlete never sees the trial', !/PROVA COACH/.test(cards(pageContext({ plan: 'free' }, { isAthleteRole: () => true, store: { prefs: {}, logs: [], accountToken: 'tok' } }))));
 }
 
 // ------------------------------------------------------------ the census: every gate goes through can()

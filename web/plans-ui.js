@@ -197,11 +197,259 @@ function planIsAndroidApp() {
   try { return typeof isAndroidWebViewNative === 'function' && isAndroidWebViewNative(); } catch (_) { return false; }
 }
 
+/* ------------------------------ buying in the app ------------------------------ */
+//
+// Plans are bought through the store of the phone: Apple on iPhone, Google Play on Android. RevenueCat
+// reads the store and tells the server (server/billing/index.mjs), which changes the account's plan. The
+// page never sees a card: it asks the store for the prices, starts the purchase, then asks the server to
+// look again. On the web (a browser) there is no store: the plans page keeps "Contattaci".
+//
+// The person in RevenueCat is the Nurvan account (its id), so the same plan follows the account to any
+// device, and a plan bought on the website (Stripe) is the same plan.
+var __billing = { state: 'idle', packs: [], adapter: null, cfg: null, busy: false };
+
+function billingPlatform() {
+  try { if (typeof isIosApp === 'function' && isIosApp()) return 'ios'; } catch (_) {}
+  try { if (typeof NativeConfig !== 'undefined') return 'android'; } catch (_) {}
+  return 'web';
+}
+function billingIsNative() { return billingPlatform() !== 'web'; }
+
+// Android: the app's Java side answers through window.__nvBillingResult(id, json).
+function billingAndroidCall(method, args) {
+  window.__nvBillingCb = window.__nvBillingCb || {};
+  window.__nvBillingSeq = (window.__nvBillingSeq || 0) + 1;
+  const id = String(window.__nvBillingSeq);
+  window.__nvBillingResult = window.__nvBillingResult || function (cbId, json) {
+    const cb = window.__nvBillingCb[cbId];
+    if (!cb) return;
+    delete window.__nvBillingCb[cbId];
+    clearTimeout(cb.timer);
+    let r = null;
+    try { r = JSON.parse(json); } catch (_) { r = { ok: false, error: 'risposta non valida' }; }
+    if (r && r.ok) cb.resolve(r.data);
+    else cb.reject(Object.assign(new Error((r && r.error) || 'Operazione non riuscita'), { userCancelled: !!(r && r.cancelled) }));
+  };
+  return new Promise(function (resolve, reject) {
+    const timer = setTimeout(function () { delete window.__nvBillingCb[id]; reject(new Error('Il negozio non risponde. Riprova.')); }, 120000);
+    window.__nvBillingCb[id] = { resolve: resolve, reject: reject, timer: timer };
+    try { NativeConfig[method].apply(NativeConfig, (args || []).concat([id])); } catch (err) { clearTimeout(timer); delete window.__nvBillingCb[id]; reject(err); }
+  });
+}
+
+// What the plans page needs from the store, the same on both phones:
+//   configure(key, userId), offerings(products) -> [{ plan, productId, packageId, priceString, period }],
+//   purchase(productId), restore()
+function billingAdapter() {
+  if (__billing.adapter) return __billing.adapter;
+  const platform = billingPlatform();
+  const planOf = function (products, productId) {
+    const id = String(productId || '').split(':')[0];
+    const plans = Object.keys(products || {});
+    for (let i = 0; i < plans.length; i++) { if ((products[plans[i]] || []).indexOf(id) >= 0) return plans[i]; }
+    return '';
+  };
+  if (platform === 'ios') {
+    const P = (window.Capacitor && typeof window.Capacitor.registerPlugin === 'function') ? window.Capacitor.registerPlugin('Purchases') : null;
+    if (!P) return null;
+    const pkgs = {};
+    let configured = false, lastUser = null;
+    __billing.adapter = {
+      configure: async function (key, userId) {
+        if (!configured) { await P.configure({ apiKey: key, appUserID: String(userId) }); configured = true; lastUser = String(userId); }
+        else if (lastUser !== String(userId)) { await P.logIn({ appUserID: String(userId) }); lastUser = String(userId); }
+      },
+      offerings: async function (products) {
+        const o = await P.getOfferings();
+        const off = (o && (o.current || (o.offerings && o.offerings.current))) || null;
+        const list = (off && off.availablePackages) || [];
+        return list.map(function (pk) {
+          const prod = pk.product || {};
+          const productId = String(prod.identifier || '').split(':')[0];
+          pkgs[productId] = pk;
+          const iso = String(prod.subscriptionPeriod || '');
+          const period = /^P1Y$/i.test(iso) || pk.packageType === 'ANNUAL' ? 'year' : (/^P1M$/i.test(iso) || pk.packageType === 'MONTHLY' ? 'month' : '');
+          return { plan: planOf(products, productId), productId: productId, packageId: pk.identifier, priceString: prod.priceString || '', period: period };
+        }).filter(function (x) { return x.plan; });
+      },
+      purchase: async function (productId) {
+        const pk = pkgs[productId];
+        if (!pk) throw new Error('Prodotto non disponibile.');
+        return P.purchasePackage({ aPackage: pk });
+      },
+      restore: async function () { return P.restorePurchases(); }
+    };
+    return __billing.adapter;
+  }
+  if (platform === 'android' && typeof NativeConfig !== 'undefined' && typeof NativeConfig.purchasesConfigure === 'function') {
+    __billing.adapter = {
+      configure: function (key, userId) { return billingAndroidCall('purchasesConfigure', [key, String(userId)]); },
+      offerings: async function (products) {
+        const list = await billingAndroidCall('purchasesOfferings', []);
+        return (list || []).map(function (x) { return Object.assign({}, x, { plan: planOf(products, x.productId) }); }).filter(function (x) { return x.plan; });
+      },
+      purchase: function (productId) { return billingAndroidCall('purchasesBuy', [String(productId)]); },
+      restore: function () { return billingAndroidCall('purchasesRestore', []); }
+    };
+    return __billing.adapter;
+  }
+  return null;
+}
+
+async function billingConfig() {
+  if (__billing.cfg) return __billing.cfg;
+  const cfg = await practiceFetch('/api/billing/config', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+  __billing.cfg = cfg || {};
+  return __billing.cfg;
+}
+
+function billingRedraw() {
+  try { if (typeof currentView !== 'undefined' && currentView === 'pricing' && typeof render === 'function') render(); } catch (_) {}
+}
+
+// Asks the store for the prices (once; again if it failed).
+async function billingLoad(force) {
+  if (!billingIsNative()) return;
+  if (__billing.state === 'loading') return;
+  if (!force && (__billing.state === 'ready' || __billing.state === 'unavailable')) return;
+  const user = String((typeof store !== 'undefined' && store && store.accountUser && store.accountUser.id) || '');
+  if (!user) { __billing.state = 'login'; return; }
+  __billing.state = 'loading';
+  try {
+    const cfg = await billingConfig();
+    const key = billingPlatform() === 'ios' ? cfg.appleKey : cfg.googleKey;
+    const adapter = billingAdapter();
+    if (!cfg.enabled || !key || !adapter) throw new Error('acquisti non configurati');
+    await adapter.configure(key, user);
+    __billing.packs = await adapter.offerings(cfg.products || {});
+    __billing.state = __billing.packs.length ? 'ready' : 'unavailable';
+  } catch (err) {
+    __billing.state = 'unavailable';
+    __billing.error = String((err && err.message) || err || '');
+  }
+  billingRedraw();
+}
+
+// The plan on the server is the one that counts: after a purchase or a restore, ask it to look again.
+async function billingSyncPlan() {
+  try { await practiceFetch('/api/billing/refresh', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 25000); } catch (_) {}
+  try {
+    const payload = await practiceFetch('/api/account/plan', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+    if (payload && payload.entitlement) onEntitlementReceived(payload.entitlement);
+  } catch (_) {}
+}
+
+function billingCancelled(err) {
+  return !!(err && (err.userCancelled === true || /cancel|annull/i.test(String(err.message || ''))));
+}
+
+async function billingBuy(productId) {
+  if (__billing.busy) return;
+  if (!store.accountToken) { if (typeof openAccount === 'function') openAccount(); return; }
+  const adapter = billingAdapter();
+  if (!adapter || __billing.state !== 'ready') { if (typeof showToast === 'function') showToast('Gli acquisti non sono disponibili in questo momento.', 'error'); return; }
+  __billing.busy = true;
+  billingRedraw();
+  try {
+    await adapter.purchase(productId);
+    await billingSyncPlan();
+    if (typeof showToast === 'function') showToast('Abbonamento attivo. Grazie!', 'ok');
+  } catch (err) {
+    if (!billingCancelled(err) && typeof showToast === 'function') showToast((err && err.message) || 'Acquisto non riuscito', 'error');
+  } finally {
+    __billing.busy = false;
+    billingRedraw();
+  }
+}
+window.billingBuy = billingBuy;
+
+async function billingRestore() {
+  if (__billing.busy) return;
+  if (!store.accountToken) { if (typeof openAccount === 'function') openAccount(); return; }
+  const adapter = billingAdapter();
+  if (!adapter || __billing.state !== 'ready') { if (typeof showToast === 'function') showToast('Gli acquisti non sono disponibili in questo momento.', 'error'); return; }
+  __billing.busy = true;
+  billingRedraw();
+  try {
+    await adapter.restore();
+    const before = currentPlanEffective().plan;
+    await billingSyncPlan();
+    const after = currentPlanEffective().plan;
+    if (typeof showToast === 'function') {
+      if (after !== 'free' || before !== after) showToast('Acquisti ripristinati', 'ok');
+      else showToast('Nessun acquisto da ripristinare', 'info');
+    }
+  } catch (err) {
+    if (typeof showToast === 'function') showToast((err && err.message) || 'Ripristino non riuscito', 'error');
+  } finally {
+    __billing.busy = false;
+    billingRedraw();
+  }
+}
+window.billingRestore = billingRestore;
+
+// Opens the store's own page where a subscription is cancelled or changed.
+function billingManage() {
+  const url = billingPlatform() === 'ios' ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions?package=com.nurvan.app';
+  try { window.open(url, '_blank'); } catch (_) { try { window.location.href = url; } catch (__) {} }
+}
+window.billingManage = billingManage;
+
+const BILLING_PERIOD_LABEL = { month: 'mese', year: 'anno' };
+
+// The buttons of one plan: what the store charges, as the store says it.
+function billingButtonsHtml(planId) {
+  if (!billingIsNative()) return '';
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return '';
+  const st = __billing.state;
+  if (st === 'login') return '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openAccount()">ACCEDI PER ABBONARTI</button>';
+  if (st === 'loading' || st === 'idle') return '<div class="plan-store-note" style="font-size:11px;color:#888;">Carico i prezzi dallo store…</div>';
+  if (st !== 'ready') return '<div class="plan-store-note" style="font-size:11px;color:#888;">Gli acquisti non sono disponibili in questo momento. Riprova più tardi.</div>';
+  const mine = __billing.packs.filter(function (x) { return x.plan === planId; });
+  if (!mine.length) return '';
+  const off = __billing.busy ? ' disabled' : '';
+  return mine.map(function (x, i) {
+    return '<button type="button" class="btn ' + (i === 0 ? 'btn-primary' : 'btn-outline') + '" style="width:100%;font-size:11px;margin-top:' + (i ? 6 : 0) + 'px;"' + off +
+      ' onclick="billingBuy(\'' + esc(x.productId) + '\')"><span>ABBONATI</span> · ' + esc(x.priceString) + (x.period ? ' / <span>' + esc(BILLING_PERIOD_LABEL[x.period] || x.period) + '</span>' : '') + '</button>';
+  }).join('');
+}
+
+// The price line of a plan card: the store's, when it is known.
+function billingPriceLine(planId) {
+  const mine = (__billing.packs || []).filter(function (x) { return x.plan === planId; });
+  if (!mine.length) return '';
+  return mine.map(function (x) { return x.priceString + (x.period ? ' / ' + (BILLING_PERIOD_LABEL[x.period] || x.period) : ''); }).join(' · ');
+}
+// The same line as markup, the period in a piece of its own (so it is translated).
+function billingPriceLineHtml(planId) {
+  const mine = (__billing.packs || []).filter(function (x) { return x.plan === planId; });
+  return mine.map(function (x) { return esc(x.priceString) + (x.period ? ' / <span>' + esc(BILLING_PERIOD_LABEL[x.period] || x.period) + '</span>' : ''); }).join(' · ');
+}
+
+// What the stores require next to a subscription: renewal, cancellation, the terms, restore.
+function billingFooterHtml() {
+  if (!billingIsNative()) return '';
+  const ios = billingPlatform() === 'ios';
+  const reg = planFeatures() || {};
+  const lg = (typeof legalLinkHtml === 'function') ? legalLinkHtml : function (k, l) { return esc(l); };
+  const where = ios ? 'Il pagamento viene addebitato sull’account Apple al momento della conferma dell’acquisto.' : 'Il pagamento viene addebitato sull’account Google Play al momento della conferma dell’acquisto.';
+  const manage = ios ? 'Puoi gestire o annullare l’abbonamento in qualsiasi momento da Impostazioni › il tuo nome › Abbonamenti.' : 'Puoi gestire o annullare l’abbonamento in qualsiasi momento da Google Play › Pagamenti e abbonamenti › Abbonamenti.';
+  return '<div class="card plan-billing-footer" style="padding:12px;margin-top:4px;border:1px solid #333;">' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;"><span>' + where + '</span> <span>L’abbonamento si rinnova automaticamente alle stesse condizioni, a meno che non venga annullato almeno 24 ore prima della fine del periodo in corso.</span> <span>' + manage + '</span></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:130px;font-size:10px;padding:8px;" onclick="billingRestore()">RIPRISTINA ACQUISTI</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:130px;font-size:10px;padding:8px;" onclick="billingManage()">GESTISCI ABBONAMENTO</button></div>' +
+    '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;margin-top:10px;">' + lg('privacy', 'Informativa privacy') + lg('termini', 'Termini di servizio') + '</div>' +
+    (reg.contactEmail ? '<div style="font-size:10px;color:#777;margin-top:8px;"><span>Assistenza:</span> ' + esc(reg.contactEmail) + '</div>' : '') +
+    '</div>';
+}
+
 function renderPlansPricing(c) {
   const reg = planFeatures();
   if (!reg) { c.innerHTML = '<div class="cp-help">Piani non disponibili.</div>'; return; }
   const eff = currentPlanEffective();
-  const android = planIsAndroidApp();
+  const native = billingIsNative();
+  if (native) billingLoad();
   const period = { month: 'mese', year: 'anno' };
   const featuresOf = function (planId) {
     return Object.keys(reg.features).filter(function (k) { return reg.features[k].min === planId; }).map(function (k) {
@@ -217,17 +465,20 @@ function renderPlansPricing(c) {
   };
   const cards = reg.plans.map(function (p) {
     const current = p.id === eff.plan;
-    const price = p.prices && p.prices.length
-      ? p.prices.map(function (x) { return x.amount + ' €/' + period[x.period]; }).join(' · ')
-      : 'Gratis';
+    // On a phone the price is the store's (local currency, taxes included), never ours.
+    const price = p.id === 'free' ? 'Gratis'
+      : (native ? billingPriceLine(p.id) : (p.prices && p.prices.length
+        ? p.prices.map(function (x) { return x.amount + ' €/' + period[x.period]; }).join(' · ')
+        : 'Gratis'));
     const coachTier = p.id === 'coach' || p.id === 'coach_pro';
     let action = '';
     if (current) {
       action = '<div class="plan-current-label" style="font-size:11px;font-weight:900;color:var(--gold);">IL TUO PIANO' + (eff.inherited ? ' (DAL TUO COACH)' : '') + (eff.trialActive && p.id === 'coach' ? ' (PROVA)' : '') + '</div>';
-    } else if (p.id !== 'free' && !(android && coachTier)) {
-      // No purchase in this version: contact, never a checkout. On the Android
-      // app, Coach and Pro show no purchase button at all.
-      action = '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="contactAboutPlan(\'' + p.id + '\')">CONTATTACI</button>';
+    } else if (p.id !== 'free') {
+      // In the apps: the store's own purchase. In a browser there is no store: contact.
+      action = native
+        ? billingButtonsHtml(p.id)
+        : '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="contactAboutPlan(\'' + p.id + '\')">CONTATTACI</button>';
     }
     const trial = p.id === 'coach' && !current && canStartCoachTrial()
       ? '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;margin-top:6px;" onclick="startCoachTrialFromApp()">PROVA COACH ' + (reg.trialDays || 14) + ' GIORNI</button>'
@@ -235,7 +486,7 @@ function renderPlansPricing(c) {
     return '<div class="card plan-card' + (current ? ' plan-card-current' : '') + '" data-plan="' + p.id + '" style="padding:14px;margin-bottom:12px;border:' + (current ? '2px solid var(--gold)' : '1px solid #333') + ';">' +
       '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">' +
       '<div style="font-size:17px;font-weight:900;color:' + (current ? 'var(--gold)' : '#fff') + ';">' + esc(p.name) + '</div>' +
-      '<div style="font-size:14px;font-weight:800;color:#fff;">' + esc(price) + '</div></div>' +
+      '<div style="font-size:14px;font-weight:800;color:#fff;">' + ((native && p.id !== 'free') ? billingPriceLineHtml(p.id) : esc(price)) + '</div></div>' +
       '<div style="font-size:11px;color:#aaa;margin:4px 0 8px;">' + esc(p.tagline || '') + '</div>' +
       '<ul style="margin:0 0 10px 16px;padding:0;font-size:12px;color:#ddd;line-height:1.5;">' +
       (p.id !== 'free' ? '<li>Tutto quello del piano precedente</li>' : '') +
@@ -247,8 +498,10 @@ function renderPlansPricing(c) {
     '<div style="margin-bottom:12px;">' +
     '<span style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1.5px;">PIANI</span>' +
     '<h1 style="color:#fff;margin:2px 0 4px;font-size:22px;">Piani Nurvan</h1>' +
-    '<p style="font-size:11px;color:#aaa;margin:0;">Nessun pagamento nell\'app in questa versione: il piano lo attiviamo noi su richiesta.</p></div>' +
-    planNoticesHtml() + cards;
+    (native
+      ? '<p style="font-size:11px;color:#aaa;margin:0;">Gli abbonamenti si acquistano e si gestiscono dallo store del tuo telefono.</p></div>'
+      : '<p style="font-size:11px;color:#aaa;margin:0;">Per attivare un piano scrivici: lo attiviamo noi su richiesta.</p></div>') +
+    planNoticesHtml() + cards + billingFooterHtml();
 }
 window.renderPlansPricing = renderPlansPricing;
 
@@ -267,12 +520,12 @@ function canStartCoachTrial() {
   const a = currentAccountEntitlement();
   if (a.trialUsedAt) return false;
   if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
-  return typeof isCoachUnlocked === 'function' && isCoachUnlocked();
+  return !!(typeof store !== 'undefined' && store && store.accountToken);
 }
 
 async function startCoachTrialFromApp() {
   if (!canStartCoachTrial()) {
-    if (typeof showToast === 'function') showToast('La prova Coach si usa una volta sola, da un account coach.', 'error');
+    if (typeof showToast === 'function') showToast('La prova Coach si usa una volta sola, da un account personale (non da un atleta).', 'error');
     return;
   }
   try {
@@ -280,6 +533,8 @@ async function startCoachTrialFromApp() {
     onEntitlementReceived(payload.entitlement);
     if (typeof showToast === 'function') showToast('Prova Coach attiva per 14 giorni', 'ok');
     render();
+    // The trial is a plan: Coach mode can be opened now.
+    try { if (typeof unlockCoachFromPlan === 'function' && !(typeof isCoachUnlocked === 'function' && isCoachUnlocked())) await unlockCoachFromPlan(); } catch (_) {}
   } catch (err) {
     if (typeof showToast === 'function') showToast((err && err.message) || 'Prova non attivata', 'error');
   }

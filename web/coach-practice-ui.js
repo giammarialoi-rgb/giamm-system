@@ -912,7 +912,6 @@ function ensurePracticeOverlays() {
     '<div id="cp-invite" class="cp-overlay"><div class="cp-panel" id="cp-invite-panel"></div></div>',
     '<div id="cp-intake" class="cp-overlay"><div class="cp-panel" id="cp-intake-panel"></div></div>',
     '<div id="cp-tutorial" class="cp-overlay"><div class="cp-panel" id="cp-tutorial-panel"></div></div>',
-    '<div id="cp-demo" class="cp-overlay"><div class="cp-panel" id="cp-demo-panel"></div></div>',
     '<div id="cp-add" class="cp-overlay"><div class="cp-panel" id="cp-add-panel"></div></div>',
     '<div id="cp-assign" class="cp-overlay"><div class="cp-panel" id="cp-assign-panel"></div></div>'
   ].join('');
@@ -2518,7 +2517,7 @@ function openPersonalCoachAi() {
 }
 function openCoachOrUnlock() {
   if (typeof isCoachUnlocked === 'function' && isCoachUnlocked()) enterCoachSession();
-  else showDemoUnlock();
+  else unlockCoachFromPlan();
 }
 
 function coachLandingView() {
@@ -3008,55 +3007,35 @@ async function leaveCoachClientView(silent) {
   }
 }
 
-function showDemoUnlock() {
+// Coach mode opens with the plan: a subscription or the Coach trial. Without one, the Plans page is where to go.
+async function unlockCoachFromPlan() {
   if (!store.accountToken) {
-    practiceToast('Accedi al tuo account Nurvan per sbloccare Coach.', 'warning');
+    practiceToast('Accedi al tuo account Nurvan per attivare la modalità Coach.', 'warning');
     if (typeof openAccount === 'function') openAccount();
     return;
   }
   if (typeof isAthleteRole === 'function' && isAthleteRole()) {
-    practiceToast('Un account atleta non può sbloccare Coach.', 'warning');
+    practiceToast('Un account atleta non può attivare la modalità Coach.', 'warning');
     return;
   }
-  ensurePracticeStyle();
-  ensurePracticeOverlays();
-  const p = document.getElementById('cp-demo-panel');
-  // The holder is whoever is signed in: the demo card is theirs, not anybody else's.
-  const holder = String((store.accountUser && (store.accountUser.name || store.accountUser.email)) || '').trim();
-  p.innerHTML = '<div style="font-size:10px;color:var(--gold);font-weight:800;">SBLOCCO DEMO</div>' +
-    '<h2>Modalità Coach</h2>' +
-    '<p class="cp-help">Per provare l’hub Coach completa il checkout demo (carta finta, addebito 0,00 €). Lo stesso tasto servirà dopo per il pagamento vero.</p>' +
-    '<div class="cp-field"><label>Intestatario</label><input value="' + esc(holder) + '" readonly></div>' +
-    '<div class="cp-field"><label>Carta</label><input value="4242 4242 4242 4242" readonly></div>' +
-    '<div style="display:flex;gap:8px;"><div class="cp-field" style="flex:1;"><label>Scadenza</label><input value="12/29" readonly></div>' +
-    '<div class="cp-field" style="flex:1;"><label>CVC</label><input value="123" readonly></div></div>' +
-    '<button class="btn btn-primary" style="width:100%;" onclick="confirmDemoUnlock()">PAGA 0,00 € E SBLOCCA</button>' +
-    '<div id="cp-demo-status" class="cp-help" style="margin-top:8px;"></div>' +
-    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="showOverlay(\'cp-demo\', false)">ANNULLA</button>';
-  showOverlay('cp-demo', true);
-}
-
-async function confirmDemoUnlock() {
-  const status = document.getElementById('cp-demo-status');
-  if (status) status.textContent = 'Pagamento in corso…';
   try {
-    const payload = await practiceFetch('/api/coach/unlock/demo', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 20000);
-    if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Sblocco non riuscito.');
+    const payload = await practiceFetch('/api/coach/unlock', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 20000);
+    if (!payload || !payload.ok) throw new Error((payload && payload.error) || 'Attivazione non riuscita.');
     store.coachUnlocked = true;
     store.coachSessionActive = true;
     if (typeof persist === 'function') persist();
     requestNotifyPermission();
-    showOverlay('cp-demo', false);
     applyClientChrome();
-    practiceToast('Pagamento ricevuto. Modalità Coach sbloccata.', 'success');
+    practiceToast('Modalità Coach attiva.', 'success');
     navigate(coachLandingView());
   } catch (err) {
     const raw = String((err && err.message) || '');
-    const msg = /404|not found|failed/i.test(raw)
-      ? 'Il server sta ancora aggiornando lo sblocco. Riprova tra un minuto.'
-      : (raw || 'Sblocco non riuscito.');
-    if (status) status.textContent = msg;
-    practiceToast(msg, 'danger');
+    if ((err && err.code === 'PLAN_REQUIRED') || /piani a pagamento/i.test(raw)) {
+      practiceToast('La modalità Coach è inclusa nei piani a pagamento: puoi provarla gratis dalla pagina Piani.', 'info');
+      if (typeof navigate === 'function') navigate('pricing');
+      return;
+    }
+    practiceToast(raw.replace(/^HTTP \d+:\s*/, '') || 'Attivazione non riuscita.', 'danger');
   }
 }
 
@@ -3092,8 +3071,8 @@ function renderCoachUnlockCardHtml() {
   }
   return '<div class="card" style="border:1px solid var(--gold);margin-bottom:14px;padding:12px;">' +
     '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">Modalità coach</div>' +
-    '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">Attiva l’hub per seguire i tuoi clienti. Per ora il pagamento è demo.</p>' +
-    '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="showDemoUnlock()">ATTIVA MODALITÀ COACH</button></div>';
+    '<p style="font-size:11px;color:#aaa;margin:0 0 10px;">Attiva l’hub per seguire i tuoi clienti. È incluso nei piani Standard, Coach e Coach Pro, e puoi provarlo gratis dalla pagina Piani.</p>' +
+    '<button class="btn btn-primary" style="width:100%;font-size:11px;" onclick="unlockCoachFromPlan()">ATTIVA MODALITÀ COACH</button></div>';
 }
 
 function injectCoachUnlockInto(container) {
@@ -7307,7 +7286,7 @@ window.drawClientTutorial = drawClientTutorial;
 window.advanceClientTutorial = advanceClientTutorial;
 window.closeClientTutorial = closeClientTutorial;
 window.isClientTutorialVisible = isClientTutorialVisible;
-window.showDemoUnlock = showDemoUnlock;
+window.unlockCoachFromPlan = unlockCoachFromPlan;
 window.openCoachOrUnlock = openCoachOrUnlock;
 window.openPersonalCoachAi = openPersonalCoachAi;
 /* ——— E2E chat crypto (ECDH P-256 + AES-GCM) ——— */
@@ -7762,7 +7741,6 @@ window.startInternalVideocall = startInternalVideocall;
 window.hangupInternalVideocall = hangupInternalVideocall;
 window.toggleCallMute = toggleCallMute;
 window.toggleCallCamera = toggleCallCamera;
-window.confirmDemoUnlock = confirmDemoUnlock;
 window.openAddClientWizard = openAddClientWizard;
 window.setAddClientMode = setAddClientMode;
 window.submitAddClient = submitAddClient;

@@ -56,6 +56,7 @@ import {
 import { createAiGateway, aiPublicStatus } from "./server/ai/gateway.mjs";
 import { cleanTrainingData, trainingDigest, trainingTools } from "./server/coach-ai/training-tools.mjs";
 import { createAiLimiter } from "./server/ai/limiter.mjs";
+import { mountBilling } from "./server/billing/index.mjs";
 import { normalizeHealthEvent, verifyWebhookSignature } from "./server/integrations/health.mjs";
 import { calendarPublicConfig } from "./server/integrations/calendar.mjs";
 
@@ -2349,6 +2350,7 @@ mountCoachPractice(app, {
 });
 
 mountPlanRoutes(app, { pool, initDb, accountFromBearer });
+mountBilling(app, { pool, initDb, accountFromBearer });
 const appleAuth = mountAppleAuth(app, { pool, initDb, secret: JWT_SECRET, accountFromBearer, issueAccountToken });
 mountGoogleAppAuth(app, { pool, initDb, secret: JWT_SECRET, verifyGoogleCredential, resolveIdentityUser, clientId: publicGoogleClientId });
 appleCallbackTarget.handle = appleAuth.callbackHandler;

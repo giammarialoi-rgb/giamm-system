@@ -2040,18 +2040,28 @@ export function mountCoachPractice(app, deps) {
     }
   });
 
-  app.post("/api/coach/unlock/demo", async (req, res) => {
+  // Coach mode opens with the plan: a subscription (Standard and above follow athletes) or the Coach trial.
+  // There is no other way in: it used to open with a fake checkout, for anyone.
+  app.post("/api/coach/unlock", async (req, res) => {
     const auth = await requireUser(req);
-    if (!auth) return res.status(401).json({ error: "Accedi al tuo account Nurvan per sbloccare." });
-    if (auth.role === "athlete") return res.status(403).json({ error: "Un atleta non può sbloccare Coach." });
+    if (!auth) return res.status(401).json({ error: "Accedi al tuo account Nurvan per attivare la modalità Coach." });
+    if (auth.role === "athlete") return res.status(403).json({ error: "Un atleta non può attivare la modalità Coach." });
     await initDb();
+    const account = await loadAccount(pool, auth.id);
+    const why = Entitlements.explain(account, "coach_clients");
+    if (!why.allowed) {
+      return res.status(403).json({
+        error: "La modalità Coach è inclusa nei piani a pagamento. Puoi provarla gratis dalla pagina Piani.",
+        code: "PLAN_REQUIRED", minPlan: why.minPlan
+      });
+    }
     await pool.query(
       `INSERT INTO coach_licenses(user_id, source, status, unlocked_at)
-       VALUES($1,'demo','active',NOW())
-       ON CONFLICT (user_id) DO UPDATE SET source='demo', status='active', unlocked_at=NOW()`,
+       VALUES($1,'plan','active',NOW())
+       ON CONFLICT (user_id) DO UPDATE SET source='plan', status='active', unlocked_at=NOW()`,
       [auth.id]
     );
-    return res.json({ ok: true, unlocked: true, source: "demo" });
+    return res.json({ ok: true, unlocked: true, source: "plan" });
   });
 
   app.get("/api/coach/clients", async (req, res) => {

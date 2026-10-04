@@ -25,6 +25,21 @@ import android.util.Log;
 import android.util.Base64;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import com.revenuecat.purchases.CustomerInfo;
+import com.revenuecat.purchases.Offerings;
+import com.revenuecat.purchases.PackageType;
+import com.revenuecat.purchases.Purchases;
+import com.revenuecat.purchases.PurchasesConfiguration;
+import com.revenuecat.purchases.PurchasesError;
+import com.revenuecat.purchases.PurchaseParams;
+import com.revenuecat.purchases.interfaces.LogInCallback;
+import com.revenuecat.purchases.interfaces.PurchaseCallback;
+import com.revenuecat.purchases.interfaces.ReceiveCustomerInfoCallback;
+import com.revenuecat.purchases.interfaces.ReceiveOfferingsCallback;
+import com.revenuecat.purchases.models.Period;
+import com.revenuecat.purchases.models.StoreTransaction;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.os.CancellationSignal;
@@ -515,6 +530,121 @@ public class MainActivity extends Activity {
                     v.vibrate(dur);
                 }
             } catch (Exception ignored) {}
+        }
+
+        // ----- Subscriptions: Google Play Billing, read through RevenueCat -----
+        // The page asks, and is answered through window.__nvBillingResult(id, json): { ok, data } or { ok:false, error, cancelled }.
+        // Nothing about a card ever reaches the app or Nurvan: the store does the payment.
+        private final java.util.Map<String, com.revenuecat.purchases.Package> rcPackages = new java.util.HashMap<>();
+
+        private void rcReply(String cbId, boolean ok, Object data, String error, boolean cancelled) {
+            try {
+                JSONObject out = new JSONObject();
+                out.put("ok", ok);
+                if (ok) out.put("data", data == null ? JSONObject.NULL : data);
+                else { out.put("error", error == null ? "Operazione non riuscita" : error); out.put("cancelled", cancelled); }
+                final String js = "window.__nvBillingResult && window.__nvBillingResult(" + JSONObject.quote(cbId) + "," + JSONObject.quote(out.toString()) + ");";
+                if (web != null) web.post(() -> web.evaluateJavascript(js, null));
+            } catch (Exception ignored) {}
+        }
+
+        @JavascriptInterface
+        public void purchasesConfigure(String apiKey, String appUserId, String cbId) {
+            runOnUiThread(() -> {
+                try {
+                    if (apiKey == null || apiKey.trim().isEmpty() || appUserId == null || appUserId.trim().isEmpty()) {
+                        rcReply(cbId, false, null, "Acquisti non configurati", false);
+                        return;
+                    }
+                    if (!Purchases.isConfigured()) {
+                        Purchases.configure(new PurchasesConfiguration.Builder(MainActivity.this, apiKey.trim()).appUserID(appUserId.trim()).build());
+                        rcReply(cbId, true, "configured", null, false);
+                    } else if (!appUserId.trim().equals(Purchases.getSharedInstance().getAppUserID())) {
+                        Purchases.getSharedInstance().logIn(appUserId.trim(), new LogInCallback() {
+                            @Override public void onReceived(CustomerInfo customerInfo, boolean created) { rcReply(cbId, true, "logged-in", null, false); }
+                            @Override public void onError(PurchasesError error) { rcReply(cbId, false, null, error.getMessage(), false); }
+                        });
+                    } else {
+                        rcReply(cbId, true, "ready", null, false);
+                    }
+                } catch (Exception e) {
+                    rcReply(cbId, false, null, String.valueOf(e.getMessage()), false);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void purchasesOfferings(String cbId) {
+            runOnUiThread(() -> {
+                try {
+                    Purchases.getSharedInstance().getOfferings(new ReceiveOfferingsCallback() {
+                        @Override public void onReceived(Offerings offerings) {
+                            try {
+                                JSONArray list = new JSONArray();
+                                rcPackages.clear();
+                                if (offerings.getCurrent() != null) {
+                                    for (com.revenuecat.purchases.Package pkg : offerings.getCurrent().getAvailablePackages()) {
+                                        String productId = String.valueOf(pkg.getProduct().getId()).split(":")[0];
+                                        rcPackages.put(productId, pkg);
+                                        PackageType type = pkg.getPackageType();
+                                        // The product's own period first (a package can have any name), the package type as a fallback.
+                                        String period = "";
+                                        Period per = pkg.getProduct().getPeriod();
+                                        if (per != null && per.getValue() > 0) {
+                                            if (per.getUnit() == Period.Unit.YEAR && per.getValue() == 1) period = "year";
+                                            else if (per.getUnit() == Period.Unit.MONTH && per.getValue() == 1) period = "month";
+                                            else if (per.getUnit() == Period.Unit.MONTH && per.getValue() == 12) period = "year";
+                                        }
+                                        if (period.isEmpty()) period = type == PackageType.MONTHLY ? "month" : (type == PackageType.ANNUAL ? "year" : "");
+                                        JSONObject one = new JSONObject();
+                                        one.put("productId", productId);
+                                        one.put("packageId", pkg.getIdentifier());
+                                        one.put("priceString", pkg.getProduct().getPrice().getFormatted());
+                                        one.put("period", period);
+                                        list.put(one);
+                                    }
+                                }
+                                rcReply(cbId, true, list, null, false);
+                            } catch (Exception e) {
+                                rcReply(cbId, false, null, String.valueOf(e.getMessage()), false);
+                            }
+                        }
+                        @Override public void onError(PurchasesError error) { rcReply(cbId, false, null, error.getMessage(), false); }
+                    });
+                } catch (Exception e) {
+                    rcReply(cbId, false, null, String.valueOf(e.getMessage()), false);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void purchasesBuy(String productId, String cbId) {
+            runOnUiThread(() -> {
+                try {
+                    com.revenuecat.purchases.Package pkg = rcPackages.get(String.valueOf(productId).split(":")[0]);
+                    if (pkg == null) { rcReply(cbId, false, null, "Prodotto non disponibile", false); return; }
+                    Purchases.getSharedInstance().purchase(new PurchaseParams.Builder(MainActivity.this, pkg).build(), new PurchaseCallback() {
+                        @Override public void onCompleted(StoreTransaction storeTransaction, CustomerInfo customerInfo) { rcReply(cbId, true, "purchased", null, false); }
+                        @Override public void onError(PurchasesError error, boolean userCancelled) { rcReply(cbId, false, null, error.getMessage(), userCancelled); }
+                    });
+                } catch (Exception e) {
+                    rcReply(cbId, false, null, String.valueOf(e.getMessage()), false);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void purchasesRestore(String cbId) {
+            runOnUiThread(() -> {
+                try {
+                    Purchases.getSharedInstance().restorePurchases(new ReceiveCustomerInfoCallback() {
+                        @Override public void onReceived(CustomerInfo customerInfo) { rcReply(cbId, true, "restored", null, false); }
+                        @Override public void onError(PurchasesError error) { rcReply(cbId, false, null, error.getMessage(), false); }
+                    });
+                } catch (Exception e) {
+                    rcReply(cbId, false, null, String.valueOf(e.getMessage()), false);
+                }
+            });
         }
 
         // Health Connect is not used: the app declared 18 read/write

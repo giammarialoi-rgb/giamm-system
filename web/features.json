@@ -6,7 +6,7 @@
   "inheritedPlan": "standard",
   "contactEmail": "info@nurvan.app",
   "legal": {
-    "version": "2026-10-04",
+    "version": "2026-10-04b",
     "lastUpdated": "4 ottobre 2026",
     "minAge": 16,
     "controllerName": "Giammaria Loi",
@@ -22,6 +22,14 @@
     { "id": "coach", "name": "Coach", "seats": 20, "prices": [{ "amount": 19, "period": "month" }, { "amount": 190, "period": "year" }], "tagline": "Fino a 20 atleti, check-in programmati" },
     { "id": "coach_pro", "name": "Coach Pro", "seats": null, "prices": [{ "amount": 39, "period": "month" }, { "amount": 390, "period": "year" }], "tagline": "Atleti illimitati, terapia ed esami" }
   ],
+  "billing": {
+    "note": "I prodotti in vendita negli store (Apple e Google Play, stessi identificativi), per piano. Si creano negli store e in RevenueCat con questi nomi esatti; il prezzo lo decide lo store.",
+    "products": {
+      "standard": ["nurvan.standard.year"],
+      "coach": ["nurvan.coach.month", "nurvan.coach.year"],
+      "coach_pro": ["nurvan.coach_pro.month", "nurvan.coach_pro.year"]
+    }
+  },
   "features": {
     "logging": { "min": "free", "label": "Registrazione degli allenamenti" },
     "active_program": { "min": "free", "label": "Programmi attivi insieme", "limit": { "free": 1, "standard": 3, "coach": 3, "coach_pro": 3 }, "unit": "programmi", "inheritMin": "coach_pro" },

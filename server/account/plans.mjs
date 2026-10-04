@@ -19,7 +19,7 @@ await import("../../web/entitlements.js");
 export const Entitlements = globalThis.NurvanEntitlements;
 
 const PLAN_IDS = FEATURES.plans.map((p) => p.id);
-const SOURCES = ["manual", "stripe", "play"];
+const SOURCES = ["manual", "stripe", "play", "apple"];
 const DAY_MS = 86400000;
 
 export function accountFromRow(row) {
@@ -202,8 +202,6 @@ export function mountPlanRoutes(app, { pool, initDb, accountFromBearer }) {
     if (!auth) return res.status(401).json({ error: "Accedi al tuo account." });
     if (auth.role === "athlete") return res.status(403).json({ error: "Il periodo di prova e' per i coach." });
     await initDb();
-    const lic = await pool.query("SELECT 1 FROM coach_licenses WHERE user_id = $1 AND status = 'active'", [auth.id]);
-    if (!lic.rows.length) return res.status(403).json({ error: "Il periodo di prova e' per i coach: attiva prima la modalita' Coach." });
     try {
       await startCoachTrial(pool, auth.id);
       return res.json({ ok: true, entitlement: await accountEntitlement(pool, auth) });

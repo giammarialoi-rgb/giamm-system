@@ -1,7 +1,8 @@
 # Privacy per Google Play e App Store
 
 **BOZZA da far verificare a un consulente legale / DPO prima della pubblicazione.**
-Risposte basate sul codice al 25/09/2026 (versione informativa `2026-09-25`).
+Risposte basate sul codice al 04/10/2026 (versione informativa `2026-10-04b`).
+Le versioni pronte da incollare, store per store, stanno in `store/apple/` e `store/google-play/`.
 Quando il codice cambia (nuovi dati, nuovi fornitori, pagamenti) vanno aggiornate
 queste risposte, `web/privacy.html` e la `legal.version` in `web/features.json`.
 
@@ -15,7 +16,8 @@ queste risposte, `web/privacy.html` e la `legal.version` in `web/features.json`.
 | Chiave Gemini a pagamento (con il livello gratuito Google può usare i contenuti per migliorare i modelli: incompatibile con quanto scritto nell'informativa) | variabile `GEMINI_API_KEY` su Render | da verificare |
 | DPA (accordo art. 28) con Render, Google Cloud/Gemini, Resend, Cloudflare | account dei fornitori | da accettare/scaricare |
 | Periodo di rotazione dei backup del database Render | dashboard Render | da verificare e, se serve, indicarlo nell'informativa |
-| Account demo per la revisione (email + password, con dati di esempio) | Play Console → Accesso all'app; App Store Connect → App Review Information | da creare |
+| Account per la revisione (3 account, password generate) | `node tools/seed_review_accounts.mjs` con il `DATABASE_URL` di produzione; poi Play Console → Accesso all'app e App Store Connect → Informazioni per la revisione | da lanciare |
+| Acquisti in-app: RevenueCat, prodotti, variabili, webhook | `docs/store/ACQUISTI_IN_APP.md` | da configurare |
 | Ricompilare features.js e le app dopo aver compilato i campi | `node build_master25.mjs`, poi APK/IPA | dopo i campi |
 
 Finché i campi del titolare sono vuoti, `/privacy`, `/termini` ed `/elimina-account` mostrano un avviso "Bozza".
@@ -32,6 +34,10 @@ URL da inserire negli store (dominio di produzione):
 - **Dati inseriti dall'utente**: allenamenti; salute (peso, misure, foto dei check fisici, alimentazione, foto dei pasti, integratori, terapie, esami del sangue, sonno/battito se inseriti a mano); messaggi, check-in e file scambiati col coach.
 - **Terapia ed esami (controlli di sezione)**: alla prima apertura di Terapia o Esami un avviso spiega il trattamento (dati sanitari, dove stanno, chi li vede) con le scelte; ogni sezione ha un riquadro «Privacy» per: visibilità al coach (atleti; `prefs.medicalPrivacy.therapyCoach/examsCoach`, applicata dal server: snapshot senza quelle sezioni, assign/patch-data del coach rifiutati su di esse), uso da parte del Coach AI (spento di default; senza, ogni «spiega questo valore» chiede conferma), elimina tutto (compresi i file dei referti allegati, che si possono anche eliminare uno per uno). Mai in classifiche, XP o share card.
 - **AI (facoltativa, consenso separato)**: Google Gemini riceve testo della chat, file dei programmi da importare, foto di pasti/etichette, codici a barre, con il contesto necessario.
+- **Acquisti (04/10/2026)**: gli abbonamenti si comprano con App Store / Google Play; **RevenueCat** (fornitore di servizi, USA) riceve l'ID account Nurvan e i dati dell'abbonamento (prodotto, store, scadenza) e li comunica al server di Nurvan. Nurvan non vede mai dati di carta. Il piano acquistato è collegato all'account.
+- **Salute scritta a mano**: sonno, frequenza a riposo, HRV, passi inseriti dall'utente; nessun collegamento con Apple Salute o Health Connect (rimandato).
+- **Chat con segnala e blocca**: le segnalazioni (con messaggi allegati solo se scelti) stanno nel pannello admin per 12 mesi dopo l'esame.
+- **iOS**: l'app è solo iPhone.
 - **Nessuna lettura da altre app** (Health Connect rimosso: nessun permesso `health.*`), nessuna posizione, nessuna rubrica, nessuna pubblicità, nessun SDK di analytics o tracking.
 - **Permessi Android**: `INTERNET`, `CAMERA` e `RECORD_AUDIO` (chiesti solo all'uso), `POST_NOTIFICATIONS`, `VIBRATE`, `RECEIVE_BOOT_COMPLETED` (ripristino promemoria).
 - **Backup Android**: disattivato (`allowBackup=false` + `data_extraction_rules.xml`).
@@ -60,9 +66,10 @@ URL da inserire negli store (dominio di produzione):
 | Foto e video | Foto | Facoltativo | Funzionalità app |
 | File e documenti | File e documenti | Facoltativo (import programmi, allegati al coach) | Funzionalità app |
 | Messaggi | Altri messaggi in-app | Facoltativo (coach-atleta) | Funzionalità app |
+| Informazioni finanziarie | Cronologia degli acquisti | Obbligatorio per chi compra | Funzionalità app, gestione account (aggiunto 04/10) |
 | Informazioni e prestazioni app | Log degli arresti anomali / Diagnostica | Obbligatorio | Analisi (solo errori, per stabilità) |
 
-Non raccolti: posizione, contatti, calendario del telefono, dati finanziari (finché non ci sono acquisti in app), audio (il riconoscimento vocale è il servizio di sistema Android: l'app riceve solo il testo), cronologia web, ID dispositivo/pubblicità.
+Non raccolti: posizione, contatti, calendario del telefono, dati di pagamento/carta (li gestisce solo lo store), audio (il riconoscimento vocale è il servizio di sistema Android: l'app riceve solo il testo), cronologia web, ID dispositivo/pubblicità.
 
 Per i dati inviati a Gemini: indicare in "Informazioni sulla salute" / "Foto" che una parte del trattamento avviene tramite fornitore di servizi, e che l'invio è facoltativo (consenso AI).
 
@@ -87,9 +94,10 @@ Tracciamento: **No** (nessun dato usato per tracciare, nessun SDK di terze parti
 | Salute e fitness | Salute, Fitness |
 | Contenuti utente | Foto o video; Altri contenuti dell'utente (messaggi al coach, check-in, file importati) |
 | Identificativi | ID utente |
+| Acquisti | Cronologia degli acquisti (aggiunto 04/10) |
 | Diagnostica | Altri dati diagnostici (eventi di errore) |
 
-Non raccolti: posizione, contatti, dati finanziari, cronologia, acquisti (finché non ci sono acquisti in app), dati sensibili oltre alla salute.
+Non raccolti: posizione, contatti, dati finanziari/carta, cronologia di navigazione, dati sensibili oltre alla salute. (Gli acquisti ora sì: «Cronologia degli acquisti».)
 
 **Messaggi tra utenti (linea guida 1.2) — aggiunto il 04/10/2026**
 - Segnalare: nella chat coach-atleta, pulsante «SEGNALA · BLOCCA» con motivo, testo libero e scelta di allegare gli ultimi 10 messaggi (la chat è cifrata end-to-end: Nurvan non la può leggere, i messaggi arrivano decifrati dal telefono solo se si sceglie di allegarli). Le segnalazioni stanno nella dashboard admin (Operazioni › Segnalazioni chat), con un avviso in Panoramica; l'obiettivo è rispondere entro 24 ore.
