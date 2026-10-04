@@ -91742,7 +91742,7 @@ function billingButtonsHtml(planId) {
   const st = __billing.state;
   if (st === 'login') return '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openAccount()">ACCEDI PER ABBONARTI</button>';
   if (st === 'loading' || st === 'idle') return '<div class="plan-store-note" style="font-size:11px;color:#888;">Carico i prezzi dallo store…</div>';
-  if (st !== 'ready') return '<div class="plan-store-note" style="font-size:11px;color:#888;">Gli acquisti non sono disponibili in questo momento. Riprova più tardi.</div>';
+  if (st !== 'ready') return '<div class="plan-store-note" style="font-size:11px;color:#888;">Gli acquisti non sono disponibili in questo momento. Riprova più tardi.' + (__billing.error ? '<div style="font-size:9px;color:#666;margin-top:4px;word-break:break-word;">' + esc(String(__billing.error).slice(0, 220)) + '</div>' : '') + '</div>';
   const mine = __billing.packs.filter(function (x) { return x.plan === planId; });
   if (!mine.length) return '';
   const off = __billing.busy ? ' disabled' : '';
