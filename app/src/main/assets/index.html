@@ -62140,6 +62140,16 @@ function paintLesson() {
     ? (step.kind === 'time' ? String(left) : esc(step.target))
     : String(left);
   const sub = working && step.kind === 'reps' ? 'ripetizioni' : 'secondi';
+  // The player is redrawn five times a second by the clock; rebuilding the whole sheet every time made the buttons
+  // at the bottom flicker (and on Android a tap could land on a button that had just been replaced). The sheet is
+  // rebuilt only when the step, the phase or the pause changes; between those only the big number is updated.
+  const sig = st.i + '|' + st.phase + '|' + (st.paused ? 1 : 0);
+  const bigEl = document.getElementById('lesson-big');
+  if (el.getAttribute('data-sig') === sig && bigEl) {
+    if (bigEl.innerHTML !== String(big)) bigEl.innerHTML = big;
+    return;
+  }
+  el.setAttribute('data-sig', sig);
   el.innerHTML =
     '<div class="nurvan-sheet-panel">' +
     '<div class="nurvan-sheet-head">' +
@@ -62148,7 +62158,7 @@ function paintLesson() {
     '</div>' +
     '<div class="nurvan-sheet-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">' +
     '<div style="font-size:11px;font-weight:900;letter-spacing:2px;color:' + colour + ';margin-bottom:6px;">' + label + '</div>' +
-    '<div style="font-size:64px;font-weight:900;color:' + colour + ';line-height:1;">' + big + '</div>' +
+    '<div id="lesson-big" style="font-size:64px;font-weight:900;color:' + colour + ';line-height:1;">' + big + '</div>' +
     '<div style="font-size:10px;color:#666;margin-top:4px;">' + sub + '</div>' +
     '<div style="font-size:22px;font-weight:900;color:#fff;margin:14px 0 4px;">' + (working || st.phase === 'prep' ? '' : '<span style="font-size:11px;color:#888;display:block;font-weight:800;">POI</span>') + esc(shown.name) + '</div>' +
     ((shown.sideText || shown.label) ? '<div style="font-size:11px;color:var(--gold);font-weight:800;">' + esc([shown.sideText, shown.label].filter(Boolean).join(' · ')) + '</div>' : '') +
@@ -87898,7 +87908,8 @@ function wrapPracticeHooks() {
           coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
           home: 1, settings: 1, ai: 1
         };
-        const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1 };
+        // hyrox and disciplines: the two ways of writing a client's program from the assignment chooser (they opened nothing).
+        const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1, hyrox: 1, disciplines: 1 };
         const ok = coachCore[raw]
           || ((store.coachViewingClient || store.coachAssigning) && clientDomains[raw])
           || (store.__cpCoachLibraryImport && (raw === 'import' || raw === 'coachLibrary'));

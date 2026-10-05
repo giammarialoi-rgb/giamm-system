@@ -781,6 +781,17 @@ const CHAT_RETRY = {
   fallbackModels: String(process.env.AI_FALLBACK_MODEL || "").split(",").map((m) => m.trim()).filter(Boolean)
 };
 
+// A model the provider has retired answers 404 "not found" (Google announces the dates by email: a model that works
+// today is a 404 on the day). When that happens the model is set aside for an hour and the next one on the list
+// (AI_FALLBACK_MODEL) is used at once, for this call and the ones after it - without waiting for someone to notice.
+const RETIRED_MODELS = new Map();
+function isModelGoneError(err) {
+  const status = geminiErrorStatus(err);
+  const msg = String(err?.message || "");
+  return status === 404 || /NOT_FOUND|is not found|no longer (available|supported)|has been (discontinued|retired|deprecated)/i.test(msg);
+}
+const modelRetired = (m) => { const until = RETIRED_MODELS.get(m); if (until && until > Date.now()) return true; if (until) RETIRED_MODELS.delete(m); return false; };
+
 async function generateContentWithRetry(ai, { model, partsAttempts, label, config, contents, patient, fallbackModels }) {
   const delaysMs = patient ? [0, 1500, 4000, 9000] : [0, 700, 1800];
   let lastErr;
@@ -791,7 +802,11 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label, confi
     const parts = partsAttempts[Math.min(attempt, partsAttempts.length - 1)];
     const fallbacks = (fallbackModels || []).filter((m) => m !== model).slice(0, delaysMs.length - 1);
     const firstFallbackAt = delaysMs.length - fallbacks.length;
-    const useModel = (fallbacks.length && attempt >= firstFallbackAt) ? fallbacks[attempt - firstFallbackAt] : model;
+    let useModel = (fallbacks.length && attempt >= firstFallbackAt) ? fallbacks[attempt - firstFallbackAt] : model;
+    if (modelRetired(useModel)) {
+      const alive = [model].concat(fallbackModels || []).find((m) => m && !modelRetired(m));
+      if (alive) useModel = alive;
+    }
     try {
       const request = { model: useModel, contents: contents || [{ role: "user", parts }] };
       if (config) request.config = config;
@@ -803,6 +818,12 @@ async function generateContentWithRetry(ai, { model, partsAttempts, label, confi
         break; // waiting again would only lengthen the line
       }
       console.warn(`${label} attempt ${attempt + 1}/${delaysMs.length} failed (${useModel}, status ${geminiErrorStatus(err) || "?"})`, err?.message || err);
+      if (isModelGoneError(err)) {
+        RETIRED_MODELS.set(useModel, Date.now() + 3600000);
+        console.error(`AI_MODEL_RETIRED ${useModel}: set aside for an hour`);
+        if ([model].concat(fallbackModels || []).some((m) => m && !modelRetired(m))) continue;
+        break;
+      }
       if (!isRetryableGeminiError(err)) break;
     }
   }

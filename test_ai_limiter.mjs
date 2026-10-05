@@ -96,15 +96,19 @@ ok('a failure says which model and which status, to read in the logs', /failed \
 
 // the models actually used, try by try (the real function, with the provider stubbed)
 {
-  const start = api.indexOf('async function generateContentWithRetry(');
-  const src = api.slice(start, api.indexOf('\n}\n', start) + 3);
-  const run = async (fallbacks, failFirst) => {
-    const used = [];
+  const start = api.indexOf('const RETIRED_MODELS = new Map();');
+  const src = api.slice(start, api.indexOf('\n}\n', api.indexOf('async function generateContentWithRetry(')) + 3);
+  const world = () => {
     const ctx = vm.createContext({
-      console: { warn() {} }, sleep: () => Promise.resolve(), aiLimiter: { run: (fn) => fn() },
-      isRetryableGeminiError: () => true, geminiErrorStatus: () => 503, Math, Promise
+      console: { warn() {}, error() {} }, sleep: () => Promise.resolve(), aiLimiter: { run: (fn) => fn() },
+      isRetryableGeminiError: () => true, geminiErrorStatus: (e) => Number(e && e.status) || null, Math, Promise, Date, Map, String, Number
     });
     vm.runInContext(src, ctx);
+    return ctx;
+  };
+  const run = async (fallbacks, failFirst) => {
+    const used = [];
+    const ctx = world();
     ctx.__ai = { models: { generateContent: async (req) => { used.push(req.model); if (used.length <= failFirst) { const e = new Error('overloaded'); e.status = 503; throw e; } return { text: 'ok from ' + req.model }; } } };
     let out = null, err = null;
     try { out = await vm.runInContext("generateContentWithRetry(__ai, { model: 'A', partsAttempts: [[{ text: 'x' }]], label: 't', patient: true, fallbackModels: " + JSON.stringify(fallbacks) + " })", ctx); } catch (e) { err = e; }
@@ -122,6 +126,23 @@ ok('a failure says which model and which status, to read in the logs', /failed \
   ok('if a fallback answers, that answer is used and the rest is not tried', rescued.used.join() === 'A,A,B' && rescued.out && rescued.out.text === 'ok from B');
   const quick = await run(['B'], 0);
   ok('when the main model answers, nothing else is called', quick.used.join() === 'A' && quick.out.text === 'ok from A');
+
+  // a retired model: Google answers 404 on the day it is switched off
+  const used = [];
+  const ctx = world();
+  ctx.__ai = { models: { generateContent: async (req) => { used.push(req.model); if (req.model === 'A') { const e = new Error('models/A is not found for API version v1beta'); e.status = 404; throw e; } return { text: 'ok from ' + req.model }; } } };
+  const call = () => vm.runInContext("generateContentWithRetry(__ai, { model: 'A', partsAttempts: [[{ text: 'x' }]], label: 't', patient: true, fallbackModels: ['B', 'C'] })", ctx);
+  const first = await call();
+  ok('a retired model (404): the next one on the list answers at once, on the same call', used.join() === 'A,B' && first.text === 'ok from B');
+  used.length = 0;
+  const second = await call();
+  ok('and the following calls do not go to the retired one again (set aside for an hour)', used.join() === 'B' && second.text === 'ok from B');
+  const lone = world();
+  const seen = [];
+  lone.__ai = { models: { generateContent: async (req) => { seen.push(req.model); const e = new Error('not found'); e.status = 404; throw e; } } };
+  let loneErr = null;
+  try { await vm.runInContext("generateContentWithRetry(__ai, { model: 'A', partsAttempts: [[{ text: 'x' }]], label: 't', patient: true, fallbackModels: [] })", lone); } catch (e) { loneErr = e; }
+  ok('with no other model to go to, it stops at the first 404 instead of insisting', seen.join() === 'A' && loneErr);
 }
 
 if (failed) { console.log('\n' + failed + ' FAIL'); process.exit(1); }

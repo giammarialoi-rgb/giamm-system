@@ -7031,7 +7031,8 @@ function wrapPracticeHooks() {
           coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
           home: 1, settings: 1, ai: 1
         };
-        const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1 };
+        // hyrox and disciplines: the two ways of writing a client's program from the assignment chooser (they opened nothing).
+        const clientDomains = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, stats: 1, athlete: 1, import: 1, programs: 1, calendar: 1, hyrox: 1, disciplines: 1 };
         const ok = coachCore[raw]
           || ((store.coachViewingClient || store.coachAssigning) && clientDomains[raw])
           || (store.__cpCoachLibraryImport && (raw === 'import' || raw === 'coachLibrary'));

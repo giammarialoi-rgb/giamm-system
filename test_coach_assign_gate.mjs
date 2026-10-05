@@ -54,8 +54,8 @@ function bodyOf(needle, chars) {
   const wrapperAt = src.indexOf('navigate = function (v, e) {');
   const domainsAt = src.indexOf('const clientDomains = { training: 1', wrapperAt);
   assert.ok(domainsAt !== -1, 'clientDomains not found inside the navigate wrapper');
-  const domains = src.slice(domainsAt, domainsAt + 220);
-  for (const d of ['training', 'nutrition', 'import', 'programs']) {
+  const domains = src.slice(domainsAt, domainsAt + 300);
+  for (const d of ['training', 'nutrition', 'import', 'programs', 'hyrox', 'disciplines']) {
     ok(new RegExp(`\\b${d}: 1`).test(domains), `"${d}" is reachable while assigning`);
   }
 }
