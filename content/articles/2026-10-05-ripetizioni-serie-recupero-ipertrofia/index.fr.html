@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Combien de répétitions pour la masse : le mythe du 8-12 | Nurvan</title>
+<meta name="description" content="La fourchette 8-12 n&#x27;est pas magique, mais presque rien de ce que les carrousels ajoutent ne tient. Ce que dit vraiment le position stand ACSM 2026.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entraînement</a><a href="#">Nutrition</a><a href="#">Compléments</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Télécharger l&#x27;app</a></div></header>
+<main class="wrap" lang="fr">
+<div class="crumb">Blog · Entraînement · Programmation</div>
+<h1>Combien de répétitions faut-il vraiment pour prendre de la masse</h1>
+<p class="lede">Ces dernières semaines, quatre carrousels ont dit la même chose : la fourchette de 8-12 répétitions n&#x27;a rien de magique, et le muscle grossit aussi bien à 6 répétitions qu&#x27;à 30. Sur ce point, ils ont raison, et la littérature est massive. Le problème, c&#x27;est ce qu&#x27;ils ont empilé autour — séries, repos, volume — où au moins trois affirmations ne tiennent pas. On les reprend une par une.</p>
+<div class="meta"><span>5 octobre 2026</span><span><b>15</b> min de lecture</span><span><b>9</b> études citées</span><span>Par <a href="/autore/giammaria-loi">Giammaria Loi</a> · mis à jour le 5 octobre 2026</span></div>
+<div class="box"><h2>L&#x27;essentiel</h2><ul><li><strong>La fourchette de répétitions compte beaucoup moins qu&#x27;on ne le croit.</strong> Le nouveau position stand de l&#x27;American College of Sports Medicine, publié en mars 2026 sur 137 revues systématiques et plus de 30 000 participants, ne trouve aucune différence d&#x27;hypertrophie entre 30 % et 100 % du maximum. Le muscle ne compte pas les répétitions : il lit l&#x27;effort.</li><li><strong>Pour la force maximale, la charge compte, et beaucoup.</strong> Dans l&#x27;étude qui a rendu le sujet célèbre, les séries de 25-35 répétitions ont produit autant de muscle que celles de 8-12, mais le squat maximal a progressé de 19,6 % avec les charges lourdes contre 8,8 % avec les légères.</li><li><strong>« Au-delà de trois séries tu n&#x27;achètes que de la fatigue » est faux.</strong> L&#x27;ACSM place les rendements décroissants de l&#x27;hypertrophie autour de 18-20 séries hebdomadaires par muscle, pas à trois. Une méta-régression de 2026 sur 67 études donne une probabilité de 100 % au lien entre plus de volume et plus de croissance.</li><li><strong>Inutile d&#x27;aller jusqu&#x27;à l&#x27;échec réel.</strong> Le position stand est net : mener les séries jusqu&#x27;à l&#x27;échec musculaire momentané n&#x27;augmente pas les gains de force, d&#x27;hypertrophie ni de puissance. Deux à trois répétitions en réserve suffisent.</li><li><strong>Sur le repos, les posts ont simplifié.</strong> Un essai chez des pratiquants entraînés favorise les 3 minutes sur une minute, mais la synthèse de l&#x27;ACSM ne trouve pas de différence de force entre des repos de moins et de plus d&#x27;une minute. Le « minimum de 90 secondes » ne vient d&#x27;aucune étude : c&#x27;est un chiffre inventé en légende.</li></ul></div>
+<figure class="cover"><img alt="Un athlète sous la barre pendant une série de squat lourde, avec un pareur derrière lui." src="images/cover.jpg" loading="lazy"/><figcaption class="cap">C&#x27;est l&#x27;effort, et non le nombre de répétitions, que le muscle reconnaît. Photo : Cpl. Kenneth Jasik, U.S. Marine Corps, domaine public.</figcaption></figure>
+<h2>D&#x27;où vient la règle du 8-12</h2>
+<p>Pendant trois décennies, les manuels ont enseigné le « continuum des répétitions » : lourd et peu de répétitions pour la force, moyen et 8-12 pour le volume, léger et beaucoup de répétitions pour l&#x27;endurance musculaire. Une théorie bien rangée, bâtie sur la logique plus que sur de la croissance mesurée.</p>
+<p>Les ennuis ont commencé quand on a mesuré l&#x27;épaisseur musculaire à l&#x27;échographie : le milieu du continuum n&#x27;est pas apparu.</p>
+<p>En 2015, l&#x27;équipe de Brad Schoenfeld a réparti 18 hommes expérimentés en deux groupes : l&#x27;un faisait 8-12 répétitions par série, l&#x27;autre 25-35, sur sept exercices, trois fois par semaine, pendant huit semaines. Toutes les séries jusqu&#x27;à l&#x27;échec.</p>
+<p>Au bout de huit semaines, le gain d&#x27;épaisseur musculaire était quasi identique : quadriceps +9,3 % contre +9,5 %, extenseurs du coude +6,0 % contre +5,2 %, fléchisseurs du coude +5,3 % contre +8,6 %, sans différence statistiquement significative. La force, elle, raconte autre chose : le squat maximal a progressé de 19,6 % avec les charges lourdes et de 8,8 % avec les légères.</p>
+<figure><div class="chart"><svg aria-label="Graphique en barres : les gains d&#x27;épaisseur musculaire sont semblables avec des charges lourdes et légères sur les quadriceps, les fléchisseurs et les extenseurs du coude, alors que la force au squat progresse de 19,6 % contre 8,8 %." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" role="img" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<style>.t{fill:#f0f0f0;font-size:21px;font-weight:700}.s{fill:#a0a0a0;font-size:13px}.ax{fill:#a0a0a0;font-size:12px}.cat{fill:#f0f0f0;font-size:12.5px}.val{font-size:12.5px;font-weight:700}.lg{fill:#f0f0f0;font-size:13px}.nt{fill:#a0a0a0;font-size:12px}</style>
+<rect width="900" height="540" fill="#0c0c0c"/>
+<text x="78" y="36" class="t">Charges lourdes ou légères : même masse, force différente</text>
+<text x="78" y="58" class="s">18 hommes entraînés, 8 semaines — Schoenfeld et al. 2015 (PMID 25853914)</text>
+<rect x="78" y="76" width="13" height="13" rx="2" fill="#d4af37"/>
+<text x="98" y="87" class="lg">8-12 répétitions</text>
+<rect x="229.6" y="76" width="13" height="13" rx="2" fill="#aa8a2e" opacity="0.9"/>
+<text x="249.6" y="87" class="lg">25-35 répétitions</text>
+<line x1="78" y1="390.0" x2="870" y2="390.0" stroke="#242424" stroke-width="1"/>
+<text x="68" y="394.0" text-anchor="end" class="ax">0%</text>
+<line x1="78" y1="325.0" x2="870" y2="325.0" stroke="#242424" stroke-width="1"/>
+<text x="68" y="329.0" text-anchor="end" class="ax">5%</text>
+<line x1="78" y1="260.0" x2="870" y2="260.0" stroke="#242424" stroke-width="1"/>
+<text x="68" y="264.0" text-anchor="end" class="ax">10%</text>
+<line x1="78" y1="195.0" x2="870" y2="195.0" stroke="#242424" stroke-width="1"/>
+<text x="68" y="199.0" text-anchor="end" class="ax">15%</text>
+<line x1="78" y1="130.0" x2="870" y2="130.0" stroke="#242424" stroke-width="1"/>
+<text x="68" y="134.0" text-anchor="end" class="ax">20%</text>
+<text x="18" y="247" text-anchor="middle" class="ax" transform="rotate(-90 18 247)">Variation sur 8 semaines (%)</text>
+<rect x="126.0" y="269.1" width="44" height="120.9" rx="3" fill="#d4af37"/>
+<text x="148.0" y="262.1" text-anchor="middle" class="val" fill="#f3e5ab">+9,3%</text>
+<rect x="184.0" y="266.5" width="44" height="123.5" rx="3" fill="#aa8a2e"/>
+<text x="206.0" y="259.5" text-anchor="middle" class="val" fill="#f3e5ab">+9,5%</text>
+<text x="177.0" y="412" text-anchor="middle" class="cat"><tspan x="177.0" dy="0">Quadriceps</tspan><tspan x="177.0" dy="15">(épaisseur)</tspan></text>
+<rect x="324.0" y="312.0" width="44" height="78.0" rx="3" fill="#d4af37"/>
+<text x="346.0" y="305.0" text-anchor="middle" class="val" fill="#f3e5ab">+6,0%</text>
+<rect x="382.0" y="322.4" width="44" height="67.6" rx="3" fill="#aa8a2e"/>
+<text x="404.0" y="315.4" text-anchor="middle" class="val" fill="#f3e5ab">+5,2%</text>
+<text x="375.0" y="412" text-anchor="middle" class="cat"><tspan x="375.0" dy="0">Extenseurs coude</tspan><tspan x="375.0" dy="15">(épaisseur)</tspan></text>
+<rect x="522.0" y="321.1" width="44" height="68.9" rx="3" fill="#d4af37"/>
+<text x="544.0" y="314.1" text-anchor="middle" class="val" fill="#f3e5ab">+5,3%</text>
+<rect x="580.0" y="278.2" width="44" height="111.8" rx="3" fill="#aa8a2e"/>
+<text x="602.0" y="271.2" text-anchor="middle" class="val" fill="#f3e5ab">+8,6%</text>
+<text x="573.0" y="412" text-anchor="middle" class="cat"><tspan x="573.0" dy="0">Fléchisseurs coude</tspan><tspan x="573.0" dy="15">(épaisseur)</tspan></text>
+<rect x="720.0" y="135.2" width="44" height="254.8" rx="3" fill="#d4af37"/>
+<text x="742.0" y="128.2" text-anchor="middle" class="val" fill="#f3e5ab">+19,6%</text>
+<rect x="778.0" y="275.6" width="44" height="114.4" rx="3" fill="#aa8a2e"/>
+<text x="800.0" y="268.6" text-anchor="middle" class="val" fill="#f3e5ab">+8,8%</text>
+<text x="771.0" y="412" text-anchor="middle" class="cat"><tspan x="771.0" dy="0">Squat 1RM</tspan><tspan x="771.0" dy="15">(force)</tspan></text>
+<line x1="78" y1="390" x2="870" y2="390" stroke="#a0a0a0" stroke-width="1"/>
+<text x="78" y="510" text-anchor="start" class="nt"><tspan x="78" dy="0">Hypertrophie : aucune différence significative. Force : avantage significatif des charges lourdes.</tspan></text>
+<text x="880" y="528" text-anchor="end" class="nt" fill="#aa8a2e">NURVAN</text>
+</svg></div><figcaption class="cap">Charge lourde (8-12 répétitions) contre charge légère (25-35 répétitions), 8 semaines — Données : Schoenfeld et al. 2015. Graphique Nurvan.</figcaption></figure>
+<p>Une méta-analyse ultérieure sur 21 études a confirmé le tableau : hypertrophie semblable sur tout le spectre de charges, force maximale nettement meilleure avec les charges lourdes. Et en mars 2026, le position stand de l&#x27;ACSM — synthèse de 137 revues systématiques — a tranché : l&#x27;hypertrophie n&#x27;a pas été affectée par des charges de 30 % à 100 % du maximum.</p>
+<p>Donc oui : <strong>le muscle ne sait pas compter</strong>. Mais il reconnaît l&#x27;effort — et c&#x27;est là que les carrousels se trompent.</p>
+<h2>L&#x27;effort compte, l&#x27;échec non</h2>
+<p>La distinction la plus utile du sujet, et celle qui voyage le plus mal.</p>
+<p>Que l&#x27;effort doive être élevé ne fait aucun doute : charge légère et arrêt loin de ta limite, pas de stimulus. Une méta-régression de 2024 sur cette question a montré que l&#x27;hypertrophie augmente à mesure que les séries finissent plus près de l&#x27;échec, tandis que les gains de force restent semblables sur un large intervalle de répétitions en réserve.</p>
+<p>Mais « proche de l&#x27;échec » n&#x27;est pas « jusqu&#x27;à l&#x27;échec ». Le position stand de l&#x27;ACSM est explicite : aller jusqu&#x27;à l&#x27;échec musculaire momentané <strong>n&#x27;augmente pas</strong> les gains de force, d&#x27;hypertrophie ou de puissance, et pour certains — pratiquants âgés, technique mal assurée — cela ajoute du risque. Le stimulus suffisant s&#x27;obtient près de l&#x27;échec, avec un objectif de 2-3 répétitions en réserve.</p>
+<p>Le RIR (<em>repetitions in reserve</em>, répétitions en réserve) est le nombre de répétitions que tu aurais encore pu faire avant d&#x27;arrêter. RIR 2 : tu as reposé la barre avec deux en réserve.</p>
+<figure class=""><img alt="Une athlète exécute une répétition de développé couché à la barre dans une salle de sport." src="images/panca-serie-impegnativa.jpg" loading="lazy"/><figcaption class="cap">S&#x27;arrêter deux répétitions avant l&#x27;échec donne le même stimulus, avec beaucoup moins de fatigue accumulée. Photo : Senior Airman Haiden Morris, U.S. Air Force, domaine public.</figcaption></figure>
+<p>C&#x27;est le plus grand écart entre la version réseaux sociaux et la littérature : le carrousel dit « pousse jusqu&#x27;à la limite », la recherche dit « arrête-toi deux répétitions avant et garde le reste pour la série suivante ».</p>
+<h2>« Au-delà de trois séries tu achètes de la fatigue » : la pire affirmation</h2>
+<p>L&#x27;un des quatre posts l&#x27;écrit ainsi : <em>une série dure fait déjà presque tout le travail, la deuxième double presque le résultat, au-delà de la troisième tu achètes surtout de la fatigue</em>.</p>
+<p>La première moitié est vraie et connue : la deuxième série apporte plus que ne le suggère l&#x27;intuition, et l&#x27;ACSM recommande <strong>au moins deux séries par exercice</strong>. La seconde moitié est contredite par tout ce dont nous disposons.</p>
+<p>Le position stand place les rendements décroissants de l&#x27;hypertrophie autour de <strong>18-20 séries hebdomadaires</strong> par groupe musculaire — pas à trois — et cite le volume parmi les rares variables qui pilotent vraiment la croissance, avec un effet positif dès <strong>10 séries par muscle et par semaine</strong>. La méta-régression publiée en 2026 par Pelland et ses collègues, sur 67 études et 2 058 participants, attribue une probabilité postérieure de 100 % au fait que plus de volume produit plus d&#x27;hypertrophie et plus de force, avec des rendements décroissants mais jamais nuls. Une méta-régression antérieure chiffrait le gain moyen à <strong>+0,37 % de muscle par série hebdomadaire supplémentaire</strong>.</p>
+<figure><div class="chart"><svg aria-label="Graphique : l&#x27;effet monte vite jusqu&#x27;à 10 séries hebdomadaires par muscle, plus lentement entre 10 et 18-20, puis s&#x27;aplatit au-delà de 20 ; la limite avancée par le post, 2-3 séries, se situe bien avant." xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" role="img" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<style>.t{fill:#f0f0f0;font-size:21px;font-weight:700}.s{fill:#a0a0a0;font-size:13px}.ax{fill:#a0a0a0;font-size:12px}.zn{fill:#f0f0f0;font-size:12.5px}.nt{fill:#a0a0a0;font-size:12px}.pz{fill:#f3e5ab;font-size:12.5px;font-weight:700}</style>
+<rect width="900" height="560" fill="#0c0c0c"/>
+<text x="72" y="36" class="t">Combien de séries par semaine et par muscle</text>
+<text x="72" y="58" class="s">Seuils du position stand ACSM 2026 (PMID 41843416) et des méta-régressions</text>
+<rect x="72.0" y="104" width="282.9" height="286" fill="#ffffff" opacity="0.025"/>
+<rect x="354.9" y="104" width="226.3" height="286" fill="#d4af37" opacity="0.10"/>
+<rect x="581.1" y="104" width="282.9" height="286" fill="#ffffff" opacity="0.025"/>
+<line x1="354.9" y1="104" x2="354.9" y2="390" stroke="#aa8a2e" stroke-width="1" stroke-dasharray="5 4"/>
+<line x1="581.1" y1="104" x2="581.1" y2="390" stroke="#aa8a2e" stroke-width="1" stroke-dasharray="5 4"/>
+<polyline points="72.0,390.0 86.1,374.1 100.3,359.0 114.4,344.8 128.6,331.5 142.7,318.9 156.9,307.0 171.0,295.8 185.1,285.2 199.3,275.2 213.4,265.8 227.6,257.0 241.7,248.6 255.9,240.8 270.0,233.3 284.1,226.3 298.3,219.7 312.4,213.5 326.6,207.6 340.7,202.1 354.9,196.9 369.0,192.0 383.1,187.3 397.3,183.0 411.4,178.8 425.6,175.0 439.7,171.3 453.9,167.8 468.0,164.6 482.1,161.5 496.3,158.6 510.4,155.9 524.6,153.3 538.7,150.9 552.9,148.6 567.0,146.4 581.1,144.4 595.3,142.5 609.4,140.7 623.6,139.0 637.7,137.4 651.9,135.8 666.0,134.4 680.1,133.1 694.3,131.8 708.4,130.6 722.6,129.5 736.7,128.4 750.9,127.4 765.0,126.4 779.1,125.5 793.3,124.7 807.4,123.9 821.6,123.2 835.7,122.5 849.9,121.8 864.0,121.2" fill="none" stroke="#d4af37" stroke-width="3" stroke-linecap="round"/>
+<line x1="156.9" y1="110" x2="156.9" y2="390" stroke="#e05555" stroke-width="2" stroke-dasharray="3 3"/>
+<circle cx="156.9" cy="307.0" r="5" fill="#e05555"/>
+<text x="162.9" y="126" text-anchor="start" class="zn" fill="#e8807f"><tspan x="162.9" dy="0">Là où le post</tspan><tspan x="162.9" dy="14">plaçait la limite</tspan></text>
+<line x1="72" y1="390" x2="864" y2="390" stroke="#a0a0a0" stroke-width="1"/>
+<line x1="72.0" y1="390" x2="72.0" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="72.0" y="410" text-anchor="middle" class="ax">0</text>
+<line x1="185.1" y1="390" x2="185.1" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="185.1" y="410" text-anchor="middle" class="ax">4</text>
+<line x1="298.3" y1="390" x2="298.3" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="298.3" y="410" text-anchor="middle" class="ax">8</text>
+<line x1="411.4" y1="390" x2="411.4" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="411.4" y="410" text-anchor="middle" class="ax">12</text>
+<line x1="524.6" y1="390" x2="524.6" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="524.6" y="410" text-anchor="middle" class="ax">16</text>
+<line x1="637.7" y1="390" x2="637.7" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="637.7" y="410" text-anchor="middle" class="ax">20</text>
+<line x1="750.9" y1="390" x2="750.9" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="750.9" y="410" text-anchor="middle" class="ax">24</text>
+<line x1="864.0" y1="390" x2="864.0" y2="395" stroke="#a0a0a0" stroke-width="1"/>
+<text x="864.0" y="410" text-anchor="middle" class="ax">28</text>
+<text x="468" y="432" text-anchor="middle" class="ax">Séries efficaces par groupe musculaire et par semaine</text>
+<text x="16" y="247" text-anchor="middle" class="ax" transform="rotate(-90 16 247)">Gain de masse attendu (tendance)</text>
+<text x="270.0" y="308" text-anchor="middle" class="zn"><tspan x="270.0" dy="0">Moins de 10 :</tspan><tspan x="270.0" dy="14">ça pousse, mais</tspan><tspan x="270.0" dy="14">sous le potentiel</tspan></text>
+<text x="468.0" y="240" text-anchor="middle" class="pz"><tspan x="468.0" dy="0">10-18 séries :</tspan><tspan x="468.0" dy="14">la zone où</tspan><tspan x="468.0" dy="14">l'effet est plein</tspan></text>
+<text x="722.6" y="162" text-anchor="middle" class="zn"><tspan x="722.6" dy="0">Au-delà de 18-20 :</tspan><tspan x="722.6" dy="14">rendements</tspan><tspan x="722.6" dy="14">nettement</tspan><tspan x="722.6" dy="14">décroissants</tspan></text>
+<text x="72" y="518" text-anchor="start" class="nt"><tspan x="72" dy="0">Chaque série hebdomadaire en plus vaut en moyenne +0,37 % de masse (Schoenfeld et al. 2017). Tendance qualitative, pas une échelle absolue.</tspan></text>
+<text x="880" y="548" text-anchor="end" class="nt" fill="#aa8a2e">NURVAN</text>
+</svg></div><figcaption class="cap">Séries hebdomadaires par groupe musculaire : seuils issus du position stand ACSM 2026 et des méta-régressions. Graphique Nurvan.</figcaption></figure>
+<p>Attention à ne pas inverser l&#x27;erreur : plus de volume n&#x27;est pas gratuit, les rendements diminuent et le temps en salle est limité. Mais le point où cela cesse de payer se situe autour de 18-20 séries hebdomadaires par muscle, pas à trois séries par séance.</p>
+<h2>Le repos : là où les posts ont le plus simplifié</h2>
+<p>L&#x27;affirmation à vérifier : <em>les repos longs battent les repos courts pour le volume comme pour la force, et 90 secondes est le plancher</em>.</p>
+<p>Il y a une base réelle. En 2016, une étude sur 21 hommes entraînés a comparé une minute à trois minutes de repos pendant huit semaines, tout le reste étant identique : le groupe trois minutes a gagné plus de force au squat et au développé couché, et plus d&#x27;épaisseur à la cuisse antérieure. Une revue de la même année, sur six études, conclut toutefois que <strong>les deux approches fonctionnent</strong>, avec un avantage possible pour les repos longs chez les pratiquants déjà entraînés.</p>
+<p>La synthèse ACSM 2026, qui regarde l&#x27;ensemble des revues, est encore plus prudente : la force <strong>n&#x27;a pas été</strong> affectée par des repos de moins d&#x27;une minute comparés à plus d&#x27;une minute, et les données sur l&#x27;hypertrophie ont été jugées insuffisantes pour conclure.</p>
+<p>Et le « plancher de 90 secondes » ? Il n&#x27;apparaît dans aucun des travaux cités. C&#x27;est un chiffre choisi en légende.</p>
+<p>L&#x27;argument pratique pour se reposer plus reste solide et n&#x27;a besoin d&#x27;aucune étude sur l&#x27;hypertrophie : si tu récupères trop peu, la série suivante est plus légère ou plus courte, donc tu accumules moins de travail de qualité. Le repos n&#x27;est pas magique : c&#x27;est ce qui te permet d&#x27;exécuter correctement la série d&#x27;après.</p>
+<h2>Ce que dit réellement la recherche</h2>
+<div class="verdict">
+<div class="v"><span class="pill ok">Confirmé</span><p>« De 6 à 30 répétitions, on construit autant de muscle, si on s&#x27;entraîne près de l&#x27;échec. » — Schoenfeld 2015 sur 25-35 contre 8-12 répétitions, la méta-analyse de 2017 sur 21 études et le position stand ACSM 2026 sur des charges de 30 % à 100 % du maximum.</p></div>
+<div class="v"><span class="pill ok">Confirmé</span><p>« C&#x27;est en dessous de 9 répétitions que vit la force. » — La force maximale progresse davantage avec des charges lourdes, et l&#x27;ACSM décrit une relation dose-réponse avec la charge, dès 80 % du maximum.</p></div>
+<div class="v"><span class="pill no">Démenti</span><p>« Une série dure fait presque tout ; au-delà de trois, tu achètes de la fatigue. » — Deux séries par exercice sont le minimum recommandé, les rendements décroissants de l&#x27;hypertrophie arrivent autour de 18-20 séries hebdomadaires par muscle, et la probabilité que plus de volume produise plus de croissance est estimée à 100 % dans la méta-régression de 2026.</p></div>
+<div class="v"><span class="pill part">À nuancer</span><p>« Les repos longs battent les repos courts pour le volume et la force ; 90 secondes est le plancher. » — Un essai contrôlé chez des pratiquants entraînés favorise les 3 minutes, une revue conclut que les deux fonctionnent, et la synthèse de l&#x27;ACSM ne trouve pas de différence de force sous et au-delà d&#x27;une minute. Le seuil de 90 secondes n&#x27;a aucune source.</p></div>
+<div class="v"><span class="pill part">À nuancer</span><p>« 10 à 20 séries dures par muscle et par semaine, c&#x27;est l&#x27;intervalle qui fait grossir. » — La borne basse correspond à l&#x27;ACSM (effet positif dès 10 séries), mais 20 n&#x27;est pas un plafond : c&#x27;est là que les gains commencent à coûter beaucoup plus cher.</p></div>
+<div class="v"><span class="pill part">À nuancer</span><p>« Proche de l&#x27;échec, voilà la clé. » — L&#x27;hypertrophie s&#x27;améliore en approchant de l&#x27;échec, mais l&#x27;atteindre n&#x27;est pas nécessaire : 2-3 répétitions en réserve donnent le même résultat avec moins de fatigue et moins de risque.</p></div>
+<div class="v"><span class="pill nv">Invérifiable</span><p>« La NSCA a mis à jour ses recommandations sur l&#x27;hypertrophie. » — Nous n&#x27;avons trouvé aucun document primaire de la NSCA confirmant les chiffres cités dans le post. La mise à jour vérifiable de 2026 est le position stand de l&#x27;ACSM, qui remplace celui de 2009.</p></div>
+<div class="v"><span class="pill no">Démenti</span><p>La citation « PMID 7928218 » présentée comme une étude de 2016 sur des séries de 4 répétitions. — Cet identifiant correspond à un travail de 1994 sur les produits de contraste au gadolinium, publié dans <em>Investigative Radiology</em>. Il n&#x27;a rien à voir avec la musculation. C&#x27;est le rappel le plus utile de cet article : un PMID en légende n&#x27;est pas une vérification tant que personne ne l&#x27;ouvre.</p></div>
+</div>
+<h2>Comment l&#x27;appliquer</h2>
+<p>Traduit en programme, ce que soutient la recherche est plus simple qu&#x27;il n&#x27;y paraît.</p>
+<figure class=""><img alt="Une personne prend un haltère sur un rack dans une salle de sport." src="images/scelta-del-carico-manubri.jpg" loading="lazy"/><figcaption class="cap">La charge se choisit d&#x27;après l&#x27;effort produit, pas d&#x27;après le chiffre écrit sur le programme. Photo : Nenad Stojkovic, Wikimedia Commons, CC BY 2.0.</figcaption></figure>
+<ol class="steps"><li>1. <strong>Choisis la fourchette selon l&#x27;exercice, pas selon le dogme.</strong> Mouvements lourds à 5-10 répétitions (moins de risque technique, plus de force) ; isolation à 10-20 (moins de contrainte articulaire, limite plus facile à approcher en sécurité). C&#x27;est un choix d&#x27;efficacité, pas de physiologie.</li><li>2. <strong>Vise 2-3 répétitions en réserve.</strong> Pas l&#x27;échec. Si tu veux vider le réservoir, fais-le sur la dernière série d&#x27;un exercice, pas sur chaque série de la séance.</li><li>3. <strong>Compte le volume par muscle, pas par exercice.</strong> Commence à 10 séries hebdomadaires par groupe musculaire réparties sur au moins deux séances, puis monte progressivement vers 15-20 seulement si la récupération suit et que la progression continue. La réponse à un volume supplémentaire varie beaucoup d&#x27;une personne à l&#x27;autre : on en a parlé dans l&#x27;article sur les <a href="/fr/blog/genetique-faibles-repondeurs">faibles et forts répondeurs</a>.</li><li>4. <strong>Repose-toi assez pour bien exécuter la série suivante.</strong> Sur les mouvements lourds, en général 2-3 minutes ; sur l&#x27;isolation, 60-90 secondes suffisent souvent. Si la série suivante perd trois répétitions, tu t&#x27;es reposé trop peu.</li><li>5. <strong>Progresse en double progression.</strong> Reste dans ta fourchette, ajoute une répétition quand tu peux, et quand tu atteins le haut de la fourchette, augmente la charge et repars du bas. C&#x27;est le moteur, et sur ce point les posts avaient raison.</li><li>6. <strong>Tiens un suivi.</strong> Sans relevé des charges, des répétitions et du RIR, tu ne sais pas si tu progresses ou si tu répètes. Presque tout le monde surestime son volume hebdomadaire : compter les séries par groupe musculaire est souvent une surprise.</li></ol>
+<p>Ce sont des intervalles observés dans des études, pas une prescription individuelle. Si tu as une pathologie, une blessure en cours ou que tu suis un avis médical, parles-en à ton médecin ou à un professionnel qualifié avant de modifier ton programme.</p>
+<div class="app"><div><h3>Nurvan — tes séries de la semaine, comptées par l&#x27;appli et pas par ta mémoire</h3><p>Nurvan enregistre la charge, les répétitions et le RIR de chaque série et affiche les séries dures réellement accumulées par groupe musculaire sur la semaine : tu sais si tu es sous 10 ou déjà au-delà de 20. Les séries d&#x27;échauffement sont proposées automatiquement et restent hors du décompte, et la progression des charges se lit dans le temps plutôt que de mémoire.</p></div><a class="cta" href="https://nurvan.app">Essaie Nurvan</a></div>
+<h2>Questions fréquentes</h2>
+<details><summary>Combien de répétitions faut-il faire pour prendre du muscle ?</summary><p>N&#x27;importe quel nombre entre environ 5 et 30, à condition que la série finisse près de ta limite. Le position stand ACSM 2026 ne trouve aucune différence d&#x27;hypertrophie entre 30 % et 100 % du maximum. Côté pratique : 5-10 répétitions sur les mouvements lourds, 10-20 sur l&#x27;isolation.</p></details>
+<details><summary>Combien de séries par muscle et par semaine faut-il vraiment ?</summary><p>L&#x27;effet positif sur l&#x27;hypertrophie apparaît dès environ 10 séries hebdomadaires par groupe musculaire, avec des rendements qui baissent autour de 18-20. Un débutant obtient déjà beaucoup avec 4-6 séries hebdomadaires bien exécutées.</p></details>
+<details><summary>Faut-il aller à l&#x27;échec à chaque série ?</summary><p>Non. Le position stand de l&#x27;ACSM est explicite : atteindre l&#x27;échec musculaire momentané n&#x27;augmente pas les gains de force, d&#x27;hypertrophie ou de puissance. S&#x27;arrêter à 2-3 répétitions en réserve suffit et coûte bien moins de fatigue.</p></details>
+<details><summary>Combien de temps faut-il se reposer entre les séries ?</summary><p>Assez pour bien exécuter la série suivante : en général 2-3 minutes sur les polyarticulaires lourds, 60-90 secondes sur l&#x27;isolation. Les études ne montrent aucun minimum universel, et le « plancher de 90 secondes » qui circule sur les réseaux n&#x27;a pas de source.</p></details>
+<details><summary>S&#x27;entraîner léger avec beaucoup de répétitions, c&#x27;est pareil que lourd ?</summary><p>Pour la prise de muscle, oui, si tu vas près de ta limite. Pour la force maximale, non : les charges lourdes gagnent nettement, et les séries de 25-35 répétitions sont aussi plus longues et nettement plus désagréables.</p></details>
+<h2>À lire aussi</h2>
+<ul><li><a href="/fr/blog/proteines-en-seche">Protéines en sèche : combien en faut-il vraiment</a> — le levier nutritionnel qui protège le muscle quand tu coupes les calories.</li><li><a href="/fr/blog/mr-olympia-2026-resultats-nick-walker">Mr. Olympia 2026 : résultats et enseignements</a> — ce que la plus grande scène du sport dit du volume et de la récupération.</li><li><a href="/fr/blog/genetique-faibles-repondeurs">Faible répondeur : le poids de la génétique dans le muscle</a> — pourquoi le même volume donne des résultats différents selon les personnes.</li></ul>
+<h2>Sources</h2>
+<ol class='refs'><li>1. Currier BS, D&#x27;Souza AC, Fiatarone Singh MA, Lowisz CV, Rawson ES, Schoenfeld BJ, Smith-Ryan AE, Steen JP, Thomas GA, Triplett NT, Washington TA, Werner TJ, Phillips SM, 2026. <em>American College of Sports Medicine Position Stand. Resistance Training Prescription for Muscle Function, Hypertrophy, and Physical Performance in Healthy Adults: An Overview of Reviews.</em> Medicine &amp; Science in Sports &amp; Exercise 58(4):851-872. PMID 41843416 — <a href="https://doi.org/10.1249/MSS.0000000000003897">DOI</a></li><li>2. Pelland JC, Remmert JF, Robinson ZP, Hinson SR, Zourdos MC, 2026. <em>The Resistance Training Dose Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gains.</em> Sports Medicine 56(2):481-505. PMID 41343037 — <a href="https://doi.org/10.1007/s40279-025-02344-w">DOI</a></li><li>3. Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. <em>Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions.</em> Sports Medicine 54(9):2209-2231. PMID 38970765 — <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI</a></li><li>4. Schoenfeld BJ, Peterson MD, Ogborn D, Contreras B, Sonmez GT, 2015. <em>Effects of Low- vs. High-Load Resistance Training on Muscle Strength and Hypertrophy in Well-Trained Men.</em> Journal of Strength and Conditioning Research 29(10):2954-2963. PMID 25853914 — <a href="https://doi.org/10.1519/JSC.0000000000000958">DOI</a></li><li>5. Schoenfeld BJ, Grgic J, Ogborn D, Krieger JW, 2017. <em>Strength and Hypertrophy Adaptations Between Low- vs. High-Load Resistance Training: A Systematic Review and Meta-analysis.</em> Journal of Strength and Conditioning Research 31(12):3508-3523. PMID 28834797 — <a href="https://doi.org/10.1519/JSC.0000000000002200">DOI</a></li><li>6. Schoenfeld BJ, Ogborn D, Krieger JW, 2017. <em>Dose-response relationship between weekly resistance training volume and increases in muscle mass: A systematic review and meta-analysis.</em> Journal of Sports Sciences 35(11):1073-1082. PMID 27433992 — <a href="https://doi.org/10.1080/02640414.2016.1210197">DOI</a></li><li>7. Schoenfeld BJ, Pope ZK, Benik FM, Hester GM, Sellers J, Nooner JL, Schnaiter JA, Bond-Williams KE, Carter AS, Ross CL, Just BL, Henselmans M, Krieger JW, 2016. <em>Longer Interset Rest Periods Enhance Muscle Strength and Hypertrophy in Resistance-Trained Men.</em> Journal of Strength and Conditioning Research 30(7):1805-1812. PMID 26605807 — <a href="https://doi.org/10.1519/JSC.0000000000001272">DOI</a></li><li>8. Grgic J, Lazinica B, Mikulic P, Krieger JW, Schoenfeld BJ, 2017. <em>The effects of short versus long inter-set rest intervals in resistance training on measures of muscle hypertrophy: A systematic review.</em> European Journal of Sport Science 17(8):983-993. PMID 28641044 — <a href="https://doi.org/10.1080/17461391.2017.1340524">DOI</a></li><li>9. Schoenfeld BJ, Grgic J, Van Every DW, Plotkin DL, 2021. <em>Loading Recommendations for Muscle Strength, Hypertrophy, and Local Endurance: A Re-Examination of the Repetition Continuum.</em> Sports (Basel) 9(2):32. PMID 33671664 — <a href="https://doi.org/10.3390/sports9020032">DOI</a></li></ol>
+<p class="note">Sources scientifiques récupérées sur PubMed et vérifiées le 5 octobre 2026.</p>
+<p class="note">Point de départ : les carrousels de <a href="https://www.instagram.com/p/DdL7UjGG2wg/">homebodyys</a>, <a href="https://www.instagram.com/p/Ddon1AtEWJb/">The Movement System</a>, <a href="https://www.instagram.com/p/DdRXFzGkTrY/">Christian Poulos</a> et <a href="https://www.instagram.com/p/Dc6T7q5iJCr/">iwannaburnfat</a>, publiés entre le 5 et le 23 septembre 2026. Le texte, la structure, les vérifications et les graphiques de cet article sont originaux.</p>
+<p><strong>Giammaria Loi</strong> est le fondateur de Nurvan. Il s&#x27;entraîne avec des poids depuis 2012, travaille comme entraîneur personnel et coach certifié FIPE depuis 2013 et est compétiteur de powerlifting au niveau national depuis 2018. Chaque article qu&#x27;il signe part de la recherche et arrive à ce qui fonctionne vraiment en salle.</p>
+<p class="note">Note : contenu informatif, qui ne remplace pas l&#x27;avis d&#x27;un médecin ou d&#x27;un professionnel qualifié. Les intervalles rapportés proviennent d&#x27;études sur des populations spécifiques et ne constituent pas un programme personnalisé.</p>
+</main>
+<footer>NURVAN · nurvan.app · Contenu informatif, ne remplace pas l&#x27;avis d&#x27;un médecin ou d&#x27;un professionnel.</footer>
+</body>
+</html>
