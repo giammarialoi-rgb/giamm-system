@@ -1721,7 +1721,12 @@ app.get("/api/account/me", async (req, res) => {
 // and a SALVA tap, or two devices); read-merge-write without the lock let the
 // second write drop whatever the first had just merged in.
 async function mergeIntoAccountData(userId, incoming) {
-  return updateAccountData(pool, userId, (current) => mergeAccountDataBlobs(current, incoming));
+  return updateAccountData(pool, userId, (current) => {
+    const notes = [];
+    const next = mergeAccountDataBlobs(current, incoming, notes);
+    if (notes.length) console.warn("SYNC_GUARD user " + userId + ": deletions of loads refused " + JSON.stringify(notes));
+    return next;
+  });
 }
 
 // A session token outlives an account deleted from another device (it is

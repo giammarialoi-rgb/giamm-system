@@ -100,7 +100,14 @@ export function mergeDomainField(cur, inc, key) {
   return incVal !== undefined ? incVal : curVal;
 }
 
-export function mergeAccountDataBlobs(current, incoming) {
+// A device that lost its loads (a bug, a wrong screen, a restore that went wrong) tells the server "these keys
+// are gone", all of them at once. A person does not delete forty sets in one sync without saying so: clearing the
+// loads on purpose (a program switch, "Azzera carichi") moves the trainingDataEpoch, and that path is untouched.
+// Without a new epoch, a deletion of this size is not applied: the keys stay as the server has them, and the
+// guard says so in `notes`. The size is "at least MASS_DELETE_MIN keys and at least half of what is stored".
+export const MASS_DELETE_MIN = 40;
+
+export function mergeAccountDataBlobs(current, incoming, notes) {
   const cur = current && typeof current === "object" ? current : {};
   const inc = incoming && typeof incoming === "object" ? incoming : {};
   const merged = { ...cur, ...inc, lastSyncedAt: new Date().toISOString() };
@@ -130,7 +137,16 @@ export function mergeAccountDataBlobs(current, incoming) {
     const a = mapOf(cur, key);
     const b = mapOf(inc, key);
     const sa = timesOf(cur, "mapStamps", key), sb = timesOf(inc, "mapStamps", key);
-    const da = timesOf(cur, "mapDeletes", key), db = timesOf(inc, "mapDeletes", key);
+    const da = timesOf(cur, "mapDeletes", key);
+    let db = timesOf(inc, "mapDeletes", key);
+    {
+      const victims = Object.keys(db).filter((k) => k in a && !(k in b) && (Number(db[k]) || 0) > Math.max(Number(sa[k]) || 0, Number(da[k]) || 0));
+      if (victims.length >= MASS_DELETE_MIN && victims.length >= Object.keys(a).length * 0.5 && !(incEpoch > curEpoch)) {
+        const drop = new Set(victims);
+        db = Object.fromEntries(Object.entries(db).filter(([k]) => !drop.has(k)));
+        if (Array.isArray(notes)) notes.push({ field: key, kept: victims.length, of: Object.keys(a).length });
+      }
+    }
     if (epochKeys.includes(key) && incEpoch > curEpoch) {
       merged[key] = b; merged.mapStamps[key] = sb; merged.mapDeletes[key] = db;
       continue;
@@ -358,6 +374,33 @@ export function mergeAccountDataBlobs(current, incoming) {
 // and a background sync) let the second write put back what it read before
 // the first one merged anything in. build(current) returns the new record,
 // or null to leave it as it is.
+// Copies of a record before it changes in a way that could lose something, so that a loss is never final:
+// one a day at most, and one whenever the loads shrink by half or more (the guard above catches the deletions
+// that come with a tombstone; this catches the rest - a phone that sends a record without them). Ten copies are
+// kept per person, and none older than thirty days.
+const HISTORY_KEEP = 10;
+const HISTORY_DAYS = 30;
+function slotKeyCount(d) { return d && d.data && typeof d.data === "object" ? Object.keys(d.data).length : 0; }
+async function keepHistory(client, userId, current, next, revision) {
+  // Inside a transaction a failed statement would abort the whole save: the history lives in a savepoint of its own.
+  try { await client.query("SAVEPOINT keep_history"); } catch (_) { return; }
+  try {
+    const before = slotKeyCount(current), after = slotKeyCount(next);
+    if (!before) { await client.query("RELEASE SAVEPOINT keep_history"); return; }
+    const shrink = after < before * 0.5 && before >= MASS_DELETE_MIN;
+    const last = await client.query("SELECT created_at FROM app_account_history WHERE user_id = $1 ORDER BY id DESC LIMIT 1", [userId]);
+    const dayOld = !last.rows[0] || Date.now() - new Date(last.rows[0].created_at).getTime() > 86400000;
+    if (!shrink && !dayOld) { await client.query("RELEASE SAVEPOINT keep_history"); return; }
+    await client.query("INSERT INTO app_account_history(user_id, revision, reason, data) VALUES($1,$2,$3,$4::jsonb)", [userId, revision || 0, shrink ? "shrink" : "daily", JSON.stringify(current)]);
+    await client.query("DELETE FROM app_account_history WHERE user_id = $1 AND (created_at < NOW() - ($2 || ' days')::interval OR id NOT IN (SELECT id FROM app_account_history WHERE user_id = $1 ORDER BY id DESC LIMIT $3))", [userId, String(HISTORY_DAYS), HISTORY_KEEP]);
+    await client.query("RELEASE SAVEPOINT keep_history");
+  } catch (err) {
+    // The history must never stop the record from being saved.
+    console.error("ACCOUNT_HISTORY", err && err.message);
+    try { await client.query("ROLLBACK TO SAVEPOINT keep_history"); } catch (_) {}
+  }
+}
+
 export async function updateAccountData(pool, userId, build) {
   const client = await pool.connect();
   try {
@@ -366,10 +409,11 @@ export async function updateAccountData(pool, userId, build) {
       "INSERT INTO app_account_data(user_id, data, updated_at) VALUES($1, '{}'::jsonb, NOW()) ON CONFLICT (user_id) DO NOTHING",
       [userId]
     );
-    const existing = await client.query("SELECT data FROM app_account_data WHERE user_id = $1 FOR UPDATE", [userId]);
+    const existing = await client.query("SELECT data, revision FROM app_account_data WHERE user_id = $1 FOR UPDATE", [userId]);
     const current = existing.rows[0]?.data || {};
     const next = await build(current);
     if (next && typeof next === "object") {
+      await keepHistory(client, userId, current, next, existing.rows[0]?.revision);
       await client.query(
         "UPDATE app_account_data SET data = $2, revision = revision + 1, updated_at = NOW() WHERE user_id = $1",
         [userId, JSON.stringify(next)]
