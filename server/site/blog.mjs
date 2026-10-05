@@ -371,6 +371,8 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles, getAut
     const reviewed = a.reviewed || "";
     const byline = author ? bylineHtml({ author, lang, dict, date: a.date, dateLabel: dateText(a.date, lang), reviewed, reviewedLabel: dateText(reviewed, lang) }) : "";
     // The author's two lines go before the sources (the last section when it is a list), else at the end.
+    // Links to other articles written as /blog/<slug> keep the reader in the article's own language.
+    const localLinks = (html) => langPrefix(lang) ? html.replace(/(href=")\/blog\//g, `$1${langPrefix(lang)}/blog/`) : html;
     const withAuthorBox = (html) => {
       if (!author) return html;
       const box = authorBoxHtml(author, lang, dict);
@@ -390,7 +392,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles, getAut
       `<div class="post-meta">${esc(st(dict, "{0} min di lettura", a.minutes))}</div>` +
       `</div><!--/notr-->` + byline + `<div data-notr>` +
       (a.cover ? `<figure class="post-cover"><img src="${esc(a.cover)}" alt="${esc(a.title)}">${a.coverCredit ? `<figcaption>${esc(st(dict, "Foto: {0}", a.coverCredit.replace(/\s*\(https?:[^)]*\)/g, "")))}</figcaption>` : ""}</figure>` : "") +
-      `<div class="prose">${withAuthorBox(a.html)}</div></div><!--/notr-->` +
+      `<div class="prose">${withAuthorBox(localLinks(a.html))}</div></div><!--/notr-->` +
       (lang === "it" ? linksBlock(relatedLinks(a)) : "") +
       `<div class="post-cta"><strong>Mettilo in pratica con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` +
       `<p class="post-wait"><a href="${waitlistPath(lang)}">Entra nella lista d'attesa di Nurvan →</a></p>` +
