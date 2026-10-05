@@ -1,5 +1,6 @@
 ---
 title: "¿La creatina provoca caída del cabello? Qué dicen de verdad los estudios"
+seotitle: "Creatina y caída del cabello: qué dicen los estudios"
 description: "¿La creatina hace que se caiga el pelo? De dónde viene el temor a la DHT, qué midió el estudio de 2009 y qué encontró el primer ensayo de 2025 sobre el cabello."
 slug: creatina-caida-cabello
 date: 2026-10-01

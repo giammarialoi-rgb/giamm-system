@@ -42,6 +42,33 @@ export function imageSize(buf) {
   return null;
 }
 
+// The longest <title> a search result shows. A page whose title is longer loses the brand first, then is cut at a word.
+export const TITLE_MAX = 60;
+export function fitTitle(title, max = TITLE_MAX) {
+  const count = (t) => [...String(t)].length;
+  let t = String(title || "").trim();
+  if (count(t) <= max) return t;
+  t = t.replace(/\s+[—|–-]\s+Nurvan$/, "").trim();
+  if (count(t) <= max) return t;
+  let out = "";
+  for (const w of t.split(/\s+/)) {
+    const next = out ? out + " " + w : w;
+    if (count(next) > max) break;
+    out = next;
+  }
+  return (out || [...t].slice(0, max).join("")).replace(/[\s,;:\-–—(]+$/, "");
+}
+
+// The finished page (after the translation, which can make a title longer): its <title>, og:title and twitter:title fitted.
+export function fitHeadTitles(html) {
+  const plain = (s) => String(s).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const fit = (raw) => { const p = plain(raw); const f = fitTitle(p); return f === p ? raw : esc(f); };
+  return String(html)
+    .replace(/<title>([\s\S]*?)<\/title>/, (all, t) => "<title>" + fit(t) + "</title>")
+    .replace(/(<meta (?:property="og:title"|name="twitter:title") content=")([^"]*)(")/g, (all, a, t, c) => a + fit(t) + c);
+}
+
 // All the social tags of a page. page.og: { type, image, imageAlt, imageWidth,
 // imageHeight, published, modified, author, section }.
 export function metaTags({ origin, lang, title, description, alternates, url, og = {} }) {

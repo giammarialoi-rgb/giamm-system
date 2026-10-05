@@ -1,5 +1,6 @@
 ---
 title: "La créatine fait-elle perdre les cheveux ? Ce que disent vraiment les études"
+seotitle: "Créatine et chute de cheveux : ce que disent les études"
 description: "La créatine fait-elle tomber les cheveux ? D'où vient la crainte liée à la DHT, ce qu'a mesuré l'étude de 2009 et ce qu'a trouvé le premier essai de 2025."
 slug: creatine-chute-cheveux
 date: 2026-10-01

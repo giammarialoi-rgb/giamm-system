@@ -1,5 +1,6 @@
 ---
 title: "Tabac pendant la grossesse et fertilité des fils : ce que disent les études"
+seotitle: "Tabac pendant la grossesse et fertilité des fils : études"
 description: "Fumer pendant la grossesse réduit-il les spermatozoïdes des fils à l'âge adulte ? Chiffres vérifiés des études européennes, ce qui est solide, ce qui est exagéré."
 slug: tabac-grossesse-fertilite-fils
 date: 2026-10-01

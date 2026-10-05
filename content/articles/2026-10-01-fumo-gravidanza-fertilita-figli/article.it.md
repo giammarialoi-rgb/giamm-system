@@ -1,5 +1,6 @@
 ---
 title: "Fumo in gravidanza e fertilità dei figli maschi: cosa dicono gli studi"
+seotitle: "Fumo in gravidanza e fertilità dei figli maschi: gli studi"
 description: "Il fumo in gravidanza riduce gli spermatozoi dei figli da adulti? Numeri verificati sugli studi europei, cosa è solido, cosa è esagerato e cosa si può fare."
 slug: fumo-gravidanza-fertilita-figli
 date: 2026-10-01

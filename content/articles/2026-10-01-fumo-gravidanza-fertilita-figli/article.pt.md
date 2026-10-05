@@ -1,5 +1,6 @@
 ---
 title: "Fumo na gravidez e fertilidade dos filhos homens: o que dizem os estudos"
+seotitle: "Fumo na gravidez e fertilidade dos filhos: os estudos"
 description: "Fumar na gravidez reduz os espermatozoides dos filhos na vida adulta? Números verificados nos estudos europeus, o que é sólido, o que é exagerado e o que dá para fazer."
 slug: fumo-gravidez-fertilidade-filhos
 date: 2026-10-01

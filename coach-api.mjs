@@ -34,7 +34,7 @@ import { canonicalUrls } from "./server/site/urls.mjs";
 import { mountWellbeing, wellbeingPath } from "./server/site/wellbeing.mjs";
 import { mountLandings } from "./server/site/landings.mjs";
 import { mountTrust, authorLoader, aboutPath, contactPath, legalPath } from "./server/site/trust.mjs";
-import { metaTags, jsonLdScripts, absUrl, organizationLd, websiteLd, softwareLd, faqLd, faqFromDetails } from "./server/site/seo.mjs";
+import { fitHeadTitles, metaTags, jsonLdScripts, absUrl, organizationLd, websiteLd, softwareLd, faqLd, faqFromDetails } from "./server/site/seo.mjs";
 import { mountProgramShare } from "./server/program/share.mjs";
 import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
@@ -2650,7 +2650,8 @@ async function siteShell(req, page) {
     });
   }
   for (const k of Object.keys(text)) html = html.split("{{" + k + "}}").join(text[k]);
-  const out = translateHtml(html, await siteDict(SITE_DIR, lang));
+  // No page has a <title> (or og:title) longer than a search result shows - checked after the translation.
+  const out = fitHeadTitles(translateHtml(html, await siteDict(SITE_DIR, lang)));
   // Structured data says what the page shows: the home's FAQ is read from the
   // questions written in it (in the page's own language).
   const ld = [];

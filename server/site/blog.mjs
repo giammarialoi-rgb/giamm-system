@@ -140,12 +140,33 @@ const dirSlug = (name) => slugify(String(name).replace(/^\d{4}-\d{2}-\d{2}-/, ""
 
 const ISO_DAY = new RegExp("^" + String.fromCharCode(92) + "d{4}-" + String.fromCharCode(92) + "d{2}-" + String.fromCharCode(92) + "d{2}");
 
+// The <title> of an article page (and its og:title): at most TITLE_MAX characters, which is what a search result shows.
+// The article's own seoTitle comes first (the h1 stays the article's title); with the brand when it fits,
+// without it when it does not, and cut at a word when even the title alone is too long.
+export const TITLE_MAX = 60;
+const charCount = (t) => [...String(t)].length;
+export function pageTitle(a, brand = "Nurvan") {
+  const base = String((a && (a.seoTitle || a.title)) || "").trim() || brand;
+  const withBrand = `${base} | ${brand}`;
+  if (charCount(withBrand) <= TITLE_MAX) return withBrand;
+  if (charCount(base) <= TITLE_MAX) return base;
+  const words = base.split(/\s+/);
+  let out = "";
+  for (const w of words) {
+    const next = out ? out + " " + w : w;
+    if (charCount(next) > TITLE_MAX) break;
+    out = next;
+  }
+  return (out || [...base].slice(0, TITLE_MAX).join("")).replace(/[\s,;:\-–—(]+$/, "");
+}
+
 function article(fields) {
   const category = capital(fields.category || "Generale");
   const plain = String(fields.plain || "").replace(/\s+/g, " ").trim();
   return {
     slug: fields.slug,
     title: fields.title || fields.slug,
+    seoTitle: String(fields.seoTitle || "").trim(),
     date: /^\d{4}-\d{2}-\d{2}/.test(fields.date || "") ? fields.date.slice(0, 10) : "",
     reviewed: ISO_DAY.test(fields.reviewed || "") ? fields.reviewed.slice(0, 10) : "",
     updated: /^\d{4}-\d{2}-\d{2}/.test(fields.updated || "") ? fields.updated.slice(0, 10) : "",
@@ -172,6 +193,7 @@ export function parseArticle(name, text, media = "") {
   return article({
     slug: slugify(meta.slug || "") || dirSlug(name),
     title,
+    seoTitle: meta.seotitle || meta.seo_title || meta["seo-title"] || "",
     date: meta.date || dirDate(name),
     reviewed: meta.reviewed || "",
     updated: meta.updated || meta.aggiornato || meta.revised || "",
@@ -400,7 +422,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles, getAut
       (more.length ? `<section class="blog"><div class="wrap"><div class="head"><h2>Continua a leggere</h2></div><div class="posts">${more.map((x) => cardHtml(x, lang, dict)).join("")}</div></div></section>` : "");
     const faq = faqFromArticle(a.html);
     return send(req, res, {
-      lang, alternates, menu, title: `${a.title} — Nurvan`, ownTitle: true, description: a.excerpt, main,
+      lang, alternates, menu, title: pageTitle(a), ownTitle: true, description: a.excerpt, main,
       og: {
         type: "article", image: a.cover, imageAlt: a.title, imageWidth: size && size.width, imageHeight: size && size.height,
         published: a.date, modified: reviewed || a.updated || a.date, section: a.category,

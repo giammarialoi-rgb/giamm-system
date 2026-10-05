@@ -1,5 +1,6 @@
 ---
 title: "Fumar en el embarazo y fertilidad de los hijos varones: qué dicen los estudios"
+seotitle: "Fumar en el embarazo y fertilidad de los hijos: estudios"
 description: "¿Fumar en el embarazo reduce los espermatozoides de los hijos en la edad adulta? Cifras verificadas de los estudios europeos: lo sólido, lo exagerado y qué hacer."
 slug: tabaco-embarazo-fertilidad-hijos
 date: 2026-10-01

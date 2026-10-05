@@ -1,5 +1,6 @@
 ---
 title: "Rauchen in der Schwangerschaft und Fruchtbarkeit der Söhne: Was die Studien zeigen"
+seotitle: "Rauchen in der Schwangerschaft und Fruchtbarkeit: Studien"
 description: "Senkt Rauchen in der Schwangerschaft die Spermienzahl der Söhne im Erwachsenenalter? Geprüfte Zahlen aus europäischen Studien: was belegt ist, was übertrieben wird und was hilft."
 slug: rauchen-schwangerschaft-fruchtbarkeit-soehne
 date: 2026-10-01

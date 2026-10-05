@@ -1,5 +1,6 @@
 ---
 title: "Smoking in pregnancy and sons' sperm count: what the studies show"
+seotitle: "Smoking in pregnancy and sons' sperm count: the studies"
 description: "Does smoking during pregnancy lower a son's sperm count in adulthood? Verified numbers from European studies, what holds up, what is overstated and what helps."
 slug: prenatal-smoking-sperm-count
 date: 2026-10-01

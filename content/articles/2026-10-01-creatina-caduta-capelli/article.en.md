@@ -1,5 +1,6 @@
 ---
 title: "Does creatine cause hair loss? What the studies actually show"
+seotitle: "Creatine and hair loss: what the studies show"
 description: "Does creatine cause hair loss? Where the DHT worry comes from, what the 2009 rugby study measured and what the first 2025 trial on hair actually found."
 slug: creatine-hair-loss
 date: 2026-10-01

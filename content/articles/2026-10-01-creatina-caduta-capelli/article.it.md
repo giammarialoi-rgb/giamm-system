@@ -1,5 +1,6 @@
 ---
 title: "La creatina fa cadere i capelli? Cosa dicono davvero gli studi"
+seotitle: "Creatina e caduta dei capelli: cosa dicono gli studi"
 description: "La creatina fa cadere i capelli? Da dove nasce il timore sul DHT, cosa ha misurato lo studio del 2009 e cosa ha trovato il primo trial del 2025 sui capelli."
 slug: creatina-caduta-capelli
 date: 2026-10-01

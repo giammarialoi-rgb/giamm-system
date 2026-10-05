@@ -1,5 +1,6 @@
 ---
 title: "Verursacht Kreatin Haarausfall? Was die Studien wirklich zeigen"
+seotitle: "Kreatin und Haarausfall: was die Studien zeigen"
 description: "Verursacht Kreatin Haarausfall? Woher die Sorge um das DHT kommt, was die Studie von 2009 gemessen hat und was die erste Haarstudie von 2025 tatsächlich ergab."
 slug: kreatin-haarausfall
 date: 2026-10-01
