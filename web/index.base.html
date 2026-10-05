@@ -3801,6 +3801,7 @@ function nurvanActivateArea(name) {
 // here on - the payload, the sandbox reset, any edit the coach makes - lands on
 // that area. The coach's own copy is not in the path at all.
 function nurvanEnterClientArea() {
+  try { saveTrainingSafetyCopy('before-client-area', true); } catch (_) {}
   NurvanMemory.client = nurvanEmptyArea();
   // The client view has always shown the coach's own profile rather than the
   // client's; start the area from it so that stays true without a second pass.
@@ -6444,6 +6445,7 @@ function renderPrivacySettingsCard() {
       '</div>') : '') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
     '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="exportFullDatabaseBackup()">ESPORTA I MIEI DATI</button>' +
+    ((logged && !athlete && typeof trainingSafetyCopies === 'function' && trainingSafetyCopies().length) ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="restoreTrainingFromSafetyUi()">RIPRISTINA I CARICHI SALVATI</button>' : '') +
     ((logged && !athlete) ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()">ELIMINA ACCOUNT</button>' : '') +
     '</div>' +
     (athlete ? '<div style="font-size:10px;color:#888;line-height:1.4;margin-top:8px;">Il tuo account è gestito dal coach: per eliminarlo chiediglielo, oppure scrivi al contatto privacy.</div>' : '') +
@@ -6585,7 +6587,9 @@ function accountPayload(opts){
   const bak = (store.coachViewingClient || store.coachAssigning)
     ? (window.__cpCoachViewBackup || window.__cpAssignBackup)
     : null;
-  if ((store.coachViewingClient || store.coachAssigning) && !bak) {
+  // The backups are markers now ({ area, at }), not copies: a payload built from one would carry empty loads.
+  const bakHasData = !!(bak && (bak.data || bak.DATA || bak.activeProgram));
+  if ((store.coachViewingClient || store.coachAssigning) && !bakHasData) {
     console.warn('[ACCOUNT_PAYLOAD] blocked: coach sandbox without personal backup');
     return {
       prefs: store.prefs || {},
@@ -6593,7 +6597,7 @@ function accountPayload(opts){
       lastLocalSavedAt: new Date().toISOString()
     };
   }
-  const srcProg = bak ? (bak.DATA || bak.activeProgram || null) : (typeof DATA !== 'undefined' ? DATA : null);
+  const srcProg = bakHasData ? (bak.DATA || bak.activeProgram || null) : (typeof DATA !== 'undefined' ? DATA : null);
   const nutr = bak
     ? (bak.nutrition || (srcProg && srcProg.nutrition) || null)
     : ((DATA && DATA.nutrition) || store.nutrition || null);
@@ -6852,6 +6856,104 @@ function mapSnapshot(fields) {
   });
   return out;
 }
+// ---- Safety copy of the loads (start)
+//
+// The loads of the training screen took weeks to write and cannot be rebuilt. Whatever empties them by mistake
+// (a bug in a coach flow, a restore that went wrong), two things keep it from being final: a copy kept on this
+// device (the last two, taken before a client area is opened and now and then), and a look at every sync: if
+// this person's own loads lose half of what they were at the last sync, and forty keys or more, without having
+// been cleared on purpose (a program switch and "Azzera carichi" restart the reference), it is not a deletion
+// to send: the keys come back from the copy, or, with no copy, the deletion is held back and the cloud fills the
+// gaps. Never inside a coach's client area, nor for an athlete: only the person's own record.
+var TRAINING_SAFETY_FIELDS = ['data', 'customSets', 'subs', 'skips', 'loadTypes', 'tempos', 'exIntensity', 'bonus'];
+var TRAINING_SAFETY_MIN = 40;
+var TRAINING_SAFETY_KEEP = 2;
+function trainingSafetyKey() { return personalScopedKey('NURVAN_TRAINING_SAFE'); }
+function trainingSafetyCopies() {
+  try { const r = JSON.parse(localStorage.getItem(trainingSafetyKey()) || '[]'); return Array.isArray(r) ? r : []; } catch (_) { return []; }
+}
+function personalTrainingContext() {
+  try {
+    if (typeof isClientStorageContext === 'function' && isClientStorageContext()) return false;
+    if (typeof coachHoldsClientData === 'function' && coachHoldsClientData()) return false;
+    if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
+  } catch (_) {}
+  return true;
+}
+function saveTrainingSafetyCopy(reason, force) {
+  try {
+    if (!personalTrainingContext()) return false;
+    const dom = personalDomain();
+    const n = Object.keys(dom.data || {}).length;
+    if (n < TRAINING_SAFETY_MIN) return false;
+    const copies = trainingSafetyCopies();
+    const last = copies[copies.length - 1];
+    const sig = n + ':' + Object.keys(dom.subs || {}).length;
+    if (last && last.sig === sig) return false;
+    if (!force && last && Date.now() - last.at < 6 * 3600000) return false;
+    const fields = {};
+    TRAINING_SAFETY_FIELDS.forEach(function (f) { fields[f] = JSON.parse(JSON.stringify(dom[f] || {})); });
+    copies.push({ at: Date.now(), reason: reason, sig: sig, programId: dom.activeProgramId || null, fields: fields });
+    while (copies.length > TRAINING_SAFETY_KEEP) copies.shift();
+    try { localStorage.setItem(trainingSafetyKey(), JSON.stringify(copies)); } catch (_) {
+      // No room: keep only this one rather than none.
+      try { localStorage.setItem(trainingSafetyKey(), JSON.stringify(copies.slice(-1))); } catch (__) {}
+    }
+    return true;
+  } catch (_) { return false; }
+}
+// Puts back what the copy has and the loads lack. Never overwrites a key that exists now.
+function restoreTrainingFromSafetyCopy(copy) {
+  if (!copy || !copy.fields || !personalTrainingContext()) return 0;
+  const now = Date.now();
+  store.mapStamps = store.mapStamps || {};
+  store.mapDeletes = store.mapDeletes || {};
+  let added = 0;
+  TRAINING_SAFETY_FIELDS.forEach(function (f) {
+    const src = copy.fields[f] || {};
+    if (!store[f] || typeof store[f] !== 'object') store[f] = {};
+    const target = store[f];
+    Object.keys(src).forEach(function (k) {
+      if (Object.prototype.hasOwnProperty.call(target, k)) return;
+      target[k] = src[k];
+      added++;
+      if (STAMPED_MAP_FIELDS.indexOf(f) >= 0) {
+        (store.mapStamps[f] = store.mapStamps[f] || {})[k] = now;
+        if (store.mapDeletes[f]) delete store.mapDeletes[f][k];
+      }
+    });
+  });
+  return added;
+}
+// Is the loads map of this person's own record losing most of what it had at the last sync?
+function trainingLoadsLookWiped() {
+  if (!personalTrainingContext() || !store.mapSyncBase || !store.mapSyncBase.data) return false;
+  const base = store.mapSyncBase.data;
+  const cur = store.data && typeof store.data === 'object' ? store.data : {};
+  const baseKeys = Object.keys(base);
+  if (baseKeys.length < TRAINING_SAFETY_MIN) return false;
+  let lost = 0;
+  baseKeys.forEach(function (k) { if (!Object.prototype.hasOwnProperty.call(cur, k)) lost++; });
+  return lost >= TRAINING_SAFETY_MIN && lost >= baseKeys.length * 0.5;
+}
+function restoreTrainingFromSafetyUi() {
+  const copies = trainingSafetyCopies();
+  const best = copies[copies.length - 1];
+  if (!best) { if (typeof showToast === 'function') showToast('Nessuna copia di sicurezza dei carichi su questo dispositivo', 'info'); return; }
+  const when = new Date(best.at).toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
+  if (!confirm('Aggiungo ai tuoi allenamenti i carichi che mancano rispetto alla copia del ' + when + '. Non cancella niente di quello che c’è. Continuare?')) return;
+  const added = restoreTrainingFromSafetyCopy(best);
+  try { persist(); } catch (_) {}
+  try { render(); } catch (_) {}
+  if (typeof showToast === 'function') {
+    if (added) showToast('Carichi ripristinati dalla copia di sicurezza', 'ok');
+    else showToast('Non manca niente: i carichi sono già tutti qui', 'info');
+  }
+}
+window.restoreTrainingFromSafetyUi = restoreTrainingFromSafetyUi;
+window.saveTrainingSafetyCopy = saveTrainingSafetyCopy;
+// ---- Safety copy of the loads (end)
+
 // Local edits since the last look get their time. The first time there is no
 // earlier look: what is here counts as synced, with no time.
 function stampLocalMapChanges(now) {
@@ -6859,7 +6961,23 @@ function stampLocalMapChanges(now) {
   if (!store.mapSyncBase || typeof store.mapSyncBase !== 'object') { store.mapSyncBase = mapSnapshot(); return; }
   store.mapStamps = store.mapStamps || {};
   store.mapDeletes = store.mapDeletes || {};
+  // The loads lost most of what they were without being cleared on purpose: put them back from the copy, or hold
+  // the deletion back (the reference stays, so the cloud's loads come back at the next download).
+  let protectedBase = null;
+  if (typeof trainingLoadsLookWiped === 'function' && trainingLoadsLookWiped()) {
+    const copies = trainingSafetyCopies();
+    const best = copies[copies.length - 1];
+    const added = best ? restoreTrainingFromSafetyCopy(best) : 0;
+    if (added && !trainingLoadsLookWiped()) {
+      try { if (typeof showToast === 'function') showToast('Ho ripristinato i carichi dalla copia di sicurezza', 'info'); } catch (_) {}
+    } else {
+      protectedBase = {};
+      TRAINING_SAFETY_FIELDS.forEach(function (f) { protectedBase[f] = store.mapSyncBase[f]; });
+      console.warn('[TRAINING_GUARD] loads dropped without being cleared: deletion held back');
+    }
+  }
   STAMPED_MAP_FIELDS.forEach(function (f) {
+    if (protectedBase && Object.prototype.hasOwnProperty.call(protectedBase, f)) return;
     const cur = store[f] && typeof store[f] === 'object' ? store[f] : {};
     const base = store.mapSyncBase[f] || {};
     const st = store.mapStamps[f] = store.mapStamps[f] || {};
@@ -6873,6 +6991,8 @@ function stampLocalMapChanges(now) {
     Object.keys(dl).forEach(function (k) { if (now - dl[k] > MAP_DELETES_KEEP_MS) delete dl[k]; });
   });
   store.mapSyncBase = mapSnapshot();
+  if (protectedBase) Object.keys(protectedBase).forEach(function (f) { if (protectedBase[f] !== undefined) store.mapSyncBase[f] = protectedBase[f]; });
+  else if (typeof saveTrainingSafetyCopy === 'function') saveTrainingSafetyCopy('periodic', false);
 }
 // A field cleared whole (program switch, "Azzera carichi"): its times start
 // over - the epoch, not the keys, says which side wins.
