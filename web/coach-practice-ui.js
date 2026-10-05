@@ -2699,12 +2699,17 @@ function applyClientPayloadToLocal(payload) {
   // is never touched and there is nothing to undo when the session ends.
   if (typeof nurvanEnterClientArea === 'function') nurvanEnterClientArea();
   const prog = payload.activeProgram || payload;
+  window.__cpClientViewError = '';
   try {
     DATA = (typeof normalizeProgram === 'function' && prog && prog.weeks)
       ? normalizeProgram(prog)
       : (prog && typeof prog === 'object' ? prog : { title: 'Cliente', weeks: [] });
-  } catch (_) {
-    DATA = { title: 'Cliente', weeks: [] };
+  } catch (err) {
+    // The client's program is there; if it cannot be tidied it is still shown as it is, and the reason is kept to be
+    // told (an empty draft here read as "no program loaded" while the sheet said it was assigned).
+    window.__cpClientViewError = String((err && err.message) || err);
+    console.error('[CLIENT_VIEW_NORMALIZE]', err);
+    DATA = (prog && Array.isArray(prog.weeks) && prog.weeks.length) ? prog : { title: 'Cliente', weeks: [] };
   }
   store.activeProgram = DATA;
   store.activeProgramId = (DATA && DATA.id) || ('client_view_' + Date.now());
@@ -2829,7 +2834,12 @@ async function enterCoachClientView(domain, opts) {
       store.coachWorkspace.data = data;
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
       store.coachWorkspace.intake = snap.intake || store.coachWorkspace.intake;
-      applyClientPayloadToLocal(data);
+      try {
+        applyClientPayloadToLocal(data);
+      } catch (err) {
+        window.__cpClientViewError = String((err && err.message) || err);
+        console.error('[CLIENT_VIEW_APPLY]', err);
+      }
       if (window.__cpCoachViewBackup && window.__cpCoachViewBackup.profile) {
         store.profile = JSON.parse(JSON.stringify(window.__cpCoachViewBackup.profile));
       }
@@ -2854,6 +2864,13 @@ async function enterCoachClientView(domain, opts) {
   ensureClientViewBanner();
   startClientLivePoll();
   navigate(domain || 'training');
+  // The server holds a program for this client but it did not reach the screen: say why, in the words of the error.
+  try {
+    const sent = store.coachWorkspace && store.coachWorkspace.data && store.coachWorkspace.data.activeProgram;
+    const had = !!(sent && Array.isArray(sent.weeks) && sent.weeks.length);
+    const shown = !!(typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+    if (had && !shown) practiceToast('La scheda del cliente c’è ma non si apre' + (window.__cpClientViewError ? ': ' + window.__cpClientViewError : '') + '. Riprova tra un attimo.', 'warning');
+  } catch (_) {}
   if (!(opts && opts.silent)) practiceToast('Stai vedendo i dati del cliente', 'success');
 }
 

@@ -28374,6 +28374,7 @@ function renderTraining(c){
       <div class="card" style="text-align:center;padding:28px 16px;">
         <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">ALLENAMENTO</div>
         <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Nessun programma caricato</h2>
+        ${(store && store.coachViewingClient) ? '<p style="color:#666;font-size:10px;margin:0 0 8px;word-break:break-word;">Dettaglio tecnico: ' + esc(String((error && error.message) || '') + (window.__cpClientViewError ? ' · ' + window.__cpClientViewError : '')) + '</p>' : ''}
         <p style="color:#888;font-size:12px;margin:0 0 16px;">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'Aspetta la scheda del coach o scrivigli in chat.' : 'Importa una scheda, scegli dal database interno oppure completa il profilo per i consigli.'}</p>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${(typeof isAthleteRole === 'function' && isAthleteRole())

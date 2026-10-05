@@ -63956,6 +63956,7 @@ function renderTraining(c){
       <div class="card" style="text-align:center;padding:28px 16px;">
         <div style="font-size:11px;color:var(--gold);font-weight:800;letter-spacing:1px;margin-bottom:6px;">ALLENAMENTO</div>
         <h2 style="color:#fff;font-size:18px;margin:0 0 8px;">Nessun programma caricato</h2>
+        ${(store && store.coachViewingClient) ? '<p style="color:#666;font-size:10px;margin:0 0 8px;word-break:break-word;">Dettaglio tecnico: ' + esc(String((error && error.message) || '') + (window.__cpClientViewError ? ' · ' + window.__cpClientViewError : '')) + '</p>' : ''}
         <p style="color:#888;font-size:12px;margin:0 0 16px;">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'Aspetta la scheda del coach o scrivigli in chat.' : 'Importa una scheda, scegli dal database interno oppure completa il profilo per i consigli.'}</p>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${(typeof isAthleteRole === 'function' && isAthleteRole())
@@ -83576,12 +83577,17 @@ function applyClientPayloadToLocal(payload) {
   // is never touched and there is nothing to undo when the session ends.
   if (typeof nurvanEnterClientArea === 'function') nurvanEnterClientArea();
   const prog = payload.activeProgram || payload;
+  window.__cpClientViewError = '';
   try {
     DATA = (typeof normalizeProgram === 'function' && prog && prog.weeks)
       ? normalizeProgram(prog)
       : (prog && typeof prog === 'object' ? prog : { title: 'Cliente', weeks: [] });
-  } catch (_) {
-    DATA = { title: 'Cliente', weeks: [] };
+  } catch (err) {
+    // The client's program is there; if it cannot be tidied it is still shown as it is, and the reason is kept to be
+    // told (an empty draft here read as "no program loaded" while the sheet said it was assigned).
+    window.__cpClientViewError = String((err && err.message) || err);
+    console.error('[CLIENT_VIEW_NORMALIZE]', err);
+    DATA = (prog && Array.isArray(prog.weeks) && prog.weeks.length) ? prog : { title: 'Cliente', weeks: [] };
   }
   store.activeProgram = DATA;
   store.activeProgramId = (DATA && DATA.id) || ('client_view_' + Date.now());
@@ -83706,7 +83712,12 @@ async function enterCoachClientView(domain, opts) {
       store.coachWorkspace.data = data;
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
       store.coachWorkspace.intake = snap.intake || store.coachWorkspace.intake;
-      applyClientPayloadToLocal(data);
+      try {
+        applyClientPayloadToLocal(data);
+      } catch (err) {
+        window.__cpClientViewError = String((err && err.message) || err);
+        console.error('[CLIENT_VIEW_APPLY]', err);
+      }
       if (window.__cpCoachViewBackup && window.__cpCoachViewBackup.profile) {
         store.profile = JSON.parse(JSON.stringify(window.__cpCoachViewBackup.profile));
       }
@@ -83731,6 +83742,13 @@ async function enterCoachClientView(domain, opts) {
   ensureClientViewBanner();
   startClientLivePoll();
   navigate(domain || 'training');
+  // The server holds a program for this client but it did not reach the screen: say why, in the words of the error.
+  try {
+    const sent = store.coachWorkspace && store.coachWorkspace.data && store.coachWorkspace.data.activeProgram;
+    const had = !!(sent && Array.isArray(sent.weeks) && sent.weeks.length);
+    const shown = !!(typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+    if (had && !shown) practiceToast('La scheda del cliente c’è ma non si apre' + (window.__cpClientViewError ? ': ' + window.__cpClientViewError : '') + '. Riprova tra un attimo.', 'warning');
+  } catch (_) {}
   if (!(opts && opts.silent)) practiceToast('Stai vedendo i dati del cliente', 'success');
 }
 
