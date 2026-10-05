@@ -2,40 +2,55 @@
 
 Generato da `node tools/media_prompts.mjs` — non modificare a mano, modifica `tools/media_prompts.mjs` e rilancialo.
 
-## Come si usa (3 passi)
+## Come si usa
 
-1. **Apri una chat nuova** con il generatore di immagini e incolla **una volta sola** il «Prompt principale» qui sotto. Se la chat diventa lunga o l'immagine comincia a sbagliare stile, apri una chat nuova e incollalo di nuovo.
-2. Per ogni esercizio incolla **un solo blocco «EXERCISE: …»** della lista (uno per messaggio, mai due insieme). Salva l'immagine con **esattamente** il nome indicato in «File» (con `.png`).
-3. Metti i file in `media-source/_nuove` e scrivimi «importa le immagini»: le controllo una per una (due pannelli, pose diverse, esercizio giusto), le scarto con il motivo se serve, e le metto direttamente nell'app (`node tools/import_media_local.mjs --apply`, niente cloud). Le vedi dopo la prossima build.
+**Perché il metodo precedente sbagliava:** senza immagini di riferimento il generatore inventa il layout (formato verticale, figure piccole, barre START/END minuscole). Con 3 immagini di riferimento allegate nello stesso messaggio del prompt principale copia il layout esatto e cambia solo la posa.
 
-Controllo veloce prima di salvare un'immagine: **(a)** due soli pannelli START / END; **(b)** le due pose sono diverse; **(c)** un solo manichino per pannello, pelato, grigio, scarpe nere; **(d)** muscoli rossi solo dove lavorano; **(e)** niente testo oltre a START / END; **(f)** tutto il corpo e l'attrezzo dentro il pannello. Se manca anche solo una di queste, rigenera: non correggere a mano.
+1. Apri una **chat nuova**. Allega le 3 immagini della cartella `media-source/_riferimenti/` (sono immagini già approvate e importate nell’app) e, **nello stesso messaggio**, incolla il «Prompt principale» qui sotto. Aspetta la risposta «OK».
+2. Poi **un messaggio per esercizio**: incolla un solo blocco «EXERCISE: …» (non due insieme). Salva l’immagine con **esattamente** il nome indicato in «File» (con `.png`).
+3. Se l’immagine è quasi giusta, non rigenerare da zero: scrivi `FIX: …` con una sola correzione (esempi sotto). Se dopo 2 correzioni è ancora sbagliata, apri una chat nuova (con le 3 immagini) e riparti.
+4. Chat lunga = deriva dello stile: **ogni 15-20 immagini apri una chat nuova** e riallega le 3 immagini con il prompt principale.
+5. Metti i file in `media-source/_nuove` e scrivimi «importa le immagini»: le controllo una per una, scarto con il motivo quelle sbagliate, e importo le buone direttamente nell’app (`node tools/import_media_local.mjs --apply`, niente cloud). Le vedi dopo la prossima build.
 
-## Prompt principale (da incollare una volta)
+**Controllo prima di salvare:** (a) formato orizzontale, due soli pannelli START / END con barre nere larghe; (b) le due pose sono diverse; (c) un solo manichino per pannello, grande, pelato, grigio, scarpe nere; (d) muscoli rossi solo dove lavorano; (e) nessun altro testo; (f) corpo e attrezzo interi dentro il pannello. Se manca anche una sola di queste, correggi con FIX o rigenera.
+
+## Correzioni rapide (da incollare dopo l’immagine sbagliata)
+
+- Formato: `FIX: make it a wide landscape 3:2 image like the references, two tall panels side by side, same layout as the references.`
+- Figura piccola: `FIX: same image but the mannequin must be much bigger: the whole body spans at least 80% of the panel width, like in the references.`
+- Barre: `FIX: the START and END label bars must span almost the full panel width and be centred, like in the references.`
+- Pose uguali: `FIX: START and END are too similar. END must clearly show: <descrizione dell’END del blocco>.`
+- Lato/arto sbagliato: `FIX: in the END panel the legs (or arms) must be the opposite ones of the START panel.`
+- Piedi nudi / capelli / altro colore: `FIX: bald, light-grey skin, black running shoes with white soles, like the references.`
+- Testo in più: `FIX: remove every text except the words START and END.`
+
+## Prompt principale (allegando le 3 immagini di riferimento)
 
 ```
-You are an illustrator for a fitness app. Each message I send describes ONE exercise. You answer with ONE image and nothing else (no text, no questions: if something is ambiguous, choose the most standard version of the exercise).
+I am attaching 3 REFERENCE IMAGES. They are the approved style of my fitness app. From now on every image you make must look like them: same layout, same mannequin, same label bars, same mat, same colours, same size of the figure. Only the exercise changes.
 
-THE IMAGE
-- One single image, 1536 x 1024 pixels (landscape 3:2), pure white background.
-- EXACTLY TWO PANELS side by side, separated by a thin vertical black line.
-- At the top of each panel a rounded black label bar with white bold capital letters: the left one says "START", the right one says "END". These are the ONLY words in the image. No title, no numbers, no captions, no extra panels, no grid, no steps, no watermark, no logo.
-- The same figure, the same size and the same camera angle in both panels, centred, filling about 70% of the panel width. The two poses must be clearly DIFFERENT: START is the starting position, END is the end of the movement (or the other side/limb when the movement alternates).
-- In the END panel only: one or two simple dark-grey curved arrows showing the direction of the movement. No text on the arrows.
+WHAT TO COPY FROM THE REFERENCES (do not change anything of this)
+1. CANVAS: one WIDE LANDSCAPE image, 3:2 (1536 x 1024), wider than tall, white background. Never portrait, never square.
+2. TWO PANELS side by side, each one a tall rectangle filling half the canvas, divided by one thin vertical black line.
+3. LABEL BARS: at the very top of each panel a black rounded bar that spans almost the full width of the panel, with the word START (left panel) or END (right panel) in big white bold capitals centred in it. No other text anywhere.
+4. FIGURE: the same realistic 3D anatomical mannequin as in the references: adult male athletic build, completely BALD, smooth light-grey skin, black shorts, black running shoes with white soles (never barefoot). It is BIG: the whole body spans at least 80% of the width of its panel, centred, with white space only above and below it. Same size and same camera angle in both panels.
+5. MUSCLES: only the muscles that work are translucent RED with a soft gradient; all other muscles stay grey.
+6. FLOOR: exercises on the floor stand on the same dark-grey rectangular mat as in the references, long enough to hold the whole body. Standing exercises have no mat. Equipment is drawn realistically in black or dark grey.
+7. ARROWS: in the END panel only, one or two plain dark-grey curved arrows for the direction of the movement.
+8. PHOTO-REAL 3D RENDER like the references: soft light, faint contact shadow, sharp. No cartoon, no line art, no flat colours.
 
-THE FIGURE (never change it)
-- A realistic 3D anatomical mannequin, adult male athletic build, completely BALD, smooth light-grey skin, no hair, no beard, neutral calm face.
-- Black athletic shorts, black running shoes with white soles. Never barefoot, never other colours, no logos, no tops.
-- The muscles that do the work are highlighted in translucent RED (soft gradient); every other muscle stays grey. The muscles to highlight are listed in each description.
-- Exercises on the floor are done on a dark-grey rectangular exercise mat. Any other equipment named in the description is drawn realistically in black or dark grey. If the description says "none", draw no equipment and no floor.
-- Soft light, a faint contact shadow on the floor, high detail, sharp, photo-real 3D render. No illustration style, no cartoon, no line art.
+THE TWO POSES
+- START = the starting position. END = the end of the movement. They must be clearly DIFFERENT. When the movement alternates sides or limbs, END shows the OTHER side / the switched limbs.
+- The whole body and all the equipment must be fully inside the panel, nothing cut off.
 
-COMMON MISTAKES TO AVOID
-- Never more than two panels. Never a numbered sequence. Never the same pose in START and END.
-- Never a second person. Never hair, beard or skin colours other than light grey. Never bare feet.
-- Never anything cut off: the whole body and the whole equipment must be inside each panel.
-- Do the movement exactly as described, with the correct left/right and the correct equipment. If the description says "legs switched", the START and END legs are the opposite ones.
+NEVER
+- more than 2 panels, numbered steps, a title, captions, a grid, watermarks, extra text;
+- a second person, hair, beard, other skin colours, bare feet, tops or logos;
+- a portrait or square image; a figure smaller than described; label bars that are small or not centred.
 
-When I send "EXERCISE: ...", draw exactly that. Answer with the image only.
+HOW WE WORK
+I will send messages that start with "EXERCISE:". Answer each one with ONE image only, no text, no questions. If something is ambiguous, choose the most standard version of the exercise. If I answer "FIX: ..." change only what I say and keep everything else identical.
+Reply "OK" now if you have understood; then wait for the first EXERCISE.
 ```
 
 ## Pilates (da rifare in due pannelli) e due esercizi con attrezzo (21)
@@ -44,11 +59,11 @@ When I send "EXERCISE: ...", draw exactly that. Answer with the image only.
 File: `Roll over.png`
 
 ```
-EXERCISE: Pilates Roll Over
+EXERCISE: Pilates Roll Over (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying flat on the back, arms along the body palms down, legs straight together on the mat
-END panel: legs lifted and carried OVER THE HEAD, straight legs parallel to the floor above the head with toes pointing towards the floor behind the head, hips lifted off the mat, weight on the shoulders and upper back (not the neck), arms pressing flat on the mat
+END panel: the PLOUGH position: the hips lifted high and the straight legs carried back over the head, the body folded in half with the torso almost vertical resting on the shoulders and upper back (not the neck), the toes reaching towards the mat BEHIND the head, the arms pressing flat on the mat along the body
 Muscles in red: abdominals, hip flexors, lower back
 ```
 
@@ -56,7 +71,7 @@ Muscles in red: abdominals, hip flexors, lower back
 File: `Single leg stretch.png`
 
 ```
-EXERCISE: Pilates Single Leg Stretch
+EXERCISE: Pilates Single Leg Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying on the back, head and shoulders curled off the mat, RIGHT knee pulled to the chest with both hands holding the right shin, LEFT leg stretched straight out at about 45 degrees above the mat
@@ -68,7 +83,7 @@ Muscles in red: abdominals, hip flexors
 File: `Scissors.png`
 
 ```
-EXERCISE: Pilates Single Straight Leg Stretch
+EXERCISE: Pilates Single Straight Leg Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying on the back, head and shoulders curled up, both legs straight: the RIGHT leg pointing up towards the ceiling with both hands holding behind the right calf, the LEFT leg lowered straight out at about 30 degrees above the mat
@@ -80,7 +95,7 @@ Muscles in red: abdominals, hip flexors, hamstrings
 File: `Neck pull.png`
 
 ```
-EXERCISE: Pilates Neck Pull
+EXERCISE: Pilates Neck Pull (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying flat on the back, legs straight together, hands interlaced behind the head, elbows wide
@@ -92,7 +107,7 @@ Muscles in red: abdominals, lower back
 File: `Jackknife.png`
 
 ```
-EXERCISE: Pilates Jackknife
+EXERCISE: Pilates Jackknife (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying flat on the back, legs straight together lifted vertical towards the ceiling, arms along the body pressing on the mat
@@ -104,7 +119,7 @@ Muscles in red: abdominals, glutes, hip flexors
 File: `Shoulder bridge.png`
 
 ```
-EXERCISE: Pilates Shoulder Bridge
+EXERCISE: Pilates Shoulder Bridge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying on the back, knees bent, both feet flat on the mat, arms along the body
@@ -116,7 +131,7 @@ Muscles in red: glutes, hamstrings, abdominals
 File: `Spine twist.png`
 
 ```
-EXERCISE: Pilates Spine Twist
+EXERCISE: Pilates Spine Twist (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view, slightly from the side
 START panel: sitting tall on the mat, legs straight together, arms stretched out to the sides at shoulder height, torso facing forward
@@ -128,7 +143,7 @@ Muscles in red: obliques, abdominals
 File: `Side kick series.png`
 
 ```
-EXERCISE: Pilates Side Kick Series
+EXERCISE: Pilates Side Kick Series (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying on the left side, head resting on the lower hand, legs stacked and slightly forward, the top (right) leg lifted straight to hip height and held there
@@ -140,7 +155,7 @@ Muscles in red: glutes (outer hip), hip flexors, obliques
 File: `Teaser.png`
 
 ```
-EXERCISE: Pilates Teaser
+EXERCISE: Pilates Teaser (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying flat on the back, legs straight together, arms stretched overhead along the ears
@@ -152,7 +167,7 @@ Muscles in red: abdominals, hip flexors
 File: `Hip circles.png`
 
 ```
-EXERCISE: Pilates Hip Circles
+EXERCISE: Pilates Hip Circles (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view from the front-left
 START panel: sitting leaning back on straight arms (hands on the mat behind the hips), legs together lifted straight in front at about 45 degrees
@@ -164,7 +179,7 @@ Muscles in red: abdominals, hip flexors, obliques
 File: `Swimming.png`
 
 ```
-EXERCISE: Pilates Swimming
+EXERCISE: Pilates Swimming (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying face down, arms stretched forward, legs straight, resting on the mat
@@ -176,7 +191,7 @@ Muscles in red: lower back, glutes, shoulders
 File: `Leg pull front.png`
 
 ```
-EXERCISE: Pilates Leg Pull Front
+EXERCISE: Pilates Leg Pull Front (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: high plank: hands under the shoulders, arms straight, body in one straight line from head to heels
@@ -188,7 +203,7 @@ Muscles in red: abdominals, shoulders, glutes
 File: `Leg pull back.png`
 
 ```
-EXERCISE: Pilates Leg Pull
+EXERCISE: Pilates Leg Pull (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: reverse plank: sitting with hands on the mat behind the hips, arms straight, hips lifted so the body is a straight line facing up, feet on the mat
@@ -200,7 +215,7 @@ Muscles in red: glutes, hamstrings, abdominals, triceps
 File: `Kneeling side kick.png`
 
 ```
-EXERCISE: Pilates Kneeling Side Kick
+EXERCISE: Pilates Kneeling Side Kick (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view
 START panel: kneeling on the left knee with the left hand flat on the mat, the right hand behind the head, the right leg stretched out to the right side at hip height
@@ -212,7 +227,7 @@ Muscles in red: glutes, hip flexors, obliques
 File: `Mermaid.png`
 
 ```
-EXERCISE: Pilates Mermaid
+EXERCISE: Pilates Mermaid (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view
 START panel: sitting tall in a cross-legged position, the right hand on the mat at the side, the left arm relaxed along the body
@@ -224,7 +239,7 @@ Muscles in red: obliques
 File: `Boomerang.png`
 
 ```
-EXERCISE: Pilates Boomerang
+EXERCISE: Pilates Boomerang (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: sitting leaning back slightly, legs stretched forward crossed at the ankles, arms reaching forward along the legs
@@ -236,7 +251,7 @@ Muscles in red: abdominals, hip flexors
 File: `Seal.png`
 
 ```
-EXERCISE: Pilates Seal
+EXERCISE: Pilates Seal (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: balancing on the sitting bones in a round C-curve, knees wide open, feet together, hands holding the feet from the inside, head tucked
@@ -248,7 +263,7 @@ Muscles in red: abdominals
 File: `Control balance.png`
 
 ```
-EXERCISE: Pilates Control Balance
+EXERCISE: Pilates Control Balance (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: rolled over: hips lifted, legs pointing straight up (shoulder-stand-like), one hand holding the right ankle, the left arm pressing on the mat
@@ -260,7 +275,7 @@ Muscles in red: abdominals, hip flexors, glutes
 File: `Pilates push-up.png`
 
 ```
-EXERCISE: Pilates Push Up
+EXERCISE: Pilates Push Up (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: high plank: arms straight under the shoulders, body in one line from head to heels
@@ -272,7 +287,7 @@ Muscles in red: chest, triceps, shoulders, abdominals
 File: `Pulldown neutro.png`
 
 ```
-EXERCISE: Neutral Grip Lat Pulldown
+EXERCISE: Neutral Grip Lat Pulldown (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: lat pulldown machine with a thigh pad and a neutral-grip (parallel handles) V bar
 Camera: side view
 START panel: seated at the lat pulldown machine, knees under the thigh pad, arms fully extended overhead holding the neutral-grip handle, slight lean back
@@ -284,7 +299,7 @@ Muscles in red: lats, biceps, rear shoulders
 File: `Towel row.png`
 
 ```
-EXERCISE: Towel Row (door)
+EXERCISE: Towel Row (door) (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a rolled towel looped around a door handle, a door
 Camera: side view
 START panel: leaning back with straight arms holding both ends of the towel, feet near the door, body in a straight line inclined backwards
@@ -298,7 +313,7 @@ Muscles in red: lats, rhomboids, biceps
 File: `Cat-cow.png`
 
 ```
-EXERCISE: Cat Cow Stretch
+EXERCISE: Cat Cow Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: on all fours, back arched down (cow), chest and head lifted, tailbone up
@@ -310,7 +325,7 @@ Muscles in red: spine, abdominals
 File: `World s greatest stretch.png`
 
 ```
-EXERCISE: World's Greatest Stretch
+EXERCISE: World's Greatest Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: deep lunge, RIGHT foot forward, both hands on the mat inside the front foot, back leg straight
@@ -322,7 +337,7 @@ Muscles in red: hip flexors, glutes, spine rotators
 File: `Stretch 90 90 anche.png`
 
 ```
-EXERCISE: 90/90 Hip Stretch
+EXERCISE: 90/90 Hip Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view
 START panel: sitting on the mat with both knees bent at 90 degrees: front leg shin parallel to the front, back leg to the side, torso upright
@@ -334,7 +349,7 @@ Muscles in red: glutes, hip rotators
 File: `Stretch flessori dell anca.png`
 
 ```
-EXERCISE: Half Kneeling Hip Flexor Stretch
+EXERCISE: Half Kneeling Hip Flexor Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: half kneeling (left knee on the mat, right foot forward), torso upright, hands on the front thigh
@@ -346,7 +361,7 @@ Muscles in red: hip flexors, front thigh
 File: `Posizione del bambino.png`
 
 ```
-EXERCISE: Child's Pose
+EXERCISE: Child's Pose (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: kneeling upright sitting on the heels, hands on the thighs, torso tall
@@ -358,7 +373,7 @@ Muscles in red: lower back, lats
 File: `Cane a testa in giu.png`
 
 ```
-EXERCISE: Downward Dog
+EXERCISE: Downward Dog (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: on all fours in a table position, hands under the shoulders, knees under the hips
@@ -370,7 +385,7 @@ Muscles in red: hamstrings, calves, shoulders
 File: `Cobra.png`
 
 ```
-EXERCISE: Cobra Stretch
+EXERCISE: Cobra Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying face down, hands flat under the shoulders, forehead on the mat
@@ -382,7 +397,7 @@ Muscles in red: abdominals (stretch), lower back
 File: `Rotazioni toraciche in quadrupedia.png`
 
 ```
-EXERCISE: Quadruped Thoracic Rotation
+EXERCISE: Quadruped Thoracic Rotation (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view, slightly from the side
 START panel: on all fours, the right hand behind the head, elbow pointing down towards the left arm
@@ -394,7 +409,7 @@ Muscles in red: upper back, obliques
 File: `Thread the needle.png`
 
 ```
-EXERCISE: Thread the Needle Stretch
+EXERCISE: Thread the Needle Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view, slightly from the side
 START panel: on all fours, the right arm reaching up to the ceiling with the chest open
@@ -406,7 +421,7 @@ Muscles in red: shoulders, upper back
 File: `Squat profondo tenuto.png`
 
 ```
-EXERCISE: Deep Squat Hold
+EXERCISE: Deep Squat Hold (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: front view
 START panel: standing with the feet slightly wider than the shoulders, toes turned out, hands together at the chest
@@ -418,7 +433,7 @@ Muscles in red: hips, adductors, ankles
 File: `Stretch ischiocrurali supino.png`
 
 ```
-EXERCISE: Supine Hamstring Stretch
+EXERCISE: Supine Hamstring Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying on the back with one leg flat on the mat and the other knee bent
@@ -430,7 +445,7 @@ Muscles in red: hamstrings
 File: `Stretch del piccione.png`
 
 ```
-EXERCISE: Pigeon Stretch
+EXERCISE: Pigeon Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: on all fours
@@ -442,7 +457,7 @@ Muscles in red: glutes, hip rotators
 File: `Stretch a rana.png`
 
 ```
-EXERCISE: Frog Stretch
+EXERCISE: Frog Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view and slightly from above
 START panel: on all fours with the knees close together
@@ -454,7 +469,7 @@ Muscles in red: adductors
 File: `Stretch polpacci al muro.png`
 
 ```
-EXERCISE: Wall Calf Stretch
+EXERCISE: Wall Calf Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a wall
 Camera: side view
 START panel: standing facing a wall, hands on the wall at shoulder height, feet together a step from the wall
@@ -466,7 +481,7 @@ Muscles in red: calves
 File: `Stretch pettorali al muro.png`
 
 ```
-EXERCISE: Wall Pec Stretch
+EXERCISE: Wall Pec Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a wall
 Camera: front view
 START panel: standing sideways next to a wall, the forearm on the wall with the elbow bent at 90 degrees at shoulder height
@@ -478,7 +493,7 @@ Muscles in red: chest, front shoulder
 File: `Cerchi controllati della spalla.png`
 
 ```
-EXERCISE: Shoulder CARs
+EXERCISE: Shoulder CARs (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: front view
 START panel: standing tall, the right arm hanging along the body, the left hand on the hip
@@ -490,7 +505,7 @@ Muscles in red: shoulder
 File: `Cerchi controllati dell anca.png`
 
 ```
-EXERCISE: Hip CARs
+EXERCISE: Hip CARs (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: on all fours, the right knee under the hip
@@ -502,7 +517,7 @@ Muscles in red: hip, glutes
 File: `Stretch quadricipite in piedi.png`
 
 ```
-EXERCISE: Standing Quad Stretch
+EXERCISE: Standing Quad Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: side view
 START panel: standing on the left leg, the right leg relaxed, one hand free
@@ -514,7 +529,7 @@ Muscles in red: front thigh
 File: `Torsione supina.png`
 
 ```
-EXERCISE: Supine Spinal Twist
+EXERCISE: Supine Spinal Twist (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view from above-side
 START panel: lying on the back, arms out to the sides in a T, knees bent and together lifted over the hips
@@ -526,7 +541,7 @@ Muscles in red: spine rotators, glutes
 File: `Stretch dorsali in ginocchio.png`
 
 ```
-EXERCISE: Kneeling Lat Stretch
+EXERCISE: Kneeling Lat Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a bench
 Camera: side view
 START panel: kneeling in front of a bench, hands resting on the bench, torso upright
@@ -538,7 +553,7 @@ Muscles in red: lats, shoulders
 File: `Stretch a farfalla.png`
 
 ```
-EXERCISE: Butterfly Stretch
+EXERCISE: Butterfly Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view
 START panel: sitting tall, the soles of the feet together, knees out to the sides
@@ -550,7 +565,7 @@ Muscles in red: adductors, hips
 File: `Stretch laterale del collo.png`
 
 ```
-EXERCISE: Lateral Neck Stretch
+EXERCISE: Lateral Neck Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: front view
 START panel: sitting tall with the head neutral, shoulders relaxed
@@ -562,7 +577,7 @@ Muscles in red: side of the neck
 File: `Scivolamenti al muro.png`
 
 ```
-EXERCISE: Wall Slides
+EXERCISE: Wall Slides (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a wall
 Camera: side view
 START panel: standing with the back and the head against the wall, forearms against the wall with the elbows bent at 90 degrees
@@ -574,7 +589,7 @@ Muscles in red: shoulders, upper back
 File: `Estensione toracica a terra.png`
 
 ```
-EXERCISE: Thoracic Extension Stretch
+EXERCISE: Thoracic Extension Stretch (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a bench
 Camera: side view
 START panel: kneeling in front of a bench with the elbows on it, hands behind the head, spine neutral
@@ -586,7 +601,7 @@ Muscles in red: upper back, lats
 File: `Jefferson curl a corpo libero.png`
 
 ```
-EXERCISE: Bodyweight Jefferson Curl
+EXERCISE: Bodyweight Jefferson Curl (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: side view
 START panel: standing tall, feet hip-width, arms overhead
@@ -600,7 +615,7 @@ Muscles in red: spine, hamstrings
 File: `Push-up inclinato.png`
 
 ```
-EXERCISE: Incline Push-Up
+EXERCISE: Incline Push-Up (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a bench
 Camera: side view
 START panel: hands on the edge of a bench, arms straight, body in one line from head to heels, feet on the floor
@@ -612,7 +627,7 @@ Muscles in red: chest, triceps, shoulders
 File: `Handstand push-up al muro.png`
 
 ```
-EXERCISE: Wall Handstand Push-Up
+EXERCISE: Wall Handstand Push-Up (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a wall
 Camera: side view
 START panel: handstand with the heels against the wall, arms straight, body in a straight vertical line
@@ -624,7 +639,7 @@ Muscles in red: shoulders, triceps
 File: `Dip su sedia.png`
 
 ```
-EXERCISE: Chair Dip
+EXERCISE: Chair Dip (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a sturdy chair
 Camera: side view
 START panel: hands on the edge of a chair behind the body, arms straight, legs extended with the heels on the floor, hips off the chair
@@ -636,7 +651,7 @@ Muscles in red: triceps, chest, front shoulders
 File: `Dead hang.png`
 
 ```
-EXERCISE: Dead Hang
+EXERCISE: Dead Hang (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a pull-up bar
 Camera: front view
 START panel: hanging from the bar with straight arms, shoulders relaxed up by the ears (passive hang)
@@ -648,7 +663,7 @@ Muscles in red: lats, forearms, shoulder stabilisers
 File: `Trazioni negative.png`
 
 ```
-EXERCISE: Negative Pull-Up
+EXERCISE: Negative Pull-Up (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a pull-up bar
 Camera: front view
 START panel: chin above the bar, arms bent (top position)
@@ -660,7 +675,7 @@ Muscles in red: lats, biceps
 File: `Reverse snow angel.png`
 
 ```
-EXERCISE: Reverse Snow Angel
+EXERCISE: Reverse Snow Angel (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying face down, arms along the body lifted slightly off the mat, palms facing down, forehead off the mat
@@ -672,7 +687,7 @@ Muscles in red: upper back, rear shoulders
 File: `Affondi a corpo libero.png`
 
 ```
-EXERCISE: Bodyweight Reverse Lunge
+EXERCISE: Bodyweight Reverse Lunge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: side view
 START panel: standing tall, feet together, hands on the hips
@@ -684,7 +699,7 @@ Muscles in red: quads, glutes
 File: `L-sit raccolto.png`
 
 ```
-EXERCISE: Tuck L-Sit
+EXERCISE: Tuck L-Sit (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: two parallettes or two blocks
 Camera: side view
 START panel: sitting with straight arms pressing on two blocks beside the hips, legs on the floor
@@ -696,7 +711,7 @@ Muscles in red: abdominals, hip flexors, triceps
 File: `Arch hold.png`
 
 ```
-EXERCISE: Superman Arch Hold
+EXERCISE: Superman Arch Hold (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying face down, arms along the body palms up, legs together on the mat
@@ -708,7 +723,7 @@ Muscles in red: lower back, glutes
 File: `Superman.png`
 
 ```
-EXERCISE: Superman
+EXERCISE: Superman (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying face down, arms stretched forward, legs straight
@@ -720,7 +735,7 @@ Muscles in red: lower back, glutes, rear shoulders
 File: `Inverted row facilitato.png`
 
 ```
-EXERCISE: Easier Inverted Row
+EXERCISE: Easier Inverted Row (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a sturdy table or a low bar
 Camera: side view
 START panel: lying under a low bar (or table edge), knees bent with the feet flat on the floor, arms straight holding the bar, hips lifted
@@ -732,7 +747,7 @@ Muscles in red: lats, rhomboids, biceps
 File: `Wall sit.png`
 
 ```
-EXERCISE: Wall Sit
+EXERCISE: Wall Sit (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a wall
 Camera: side view
 START panel: standing with the back against the wall, feet a step in front, arms along the body
@@ -744,7 +759,7 @@ Muscles in red: quads, glutes
 File: `Calf raise a corpo libero.png`
 
 ```
-EXERCISE: Bodyweight Calf Raise
+EXERCISE: Bodyweight Calf Raise (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a step
 Camera: side view
 START panel: standing on the edge of a step on the balls of the feet, heels lowered below the step, hands on a wall for balance
@@ -756,7 +771,7 @@ Muscles in red: calves
 File: `Affondi saltati.png`
 
 ```
-EXERCISE: Jumping Lunge
+EXERCISE: Jumping Lunge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: side view
 START panel: in a lunge, the right leg forward, the left knee near the floor
@@ -768,7 +783,7 @@ Muscles in red: quads, glutes, calves
 File: `Plank jack.png`
 
 ```
-EXERCISE: Plank Jack
+EXERCISE: Plank Jack (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view slightly from the side
 START panel: high plank with the feet together, arms straight
@@ -780,7 +795,7 @@ Muscles in red: abdominals, shoulders, adductors
 File: `Bear crawl.png`
 
 ```
-EXERCISE: Bear Crawl
+EXERCISE: Bear Crawl (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: side view
 START panel: on hands and toes with the knees bent and lifted just off the floor, back flat
@@ -792,7 +807,7 @@ Muscles in red: shoulders, abdominals, quads
 File: `Squat con elastico.png`
 
 ```
-EXERCISE: Banded Squat
+EXERCISE: Banded Squat (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a loop resistance band above the knees
 Camera: front view
 START panel: standing with the feet shoulder-width, a resistance band around the legs just above the knees, arms in front
@@ -804,7 +819,7 @@ Muscles in red: quads, glutes
 File: `Chest press elastico.png`
 
 ```
-EXERCISE: Band Chest Press
+EXERCISE: Band Chest Press (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a long resistance band around the back
 Camera: side view
 START panel: standing in a split stance, the band around the upper back with the handles in the hands at the chest, elbows bent
@@ -816,7 +831,7 @@ Muscles in red: chest, triceps, front shoulders
 File: `Pull-apart elastico.png`
 
 ```
-EXERCISE: Band Pull-Apart
+EXERCISE: Band Pull-Apart (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a resistance band
 Camera: front view
 START panel: standing, arms straight in front at shoulder height holding the band with the hands shoulder-width apart
@@ -830,7 +845,7 @@ Muscles in red: rear shoulders, upper back
 File: `Hip thrust manubrio.png`
 
 ```
-EXERCISE: Dumbbell Hip Thrust
+EXERCISE: Dumbbell Hip Thrust (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a flat bench and one dumbbell
 Camera: side view
 START panel: the upper back resting on the edge of the bench, knees bent with the feet flat, one dumbbell on the hips held with both hands, hips lowered close to the floor
@@ -842,7 +857,7 @@ Muscles in red: glutes, hamstrings
 File: `Hip thrust piedi rialzati.png`
 
 ```
-EXERCISE: Feet-Elevated Hip Thrust
+EXERCISE: Feet-Elevated Hip Thrust (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a flat bench, a low box and a barbell
 Camera: side view
 START panel: the upper back on the bench, the feet on a low box in front, a barbell over the hips, hips lowered
@@ -854,7 +869,7 @@ Muscles in red: glutes, hamstrings
 File: `B-stance hip thrust.png`
 
 ```
-EXERCISE: B-Stance Hip Thrust
+EXERCISE: B-Stance Hip Thrust (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a flat bench and one dumbbell
 Camera: side view
 START panel: the upper back on the bench, the RIGHT foot flat as the working foot and the LEFT foot a step behind it touching the floor only with the toes, a dumbbell on the hips, hips lowered
@@ -866,7 +881,7 @@ Muscles in red: glutes (working side), hamstrings
 File: `Hip thrust con elastico.png`
 
 ```
-EXERCISE: Banded Hip Thrust
+EXERCISE: Banded Hip Thrust (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a flat bench, a barbell and a loop band above the knees
 Camera: side view and slightly from the front
 START panel: the upper back on the bench, a loop band around the legs just above the knees, a barbell over the hips, hips lowered
@@ -878,7 +893,7 @@ Muscles in red: glutes, outer hips
 File: `Glute bridge con elastico.png`
 
 ```
-EXERCISE: Banded Glute Bridge
+EXERCISE: Banded Glute Bridge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: lying on the back, knees bent, a loop band around the legs just above the knees, feet flat, hips on the mat
@@ -890,7 +905,7 @@ Muscles in red: glutes, outer hips
 File: `Glute bridge bilanciere.png`
 
 ```
-EXERCISE: Barbell Glute Bridge
+EXERCISE: Barbell Glute Bridge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a barbell with plates over the hips
 Camera: side view
 START panel: lying on the back on the floor, knees bent, a barbell over the hips held with both hands, hips on the floor
@@ -902,7 +917,7 @@ Muscles in red: glutes, hamstrings
 File: `Glute bridge manubrio.png`
 
 ```
-EXERCISE: Dumbbell Glute Bridge
+EXERCISE: Dumbbell Glute Bridge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: one dumbbell
 Camera: side view
 START panel: lying on the back on the mat, knees bent, a dumbbell on the hips held with both hands, hips down
@@ -914,7 +929,7 @@ Muscles in red: glutes, hamstrings
 File: `Glute bridge piedi rialzati.png`
 
 ```
-EXERCISE: Feet-Elevated Glute Bridge
+EXERCISE: Feet-Elevated Glute Bridge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a bench or box for the feet
 Camera: side view
 START panel: lying on the back, the feet on a bench, knees bent, hips on the mat, arms along the body
@@ -926,7 +941,7 @@ Muscles in red: glutes, hamstrings
 File: `Reverse hyper.png`
 
 ```
-EXERCISE: Reverse Hyperextension
+EXERCISE: Reverse Hyperextension (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a reverse hyperextension machine with a padded platform
 Camera: side view
 START panel: lying face down on the padded platform with the hips at the edge, the legs hanging down under the platform, hands holding the handles
@@ -938,7 +953,7 @@ Muscles in red: glutes, hamstrings, lower back
 File: `Reverse hyper su panca.png`
 
 ```
-EXERCISE: Bench Reverse Hyperextension
+EXERCISE: Bench Reverse Hyperextension (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a flat bench
 Camera: side view
 START panel: lying face down on a bench with the hips at the end edge, hands holding the bench, the legs hanging down
@@ -950,7 +965,7 @@ Muscles in red: glutes, hamstrings, lower back
 File: `Iperestensione 45 glutei.png`
 
 ```
-EXERCISE: Glute-Focus 45-Degree Back Extension
+EXERCISE: Glute-Focus 45-Degree Back Extension (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a 45-degree hyperextension bench
 Camera: side view
 START panel: on the 45-degree bench, hips on the pad, feet locked under the rollers, torso hanging down with a rounded upper back, arms crossed on the chest
@@ -962,7 +977,7 @@ Muscles in red: glutes, hamstrings
 File: `Kickback cavo in ginocchio.png`
 
 ```
-EXERCISE: Kneeling Cable Glute Kickback
+EXERCISE: Kneeling Cable Glute Kickback (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a low cable pulley with an ankle strap
 Camera: side view
 START panel: on all fours on the mat facing the cable machine, the ankle strap on the right ankle, the right knee bent under the hip
@@ -974,7 +989,7 @@ Muscles in red: glutes
 File: `Donkey kick.png`
 
 ```
-EXERCISE: Donkey Kick
+EXERCISE: Donkey Kick (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: on all fours, the right knee bent at 90 degrees under the hip, back flat
@@ -986,7 +1001,7 @@ Muscles in red: glutes
 File: `Fire hydrant.png`
 
 ```
-EXERCISE: Fire Hydrant
+EXERCISE: Fire Hydrant (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: rear view from slightly above
 START panel: on all fours, knees under the hips, back flat
@@ -998,7 +1013,7 @@ Muscles in red: glutes (outer hip)
 File: `Clam shell.png`
 
 ```
-EXERCISE: Side-Lying Clam
+EXERCISE: Side-Lying Clam (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view
 START panel: lying on the left side, head on the lower arm, hips and knees bent, the feet together and the knees together
@@ -1010,7 +1025,7 @@ Muscles in red: glutes (outer hip)
 File: `Abduzione sdraiata sul fianco.png`
 
 ```
-EXERCISE: Side-Lying Hip Abduction
+EXERCISE: Side-Lying Hip Abduction (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: front view
 START panel: lying on the left side, legs straight and stacked, head on the lower arm
@@ -1022,7 +1037,7 @@ Muscles in red: glutes (outer hip)
 File: `Abduzione in piedi con elastico.png`
 
 ```
-EXERCISE: Standing Band Hip Abduction
+EXERCISE: Standing Band Hip Abduction (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a loop band around the ankles
 Camera: front view
 START panel: standing tall with a loop band around the ankles, feet together, hands on the hips or a support
@@ -1034,7 +1049,7 @@ Muscles in red: glutes (outer hip)
 File: `Abduzione ai cavi in piedi.png`
 
 ```
-EXERCISE: Standing Cable Hip Abduction
+EXERCISE: Standing Cable Hip Abduction (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a low cable pulley with an ankle strap
 Camera: front view
 START panel: standing sideways to the cable machine, the ankle strap on the outer ankle, the cable crossing in front of the body, holding the machine for support
@@ -1046,7 +1061,7 @@ Muscles in red: glutes (outer hip)
 File: `Abduzione seduta con elastico.png`
 
 ```
-EXERCISE: Seated Band Hip Abduction
+EXERCISE: Seated Band Hip Abduction (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a loop band above the knees and a bench
 Camera: front view
 START panel: sitting on a bench, a loop band above the knees, the knees together, torso leaning slightly forward
@@ -1058,7 +1073,7 @@ Muscles in red: glutes (outer hip)
 File: `Lateral band walk.png`
 
 ```
-EXERCISE: Lateral Band Walk
+EXERCISE: Lateral Band Walk (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a loop band above the knees
 Camera: front view
 START panel: half squat with a loop band above the knees, the feet shoulder-width, hands in front
@@ -1070,7 +1085,7 @@ Muscles in red: glutes (outer hip)
 File: `Monster walk.png`
 
 ```
-EXERCISE: Monster Walk
+EXERCISE: Monster Walk (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a loop band above the knees
 Camera: front view
 START panel: half squat with a loop band above the knees, the feet shoulder-width, arms in front
@@ -1082,7 +1097,7 @@ Muscles in red: glutes (outer hip)
 File: `Hip hike.png`
 
 ```
-EXERCISE: Hip Hike
+EXERCISE: Hip Hike (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a step or a low box
 Camera: rear view
 START panel: standing on the edge of a step on the left leg, the right leg hanging down beside the step, pelvis level, a hand on a wall
@@ -1096,7 +1111,7 @@ Muscles in red: glutes (outer hip), obliques
 File: `Sumo squat.png`
 
 ```
-EXERCISE: Dumbbell Sumo Squat
+EXERCISE: Dumbbell Sumo Squat (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: one dumbbell
 Camera: front view
 START panel: standing with the feet very wide and the toes turned out, one dumbbell held in both hands hanging in front, torso upright
@@ -1108,7 +1123,7 @@ Muscles in red: inner thighs, glutes, quads
 File: `Front squat manubri.png`
 
 ```
-EXERCISE: Dumbbell Front Squat
+EXERCISE: Dumbbell Front Squat (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: two dumbbells
 Camera: side view
 START panel: standing with the feet shoulder-width, two dumbbells resting on the front shoulders with the elbows up
@@ -1120,7 +1135,7 @@ Muscles in red: quads, glutes
 File: `Curtsy lunge.png`
 
 ```
-EXERCISE: Curtsy Lunge
+EXERCISE: Curtsy Lunge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: two dumbbells at the sides
 Camera: front view
 START panel: standing tall with the feet together, a dumbbell in each hand
@@ -1132,7 +1147,7 @@ Muscles in red: glutes, quads, adductors
 File: `Lateral lunge.png`
 
 ```
-EXERCISE: Lateral Lunge
+EXERCISE: Lateral Lunge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: one dumbbell at the chest
 Camera: front view
 START panel: standing tall with the feet together, a dumbbell held at the chest
@@ -1144,7 +1159,7 @@ Muscles in red: glutes, quads, adductors
 File: `Affondi bilanciere.png`
 
 ```
-EXERCISE: Barbell Lunge
+EXERCISE: Barbell Lunge (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a barbell across the upper back
 Camera: side view
 START panel: standing tall with a barbell on the upper back, feet together
@@ -1156,7 +1171,7 @@ Muscles in red: quads, glutes
 File: `High step-up.png`
 
 ```
-EXERCISE: High Step-Up
+EXERCISE: High Step-Up (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a high box and two dumbbells
 Camera: side view
 START panel: standing in front of a high box (knee-height or higher) with the right foot on it, a dumbbell in each hand
@@ -1168,7 +1183,7 @@ Muscles in red: glutes, quads
 File: `Skater squat.png`
 
 ```
-EXERCISE: Skater Squat
+EXERCISE: Skater Squat (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: none
 Camera: side view
 START panel: standing on the left leg with the right knee bent and the right foot behind, arms in front for balance
@@ -1180,7 +1195,7 @@ Muscles in red: quads, glutes
 File: `Single-leg box squat.png`
 
 ```
-EXERCISE: Single-Leg Box Squat
+EXERCISE: Single-Leg Box Squat (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a box
 Camera: side view
 START panel: standing in front of a box on the left leg, the right leg extended forward, arms forward
@@ -1192,7 +1207,7 @@ Muscles in red: quads, glutes
 File: `Stacco rumeno manubri.png`
 
 ```
-EXERCISE: Dumbbell Romanian Deadlift
+EXERCISE: Dumbbell Romanian Deadlift (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: two dumbbells
 Camera: side view
 START panel: standing tall with a dumbbell in each hand in front of the thighs, knees slightly bent
@@ -1204,7 +1219,7 @@ Muscles in red: hamstrings, glutes, lower back
 File: `B-stance RDL.png`
 
 ```
-EXERCISE: B-Stance Romanian Deadlift
+EXERCISE: B-Stance Romanian Deadlift (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: two dumbbells
 Camera: side view
 START panel: standing with the right foot flat as the working leg and the left foot a step behind touching only with the toes, a dumbbell in each hand in front of the thighs
@@ -1216,7 +1231,7 @@ Muscles in red: hamstrings, glutes (working side)
 File: `Leg curl con slider.png`
 
 ```
-EXERCISE: Slider Leg Curl
+EXERCISE: Slider Leg Curl (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a towel or two sliders under the heels
 Camera: side view
 START panel: lying on the back, the heels on towels on a smooth floor, legs straight, hips lifted in a bridge
@@ -1228,7 +1243,7 @@ Muscles in red: hamstrings, glutes
 File: `Leg curl con fitball.png`
 
 ```
-EXERCISE: Stability Ball Leg Curl
+EXERCISE: Stability Ball Leg Curl (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a stability ball
 Camera: side view
 START panel: lying on the back, the heels on a stability ball, legs straight, hips lifted in a bridge
@@ -1240,7 +1255,7 @@ Muscles in red: hamstrings, glutes
 File: `Leg curl manubrio.png`
 
 ```
-EXERCISE: Dumbbell Lying Leg Curl
+EXERCISE: Dumbbell Lying Leg Curl (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: a flat bench and one dumbbell
 Camera: side view
 START panel: lying face down on a bench, a dumbbell held between the feet, legs straight
@@ -1252,7 +1267,7 @@ Muscles in red: hamstrings
 File: `RKC plank.png`
 
 ```
-EXERCISE: RKC Plank
+EXERCISE: RKC Plank (wide landscape 3:2, two panels START / END, same style as the references)
 Equipment: dark-grey exercise mat
 Camera: side view
 START panel: a forearm plank with the elbows under the shoulders, body in one line from head to heels

@@ -18,7 +18,7 @@ const MAT = 'dark-grey exercise mat';
 
 export const SECTIONS = [
   { title: 'Pilates (da rifare in due pannelli) e due esercizi con attrezzo', items: [
-    ['Roll over', 'Roll over', 'Pilates Roll Over', MAT, 'side view', 'lying flat on the back, arms along the body palms down, legs straight together on the mat', 'legs lifted and carried OVER THE HEAD, straight legs parallel to the floor above the head with toes pointing towards the floor behind the head, hips lifted off the mat, weight on the shoulders and upper back (not the neck), arms pressing flat on the mat', 'abdominals, hip flexors, lower back'],
+    ['Roll over', 'Roll over', 'Pilates Roll Over', MAT, 'side view', 'lying flat on the back, arms along the body palms down, legs straight together on the mat', 'the PLOUGH position: the hips lifted high and the straight legs carried back over the head, the body folded in half with the torso almost vertical resting on the shoulders and upper back (not the neck), the toes reaching towards the mat BEHIND the head, the arms pressing flat on the mat along the body', 'abdominals, hip flexors, lower back'],
     ['Single leg stretch', 'Single leg stretch', 'Pilates Single Leg Stretch', MAT, 'side view', 'lying on the back, head and shoulders curled off the mat, RIGHT knee pulled to the chest with both hands holding the right shin, LEFT leg stretched straight out at about 45 degrees above the mat', 'the legs SWITCHED: LEFT knee pulled to the chest with both hands on the left shin, RIGHT leg stretched straight out at 45 degrees. Head and shoulders stay curled up', 'abdominals, hip flexors'],
     ['Scissors', 'Scissors', 'Pilates Single Straight Leg Stretch', MAT, 'side view', 'lying on the back, head and shoulders curled up, both legs straight: the RIGHT leg pointing up towards the ceiling with both hands holding behind the right calf, the LEFT leg lowered straight out at about 30 degrees above the mat', 'the legs SWITCHED: LEFT leg straight up with both hands holding behind the left calf, RIGHT leg lowered straight at 30 degrees. Head and shoulders stay curled up', 'abdominals, hip flexors, hamstrings'],
     ['Neck pull', 'Neck pull', 'Pilates Neck Pull', MAT, 'side view', 'lying flat on the back, legs straight together, hands interlaced behind the head, elbows wide', 'sitting upright then folded forward over the straight legs, spine rounded in a C-curve, hands still interlaced behind the head, elbows wide, head down towards the knees', 'abdominals, lower back'],
@@ -130,29 +130,30 @@ export const SECTIONS = [
   ] }
 ];
 
-export const MASTER_PROMPT = `You are an illustrator for a fitness app. Each message I send describes ONE exercise. You answer with ONE image and nothing else (no text, no questions: if something is ambiguous, choose the most standard version of the exercise).
+export const MASTER_PROMPT = `I am attaching 3 REFERENCE IMAGES. They are the approved style of my fitness app. From now on every image you make must look like them: same layout, same mannequin, same label bars, same mat, same colours, same size of the figure. Only the exercise changes.
 
-THE IMAGE
-- One single image, 1536 x 1024 pixels (landscape 3:2), pure white background.
-- EXACTLY TWO PANELS side by side, separated by a thin vertical black line.
-- At the top of each panel a rounded black label bar with white bold capital letters: the left one says "START", the right one says "END". These are the ONLY words in the image. No title, no numbers, no captions, no extra panels, no grid, no steps, no watermark, no logo.
-- The same figure, the same size and the same camera angle in both panels, centred, filling about 70% of the panel width. The two poses must be clearly DIFFERENT: START is the starting position, END is the end of the movement (or the other side/limb when the movement alternates).
-- In the END panel only: one or two simple dark-grey curved arrows showing the direction of the movement. No text on the arrows.
+WHAT TO COPY FROM THE REFERENCES (do not change anything of this)
+1. CANVAS: one WIDE LANDSCAPE image, 3:2 (1536 x 1024), wider than tall, white background. Never portrait, never square.
+2. TWO PANELS side by side, each one a tall rectangle filling half the canvas, divided by one thin vertical black line.
+3. LABEL BARS: at the very top of each panel a black rounded bar that spans almost the full width of the panel, with the word START (left panel) or END (right panel) in big white bold capitals centred in it. No other text anywhere.
+4. FIGURE: the same realistic 3D anatomical mannequin as in the references: adult male athletic build, completely BALD, smooth light-grey skin, black shorts, black running shoes with white soles (never barefoot). It is BIG: the whole body spans at least 80% of the width of its panel, centred, with white space only above and below it. Same size and same camera angle in both panels.
+5. MUSCLES: only the muscles that work are translucent RED with a soft gradient; all other muscles stay grey.
+6. FLOOR: exercises on the floor stand on the same dark-grey rectangular mat as in the references, long enough to hold the whole body. Standing exercises have no mat. Equipment is drawn realistically in black or dark grey.
+7. ARROWS: in the END panel only, one or two plain dark-grey curved arrows for the direction of the movement.
+8. PHOTO-REAL 3D RENDER like the references: soft light, faint contact shadow, sharp. No cartoon, no line art, no flat colours.
 
-THE FIGURE (never change it)
-- A realistic 3D anatomical mannequin, adult male athletic build, completely BALD, smooth light-grey skin, no hair, no beard, neutral calm face.
-- Black athletic shorts, black running shoes with white soles. Never barefoot, never other colours, no logos, no tops.
-- The muscles that do the work are highlighted in translucent RED (soft gradient); every other muscle stays grey. The muscles to highlight are listed in each description.
-- Exercises on the floor are done on a dark-grey rectangular exercise mat. Any other equipment named in the description is drawn realistically in black or dark grey. If the description says "none", draw no equipment and no floor.
-- Soft light, a faint contact shadow on the floor, high detail, sharp, photo-real 3D render. No illustration style, no cartoon, no line art.
+THE TWO POSES
+- START = the starting position. END = the end of the movement. They must be clearly DIFFERENT. When the movement alternates sides or limbs, END shows the OTHER side / the switched limbs.
+- The whole body and all the equipment must be fully inside the panel, nothing cut off.
 
-COMMON MISTAKES TO AVOID
-- Never more than two panels. Never a numbered sequence. Never the same pose in START and END.
-- Never a second person. Never hair, beard or skin colours other than light grey. Never bare feet.
-- Never anything cut off: the whole body and the whole equipment must be inside each panel.
-- Do the movement exactly as described, with the correct left/right and the correct equipment. If the description says "legs switched", the START and END legs are the opposite ones.
+NEVER
+- more than 2 panels, numbered steps, a title, captions, a grid, watermarks, extra text;
+- a second person, hair, beard, other skin colours, bare feet, tops or logos;
+- a portrait or square image; a figure smaller than described; label bars that are small or not centred.
 
-When I send "EXERCISE: ...", draw exactly that. Answer with the image only.`;
+HOW WE WORK
+I will send messages that start with "EXERCISE:". Answer each one with ONE image only, no text, no questions. If something is ambiguous, choose the most standard version of the exercise. If I answer "FIX: ..." change only what I say and keep everything else identical.
+Reply "OK" now if you have understood; then wait for the first EXERCISE.`;
 
 function render() {
   const lines = [];
@@ -160,15 +161,29 @@ function render() {
   lines.push('');
   lines.push('Generato da `node tools/media_prompts.mjs` — non modificare a mano, modifica `tools/media_prompts.mjs` e rilancialo.');
   lines.push('');
-  lines.push('## Come si usa (3 passi)');
+  lines.push('## Come si usa');
   lines.push('');
-  lines.push('1. **Apri una chat nuova** con il generatore di immagini e incolla **una volta sola** il «Prompt principale» qui sotto. Se la chat diventa lunga o l\'immagine comincia a sbagliare stile, apri una chat nuova e incollalo di nuovo.');
-  lines.push('2. Per ogni esercizio incolla **un solo blocco «EXERCISE: …»** della lista (uno per messaggio, mai due insieme). Salva l\'immagine con **esattamente** il nome indicato in «File» (con `.png`).');
-  lines.push('3. Metti i file in `media-source/_nuove` e scrivimi «importa le immagini»: le controllo una per una (due pannelli, pose diverse, esercizio giusto), le scarto con il motivo se serve, e le metto direttamente nell\'app (`node tools/import_media_local.mjs --apply`, niente cloud). Le vedi dopo la prossima build.');
+  lines.push('**Perché il metodo precedente sbagliava:** senza immagini di riferimento il generatore inventa il layout (formato verticale, figure piccole, barre START/END minuscole). Con 3 immagini di riferimento allegate nello stesso messaggio del prompt principale copia il layout esatto e cambia solo la posa.');
   lines.push('');
-  lines.push('Controllo veloce prima di salvare un\'immagine: **(a)** due soli pannelli START / END; **(b)** le due pose sono diverse; **(c)** un solo manichino per pannello, pelato, grigio, scarpe nere; **(d)** muscoli rossi solo dove lavorano; **(e)** niente testo oltre a START / END; **(f)** tutto il corpo e l\'attrezzo dentro il pannello. Se manca anche solo una di queste, rigenera: non correggere a mano.');
+  lines.push('1. Apri una **chat nuova**. Allega le 3 immagini della cartella `media-source/_riferimenti/` (sono immagini già approvate e importate nell’app) e, **nello stesso messaggio**, incolla il «Prompt principale» qui sotto. Aspetta la risposta «OK».');
+  lines.push('2. Poi **un messaggio per esercizio**: incolla un solo blocco «EXERCISE: …» (non due insieme). Salva l’immagine con **esattamente** il nome indicato in «File» (con `.png`).');
+  lines.push('3. Se l’immagine è quasi giusta, non rigenerare da zero: scrivi `FIX: …` con una sola correzione (esempi sotto). Se dopo 2 correzioni è ancora sbagliata, apri una chat nuova (con le 3 immagini) e riparti.');
+  lines.push('4. Chat lunga = deriva dello stile: **ogni 15-20 immagini apri una chat nuova** e riallega le 3 immagini con il prompt principale.');
+  lines.push('5. Metti i file in `media-source/_nuove` e scrivimi «importa le immagini»: le controllo una per una, scarto con il motivo quelle sbagliate, e importo le buone direttamente nell’app (`node tools/import_media_local.mjs --apply`, niente cloud). Le vedi dopo la prossima build.');
   lines.push('');
-  lines.push('## Prompt principale (da incollare una volta)');
+  lines.push('**Controllo prima di salvare:** (a) formato orizzontale, due soli pannelli START / END con barre nere larghe; (b) le due pose sono diverse; (c) un solo manichino per pannello, grande, pelato, grigio, scarpe nere; (d) muscoli rossi solo dove lavorano; (e) nessun altro testo; (f) corpo e attrezzo interi dentro il pannello. Se manca anche una sola di queste, correggi con FIX o rigenera.');
+  lines.push('');
+  lines.push('## Correzioni rapide (da incollare dopo l’immagine sbagliata)');
+  lines.push('');
+  lines.push('- Formato: `FIX: make it a wide landscape 3:2 image like the references, two tall panels side by side, same layout as the references.`');
+  lines.push('- Figura piccola: `FIX: same image but the mannequin must be much bigger: the whole body spans at least 80% of the panel width, like in the references.`');
+  lines.push('- Barre: `FIX: the START and END label bars must span almost the full panel width and be centred, like in the references.`');
+  lines.push('- Pose uguali: `FIX: START and END are too similar. END must clearly show: <descrizione dell’END del blocco>.`');
+  lines.push('- Lato/arto sbagliato: `FIX: in the END panel the legs (or arms) must be the opposite ones of the START panel.`');
+  lines.push('- Piedi nudi / capelli / altro colore: `FIX: bald, light-grey skin, black running shoes with white soles, like the references.`');
+  lines.push('- Testo in più: `FIX: remove every text except the words START and END.`');
+  lines.push('');
+  lines.push('## Prompt principale (allegando le 3 immagini di riferimento)');
   lines.push('');
   lines.push('```');
   lines.push(MASTER_PROMPT);
@@ -184,7 +199,7 @@ function render() {
       lines.push('File: `' + file + '.png`');
       lines.push('');
       lines.push('```');
-      lines.push('EXERCISE: ' + en);
+      lines.push('EXERCISE: ' + en + ' (wide landscape 3:2, two panels START / END, same style as the references)');
       lines.push('Equipment: ' + equip);
       lines.push('Camera: ' + view);
       lines.push('START panel: ' + start);
