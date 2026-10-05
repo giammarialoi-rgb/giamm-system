@@ -50,6 +50,7 @@ import {
   buildCorsOriginValidator,
   createFixedWindowRateLimiter,
   createPostgresFixedWindowRateLimiter,
+  requestIp,
   isProduction,
   resolveJwtSecret
 } from "./server/security.mjs";
@@ -208,14 +209,36 @@ app.use(
     keyPrefix: "meal-photo"
   })
 );
+// The AI routes: a few a minute. The coach's own area (/api/coach/...: the client list, the client's data, the
+// assignment, the chat) is NOT one of them: it used to share this limit (30 a minute, per address), and the client
+// view alone asks for the client's data every four seconds - a coach, or a gym with a few of them behind one
+// address, ran into "Troppe richieste al Coach AI" while doing ordinary work.
 app.use(
-  ["/api/chat", "/coach", "/api/coach"],
+  ["/api/chat", "/coach", "/api/coach/agent", "/api/coach/meals/estimate", "/api/coach/form-reviews"],
   distributedRateLimiter({
     windowMs: 60_000,
     max: Number(process.env.CHAT_RATE_LIMIT_MAX || 30),
     keyPrefix: "chat",
     code: "AI_RATE_LIMITED",
     message: "Troppe richieste al Coach AI. Attendi qualche secondo e riprova."
+  })
+);
+// The coach's own area: generous, and per person (the address and the account in the token), not per address.
+const coachAreaKey = (req) => {
+  let who = "";
+  try {
+    const t = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").split(".")[1];
+    if (t) who = String((JSON.parse(Buffer.from(t, "base64url").toString("utf8")) || {}).sub || "");
+  } catch (_) {}
+  return requestIp(req) + ":" + (who || "anon");
+};
+app.use(
+  "/api/coach",
+  distributedRateLimiter({
+    windowMs: 60_000,
+    max: Number(process.env.COACH_AREA_RATE_LIMIT_MAX || 900),
+    keyPrefix: "coach-area",
+    key: coachAreaKey
   })
 );
 const barcodeAiRateLimiter = distributedRateLimiter({

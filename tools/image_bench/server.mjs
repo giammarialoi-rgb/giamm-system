@@ -12,6 +12,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import sharp from 'sharp';
 import { SECTIONS } from '../media_prompts.mjs';
 
@@ -64,11 +65,31 @@ function promptFor(x, slot) {
     'Camera: ' + x.view,
     'Draw this position: ' + own,
     (slot === 'start' ? 'For your information, the END position (do NOT draw it) is: ' : 'For your information, the START position (do NOT draw it) was: ') + other,
-    'Muscles in red: ' + x.red
-  ].join('\n');
+    'Muscles in red: ' + x.red,
+    'Context: neutral anatomical sports-science illustration of a grey mannequin (not a real person), athletic shorts and shoes, non-sexual training pose.'
+  ].join('\n').replace(/\bglutes\b/gi, 'gluteal muscles').replace(/\bhips thrust\b/gi, 'hips lift');
 }
 
 const exists = (p) => fs.existsSync(p);
+
+// The same layout the page draws in its preview: 1536x1024, two panels, START / END bars, each figure cropped to its
+// content, as big as the panel allows, standing on a common floor line.
+const bar = (t) => Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="736" height="56"><rect width="736" height="56" rx="10" fill="#000"/><text x="368" y="42" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="46" fill="#fff" text-anchor="middle">' + t + '</text></svg>');
+export async function composeFinal(file) {
+  const AW = Math.floor(736 * 0.96), AH = 1024 - 64 - 70, FLOOR = 1024 - 70;
+  const layers = [
+    { input: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="1024"><rect width="4" height="1024" fill="#000"/></svg>'), left: 766, top: 0 },
+    { input: bar('START'), left: 16, top: 8 },
+    { input: bar('END'), left: 784, top: 8 }
+  ];
+  for (const [slot, x] of [['start', 16], ['end', 784]]) {
+    const fig = await sharp(path.join(WORK, file + '.' + slot + '.png')).trim({ background: '#ffffff', threshold: 18 })
+      .resize({ width: AW, height: AH, fit: 'inside' }).png().toBuffer({ resolveWithObject: true });
+    layers.push({ input: fig.data, left: x + Math.round((736 - fig.info.width) / 2), top: FLOOR - fig.info.height });
+  }
+  const out = await sharp({ create: { width: 1536, height: 1024, channels: 3, background: '#ffffff' } }).composite(layers).png().toBuffer();
+  fs.writeFileSync(path.join(NEW, file + '.png'), out);
+}
 function state(x) {
   return {
     file: x.file, name: x.name, en: x.en, section: x.section,
@@ -91,6 +112,14 @@ const json = (res, code, obj) => { res.writeHead(code, { 'Content-Type': 'applic
 const server = http.createServer(async (req, res) => {
   try {
     const u = new URL(req.url, 'http://127.0.0.1');
+    // Only the ChatGPT page (the automation that fills the bench) may talk to the bench from another site.
+    if (req.headers.origin === 'https://chatgpt.com') {
+      res.setHeader('Access-Control-Allow-Origin', 'https://chatgpt.com');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+    if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
     const parts = u.pathname.split('/').filter(Boolean);
     if (req.method === 'GET' && u.pathname === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -131,4 +160,23 @@ const server = http.createServer(async (req, res) => {
     json(res, 500, { error: String(e && e.message || e) });
   }
 });
+// The automation in the ChatGPT page cannot post to this server (the site's security policy forbids it), so it
+// downloads each picture as "<file>.<start|end>.png"; the files that land in Downloads are taken here and removed.
+const DOWNLOADS = process.env.BENCH_DOWNLOADS || path.join(os.homedir(), 'Downloads');
+setInterval(async () => {
+  try {
+    for (const f of fs.readdirSync(DOWNLOADS)) {
+      const m = /^(.+?)\.(start|end)(?: \(\d+\))?\.(png|webp|jpe?g)$/i.exec(f);
+      if (!m || !byFile.has(m[1])) continue;
+      const full = path.join(DOWNLOADS, f);
+      const age = Date.now() - fs.statSync(full).mtimeMs;
+      if (age < 1500) continue;
+      const png = await sharp(fs.readFileSync(full)).rotate().png().toBuffer();
+      fs.writeFileSync(path.join(WORK, m[1] + '.' + m[2].toLowerCase() + '.png'), png);
+      fs.rmSync(full, { force: true });
+      console.log('da Downloads: ' + m[1] + ' ' + m[2]);
+      if (exists(path.join(WORK, m[1] + '.start.png')) && exists(path.join(WORK, m[1] + '.end.png'))) { await composeFinal(m[1]); console.log('composta: ' + m[1]); }
+    }
+  } catch (e) { /* the file may still be being written: next round */ }
+}, 2000);
 server.listen(PORT, '127.0.0.1', () => console.log('Banco immagini: http://127.0.0.1:' + PORT + '  (Ctrl+C per chiudere)'));

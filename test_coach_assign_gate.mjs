@@ -90,11 +90,22 @@ function bodyOf(needle, chars) {
 
 // --- the sandbox announces itself ---
 {
-  const begin = bodyOf('function beginAssignSandbox', 700);
+  const bar = bodyOf('function ensureAssignBanner', 3600);
   ok(
-    /__cpAssignBarExpanded = true/.test(begin),
-    'the assign banner opens expanded, so a client draft is not mistaken for the coach program'
+    /classList\.add\('cp-assign-expanded'\)/.test(bar) && /NON ANCORA INVIATA/.test(bar),
+    'the assign bar is always open and says the draft is not sent yet, so a client draft is not mistaken for the coach program'
   );
+  ok(
+    /onclick="assignBarEdit\(\)"/.test(bar) && /onclick="confirmAssignSandbox\(\)"/.test(bar) && /onclick="cancelAssignSandbox\(\)"/.test(bar),
+    'edit, send and leave are one tap each on the bar (no chip to open first)'
+  );
+  const cancel = bodyOf('async function cancelAssignSandbox', 700);
+  ok(
+    /detectSandboxKinds\(\)\.length/.test(cancel) && /Non hai ancora inviato nulla a/.test(cancel) && /confirm\(/.test(cancel),
+    'leaving an assignment with a draft asks first: nothing has been sent'
+  );
+  const exit = bodyOf('function exitCoachSession', 700);
+  ok(/Non hai ancora inviato nulla a/.test(exit), 'leaving the coach hub with a draft says the same');
 }
 
 console.log('\nAll coach assign gate tests passed.');

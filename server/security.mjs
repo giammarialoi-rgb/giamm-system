@@ -68,7 +68,7 @@ export function buildCorsOriginValidator(env = process.env) {
 // entry: that one is whatever the client wrote, and a new value per request
 // used to get past every limit. Express resolves req.ip from the trusted
 // hops ("trust proxy" in coach-api.mjs).
-function requestIp(req) {
+export function requestIp(req) {
   return (req && (req.ip || (req.socket && req.socket.remoteAddress))) || "unknown";
 }
 

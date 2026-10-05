@@ -83408,7 +83408,13 @@ function enterCoachSession() {
 }
 
 function exitCoachSession(force) {
-  if (!force && !confirm('Uscire dall’hub Coach? Tornerai all’app personale Nurvan.')) return false;
+  if (!force) {
+    const draftFor = (store.coachAssigning && detectSandboxKinds().length) ? (store.coachAssigning.name || 'cliente') : '';
+    const msg = draftFor
+      ? 'Non hai ancora inviato nulla a ' + draftFor + '. Se esci dall’hub la bozza va persa. Uscire senza inviare?'
+      : 'Uscire dall’hub Coach? Tornerai all’app personale Nurvan.';
+    if (!confirm(msg)) return false;
+  }
   window.__cpExitingCoach = true;
   const assignBak = window.__cpAssignBackup
     || (store.coachAssigning && store.coachAssigning.backup)
@@ -83673,11 +83679,18 @@ async function enterCoachClientView(domain, opts) {
   try { window.__editFinalizedKey = ''; } catch (_) {}
   try { window.__liveSetIntel = null; } catch (_) {}
   try { currentWeek = 1; currentDay = 0; } catch (_) {}
+  // Switching from one client to another quickly leaves earlier requests in flight: an answer for a client that is
+  // no longer the one selected must not be loaded (it would show one client's program and loads under another's name).
+  const viewSeq = window.__cpViewSeq = (window.__cpViewSeq || 0) + 1;
+  const stale = function () {
+    return window.__cpViewSeq !== viewSeq || String((store.coachWorkspace && store.coachWorkspace.clientId) || '') !== String(id);
+  };
   if (typeof withBusy === 'function') {
     await withBusy(async function () {
       captureCoachMasterForClientView();
       let data = store.coachWorkspace.data;
       const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
+      if (stale()) return;
       data = snap.data || data || {};
       store.coachWorkspace.data = data;
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
@@ -83693,12 +83706,14 @@ async function enterCoachClientView(domain, opts) {
       const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
       store.coachWorkspace.data = snap.data || {};
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
+      if (stale()) return;
       applyClientPayloadToLocal(snap.data || {});
-    } catch (_) { applyClientPayloadToLocal(store.coachWorkspace.data || {}); }
+    } catch (_) { if (stale()) return; applyClientPayloadToLocal(store.coachWorkspace.data || {}); }
     if (window.__cpCoachViewBackup && window.__cpCoachViewBackup.profile) {
       store.profile = JSON.parse(JSON.stringify(window.__cpCoachViewBackup.profile));
     }
   }
+  if (stale()) return;
   store.coachViewingClient = true;
   store.coachSessionActive = true;
   if (typeof persist === 'function') persist();
@@ -83731,8 +83746,9 @@ function startClientLivePoll() {
     try {
       const id = store.coachWorkspace.clientId;
       const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 12000);
-      // The answer can arrive after the area changed.
+      // The answer can arrive after the area changed, or after another client was selected.
       if (ownAreaBack() || !store.coachViewingClient) { if (ownAreaBack()) stopStale(); return; }
+      if (String((store.coachWorkspace && store.coachWorkspace.clientId) || '') !== String(id)) return;
       const data = snap.data || {};
       store.coachWorkspace.data = data;
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
@@ -85617,29 +85633,44 @@ function ensureAssignBanner() {
     if (document.body) document.body.classList.remove('cp-assign-expanded');
     return;
   }
-  const expanded = !!store.__cpAssignBarExpanded;
+  // One bar, always open while a draft exists: what it is, and the three things to do with it, one tap each.
+  // (It used to be a chip that had to be opened, then a button to see the training, then the chip again to send.)
+  const more = !!store.__cpAssignBarExpanded;   // the other sections of the draft
   bar.style.display = 'block';
-  bar.classList.toggle('cp-assign-expanded', expanded);
-  bar.classList.toggle('cp-assign-collapsed', !expanded);
-  if (document.body) document.body.classList.toggle('cp-assign-expanded', expanded);
-  if (!expanded) {
-    bar.innerHTML = '<button type="button" class="cp-assign-chip" onclick="toggleAssignBannerExpand()">' +
-      'ASSEGNA · ' + esc((job.name || 'cliente').slice(0, 18)) + ' ▴</button>';
-    return;
+  bar.classList.add('cp-assign-expanded');
+  bar.classList.remove('cp-assign-collapsed');
+  if (document.body) document.body.classList.add('cp-assign-expanded');
+  bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;"><span>BOZZA PER</span> ' + esc(job.name || 'cliente') + ' · <span>NON ANCORA INVIATA</span></div>' +
+    '<div style="display:flex;gap:6px;">' +
+    '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:8px 6px;" onclick="assignBarEdit()">MODIFICA</button>' +
+    '<button class="btn btn-primary" style="flex:2;font-size:11px;padding:8px 6px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
+    '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:8px 6px;" onclick="cancelAssignSandbox()">ESCI</button></div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:5px;margin-top:6px;border-style:dashed;" onclick="toggleAssignBannerExpand()">' + (more ? '<span>NASCONDI LE ALTRE SEZIONI</span> ▴' : '<span>ALTRE SEZIONI (ALIMENTAZIONE, INTEGRAZIONE…)</span> ▾') + '</button>' +
+    (more
+      ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">' +
+        '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'supplements\')">INTEGRAZIONE</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'therapy\')">TERAPIA</button>' +
+        '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'exams\')">ESAMI</button></div>'
+      : '');
+  if (!window.__cpAssignLeaveGuard) {
+    window.__cpAssignLeaveGuard = true;
+    window.addEventListener('beforeunload', function (ev) {
+      if (store && store.coachAssigning && detectSandboxKinds().length) { ev.preventDefault(); ev.returnValue = ''; return ''; }
+    });
   }
-  bar.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px;">' +
-    '<div style="font-size:11px;color:var(--gold);font-weight:800;">ASSEGNAZIONE A ' + esc(job.name || 'cliente') + ' · SPAZIO CLIENTE</div>' +
-    '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="toggleAssignBannerExpand()">RIDUCI</button></div>' +
-    '<div style="font-size:11px;color:#aaa;margin-bottom:8px;">Questo non è il tuo allenamento. Importa o scegli, modifica, poi invia.</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'training\')">VISUALIZZA ALLENAMENTO</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'nutrition\')">ALIMENTAZIONE</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'supplements\')">INTEGRAZIONE</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'therapy\')">TERAPIA</button>' +
-    '<button class="btn btn-outline" style="font-size:10px;" onclick="navigate(\'exams\')">ESAMI</button></div>' +
-    '<div style="display:flex;gap:8px;"><button class="btn btn-primary" style="flex:1;font-size:11px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
-    '<button class="btn btn-outline" style="flex:1;font-size:11px;" onclick="cancelAssignSandbox()">ANNULLA</button></div>';
 }
+
+// MODIFICA: the draft's program on screen in one tap (the first section that has something if there is no training).
+function assignBarEdit() {
+  const hasWeeks = !!(typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+  if (hasWeeks) { navigate('training'); return; }
+  const kinds = detectSandboxKinds();
+  const view = { nutrition: 'nutrition', supplements: 'supplements', therapy: 'therapy', exams: 'exams' };
+  const first = kinds.filter(function (k) { return view[k]; })[0];
+  navigate(first ? view[first] : 'training');
+}
+window.assignBarEdit = assignBarEdit;
 
 function toggleAssignBannerExpand() {
   store.__cpAssignBarExpanded = !store.__cpAssignBarExpanded;
@@ -85759,7 +85790,7 @@ function beginAssignSandbox(clientId, name, mode) {
   // Open expanded. Collapsed, the only sign that the training screen is showing
   // a client's draft rather than the coach's own program is a small chip, which
   // is not enough to tell the two apart.
-  store.__cpAssignBarExpanded = true;
+  store.__cpAssignBarExpanded = false;
   // Order matters: enter the client area first. resetSandboxSessionState()
   // below clears the domain fields, and those are accessors onto whichever area
   // is active - run it a moment too early and it would clear the coach's own.
@@ -86165,8 +86196,12 @@ async function confirmAssignSandboxSend() {
 }
 window.confirmAssignSandboxSend = confirmAssignSandboxSend;
 
-async function cancelAssignSandbox() {
+async function cancelAssignSandbox(opts) {
   const job = store.coachAssigning;
+  // Nothing has been sent yet: leaving throws the draft away. Say so, and let the coach stay.
+  if (job && !(opts && opts.force === true) && detectSandboxKinds().length) {
+    if (!confirm('Non hai ancora inviato nulla a ' + (job.name || 'cliente') + '. Se esci adesso la bozza va persa. Uscire senza inviare?')) return;
+  }
   if (job) await restoreCoachMaster(window.__cpAssignBackup || job.backup);
   window.__cpAssignBackup = null;
   store.coachAssigning = null;

@@ -144,7 +144,11 @@ const ui = fs.readFileSync('web/coach-practice-ui.js', 'utf8').replace(/\r\n/g, 
 ok('7a. the live poll stops by itself when the coach\'s own area is back on screen (before and after its request)',
   /const ownAreaBack = function \(\) \{ return typeof nurvanClientAreaActive === 'function' && !nurvanClientAreaActive\(\); \};/.test(ui)
   && /if \(ownAreaBack\(\)\) \{ stopStale\(\); return; \}/.test(ui)
-  && /The answer can arrive after the area changed\./.test(ui));
+  && /The answer can arrive after the area changed/.test(ui));
+ok('7d. an answer for a client that is no longer the selected one is never loaded (view and poll)',
+  /const viewSeq = window\.__cpViewSeq = \(window\.__cpViewSeq \|\| 0\) \+ 1;/.test(ui)
+  && (ui.match(/if \(stale\(\)\) return;/g) || []).length >= 3
+  && /String\(\(store\.coachWorkspace && store\.coachWorkspace\.clientId\) \|\| ''\) !== String\(id\)\) return;/.test(ui));
 ok('7b. leaving the client area ends the client view (flag and poll), whichever way it was left',
   /if \(!left\) return;\n(  \/\/[^\n]*\n)+  try \{ stopClientLivePoll\(\); \} catch \(_\) \{\}\n  store\.coachViewingClient = false;/.test(ui));
 ok('7c. starting an assignment from the client view ends the view (both ways into the sandbox)',
