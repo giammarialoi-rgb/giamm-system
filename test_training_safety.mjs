@@ -139,5 +139,17 @@ ok('6a. a copy is taken before any client area is opened', /function nurvanEnter
 ok('6b. the payload of a coach session is never built from the markers', /const bakHasData = !!\(bak && \(bak\.data \|\| bak\.DATA \|\| bak\.activeProgram\)\);/.test(html) && /&& !bakHasData\) \{/.test(html));
 ok('6c. the button is in Privacy e dati, only with a copy and not for athletes', /trainingSafetyCopies\(\)\.length\) \? '<button[^']*restoreTrainingFromSafetyUi\(\)/.test(html));
 
+// ---- the cause found on 05-10-2026: the client view's live poll kept writing into whichever area was on screen
+const ui = fs.readFileSync('web/coach-practice-ui.js', 'utf8').replace(/\r\n/g, '\n');
+ok('7a. the live poll stops by itself when the coach\'s own area is back on screen (before and after its request)',
+  /const ownAreaBack = function \(\) \{ return typeof nurvanClientAreaActive === 'function' && !nurvanClientAreaActive\(\); \};/.test(ui)
+  && /if \(ownAreaBack\(\)\) \{ stopStale\(\); return; \}/.test(ui)
+  && /The answer can arrive after the area changed\./.test(ui));
+ok('7b. leaving the client area ends the client view (flag and poll), whichever way it was left',
+  /if \(!left\) return;\n(  \/\/[^\n]*\n)+  try \{ stopClientLivePoll\(\); \} catch \(_\) \{\}\n  store\.coachViewingClient = false;/.test(ui));
+ok('7c. starting an assignment from the client view ends the view (both ways into the sandbox)',
+  /function beginAssignSandbox\(clientId, name, mode\) \{\n  requestNotifyPermission\(\);\n(  \/\/[^\n]*\n)+  try \{ stopClientLivePoll\(\); \} catch \(_\) \{\}\n  store\.coachViewingClient = false;/.test(ui)
+  && /if \(!store\.coachAssigning\) \{\n    try \{ stopClientLivePoll\(\); \} catch \(_\) \{\}\n    store\.coachViewingClient = false;/.test(ui));
+
 if (failed) { console.log('\n' + failed + ' FAIL'); process.exit(1); }
 console.log('\nCarichi al sicuro: copia sul dispositivo e controllo a ogni sincronizzazione.');

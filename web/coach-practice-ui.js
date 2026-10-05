@@ -2848,11 +2848,24 @@ function startClientLivePoll() {
     const live = !!(store && store.coachWorkspace && store.coachWorkspace.client && store.coachWorkspace.client.workoutLive);
     return live || window.__cpFollowLive ? 2500 : 4000;
   };
+  // Every line below writes into `store`, which is whichever memory area is on screen. The poll is only for the
+  // client's own area: if the coach's own area is back on screen (an assignment was cancelled or sent from the
+  // client view, the view flag was left on) it must stop at once, or it writes the client's loads and sessions
+  // over the coach's own - which is what emptied a coach's training.
+  const ownAreaBack = function () { return typeof nurvanClientAreaActive === 'function' && !nurvanClientAreaActive(); };
+  const stopStale = function () {
+    stopClientLivePoll();
+    if (store) store.coachViewingClient = false;
+    try { ensureClientViewBanner(); } catch (_) {}
+  };
   const run = async function () {
     if (!(store && store.coachViewingClient && store.coachWorkspace && store.coachWorkspace.clientId)) return;
+    if (ownAreaBack()) { stopStale(); return; }
     try {
       const id = store.coachWorkspace.clientId;
       const snap = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+      // The answer can arrive after the area changed.
+      if (ownAreaBack() || !store.coachViewingClient) { if (ownAreaBack()) stopStale(); return; }
       const data = snap.data || {};
       store.coachWorkspace.data = data;
       store.coachWorkspace.client = snap.client || store.coachWorkspace.client;
@@ -4494,6 +4507,11 @@ async function restoreCoachMaster(backup) {
   const left = (typeof nurvanLeaveClientArea === 'function') && nurvanLeaveClientArea();
   if (store.__cpClientViewProfile) delete store.__cpClientViewProfile;
   if (!left) return;
+  // The client's data is no longer what is loaded: the view (and its poll, which writes into the area on screen)
+  // is over, whichever way the area was left.
+  try { stopClientLivePoll(); } catch (_) {}
+  store.coachViewingClient = false;
+  try { ensureClientViewBanner(); } catch (_) {}
   if (typeof persist === 'function') persist();
   try {
     if (DATA && typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.activateCanonicalProgram) {
@@ -4866,6 +4884,10 @@ function openAssignChooser(clientId, name) {
 
 function beginAssignSandbox(clientId, name, mode) {
   requestNotifyPermission();
+  // Coming from the client view: the assignment replaces it. Its poll would write the client's stored program and
+  // loads over the draft every few seconds.
+  try { stopClientLivePoll(); } catch (_) {}
+  store.coachViewingClient = false;
   store.coachAssigning = { clientId: clientId, name: name, mode: mode || 'import' };
   // Open expanded. Collapsed, the only sign that the training screen is showing
   // a client's draft rather than the coach's own program is a small chip, which
@@ -6574,6 +6596,8 @@ async function applyCoachLibraryToAssign(clientId, name, entryId) {
   if (!selected || !selected.length) return;
 
   if (!store.coachAssigning) {
+    try { stopClientLivePoll(); } catch (_) {}
+    store.coachViewingClient = false;
     store.coachAssigning = { clientId: clientId, name: name, mode: 'mylib' };
     store.__cpAssignBarExpanded = true;
     // Second way into the sandbox, and it has the same ordering requirement as
