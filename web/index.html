@@ -80933,7 +80933,8 @@ function practiceHeaders(json) {
 
 async function practiceFetch(path, options, timeoutMs) {
   const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
-  const res = await fetchFn(practiceApi(path), options || {}, timeoutMs || 20000);
+  // Never from the cache: the client's record changes when the coach assigns, and an old copy shows no program.
+  const res = await fetchFn(practiceApi(path), Object.assign({ cache: 'no-store' }, options || {}), timeoutMs || 20000);
   if (typeof readApiJson === 'function') return readApiJson(res);
   return res.json();
 }
@@ -83688,7 +83689,7 @@ async function enterCoachClientView(domain, opts) {
   try { window.__pinnedTraining = null; } catch (_) {}
   try { window.__editFinalizedKey = ''; } catch (_) {}
   try { window.__liveSetIntel = null; } catch (_) {}
-  try { currentWeek = 1; currentDay = 0; } catch (_) {}
+  // (the week and day of the coach's own area are left alone: the client's are set when its area is entered)
   // Switching from one client to another quickly leaves earlier requests in flight: an answer for a client that is
   // no longer the one selected must not be loaded (it would show one client's program and loads under another's name).
   const viewSeq = window.__cpViewSeq = (window.__cpViewSeq || 0) + 1;
@@ -84581,7 +84582,7 @@ async function openCoachClient(id) {
   // Never inherit coach personal week/day into this client session.
   try { window.__pinnedTraining = null; } catch (_) {}
   try { window.__editFinalizedKey = ''; } catch (_) {}
-  try { currentWeek = 1; currentDay = 0; } catch (_) {}
+  // (the week and day of the coach's own area are left alone: the client's are set when its area is entered)
   primeCoachWorkspaceForClient(id);
   ensureCoachSessionBanner();
   if (typeof persist === 'function') persist();
@@ -86180,6 +86181,16 @@ async function confirmAssignSandboxSend() {
         nextCheckAt: nextCheckAt
       })
     }, 45000);
+    // Say so if the server does not hold what was just sent: the draft stays on screen and can be sent again.
+    if (kinds.indexOf('training') >= 0) {
+      let held = true;
+      try {
+        const check = await practiceFetch('/api/coach/clients/' + encodeURIComponent(job.clientId) + '/snapshot', { method: 'GET', headers: practiceHeaders(false) }, 25000);
+        const p = check && check.data && check.data.activeProgram;
+        held = !!(p && Array.isArray(p.weeks) && p.weeks.length);
+      } catch (_) { held = true; }
+      if (!held) throw new Error('La scheda non risulta salvata sul server. Riprova a inviarla: la bozza è ancora qui.');
+    }
     closeCpModal();
     await restoreCoachMaster(window.__cpAssignBackup || job.backup);
     window.__cpAssignBackup = null;
@@ -86189,7 +86200,8 @@ async function confirmAssignSandboxSend() {
     practiceToast('Scheda inviata a ' + (job.name || 'cliente'), 'success');
     store.coachSessionActive = true;
     store.__coachOsClientLegacy = true;
-    try { window.__pinnedTraining = { week: 1, day: 0, at: Date.now() }; currentWeek = 1; currentDay = 0; } catch (_) {}
+    // The coach's own area is back on screen: its week and day are the coach's, not the client's. They used to be
+    // reset to week 1 day 1 here, and the coach's home showed that from then on.
     store.coachWorkspace = { clientId: job.clientId };
     navigate('coachClient');
   };
