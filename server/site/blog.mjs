@@ -336,7 +336,7 @@ export function mountBlog(app, { contentDir, siteDir, shell, staticFiles, getAut
     const lang = langOf(req);
     const dict = await siteDict(siteDir, lang);
     const all = await articles(lang);
-    return send(req, res, { lang, alternates: everyLang("/blog"), title: "Blog — Nurvan", description: "Il blog di Nurvan: articoli su allenamento, alimentazione, integratori e recupero, scritti con le fonti e pensati da mettere in pratica.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli da mettere in pratica, con le fonti.", lang, dict) });
+    return send(req, res, { lang, alternates: everyLang("/blog"), title: "Blog — Nurvan", description: "Il blog di Nurvan: articoli su allenamento, alimentazione, integratori e recupero, scritti con le fonti e da mettere in pratica in palestra e a tavola.", main: listPage(all, all, "", "Idee per allenarti meglio", "Allenamento, alimentazione, recupero e gare: articoli da mettere in pratica, con le fonti.", lang, dict), ld: (origin) => [breadcrumbLd([{ name: "Nurvan", url: origin + (langPrefix(lang) || "/") }, { name: "Blog", url: origin + langPrefix(lang) + "/blog" }])] });
   };
   const category = async (req, res) => {
     const lang = langOf(req);

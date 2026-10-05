@@ -264,7 +264,7 @@ export const PAGES = {
 
   "app-allenamento-palestra": {
     kind: "athlete",
-    title: "App allenamento in palestra: schede, carichi, progressi | Nurvan",
+    title: "App allenamento in palestra: schede e carichi | Nurvan",
     description: "Come usare un’app per l’allenamento in palestra: schede, carichi, RIR, progressione e storico. Per ipertrofia, forza, HYROX e powerlifting. Nurvan, in arrivo.",
     h1: "App per l’allenamento in palestra: schede, carichi e progressi",
     eyebrow: "Atleti",
@@ -337,7 +337,7 @@ export const TOOLS = {
     ]
   },
   "calcolatore-macro": {
-    title: "Calcolatore macro e calorie gratuito (Mifflin-St Jeor) | Nurvan",
+    title: "Calcolatore macro e calorie gratuito | Nurvan",
     description: "Stima il fabbisogno di calorie, proteine, carboidrati e grassi con la formula di Mifflin-St Jeor per dimagrire, mantenere o aumentare. Non è un consiglio medico.",
     h1: "Calcolatore macro e calorie: una stima di partenza",
     name: "Calcolatore macro",

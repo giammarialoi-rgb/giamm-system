@@ -7,6 +7,7 @@
 // not affiliated and link the official page for dates and registration.
 import fs from "node:fs/promises";
 import path from "node:path";
+import { breadcrumbLd } from "./seo.mjs";
 import { SITE_LANGS, SITE_LOCALES, langPrefix, langOfPath, siteDict, st } from "./i18n.mjs";
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -68,7 +69,7 @@ export function mountHyrox(app, { webDir, siteDir, shell }) {
       (lang === "it" ? '<p class="lead">Come ti prepara Nurvan: <a href="/app-allenamento-hyrox">app di allenamento per HYROX</a>, con un programma scritto sulla data della gara.</p>' : "") +
       `<div class="post-cta"><strong>Prepara la tua gara con Nurvan.</strong><a class="btn primary" href="{{APP_URL}}">Apri l'app</a></div>` + note +
       "</div></section>";
-    return send(req, res, { lang, alternates: everyLang("/hyrox"), title: "Calendario gare HYROX — Nurvan", description: "Le prossime gare HYROX in Italia, in Europa e nel mondo, con date e link ufficiali, e la preparazione su misura nell’app Nurvan.", main });
+    return send(req, res, { lang, alternates: everyLang("/hyrox"), title: "Calendario gare HYROX — Nurvan", description: "Le prossime gare HYROX in Italia, in Europa e nel mondo, con date, città e link ufficiali per iscriverti, e la preparazione su misura nell’app Nurvan.", main, ld: (origin) => [breadcrumbLd([{ name: "Nurvan", url: origin + (langPrefix(lang) || "/") }, { name: "HYROX", url: origin + langPrefix(lang) + "/hyrox" }])] });
   };
 
   const one = async (req, res) => {

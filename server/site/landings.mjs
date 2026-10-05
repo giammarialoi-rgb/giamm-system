@@ -24,7 +24,7 @@ export const TOOL_PATHS = ["/strumenti"].concat(Object.keys(TOOLS).map((k) => "/
 export const ALL_PATHS = LANDING_PATHS.concat(TOOL_PATHS);
 
 const TOOLS_INDEX = {
-  title: "Strumenti gratuiti per chi si allena: 1RM, Wilks, macro | Nurvan",
+  title: "Calcolatori gratuiti: 1RM, Wilks e macro | Nurvan",
   description: "Tre calcolatori gratuiti che funzionano nel browser, senza registrazione e senza salvare nulla: massimale stimato 1RM, punti Wilks e IPF GL, calorie e macro.",
   h1: "Strumenti gratuiti per chi si allena"
 };
