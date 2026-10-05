@@ -4,6 +4,10 @@ Generato da `node tools/media_prompts.mjs` — non modificare a mano, modifica `
 
 ## Come si usa
 
+**METODO CONSIGLIATO: il banco immagini.** Doppio clic su `Banco immagini.bat` (o `node tools/image_bench/server.mjs`, poi http://127.0.0.1:4777). Una posa per immagine (START e END separate, molto più affidabili di due pose in una): il banco mostra i due prompt già pronti, tu li incolli nel generatore, copi l’immagine e la incolli nel banco con Ctrl+V. Il file prende il nome giusto da solo, il layout (due pannelli, barre START/END) lo compone il banco, quindi formato e barre non possono più sbagliare. Se una posa è sbagliata la rifai da sola. Le immagini finite finiscono in `media-source/_nuove`: poi scrivimi «importa le immagini». Prompt principale per questo metodo: è nella pagina del banco (si copia con un clic).
+
+Il resto di questo documento descrive il metodo a immagine unica con due pannelli, da usare solo se il generatore riesce a farli bene.
+
 **Perché il metodo precedente sbagliava:** senza immagini di riferimento il generatore inventa il layout (formato verticale, figure piccole, barre START/END minuscole). Con 3 immagini di riferimento allegate nello stesso messaggio del prompt principale copia il layout esatto e cambia solo la posa.
 
 1. Apri una **chat nuova**. Allega le 3 immagini della cartella `media-source/_riferimenti/` (sono immagini già approvate e importate nell’app) e, **nello stesso messaggio**, incolla il «Prompt principale» qui sotto. Aspetta la risposta «OK».

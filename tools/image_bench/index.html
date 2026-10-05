@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Banco immagini esercizi</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14171c;--mut:#667085;--line:#e1e4ea;--acc:#0b6bff;--ok:#12803c;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#101318;--card:#181c23;--ink:#eef1f6;--mut:#9aa4b2;--line:#2a303b;--acc:#5b9bff;--ok:#4cc27a;--bad:#ff8a80}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Segoe UI,sans-serif;display:flex;height:100vh}
+aside{width:300px;border-right:1px solid var(--line);background:var(--card);display:flex;flex-direction:column}
+aside header{padding:12px;border-bottom:1px solid var(--line)}
+#prog{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:6px 0}#prog i{display:block;height:100%;background:var(--ok);width:0}
+#list{overflow:auto;flex:1}
+.sec{padding:8px 12px;font-weight:600;font-size:12px;text-transform:uppercase;color:var(--mut);background:var(--bg);position:sticky;top:0}
+.row{padding:7px 12px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line)}
+.row.cur{background:color-mix(in srgb,var(--acc) 14%,transparent)}.row:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.dots{white-space:nowrap;font-size:12px;color:var(--mut)}.dots b{color:var(--ok)}
+main{flex:1;overflow:auto;padding:16px 20px}
+h1{font-size:20px;margin:0 0 2px}.sub{color:var(--mut);margin-bottom:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card h3{margin:0 0 6px;font-size:14px}
+textarea{width:100%;height:150px;font:12.5px/1.4 ui-monospace,Consolas,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;resize:vertical}
+button{font:inherit;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.p{background:var(--acc);color:#fff;border-color:var(--acc)}button:disabled{opacity:.45;cursor:default}
+.drop{margin-top:8px;border:2px dashed var(--line);border-radius:8px;min-height:130px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--mut);padding:6px;position:relative}
+.drop.act{border-color:var(--acc);color:var(--ink)}.drop img{max-width:100%;max-height:220px;display:block}
+.drop .x{position:absolute;top:4px;right:4px;padding:2px 8px}
+#prev{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chips button{font-size:12.5px;padding:4px 9px}
+.msg{margin-top:8px;color:var(--ok);min-height:20px}.msg.bad{color:var(--bad)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+details{margin-bottom:12px}summary{cursor:pointer;color:var(--acc)}
+</style></head><body>
+<aside><header><b>Banco immagini</b><div id="prog"><i></i></div><div id="progt" class="sub" style="margin:0"></div>
+<label style="font-size:13px"><input type="checkbox" id="onlyTodo" checked> solo da fare</label></header><div id="list"></div></aside>
+<main>
+<details id="masterBox"><summary>1. Prompt principale (una volta per chat, con le immagini di riferimento allegate)</summary>
+<div class="card" style="margin-top:8px"><textarea id="master" readonly style="height:210px"></textarea>
+<div class="tools"><button id="cpMaster" class="p">Copia il prompt principale</button><span class="sub" style="margin:0">Allega le 3 immagini di <code>media-source/_riferimenti</code> nello stesso messaggio. Ogni 15-20 immagini apri una chat nuova.</span></div></div></details>
+<h1 id="title">...</h1><div class="sub" id="sub"></div>
+<div class="grid">
+ <div class="card"><h3>START</h3><textarea id="pStart" readonly></textarea>
+  <div class="tools"><button class="p" id="cpStart">Copia prompt START</button></div>
+  <div class="drop" id="dStart" tabindex="0">Incolla qui l'immagine (Ctrl+V), trascinala, oppure clicca per scegliere il file</div></div>
+ <div class="card"><h3>END</h3><textarea id="pEnd" readonly></textarea>
+  <div class="tools"><button class="p" id="cpEnd">Copia prompt END</button></div>
+  <div class="drop" id="dEnd" tabindex="0">Incolla qui l'immagine (Ctrl+V), trascinala, oppure clicca per scegliere il file</div></div>
+</div>
+<div class="card" style="margin-top:14px"><h3>Se l'immagine è sbagliata: incolla nel generatore una correzione</h3><div class="chips" id="fixes"></div></div>
+<div class="card" style="margin-top:14px"><h3>Risultato finale (come nell'app)</h3>
+ <canvas id="prev" width="1536" height="1024"></canvas>
+ <div class="tools"><label><input type="checkbox" id="same"> stessa scala nelle due pose</label>
+ <button class="p" id="save" disabled>Conferma e passa al prossimo (Invio)</button><button id="skip">Salta</button></div>
+ <div class="msg" id="msg"></div></div>
+</main>
+<script>
+let DATA=null, cur=0, loaded={start:null,end:null}, active='start';
+const $=id=>document.getElementById(id);
+const imgOf=src=>new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src;});
+async function load(keep){
+  const r=await fetch('/api/list');DATA=await r.json();
+  $('master').value=DATA.master;
+  $('fixes').innerHTML='';DATA.fixes.forEach(([l,t])=>{const b=document.createElement('button');b.textContent=l;b.onclick=()=>{navigator.clipboard.writeText(t);say('Copiato: '+t)};$('fixes').appendChild(b)});
+  if(!keep){const k=DATA.items.findIndex(x=>!x.final&&!x.imported);cur=k<0?0:k;}
+  drawList();await show();
+}
+function done(x){return x.final||x.imported}
+function drawList(){
+  const only=$('onlyTodo').checked;let sec='',h='';
+  DATA.items.forEach((x,i)=>{
+    if(only&&done(x)&&i!==cur)return;
+    if(x.section!==sec){sec=x.section;h+='<div class="sec">'+sec.replace(/</g,'&lt;')+'</div>'}
+    h+='<div class="row'+(i===cur?' cur':'')+'" data-i="'+i+'"><span>'+x.name.replace(/</g,'&lt;')+'</span><span class="dots">'+(x.start?'<b>S</b>':'s')+' '+(x.end?'<b>E</b>':'e')+' '+(done(x)?'<b>&#10003;</b>':'')+'</span></div>';
+  });
+  $('list').innerHTML=h;
+  $('list').querySelectorAll('.row').forEach(r=>r.onclick=()=>{cur=+r.dataset.i;drawList();show()});
+  const n=DATA.items.filter(done).length;$('prog').firstChild.style.width=(100*n/DATA.items.length)+'%';
+  $('progt').textContent=n+' di '+DATA.items.length+' completati';
+}
+async function show(){
+  const x=DATA.items[cur];$('title').textContent=x.name;$('sub').textContent='File: '+x.file+'.png - '+x.en+(done(x)?' (già fatto)':'');
+  $('pStart').value=x.prompts.start;$('pEnd').value=x.prompts.end;
+  for(const s of ['start','end']){loaded[s]=null;await slot(s,x[s]);}
+  active=!x.start?'start':'end';markActive();await compose();say('');
+}
+function markActive(){$('dStart').classList.toggle('act',active==='start');$('dEnd').classList.toggle('act',active==='end')}
+async function slot(s,has){
+  const d=$(s==='start'?'dStart':'dEnd');
+  if(!has){d.innerHTML='Incolla qui l\'immagine (Ctrl+V), trascinala, oppure clicca per scegliere il file';return}
+  const x=DATA.items[cur];const im=await imgOf('/raw/'+encodeURIComponent(x.file+'.'+s+'.png')+'?t='+Date.now());loaded[s]=im;
+  d.innerHTML='';d.appendChild(im);const b=document.createElement('button');b.className='x';b.textContent='Rifai';
+  b.onclick=async e=>{e.stopPropagation();await fetch('/api/slot/'+encodeURIComponent(x.file)+'/'+s,{method:'DELETE'});x[s]=false;loaded[s]=null;await slot(s,false);active=s;markActive();compose();drawList()};d.appendChild(b);
+}
+function bounds(im){
+  const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0);
+  const d=g.getImageData(0,0,c.width,c.height).data,W=c.width,H=c.height;let x0=W,y0=H,x1=-1,y1=-1;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;if(d[i+3]>20&&(d[i]<236||d[i+1]<236||d[i+2]<236)){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}}
+  return x1<0?null:{x:x0,y:y0,w:x1-x0+1,h:y1-y0+1};
+}
+function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+async function compose(){
+  const cv=$('prev'),g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,1536,1024);
+  g.fillStyle='#000';g.fillRect(766,0,4,1024);
+  [['START',16],['END',784]].forEach(([t,x])=>{g.fillStyle='#000';rr(g,x,8,736,56,10);g.fill();g.fillStyle='#fff';g.font='bold 50px Arial, Helvetica, sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(t,x+368,38)});
+  const L=[['start',16],['end',784]].map(([s,x])=>({s,x,im:loaded[s]})), ok=L.every(o=>o.im);
+  const AW=736*0.96,AH=1024-64-70;
+  const info=L.map(o=>{if(!o.im)return null;const b=bounds(o.im);return b&&{o,b,fit:Math.min(AW/b.w,AH/b.h)}});
+  const common=info.every(Boolean)?Math.min(info[0].fit,info[1].fit):1;
+  const floor=1024-70;
+  info.forEach(i=>{if(!i)return;const sc=$('same').checked?common:i.fit,w=i.b.w*sc,h=i.b.h*sc;
+    g.drawImage(i.o.im,i.b.x,i.b.y,i.b.w,i.b.h,i.o.x+(736-w)/2,floor-h-((AH-(AH))/2),w,h)});
+  $('save').disabled=!ok;
+}
+$('same').onchange=compose;
+async function put(s,blob){
+  const x=DATA.items[cur];say('Salvo...');
+  const r=await fetch('/api/slot/'+encodeURIComponent(x.file)+'/'+s,{method:'POST',body:blob});
+  if(!r.ok){say((await r.json()).error,1);return}
+  x[s]=true;await slot(s,true);active=!x.start?'start':!x.end?'end':s;markActive();await compose();drawList();say('Salvata la posa '+s.toUpperCase());
+}
+function say(t,bad){const m=$('msg');m.textContent=t;m.className='msg'+(bad?' bad':'')}
+document.addEventListener('paste',e=>{const f=[...(e.clipboardData&&e.clipboardData.items||[])].find(i=>i.type.startsWith('image/'));if(f){e.preventDefault();put(active,f.getAsFile())}});
+[['dStart','start'],['dEnd','end']].forEach(([id,s])=>{
+  const d=$(id);
+  d.onclick=()=>{active=s;markActive();const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>i.files[0]&&put(s,i.files[0]);i.click()};
+  d.ondragover=e=>{e.preventDefault();d.classList.add('act')};
+  d.ondrop=e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)put(s,f)};
+});
+$('cpMaster').onclick=()=>{navigator.clipboard.writeText($('master').value);say('Prompt principale copiato')};
+$('cpStart').onclick=()=>{navigator.clipboard.writeText($('pStart').value);active='start';markActive();say('Prompt START copiato')};
+$('cpEnd').onclick=()=>{navigator.clipboard.writeText($('pEnd').value);active='end';markActive();say('Prompt END copiato')};
+$('onlyTodo').onchange=drawList;
+async function save(){
+  if($('save').disabled)return;const x=DATA.items[cur];
+  const blob=await new Promise(r=>$('prev').toBlob(r,'image/png'));
+  const r=await fetch('/api/final/'+encodeURIComponent(x.file),{method:'POST',body:blob});
+  if(!r.ok){say((await r.json()).error,1);return}
+  await load(true);const k=DATA.items.findIndex((y,i)=>i>cur&&!done(y));cur=k<0?DATA.items.findIndex(y=>!done(y)):k;if(cur<0)cur=0;drawList();await show();say('Salvata in media-source/_nuove/'+x.file+'.png')
+}
+$('save').onclick=save;
+$('skip').onclick=()=>{const k=DATA.items.findIndex((y,i)=>i>cur&&!done(y));cur=k<0?0:k;drawList();show()};
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.target.matches('textarea,button'))save()});
+load();
+</script></body></html>
