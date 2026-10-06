@@ -628,10 +628,12 @@ function injectClientPwaHtml(html, token, brand) {
   );
   if (brand) {
     const v = "?v=" + brand.version;
-    if (brand.name) {
-      out = out.replace(/<title>[\s\S]*?<\/title>/i, "<title>" + escAttrHtml(brand.name) + "</title>");
-      out = out.replace(/(<meta name="apple-mobile-web-app-title" content=")[^"]*(")/i, "$1" + escAttrHtml(brand.name) + "$2");
-      out = out.replace(/(<meta name="application-name" content=")[^"]*(")/i, "$1" + escAttrHtml(brand.name) + "$2");
+    // The name under the Home-screen icon is the coach's "home name", else the brand name, else Nurvan's own.
+    const homeName = brand.homeName || brand.name;
+    if (brand.name || brand.homeName) {
+      out = out.replace(/<title>[\s\S]*?<\/title>/i, "<title>" + escAttrHtml(brand.name || brand.homeName) + "</title>");
+      out = out.replace(/(<meta name="apple-mobile-web-app-title" content=")[^"]*(")/i, "$1" + escAttrHtml(homeName) + "$2");
+      out = out.replace(/(<meta name="application-name" content=")[^"]*(")/i, "$1" + escAttrHtml(homeName) + "$2");
     }
     if (brand.hasLogo) {
       out = out.replace(/<link rel="apple-touch-icon"[^>]*>\s*/gi, "");
@@ -1128,12 +1130,13 @@ export function mountCoachPractice(app, deps) {
         { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png", purpose: "any" }
       ];
     const brandName = brand && brand.name ? brand.name : "";
+    const homeName = (brand && (brand.homeName || brand.name)) || "";
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Content-Type", "application/manifest+json");
     res.json({
       id: start,
-      name: brandName || "Nurvan",
-      short_name: (brandName || "Nurvan").slice(0, 12),
+      name: homeName || "Nurvan",
+      short_name: (homeName || "Nurvan").slice(0, 24),
       description: brandName ? brandName + " · powered by Nurvan" : "Train. Fuel. Recover. Track. Evolve.",
       lang: "it",
       dir: "ltr",
@@ -1330,9 +1333,9 @@ export function mountCoachPractice(app, deps) {
         brand: await (async () => {
           try {
             const b = await getBranding(pool, ctx.client.coach_user_id);
-            if (!b.name && !b.hasLogo) return null;
+            if (!b.name && !b.hasLogo && !b.homeName) return null;
             const tok = encodeURIComponent(ctx.client.invite_token || "");
-            return { name: b.name, hasLogo: b.hasLogo, version: b.version, iconUrl: b.hasLogo && tok ? "/c/" + tok + "/icon-192.png?v=" + b.version : "" };
+            return { name: b.name, homeName: b.homeName, hasLogo: b.hasLogo, version: b.version, iconUrl: b.hasLogo && tok ? "/c/" + tok + "/icon-192.png?v=" + b.version : "" };
           } catch (_) { return null; }
         })(),
         coachOnline: !hide && isOnlineAt(coachLastSeen),
@@ -3939,7 +3942,7 @@ export function mountCoachPractice(app, deps) {
   app.get("/api/coach/branding", async (req, res) => {
     const coach = await requireCoach(req, res);
     if (!coach) return;
-    const branding = await getBranding(pool, coach.id);
+    const branding = await getBranding(pool, coach.id, true);
     return res.json({ ok: true, branding });
   });
 

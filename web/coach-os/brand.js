@@ -30,7 +30,7 @@
   }
   // The band "powered by" takes the lower fifth of the icon: the logo is drawn above it, never under it.
   const BAND = 0.2;
-  const state = { img: null, zoom: 1, ox: 0, oy: 0, name: '', saved: { name: '', hasLogo: false }, busy: false };
+  const state = { img: null, zoom: 1, ox: 0, oy: 0, name: '', homeName: '', savedIcon: '', saved: { name: '', homeName: '', hasLogo: false }, busy: false };
 
   // Draws the icon at `size`: the picture in the square above, the band "powered by" + Nurvan wordmark below.
   function drawIcon(canvas, size) {
@@ -87,10 +87,23 @@
   function paintPreview() {
     const c = document.getElementById('brand-canvas');
     if (c) drawIcon(c, PREVIEW);
-    const mini = document.getElementById('brand-mini');
-    if (mini) drawIcon(mini, 96);
-    const nm = document.getElementById('brand-mini-name');
-    if (nm) nm.textContent = (state.name || '').trim() || 'Nurvan';
+    paintPreviews();
+  }
+
+  // The two previews: the header of the client's app, and the Home screen of the phone (icon + the name under it).
+  function paintPreviews() {
+    let src = state.savedIcon || 'nurvan_app_icon.png';
+    if (state.img) { const c = document.createElement('canvas'); drawIcon(c, 192); src = c.toDataURL('image/png'); }
+    ['brand-pv-app', 'brand-pv-home'].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el && el.getAttribute('src') !== src) el.setAttribute('src', src);
+    });
+    const name = (state.name || '').trim();
+    const home = (state.homeName || '').trim() || name || 'Nurvan';
+    const a = document.getElementById('brand-pv-app-name');
+    if (a) a.textContent = name || 'Nurvan';
+    const h = document.getElementById('brand-pv-home-name');
+    if (h) h.textContent = home;
   }
 
   function iconDataUrls() {
@@ -134,6 +147,9 @@
       '<div class="coach-os-card" style="padding:14px;">' +
       '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;">' + escText(T('Nome (palestra o coach)')) +
       '<input id="brand-name" type="text" maxlength="40" placeholder="Fitness Gym X" value="' + escText(state.name) + '" style="' + field + '"></label>' +
+      '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;margin-top:14px;">' + escText(T('Nome sotto l’icona sulla Home del telefono')) +
+      '<input id="brand-home-name" type="text" maxlength="24" placeholder="' + escText(T('Se vuoto: il nome qui sopra, altrimenti Nurvan')) + '" value="' + escText(state.homeName) + '" style="' + field + '"></label>' +
+      '<div style="font-size:11px;color:#aaa;margin-top:4px;">' + escText(T('È il nome che il telefono propone quando il cliente aggiunge la web app alla Home (lo può cambiare lui). Vale solo per i tuoi clienti.')) + '</div>' +
       '<div style="font-size:10px;color:#ccc;font-weight:800;margin-top:14px;">' + escText(T('Logo')) + '</div>' +
       '<input id="brand-file" type="file" accept="image/*" style="display:none;">' +
       '<button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="document.getElementById(\'brand-file\').click()">' + escText(T('SCEGLI IL LOGO')) + '</button>' +
@@ -141,22 +157,31 @@
       '<div id="brand-crop" style="display:' + (state.img ? 'block' : 'none') + ';margin-top:12px;text-align:center;">' +
       '<canvas id="brand-canvas" width="' + PREVIEW + '" height="' + PREVIEW + '" style="width:' + PREVIEW + 'px;height:' + PREVIEW + 'px;max-width:100%;border-radius:22%;border:1px solid #333;touch-action:none;cursor:grab;"></canvas>' +
       '<div style="font-size:11px;color:#aaa;margin-top:6px;">' + escText(T('Trascina per spostare, usa il cursore per ingrandire. Il logo sta sopra la fascia “powered by Nurvan”, che non lo copre.')) + '</div>' +
-      '<div style="font-size:10px;color:#ccc;font-weight:800;margin-top:14px;">' + escText(T('Anteprima nell’app del cliente')) + '</div>' +
-      '<div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-top:6px;padding:10px;background:#000;border:1px solid #333;border-radius:12px;">' +
-      '<canvas id="brand-mini" width="96" height="96" style="width:48px;height:48px;border-radius:22%;"></canvas>' +
-      '<span id="brand-mini-name" style="font-weight:900;letter-spacing:2px;color:#d4af37;font-size:15px;"></span></div>' +
       '<input id="brand-zoom" type="range" min="1" max="4" step="0.02" value="' + state.zoom + '" aria-label="Zoom" style="width:80%;margin-top:8px;"></div>' +
+      '<div style="font-size:10px;color:#ccc;font-weight:800;margin-top:16px;">' + escText(T('Anteprima nell’app del cliente')) + '</div>' +
+      '<div style="display:flex;gap:10px;margin-top:6px;">' +
+      '<div style="flex:1;padding:10px;background:#000;border:1px solid #333;border-radius:12px;">' +
+      '<div style="font-size:10px;color:#888;margin-bottom:8px;">' + escText(T('In alto, dentro l’app')) + '</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;"><img id="brand-pv-app" alt="" style="width:44px;height:44px;border-radius:22%;object-fit:cover;">' +
+      '<span id="brand-pv-app-name" style="font-weight:900;letter-spacing:1px;color:#d4af37;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span></div></div>' +
+      '<div style="flex:1;padding:10px;background:#000;border:1px solid #333;border-radius:12px;text-align:center;">' +
+      '<div style="font-size:10px;color:#888;margin-bottom:8px;">' + escText(T('Sulla Home del telefono')) + '</div>' +
+      '<img id="brand-pv-home" alt="" style="width:60px;height:60px;border-radius:22%;object-fit:cover;">' +
+      '<div id="brand-pv-home-name" style="font-size:11px;color:#fff;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div></div></div>' +
       '<div id="brand-msg" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
       '<div style="display:grid;gap:8px;margin-top:6px;">' +
       '<button type="button" class="btn btn-primary" id="brand-save">' + escText(T('SALVA IL MARCHIO')) + '</button>' +
-      ((state.saved.hasLogo || state.saved.name) ? '<button type="button" class="btn btn-outline" id="brand-remove" style="color:#c66;border-color:#c66;">' + escText(T('TOGLI IL MARCHIO')) + '</button>' : '') +
+      ((state.saved.hasLogo || state.saved.name || state.saved.homeName) ? '<button type="button" class="btn btn-outline" id="brand-remove" style="color:#c66;border-color:#c66;">' + escText(T('TOGLI IL MARCHIO')) + '</button>' : '') +
       '</div></div>' +
       '<p class="coach-os-subtitle" style="margin-top:12px;">' + escText(T('Nell’app degli store l’icona resta quella di Nurvan, uguale per tutti: il tuo logo compare in alto dentro l’app dei tuoi clienti e come icona della web app che aggiungono alla Home. Chi l’ha già aggiunta deve toglierla e aggiungerla di nuovo per vedere la nuova icona.')) + '</p>' +
       '</div>';
     const file = document.getElementById('brand-file');
     if (file) file.onchange = function () { loadFile(file.files && file.files[0]); };
     const name = document.getElementById('brand-name');
-    if (name) name.oninput = function () { state.name = name.value; };
+    if (name) name.oninput = function () { state.name = name.value; paintPreviews(); };
+    const homeEl = document.getElementById('brand-home-name');
+    if (homeEl) homeEl.oninput = function () { state.homeName = homeEl.value; paintPreviews(); };
+    paintPreviews();
     const zoom = document.getElementById('brand-zoom');
     if (zoom) zoom.oninput = function () { state.zoom = Number(zoom.value) || 1; clampOffsets(); paintPreview(); };
     const canvas = document.getElementById('brand-canvas');
@@ -184,16 +209,19 @@
     if (state.busy) return;
     const nameEl = document.getElementById('brand-name');
     const name = nameEl ? String(nameEl.value || '').trim() : state.name;
-    if (!name && !state.img) { say('Scrivi il nome o scegli il logo.'); return; }
+    const homeEl = document.getElementById('brand-home-name');
+    const homeName = homeEl ? String(homeEl.value || '').trim() : state.homeName;
+    if (!name && !homeName && !state.img) { say('Scrivi il nome o scegli il logo.'); return; }
     state.busy = true;
     const btn = document.getElementById('brand-save');
     if (btn) btn.disabled = true;
     try {
-      const body = { name: name };
+      const body = { name: name, homeName: homeName };
       if (state.img) body.icons = iconDataUrls();
       const data = await window.practiceFetch('/api/coach/branding', { method: 'PUT', headers: window.practiceHeaders(true), body: JSON.stringify(body) }, 40000);
-      state.saved = { name: (data.branding && data.branding.name) || name, hasLogo: !!(data.branding && data.branding.hasLogo) };
-      state.name = state.saved.name;
+      const b = (data && data.branding) || {};
+      state.saved = { name: b.name || name, homeName: b.homeName || '', hasLogo: !!b.hasLogo };
+      state.name = state.saved.name; state.homeName = state.saved.homeName; state.savedIcon = b.icon || state.savedIcon;
       state.img = null;
       if (typeof window.practiceToast === 'function') window.practiceToast(T('Marchio salvato'), 'success');
       const page = document.getElementById('coach-brand-page');
@@ -209,7 +237,7 @@
     if (!window.confirm(T('Togliere il marchio? I clienti rivedranno quello di Nurvan.'))) return;
     try {
       await window.practiceFetch('/api/coach/branding', { method: 'DELETE', headers: window.practiceHeaders(false) });
-      state.saved = { name: '', hasLogo: false }; state.name = ''; state.img = null;
+      state.saved = { name: '', homeName: '', hasLogo: false }; state.name = ''; state.homeName = ''; state.savedIcon = ''; state.img = null;
       if (typeof window.practiceToast === 'function') window.practiceToast(T('Marchio tolto'), 'success');
       const page = document.getElementById('coach-brand-page');
       if (page && page.parentNode) render(page.parentNode);
@@ -228,8 +256,10 @@
     try {
       const data = await window.practiceFetch('/api/coach/branding', { headers: window.practiceHeaders(false) });
       const b = (data && data.branding) || {};
-      state.saved = { name: b.name || '', hasLogo: !!b.hasLogo };
+      state.saved = { name: b.name || '', homeName: b.homeName || '', hasLogo: !!b.hasLogo };
+      state.savedIcon = b.icon || '';
       if (!state.name) state.name = state.saved.name;
+      if (!state.homeName) state.homeName = state.saved.homeName;
     } catch (_) {}
     if (typeof currentView === 'undefined' || currentView === 'coachBrand') render(container);
   };

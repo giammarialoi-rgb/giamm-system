@@ -4788,10 +4788,34 @@ function hideA2hsSheet() {
   if (sheet) sheet.style.display = 'none';
 }
 
+// A full-screen layer the client has to answer first: the "add to Home" sheet never goes on top of these (it used to
+// cover the questionnaire and the consent, and what the client could tap was no longer what they saw).
+function blockingOverlayVisible() {
+  try {
+    return ['cp-intake', 'cp-invite', 'cp-tutorial', 'cp-modal', 'privacy-consent-overlay'].some(function (id) {
+      const el = document.getElementById(id);
+      return !!el && getComputedStyle(el).display !== 'none';
+    });
+  } catch (_) { return false; }
+}
+// A web app added to the Home screen from a browser that does not say so (iPhone: Chrome): no browser bars, so the
+// window is as tall as the screen.
+function looksLikeHomeScreenApp() {
+  try {
+    const ios = typeof isIosDevice === 'function' ? isIosDevice() : /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+    return ios && window.screen && window.screen.height > 0 && Math.abs(window.screen.height - window.innerHeight) <= 2;
+  } catch (_) { return false; }
+}
+function retryClientHomeInstall(token) {
+  window.__cpA2hsTries = (window.__cpA2hsTries || 0) + 1;
+  if (window.__cpA2hsTries > 40 || window.__cpA2hsTimer) return;
+  window.__cpA2hsTimer = setTimeout(function () { window.__cpA2hsTimer = null; maybeOfferClientHomeInstall(token); }, 2500);
+}
+
 function maybeOfferClientHomeInstall(token) {
   captureInstallPromptEarly();
   if (typeof window !== 'undefined' && window.NativeConfig) return;
-  if (isStandalonePwaLocal()) {
+  if (isStandalonePwaLocal() || looksLikeHomeScreenApp()) {
     maybeSubscribeWebPush();
     return;
   }
@@ -4799,6 +4823,7 @@ function maybeOfferClientHomeInstall(token) {
     window.__cpA2hsPending = token || store.inviteToken || true;
     return;
   }
+  if (blockingOverlayVisible()) { retryClientHomeInstall(token); return; }
   const t = token || store.inviteToken || '';
   try {
     if (t && localStorage.getItem(a2hsDismissKey(t)) === '1') return;
@@ -4859,8 +4884,27 @@ function maybeOfferClientHomeInstall(token) {
       hideA2hsSheet();
     };
   }
+  const title = sheet.querySelector('h2');
+  if (title) {
+    let brandName = '';
+    try { brandName = (currentCoachBrand() || {}).name || ''; } catch (_) {}
+    if (brandName) title.textContent = ['Aggiungi', brandName, 'alla Home'].join(' ');
+  }
   sheet.style.display = 'flex';
 }
+
+// Coming back to the app (also from the Home screen icon): if the sheet is still up over a question the client has to
+// answer, it goes away.
+function repairOverlayStack() {
+  try {
+    const sheet = document.getElementById('cp-a2hs-sheet');
+    if (sheet && getComputedStyle(sheet).display !== 'none' && blockingOverlayVisible()) sheet.style.display = 'none';
+  } catch (_) {}
+}
+try {
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) repairOverlayStack(); });
+  window.addEventListener('pageshow', repairOverlayStack);
+} catch (_) {}
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);

@@ -1,6 +1,6 @@
 // The coach's brand (name + logo as the clients' web app shows it) and the coach's books (expenses, profit, who owes).
 import sharp from 'sharp';
-import { cleanBrandName, pngFromDataUrl, brandPublic, ICON_SIZES } from './server/coach-os/branding.mjs';
+import { cleanBrandName, cleanHomeName, pngFromDataUrl, brandPublic, ICON_SIZES } from './server/coach-os/branding.mjs';
 import { financeReport, EXPENSE_CATEGORIES } from './server/coach-os/business.mjs';
 
 let failed = 0;
@@ -13,6 +13,7 @@ ok('1c. the sizes of the icon are the ones a Home screen needs', ICON_SIZES.join
 ok('2a. a PNG of the right size is accepted', !!pngFromDataUrl(await png(192), 192));
 ok('2b. a PNG of another size is refused', pngFromDataUrl(await png(180), 192) === null);
 ok('2c. something that is not a PNG is refused', pngFromDataUrl('data:image/png;base64,AAAA', 192) === null && pngFromDataUrl('data:image/jpeg;base64,/9j/', 192) === null && pngFromDataUrl('', 192) === null);
+ok('1c. the Home-screen name is one short line (24 characters)', cleanHomeName('  Alpha\n Gym ' + 'x'.repeat(40)).length === 24 && !/\n/.test(cleanHomeName('a\nb')));
 ok('2d. nothing to show without name and logo', brandPublic({ brand_name: '', icon_512: null, updated_at: new Date() }) === null);
 ok('2e. a name alone is a brand', brandPublic({ brand_name: 'Gym', icon_512: null, updated_at: new Date() }).hasLogo === false);
 
