@@ -24,11 +24,19 @@ const url = process.env.DATABASE_URL;
 if (!url) { console.log('DATABASE_URL is missing.'); process.exit(1); }
 const pool = new pg.Pool({ connectionString: url, ssl: /localhost|127\.0\.0\.1/.test(url) ? false : { rejectUnauthorized: false } });
 
-const ACCOUNTS = [
+// The reviewers' three accounts. With --testers N (1-50) the script makes N more free accounts, tester-01@nurvan.app ...,
+// for the people who test the app (the closed test); with --only-testers N it makes just those and leaves the reviewers'
+// accounts (and the passwords already given to the stores) as they are.
+const REVIEW_ACCOUNTS = [
   { email: 'review-coach@nurvan.app', name: 'Revisore Coach', plan: 'coach_pro' },
   { email: 'review-free@nurvan.app', name: 'Revisore Free', plan: 'free' },
   { email: 'review-athlete@nurvan.app', name: 'Revisore Atleta', plan: 'free' }
 ];
+const flagValue = (name) => { const i = process.argv.indexOf(name); return i < 0 ? 0 : Math.max(0, Math.min(50, parseInt(process.argv[i + 1], 10) || 0)); };
+const onlyTesters = flagValue('--only-testers');
+const extraTesters = onlyTesters || flagValue('--testers');
+const TESTERS = Array.from({ length: extraTesters }, (_, i) => ({ email: 'tester-' + String(i + 1).padStart(2, '0') + '@nurvan.app', name: 'Tester ' + String(i + 1).padStart(2, '0'), plan: 'free' }));
+const ACCOUNTS = (onlyTesters ? [] : REVIEW_ACCOUNTS).concat(TESTERS);
 const withData = !process.argv.includes('--no-data');
 const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 
@@ -86,4 +94,4 @@ for (const a of ACCOUNTS) {
 await pool.end();
 console.log('\nAccount per i revisori (le password si vedono solo ora, copiale subito):\n');
 out.forEach((o) => console.log('  ' + o.email.padEnd(28) + o.password.padEnd(18) + 'piano ' + o.plan));
-console.log(demo ? '  Dati di esempio caricati su tutti e tre (programma, allenamenti, pasto, integratore, terapia, esame, check).\n' : '');
+console.log(demo ? '  Dati di esempio caricati su tutti gli account (programma, allenamenti, pasto, integratore, terapia, esame, check).\n' : '');
