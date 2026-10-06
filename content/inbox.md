@@ -6,9 +6,8 @@ Per decidere: sposta una riga in **PRIORITÀ** (in cima) per farla uscire per pr
 In ogni sezione le righe sono già ordinate: in alto i temi più cercati e più vicini a Nurvan (programmazione: serie, ripetizioni, recupero), in basso i temi di nicchia.
 Le righe con "poco contenuto" sono promo o meme: probabilmente non vale la pena farne un articolo.
 
-## PRIORITÀ — ordine di uscita, alternando gli argomenti (10)
+## PRIORITÀ — ordine di uscita, alternando gli argomenti (9)
 
-* \[ ] https://www.instagram.com/p/Dd_OSqQiFfi/ — Carboidrati e aumento di peso: sono davvero il problema? (italiano, tabelle nutrizionali) (Andrea Biasci)
 * \[ ] https://www.instagram.com/p/DdtXZsPxbYU/ — Somatotipo (ecto/meso) e crescita muscolare: nuovo studio su 40 uomini (Brad Schoenfeld)
 * \[ ] https://www.instagram.com/p/Dd_qscdm4cy/ — Classifica degli integratori da S a F per la forza (Alfred Jong)
 * \[ ] https://www.instagram.com/p/DdnB85NFZca/ — Lo split di allenamento deve cambiare con l'esperienza: principiante vs avanzato (Dale Hansford)
@@ -70,7 +69,7 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 
 ## SCARTATI
 
-## GIÀ PUBBLICATI (11)
+## GIÀ PUBBLICATI (12)
 
 * \[x] https://www.instagram.com/p/Ddf-0MRF7p0/ (2026-09-30, genetica-high-low-responder)
 * \[x] https://www.instagram.com/p/Dd6ncPLF7mI/ (2026-10-01, proteine-in-definizione)
@@ -83,3 +82,4 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 * \[x] tema: EVENTO Mr. Olympia 2026 (2026-10-03, mr-olympia-2026-nick-walker-risultati)
 * \[x] https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/ (2026-10-04, cbl-514-farmaco-grasso-sottocutaneo)
 * \[x] https://www.instagram.com/p/DdL7UjGG2wg/ + https://www.instagram.com/p/Ddon1AtEWJb/ + https://www.instagram.com/p/DdRXFzGkTrY/ + https://www.instagram.com/p/Dc6T7q5iJCr/ (2026-10-05, ripetizioni-serie-recupero-ipertrofia — UNITI: 4 post; verificato che il PMID 7928218 citato da iwannaburnfat è un lavoro del 1994 sui mezzi di contrasto, non uno studio sull'allenamento; "linee guida NSCA aggiornate" non verificabile sulla fonte primaria, usato il position stand ACSM 2026)
+* \[x] https://www.instagram.com/p/Dd_OSqQiFfi/ (2026-10-06, carboidrati-fanno-ingrassare-grassi-nascosti — verificato sulle tabelle CREA del repo che lasagna 49%, patatine 51%, crackers al formaggio 45% delle calorie vengono dai grassi, mentre pane bianco 2% e pasta cotta 3%; PMID 2369116 "Invisible fats" confermato; aggiunto il dato Hall 2021 non citato dal post, la dieta povera di grassi fa mangiare 689 kcal/die in meno della chetogenica)

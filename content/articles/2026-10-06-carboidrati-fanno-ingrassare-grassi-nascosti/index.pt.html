@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="pt" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carboidratos engordam? A gordura escondida | Nurvan</title>
+<meta name="description" content="Lasanha, bolachas de água e sal e batatas fritas entram como carboidrato, mas metade das calorias é gordura. Os dados oficiais e o que dizem os estudos.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Treino</a><a href="#">Nutrição</a><a href="#">Suplementos</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Baixar o app</a></div></header>
+<main class="wrap" lang="pt">
+<div class="crumb">Blog · Nutrição · Macronutrientes</div>
+<h1>Carboidratos engordam? Onde a gordura se esconde de verdade</h1>
+<p class="lede">Um post muito compartilhado do divulgador italiano Andrea Biasci afirma que os alimentos que chamamos de &quot;carboidratos&quot; costumam estar cheios de gordura, e que quem emagrece cortando carboidratos está na verdade cortando calorias. Verificamos a primeira parte alimento por alimento nas tabelas oficiais de composição, e a segunda nos ensaios feitos com participantes internados. Quase tudo se sustenta, mas os números dizem algo mais preciso do que &quot;não são os carboidratos&quot;.</p>
+<div class="meta"><span>6 de outubro de 2026</span><span><b>9</b> min de leitura</span><span><b>7</b> estudos citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · atualizado em 6 de outubro de 2026</span></div>
+<div class="box"><h2>Em resumo</h2><ul><li><strong>Na lasanha, 49% das calorias vêm da gordura e só 27% dos carboidratos.</strong> Não é um prato de carboidrato: é um prato de gordura com um pouco de massa dentro. Dados CREA, cálculo nosso.</li><li><strong>As batatas fritas de pacote estão em 51% de calorias de gordura, as bolachas de queijo em 45%, o wafer de chocolate em 47%.</strong> Todos arquivados mentalmente como &quot;carboidratos&quot;.</li><li><strong>Mas o pão branco está em 2% de calorias de gordura e a massa cozida em 3%.</strong> Aqui está a nuance que o post não faz: o problema não é a categoria carboidrato, é o grau de processamento do alimento.</li><li><strong>O açúcar realmente mascara a percepção da gordura.</strong> O estudo de 1990 citado no post existe e se chama <em>Invisible fats</em>: quanto mais açúcar, menos gordura as pessoas percebiam, com a mesma gordura real.</li><li><strong>Tirar os carboidratos não faz comer menos.</strong> Num ensaio do NIH com comida ilimitada, a dieta pobre em gordura levou a comer 689 kcal por dia a menos que a cetogênica. O déficit não é criado pelo macronutriente.</li></ul></div>
+<figure class="cover"><img alt="Uma porção de lasanha ao forno servida num prato branco." src="images/cover.jpg" loading="lazy"/><figcaption class="cap">A lasanha é o exemplo mais claro: 196 kcal por 100 g, das quais 49% vêm da gordura e só 27% dos carboidratos. Foto: Syced, Wikimedia Commons, CC0.</figcaption></figure>
+<h2>&quot;Carboidratos&quot; é uma categoria, não um prato</h2>
+<p>Na linguagem do dia a dia, &quot;os carboidratos&quot; viraram uma categoria de <strong>alimentos</strong>: a massa, o pão, as bolachas, os bolinhos, a pizza, as batatas fritas. Dentro desses alimentos, porém, o carboidrato é apenas um dos três macronutrientes presentes — e muitas vezes não é o que mais traz calorias.</p>
+<p>A confusão nasce de um passo que parece inofensivo: se um alimento é feito sobretudo de farinha, suas calorias vêm da farinha. Não funciona assim. Um grama de gordura traz 9 kcal, mais do que o dobro de um grama de carboidrato. Bastam poucos gramas de manteiga, óleo ou creme para virar o balanço energético de uma porção.</p>
+<p>O post diz isso bem e propõe algo simples: abrir as tabelas nutricionais. Fizemos exatamente isso, com um banco de dados que já temos dentro do app.</p>
+<h2>Os números das tabelas oficiais</h2>
+<p>Pegamos as tabelas de composição de alimentos do <strong>CREA</strong>, o centro italiano de pesquisa em alimentos e nutrição, e calculamos, para cada alimento, quanto das calorias vem de cada macronutriente. A conta é elementar: gramas de carboidrato × 4, gramas de proteína × 4, gramas de gordura × 9, e depois se olha a proporção.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 727" role="img" aria-label="Gráfico de barras empilhadas: o creme de avelã com cacau tira 53% das calorias da gordura, as batatas fritas 51%, a lasanha 49%, o wafer de chocolate 47%, as bolachas de queijo 45%, o croissant 40%, o bolinho recheado de cacau 32%, os palitos de pão 29%, as bolachas amanteigadas 28%, enquanto a massa cozida fica em 3% e o pão branco em 2%." font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<style>.t{fill:#f0f0f0;font-size:21px;font-weight:700}.s{fill:#a0a0a0;font-size:13px}.cat{fill:#f0f0f0;font-size:13px}.val{font-size:12px;font-weight:700}.ax{fill:#a0a0a0;font-size:12px}.lg{fill:#f0f0f0;font-size:13px}.nt{fill:#a0a0a0;font-size:12px}</style>
+<rect width="900" height="727" fill="#0c0c0c"/>
+<text x="24" y="34" class="t">De onde vêm realmente as calorias</text>
+<text x="24" y="56" class="s">Divisão calórica por 100 g — dados CREA 2019, cálculo Nurvan (4/4/9 kcal por grama)</text>
+<rect x="24" y="74" width="13" height="13" rx="2" fill="#d4af37"/>
+<text x="44" y="85" class="lg">Carboidratos</text>
+<rect x="168" y="74" width="13" height="13" rx="2" fill="#e0683c"/>
+<text x="188" y="85" class="lg">Gorduras</text>
+<rect x="280" y="74" width="13" height="13" rx="2" fill="#5f9ea0"/>
+<text x="300" y="85" class="lg">Proteínas</text>
+<line x1="240.0" y1="114" x2="240.0" y2="606" stroke="#242424" stroke-width="1"/>
+<text x="240.0" y="108" text-anchor="middle" class="ax">0%</text>
+<line x1="392.5" y1="114" x2="392.5" y2="606" stroke="#242424" stroke-width="1"/>
+<text x="392.5" y="108" text-anchor="middle" class="ax">25%</text>
+<line x1="545.0" y1="114" x2="545.0" y2="606" stroke="#242424" stroke-width="1"/>
+<text x="545.0" y="108" text-anchor="middle" class="ax">50%</text>
+<line x1="697.5" y1="114" x2="697.5" y2="606" stroke="#242424" stroke-width="1"/>
+<text x="697.5" y="108" text-anchor="middle" class="ax">75%</text>
+<line x1="850.0" y1="114" x2="850.0" y2="606" stroke="#242424" stroke-width="1"/>
+<text x="850.0" y="108" text-anchor="middle" class="ax">100%</text>
+<text x="228" y="149" text-anchor="end" class="cat">Creme de avelã com cacau</text>
+<rect x="240.0" y="128" width="256.2" height="32" fill="#d4af37"/>
+<text x="368.1" y="148" text-anchor="middle" class="val" fill="#000000">42%</text>
+<rect x="496.2" y="128" width="323.3" height="32" fill="#e0683c"/>
+<text x="657.9" y="148" text-anchor="middle" class="val" fill="#f0f0f0">53%</text>
+<rect x="819.5" y="128" width="30.5" height="32" fill="#5f9ea0"/>
+<text x="228" y="193" text-anchor="end" class="cat">Batata frita de pacote</text>
+<rect x="240.0" y="172" width="274.5" height="32" fill="#d4af37"/>
+<text x="377.2" y="192" text-anchor="middle" class="val" fill="#000000">45%</text>
+<rect x="514.5" y="172" width="311.1" height="32" fill="#e0683c"/>
+<text x="670.0" y="192" text-anchor="middle" class="val" fill="#f0f0f0">51%</text>
+<rect x="825.6" y="172" width="24.4" height="32" fill="#5f9ea0"/>
+<text x="228" y="237" text-anchor="end" class="cat">Lasanha</text>
+<rect x="240.0" y="216" width="164.7" height="32" fill="#d4af37"/>
+<text x="322.4" y="236" text-anchor="middle" class="val" fill="#000000">27%</text>
+<rect x="404.7" y="216" width="298.9" height="32" fill="#e0683c"/>
+<text x="554.1" y="236" text-anchor="middle" class="val" fill="#f0f0f0">49%</text>
+<rect x="703.6" y="216" width="146.4" height="32" fill="#5f9ea0"/>
+<text x="776.8" y="236" text-anchor="middle" class="val" fill="#f0f0f0">24%</text>
+<text x="228" y="281" text-anchor="end" class="cat">Wafer de chocolate</text>
+<rect x="240.0" y="260" width="286.7" height="32" fill="#d4af37"/>
+<text x="383.4" y="280" text-anchor="middle" class="val" fill="#000000">47%</text>
+<rect x="526.7" y="260" width="286.7" height="32" fill="#e0683c"/>
+<text x="670.1" y="280" text-anchor="middle" class="val" fill="#f0f0f0">47%</text>
+<rect x="813.4" y="260" width="36.6" height="32" fill="#5f9ea0"/>
+<text x="228" y="325" text-anchor="end" class="cat">Bolachas de queijo</text>
+<rect x="240.0" y="304" width="286.7" height="32" fill="#d4af37"/>
+<text x="383.4" y="324" text-anchor="middle" class="val" fill="#000000">47%</text>
+<rect x="526.7" y="304" width="274.5" height="32" fill="#e0683c"/>
+<text x="664.0" y="324" text-anchor="middle" class="val" fill="#f0f0f0">45%</text>
+<rect x="801.2" y="304" width="48.8" height="32" fill="#5f9ea0"/>
+<text x="228" y="369" text-anchor="end" class="cat">Croissant</text>
+<rect x="240.0" y="348" width="323.3" height="32" fill="#d4af37"/>
+<text x="401.6" y="368" text-anchor="middle" class="val" fill="#000000">53%</text>
+<rect x="563.3" y="348" width="244.0" height="32" fill="#e0683c"/>
+<text x="685.3" y="368" text-anchor="middle" class="val" fill="#f0f0f0">40%</text>
+<rect x="807.3" y="348" width="42.7" height="32" fill="#5f9ea0"/>
+<text x="228" y="413" text-anchor="end" class="cat">Bolinho recheado de cacau</text>
+<rect x="240.0" y="392" width="378.2" height="32" fill="#d4af37"/>
+<text x="429.1" y="412" text-anchor="middle" class="val" fill="#000000">62%</text>
+<rect x="618.2" y="392" width="195.2" height="32" fill="#e0683c"/>
+<text x="715.8" y="412" text-anchor="middle" class="val" fill="#f0f0f0">32%</text>
+<rect x="813.4" y="392" width="36.6" height="32" fill="#5f9ea0"/>
+<text x="228" y="457" text-anchor="end" class="cat">Palitos de pão</text>
+<rect x="240.0" y="436" width="366.0" height="32" fill="#d4af37"/>
+<text x="423.0" y="456" text-anchor="middle" class="val" fill="#000000">60%</text>
+<rect x="606.0" y="436" width="176.9" height="32" fill="#e0683c"/>
+<text x="694.5" y="456" text-anchor="middle" class="val" fill="#f0f0f0">29%</text>
+<rect x="782.9" y="436" width="67.1" height="32" fill="#5f9ea0"/>
+<text x="816.4" y="456" text-anchor="middle" class="val" fill="#f0f0f0">11%</text>
+<text x="228" y="501" text-anchor="end" class="cat">Bolachas amanteigadas</text>
+<rect x="240.0" y="480" width="396.5" height="32" fill="#d4af37"/>
+<text x="438.2" y="500" text-anchor="middle" class="val" fill="#000000">65%</text>
+<rect x="636.5" y="480" width="170.8" height="32" fill="#e0683c"/>
+<text x="721.9" y="500" text-anchor="middle" class="val" fill="#f0f0f0">28%</text>
+<rect x="807.3" y="480" width="42.7" height="32" fill="#5f9ea0"/>
+<text x="228" y="545" text-anchor="end" class="cat">Massa cozida</text>
+<rect x="240.0" y="524" width="500.2" height="32" fill="#d4af37"/>
+<text x="490.1" y="544" text-anchor="middle" class="val" fill="#000000">82%</text>
+<rect x="740.2" y="524" width="18.3" height="32" fill="#e0683c"/>
+<rect x="758.5" y="524" width="91.5" height="32" fill="#5f9ea0"/>
+<text x="804.2" y="544" text-anchor="middle" class="val" fill="#f0f0f0">15%</text>
+<text x="228" y="589" text-anchor="end" class="cat">Pão branco</text>
+<rect x="240.0" y="568" width="524.6" height="32" fill="#d4af37"/>
+<text x="502.3" y="588" text-anchor="middle" class="val" fill="#000000">86%</text>
+<rect x="764.6" y="568" width="12.2" height="32" fill="#e0683c"/>
+<rect x="776.8" y="568" width="73.2" height="32" fill="#5f9ea0"/>
+<text x="813.4" y="588" text-anchor="middle" class="val" fill="#f0f0f0">12%</text>
+<text x="24" y="636" class="nt">Percentuais calculados por nós a partir dos gramas de macronutrientes das tabelas CREA, com 4 kcal/g para carboidratos e</text>
+<text x="24" y="653" class="nt">proteínas e 9 kcal/g para gorduras.</text>
+<text x="24" y="670" class="nt">Os arredondamentos são ajustados para somar 100. As duas últimas linhas são o controle: fontes de carboidrato não processadas.</text>
+<text x="876" y="715" text-anchor="end" class="nt" fill="#aa8a2e">NURVAN</text>
+</svg></div><figcaption class="cap">De onde vêm as calorias em 11 alimentos do dia a dia. Dados: CREA, tabelas italianas de composição de alimentos, atualização 2019. Cálculo e gráfico da Nurvan.</figcaption></figure>
+<p>O resultado é mais contundente do que o post sugere. Na <strong>lasanha</strong> os carboidratos trazem 27% das calorias e a gordura 49%: chamar de prato de carboidrato é simplesmente errado. As <strong>batatas fritas de pacote</strong> chegam a 51% de calorias de gordura, o <strong>creme de avelã com cacau</strong> a 53%, o <strong>wafer de chocolate</strong> a 47%, as <strong>bolachas de queijo</strong> a 45%.</p>
+<table><thead><tr><th>Alimento (100 g)</th><th>kcal</th><th>Carboidratos</th><th>Gorduras</th><th>% kcal de gordura</th></tr></thead><tbody><tr><td>Creme de avelã com cacau</td><td>537</td><td>58,1 g</td><td>32,4 g</td><td><strong>53%</strong></td></tr><tr><td>Batata frita de pacote</td><td>512</td><td>58,0 g</td><td>29,6 g</td><td><strong>51%</strong></td></tr><tr><td>Lasanha</td><td>196</td><td>13,4 g</td><td>10,8 g</td><td><strong>49%</strong></td></tr><tr><td>Wafer de chocolate</td><td>498</td><td>60,3 g</td><td>26,6 g</td><td><strong>47%</strong></td></tr><tr><td>Bolachas de queijo</td><td>498</td><td>59,2 g</td><td>25,5 g</td><td><strong>45%</strong></td></tr><tr><td>Croissant</td><td>403</td><td>54,7 g</td><td>18,3 g</td><td><strong>40%</strong></td></tr><tr><td>Bolinho recheado de cacau</td><td>410</td><td>65,5 g</td><td>15,1 g</td><td><strong>32%</strong></td></tr><tr><td>Palitos de pão</td><td>421</td><td>65,1 g</td><td>13,9 g</td><td><strong>29%</strong></td></tr><tr><td>Bolachas amanteigadas</td><td>426</td><td>71,7 g</td><td>13,8 g</td><td><strong>28%</strong></td></tr><tr><td>Massa cozida</td><td>175</td><td>37,3 g</td><td>0,6 g</td><td><strong>3%</strong></td></tr><tr><td>Pão branco</td><td>268</td><td>59,5 g</td><td>0,5 g</td><td><strong>2%</strong></td></tr></tbody></table>
+<p class="cap">Valores por 100 g das tabelas CREA (atualização 2019); o percentual de calorias de gordura é um cálculo nosso sobre 4/4/9 kcal por grama.</p>
+<p>As duas últimas linhas é que mudam a conclusão. <strong>O pão branco tira 2% das suas calorias da gordura e a massa cozida 3%.</strong> São praticamente isentos de gordura. O mesmo vale para arroz, batata cozida, leguminosas e frutas.</p>
+<figure><img alt="Pães recém-assados sobre uma bancada." src="images/pane-semplice.jpg" loading="lazy"/><figcaption class="cap">O pão branco tira 2% das suas calorias da gordura, a massa cozida 3%. As fontes de carboidrato não processadas não são o problema. Foto: FranHogan, Wikimedia Commons, CC BY-SA 4.0.</figcaption></figure>
+<p>A frase correta, portanto, não é &quot;carboidrato também é gordura&quot;, mas: <strong>quanto mais composto e processado é um alimento, mais gordura ele carrega, seja qual for a categoria em que o colocamos.</strong> O palito de pão não é pão, o bolinho não é pão, a lasanha não é massa. Quem pesa a massa mas não o molho está medindo a parte menos calórica do prato.</p>
+<h2>Por que você não percebe: o açúcar cobre a gordura</h2>
+<p>O post cita um estudo de 1990 de Drewnowski e Schwartz. Ele existe, nós o abrimos: chama-se <em>Invisible fats</em> — gorduras invisíveis — e foi publicado na <em>Appetite</em>.</p>
+<p>Cinquenta estudantes eutróficas provaram quinze preparações parecidas com coberturas de bolo, com açúcar de 20% a 77% e manteiga de 15% a 35%, e deram notas para doçura e teor de gordura. A doçura percebida acompanhava fielmente o açúcar. A gordura percebida, não: <strong>com mais açúcar, as amostras eram julgadas menos gordurosas, contendo a mesma manteiga.</strong></p>
+<p>Os autores concluem exatamente o que nos interessa: o mecanismo pode explicar por que tantos doces ricos em gordura são vistos como alimentos &quot;à base de carboidrato&quot;. É um experimento sensorial com amostra pequena: não prova que você engorda mais, prova que você não percebe.</p>
+<figure><img alt="Uma tigela com vários tipos de batatas fritas e salgadinhos industrializados." src="images/snack-confezionati.jpg" loading="lazy"/><figcaption class="cap">Nos salgadinhos industrializados a gordura é a maior parcela, mas o sabor que você reconhece é o da parte crocante. Foto: Toby Scratch Fanatic, Wikimedia Commons, CC0.</figcaption></figure>
+<p>A peça mais recente é de 2018, na <em>Cell Metabolism</em>. Com um leilão real e ressonância magnética funcional, os participantes se dispunham a <strong>pagar mais</strong> por alimentos que uniam gordura e carboidrato do que por alimentos igualmente familiares, igualmente apreciados e com as mesmas calorias feitos só de gordura ou só de carboidrato. E estimavam <strong>melhor</strong> a densidade energética dos alimentos gordurosos e <strong>pior</strong> a dos mistos.</p>
+<p>Em resumo: a combinação agrada mais a calorias iguais e ainda é a que o cérebro avalia pior. O produto industrial que une açúcar e gordura cai exatamente no ponto cego.</p>
+<h2>Então por que se emagrece tirando carboidratos?</h2>
+<p>Aqui o post chega à conclusão certa — é o déficit calórico, não a eliminação dos glicídios — mas o caminho merece alguns números, porque a literatura não é tão unânime quanto parece.</p>
+<p>O ensaio maior e mais controlado é o <strong>DIETFITS</strong>, publicado no <em>JAMA</em> em 2018: 609 adultos com sobrepeso, doze meses, 22 encontros em grupo, dieta pobre em gordura contra dieta pobre em carboidrato, ambas construídas com comida de qualidade. Resultado: −5,3 kg contra −6,0 kg. A diferença de 0,7 kg não é estatisticamente significativa. Nem o perfil genético nem a secreção de insulina permitiram prever quem respondia melhor a qual dieta.</p>
+<p>As metanálises de estudos na vida real são menos neutras: aos 6-12 meses encontram uma pequena vantagem low carb, <strong>1,3 kg</strong> numa revisão de 2020 sobre 38 estudos e 6.499 adultos, <strong>2,2 kg</strong> numa de 2016. Vantagem real, mas modesta, e nas duas acompanhada de aumento do colesterol LDL.</p>
+<p>O dado que fecha o debate é outro, e o post não o cita. Em 2021 o grupo de Kevin Hall internou vinte adultos no centro clínico do NIH e lhes deu, por duas semanas cada, uma dieta cetogênica (10% de carboidrato) e uma dieta pobre em gordura (10% de gordura, 75% de carboidrato), <strong>com comida ilimitada nos dois casos</strong>.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" role="img" aria-label="Gráfico de barras: no experimento de 2019 a dieta ultraprocessada levou a comer 508 kcal por dia a mais que a não processada; no de 2021 a dieta cetogênica levou a comer 689 kcal por dia a mais que a pobre em gordura." font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<style>.t{fill:#f0f0f0;font-size:21px;font-weight:700}.s{fill:#a0a0a0;font-size:13px}.ax{fill:#a0a0a0;font-size:12px}.cat{fill:#f0f0f0;font-size:13px}.big{fill:#f3e5ab;font-size:26px;font-weight:700}.nt{fill:#a0a0a0;font-size:12px}.sm{fill:#a0a0a0;font-size:12px}</style>
+<rect width="900" height="500" fill="#0c0c0c"/>
+<text x="24" y="34" class="t">Qual dieta faz comer mais, quando se come à vontade</text>
+<text x="24" y="56" class="s">Dois experimentos do NIH com participantes internados e comida ilimitada</text>
+<text x="384" y="167" text-anchor="end" class="cat"><tspan x="384" dy="0">Dieta ultraprocessada</tspan><tspan x="384" dy="17" class="sm">contra a mesma dieta não processada</tspan><tspan x="384" dy="17" class="sm">(2019)</tspan></text>
+<rect x="400" y="150" width="267" height="52" rx="4" fill="#e0683c"/>
+<text x="681" y="186" class="big">+508</text>
+<text x="384" y="288" text-anchor="end" class="cat"><tspan x="384" dy="0">Dieta cetogênica, pobre em</tspan><tspan x="384" dy="17">carboidratos</tspan><tspan x="384" dy="17" class="sm">contra dieta pobre em gordura, rica</tspan><tspan x="384" dy="17" class="sm">em carboidratos (2021)</tspan></text>
+<rect x="400" y="280" width="362" height="52" rx="4" fill="#d4af37"/>
+<text x="776" y="316" class="big">+689</text>
+<line x1="400" y1="126" x2="400" y2="362" stroke="#a0a0a0" stroke-width="1"/>
+<text x="404" y="118" class="ax">kcal por dia a mais</text>
+<text x="24" y="418" class="nt">Hall et al. 2019 (PMID 31105044), 20 adultos, 2 semanas por dieta, macronutrientes oferecidos equiparados.</text>
+<text x="24" y="436" class="nt">Hall et al. 2021 (PMID 33479499), 20 adultos, 2 semanas por dieta, comida à vontade nos dois braços.</text>
+<text x="876" y="488" text-anchor="end" class="nt" fill="#aa8a2e">NURVAN</text>
+</svg></div><figcaption class="cap">Quando se pode comer o quanto quiser, não é tirar os carboidratos que faz as calorias caírem. Dados: Hall et al. 2019 e 2021. Gráfico da Nurvan.</figcaption></figure>
+<p>Se a hipótese &quot;os carboidratos fazem comer mais&quot; fosse verdadeira, o braço cetogênico deveria ter registrado menos calorias. Aconteceu o contrário: com a dieta pobre em gordura os participantes comeram <strong>689 kcal por dia a menos</strong> que na cetogênica, e 544 a menos na última semana.</p>
+<p>A contraprova é o estudo de 2019 do mesmo grupo: vinte internados, duas semanas de dieta ultraprocessada e duas de dieta não processada, com calorias oferecidas, densidade energética, macronutrientes, açúcares, sódio e fibra equiparados. Com a ultraprocessada comeram <strong>508 kcal por dia a mais</strong> e ganharam 0,9 kg em duas semanas; com a outra perderam 0,9.</p>
+<p>O macronutriente não é a alavanca. A forma em que você o come, sim. Quem emagrece passando a uma dieta pobre em carboidratos, na maioria dos casos, parou de comer bolinhos, bolachas, batatas fritas e cremes de passar — ou seja, tirou gordura e calorias, como escreve o post, não apenas glicídios.</p>
+<h2>O que a pesquisa realmente diz</h2>
+<div class="verdict">
+<div class="v"><span class="pill ok">Confirmado</span><p>&quot;Muitos alimentos percebidos como carboidrato contêm quantidades relevantes de gordura.&quot; — Confirmado nos dados CREA: lasanha 49% das calorias de gordura, batata frita de pacote 51%, bolachas de queijo 45%, wafer de chocolate 47%.</p></div>
+<div class="v"><span class="pill part">Com ressalvas</span><p>&quot;O problema não são os carboidratos.&quot; — Verdade, mas precisa ser dito melhor: as fontes de carboidrato não processadas quase não têm gordura (pão branco 2% das calorias, massa cozida 3%). A variável que conta não é o macronutriente, é o quanto o alimento é composto e processado.</p></div>
+<div class="v"><span class="pill ok">Confirmado</span><p>&quot;O gosto doce mascara a percepção da gordura (Drewnowski e Schwartz, 1990).&quot; — O estudo existe, chama-se <em>Invisible fats</em>, e o resultado é o relatado: mais açúcar, menos gordura percebida com a mesma gordura real. Cinquenta participantes e coberturas experimentais: é um dado sensorial, não um dado sobre o peso.</p></div>
+<div class="v"><span class="pill ok">Confirmado</span><p>&quot;A combinação de açúcares e gorduras aumenta a palatabilidade.&quot; — Confirmado e reforçado: no estudo de 2018 na <em>Cell Metabolism</em> as pessoas pagam mais por alimentos que unem gordura e carboidrato, com calorias, familiaridade e preferência equiparadas.</p></div>
+<div class="v"><span class="pill part">Com ressalvas</span><p>&quot;O benefício sobre o peso vem do déficit energético, não da eliminação dos carboidratos.&quot; — O DIETFITS, com 609 pessoas, dá razão ao post (0,7 kg de diferença em 12 meses, não significativa), mas as metanálises da vida real ainda encontram uma pequena vantagem low carb, de 1,3 a 2,2 kg aos 6-12 meses.</p></div>
+<div class="v"><span class="pill no">Desmentido</span><p>&quot;Tirar os carboidratos faz comer espontaneamente menos.&quot; — É a ideia implícita em boa parte do discurso low carb, e em enfermaria acontece o contrário: com comida à vontade, a dieta pobre em gordura produziu 689 kcal por dia a menos que a cetogênica.</p></div>
+<div class="v"><span class="pill part">Com ressalvas</span><p>&quot;Usar um app para monitorar a alimentação ajuda a entender quais macronutrientes trazem as calorias.&quot; — Sim, e é o conselho mais útil do post. Com uma ressalva: é justamente nos alimentos que unem gordura e carboidrato que a estimativa no olho é a pior. Então é preciso o número escrito, não a sensação.</p></div>
+</div>
+<h2>Como aplicar</h2>
+<ol class="steps"><li><strong>Olhe a linha das gorduras, não a dos carboidratos.</strong> No rótulo, multiplique os gramas de gordura por 9 e divida pelas calorias daquela mesma porção: se der mais de 0,35, a gordura é a maior parcela, seja qual for o nome do alimento.</li><li><strong>Separe as fontes dos produtos.</strong> Pão, massa, arroz, batata e leguminosas quase não têm gordura. Palitos de pão, bolachas, biscoitos, bolinhos, croissants e cremes de passar são outra coisa: mesma prateleira, composição diferente.</li><li><strong>Pese o molho, não só a base.</strong> Na lasanha, na massa ao pesto e na carbonara as calorias estão quase todas ali. É a intervenção que mais muda o total diário e custa menos esforço do que tirar um grupo alimentar inteiro.</li><li><strong>Registre por duas semanas e depois pare, se quiser.</strong> Não é preciso registrar para sempre: só o tempo suficiente para descobrir onde suas calorias realmente vão parar. Quase todo mundo encontra a surpresa na mesma coluna.</li><li><strong>Mantenha a proteína alta enquanto corta.</strong> É a alavanca que protege a massa muscular quando as calorias caem: falamos disso no artigo sobre <a href="/pt/blog/proteina-na-definicao">quanta proteína é preciso na definição</a>.</li><li><strong>Escolha a dieta que você consegue seguir.</strong> Com o mesmo déficit, pobre em carboidrato e pobre em gordura dão resultados muito parecidos em doze meses. A adesão vale mais que o nome do protocolo.</li></ol>
+<p>Estes são dados médios de população, não um plano personalizado. Se você tem diabetes, dislipidemia, transtorno alimentar ou faz algum tratamento, converse com seu médico ou com um nutricionista antes de mudar a alimentação.</p>
+<div class="app"><div><h3>Nurvan — a gordura escondida você vê no diário, não no rótulo</h3><p>O banco de alimentos da Nurvan usa as tabelas oficiais CREA: quando você registra uma porção de lasanha ou de bolachas, vê na hora quantas calorias vêm da gordura e quantas dos carboidratos, não só o total. A divisão diária de macronutrientes se atualiza sozinha, e a coluna que cresce escondida deixa de ser surpresa.</p></div><a class="cta" href="https://nurvan.app">Experimente a Nurvan</a></div>
+<h2>Perguntas frequentes</h2>
+<details><summary>Carboidratos engordam?</summary><p>Não mais do que qualquer outra fonte de calorias. Engorda-se com um superávit energético prolongado. O motivo pelo qual os &quot;alimentos de carboidrato&quot; são associados ao ganho de peso é que muitos deles — bolinhos, bolachas, batatas fritas, cremes de passar — tiram entre 30% e 53% das suas calorias da gordura, segundo as tabelas CREA.</p></details><details><summary>Quantas calorias da lasanha vêm dos carboidratos?</summary><p>27%. A gordura traz 49% e as proteínas 24%, sobre 196 kcal por 100 g segundo as tabelas CREA. É por isso que chamá-la de prato de carboidrato engana.</p></details><details><summary>Como saber se um alimento é gorduroso lendo o rótulo?</summary><p>Multiplique os gramas de gordura por 9, divida pelas calorias daquela mesma porção e leia o percentual. Acima de cerca de 35% a gordura é a principal contribuição, mesmo que o produto pareça feito de farinha ou de açúcar.</p></details><details><summary>A dieta low carb funciona melhor que a pobre em gordura?</summary><p>No ensaio maior e mais controlado, o DIETFITS com 609 pessoas, a diferença em doze meses foi de 0,7 kg e não significativa. As metanálises da vida real encontram uma pequena vantagem low carb (1,3 a 2,2 kg), mas também um aumento do colesterol LDL. Conta muito mais qual das duas você consegue manter.</p></details><details><summary>Preciso eliminar pão e massa para emagrecer?</summary><p>Não. Pão e massa trazem, respectivamente, 2% e 3% das calorias da gordura: não são o problema. Para a maioria das pessoas a maior margem está nos molhos e nos produtos embalados.</p></details>
+<h2>Leia também</h2>
+<ul><li><a href="/pt/blog/proteina-na-definicao">Proteína na definição: quanto você realmente precisa</a> — a alavanca nutricional que protege o músculo quando as calorias caem.</li><li><a href="/pt/blog/arroz-arrefecido-amido-resistente">Arroz arrefecido: quanto pesa o amido resistente</a> — outro caso em que os números reais são menores que o título.</li><li><a href="/pt/blog/cbl-514-medicamento-gordura-subcutanea">CBL-514: o medicamento contra a gordura, o que dizem os estudos</a> — o que acontece quando se tenta atacar a gordura pelo outro lado.</li></ul>
+<h2>Fontes</h2>
+<ol class='refs'><li>Drewnowski A, Schwartz M, 1990. <em>Invisible fats: sensory assessment of sugar/fat mixtures.</em> Appetite 14(3):203-217. PMID 2369116 — <a href="https://doi.org/10.1016/0195-6663(90">DOI</a>90088-p)</li><li>DiFeliceantonio AG, Coppin G, Rigoux L, Edwin Thanarajah S, Dagher A, Tittgemeyer M, Small DM, 2018. <em>Supra-Additive Effects of Combining Fat and Carbohydrate on Food Reward.</em> Cell Metabolism 28(1):33-44. PMID 29909968 — <a href="https://doi.org/10.1016/j.cmet.2018.05.018">DOI</a></li><li>Hall KD, Guo J, Courville AB et al., 2021. <em>Effect of a plant-based, low-fat diet versus an animal-based, ketogenic diet on ad libitum energy intake.</em> Nature Medicine 27(2):344-353. PMID 33479499 — <a href="https://doi.org/10.1038/s41591-020-01209-1">DOI</a></li><li>Hall KD, Ayuketah A, Brychta R et al., 2019. <em>Ultra-Processed Diets Cause Excess Calorie Intake and Weight Gain: An Inpatient Randomized Controlled Trial of Ad Libitum Food Intake.</em> Cell Metabolism 30(1):67-77. PMID 31105044 — <a href="https://doi.org/10.1016/j.cmet.2019.05.008">DOI</a></li><li>Gardner CD, Trepanowski JF, Del Gobbo LC et al., 2018. <em>Effect of Low-Fat vs Low-Carbohydrate Diet on 12-Month Weight Loss in Overweight Adults: The DIETFITS Randomized Clinical Trial.</em> JAMA 319(7):667-679. PMID 29466592 — <a href="https://doi.org/10.1001/jama.2018.0245">DOI</a></li><li>Chawla S, Tessarolo Silva F, Amaral Medeiros S, Mekary RA, Radenkovic D, 2020. <em>The Effect of Low-Fat and Low-Carbohydrate Diets on Weight Loss and Lipid Levels: A Systematic Review and Meta-Analysis.</em> Nutrients 12(12):3774. PMID 33317019 — <a href="https://doi.org/10.3390/nu12123774">DOI</a></li><li>Mansoor N, Vinknes KJ, Veierød MB, Retterstøl K, 2016. <em>Effects of low-carbohydrate diets v. low-fat diets on body weight and cardiovascular risk factors: a meta-analysis of randomised controlled trials.</em> British Journal of Nutrition 115(3):466-479. PMID 26768850 — <a href="https://doi.org/10.1017/S0007114515004699">DOI</a></li><li>CREA — Centro de pesquisa Alimentos e Nutrição (Itália). <em>Tabelas de composição dos alimentos</em>, atualização 2019 — <a href="https://www.alimentinutrizione.it/tabelle-nutrizionali/ricerca-per-ordine-alfabetico">alimentinutrizione.it</a>. Fonte dos valores por 100 g; os percentuais de calorias por macronutriente são um cálculo da Nurvan.</li></ol>
+<p class="note">Fontes científicas recuperadas no PubMed e verificadas em 6 de outubro de 2026. Os valores de composição vêm das tabelas oficiais CREA já integradas ao banco de alimentos da Nurvan.</p>
+<p class="note">Ponto de partida: o post de <a href="https://www.instagram.com/p/Dd_OSqQiFfi/">Andrea Biasci</a> de 3 de outubro de 2026 sobre carboidratos e ganho de peso. O texto, a estrutura, os cálculos sobre os dados CREA, as verificações e os gráficos deste artigo são originais.</p>
+<p><strong>Giammaria Loi</strong> é o fundador da Nurvan. Treina com pesos desde 2012, trabalha como personal trainer e coach certificado FIPE desde 2013 e compete no powerlifting em nível nacional desde 2018. Cada artigo que assina parte dos estudos científicos e chega ao que funciona de verdade na academia.</p>
+<p class="note">Nota: conteúdo informativo, não substitui a avaliação de um médico ou profissional qualificado. Os valores apresentados são médias de composição dos alimentos e resultados médios de estudos em populações específicas: não constituem um plano alimentar personalizado.</p>
+</main>
+<footer>NURVAN · nurvan.app · Conteúdo informativo, não substitui a avaliação de um médico ou profissional qualificado.</footer>
+</body>
+</html>
