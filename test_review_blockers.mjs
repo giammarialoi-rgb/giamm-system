@@ -1,6 +1,7 @@
 // What Apple's review asks for, kept true: account deletion (and its warning about a subscription), rules against
 // objectionable content with a way to report and block, the way the paid plans are described, medical and AI notices.
 import fs from 'node:fs';
+import { stripWebOnly } from './server/site/web-only.mjs';
 let failed = 0;
 const ok = (m, v) => { if (v) console.log('OK   ' + m); else { failed++; console.log('FAIL ' + m); } };
 const read = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
@@ -18,5 +19,14 @@ const pages = ['web/termini.html'].concat(LANGS.map((l) => 'web/legal/' + l + '/
 const section7 = (html) => { const h = html.indexOf('<h2>7.'); return html.slice(h, html.indexOf('<h2>8.')); };
 ok('2a. i termini (10 lingue) vietano contenuti offensivi, spiegano segnala/blocca, 24 ore e il contatto', pages.every((f) => { const t = section7(read(f)); return /info@nurvan\.app/.test(t) && /24/.test(t); }));
 ok('2b. la versione dei termini e\' cambiata (si richiede di nuovo il consenso)', /"version": "2026-10-06"/.test(read('web/features.json')));
+console.log('--- 3. pagamenti: niente Stripe né primo periodo gratuito nell’app ---');
+const termsApp = stripWebOnly(read('web/termini.html'));
+const privacyApp = stripWebOnly(read('web/privacy.html'));
+ok('3a. i termini per l’app non parlano di Stripe, del primo periodo gratuito o di acquisti dal sito', !/Stripe|primo periodo|dal sito/.test(termsApp) && /Google Play o App Store/.test(termsApp));
+ok('3b. la privacy per l’app non nomina Stripe', !/Stripe/.test(privacyApp) && /RevenueCat/.test(privacyApp));
+ok('3c. le pagine per il sito restano complete (Stripe, recesso)', /Stripe/.test(read('web/termini.html')) && /recedere/.test(read('web/termini.html')) && /Stripe/.test(read('web/privacy.html')));
+ok('3d. l’app chiede la versione per l’app (?app=1) e il server la serve', page.includes('app=1') && read('coach-api.mjs').includes('asksForAppVersion(req)') && read('server/site/trust.mjs').includes('asksForAppVersion(req)'));
+const plansUi = read('web/plans-ui.js');
+ok('3e. la prova di 14 giorni dice che non c’è addebito né rinnovo', plansUi.includes("GIORNI DI COACH</button>") && plansUi.includes('Nessun addebito e nessun rinnovo automatico'));
 console.log(failed ? '\n' + failed + ' controlli falliti.' : '\nBlocchi della review Apple: tutto in regola.');
 process.exit(failed ? 1 : 0);

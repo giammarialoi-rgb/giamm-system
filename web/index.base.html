@@ -6205,7 +6205,10 @@ function legalConfig() {
 function legalPageUrl(slug) {
   // In the language of the app: the pages exist translated (?lang=).
   const lang = (window.NurvanI18n && NurvanI18n.lang && NurvanI18n.lang()) || 'it';
-  const q = lang !== 'it' ? '?lang=' + lang : '';
+  // In the store apps the page comes without what concerns buying on the website (?app=1).
+  let native = false;
+  try { native = (typeof billingIsNative === 'function' && billingIsNative()) || !!window.NativeConfig; } catch (_) {}
+  const q = (lang !== 'it' ? '?lang=' + lang : '') + (native ? (lang !== 'it' ? '&' : '?') + 'app=1' : '');
   try { return coachEndpoint('/' + slug) + q; } catch (_) { return '/' + slug + q; }
 }
 function legalLinkHtml(slug, label) {

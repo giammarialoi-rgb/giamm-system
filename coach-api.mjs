@@ -58,6 +58,7 @@ import { createAiGateway, aiPublicStatus } from "./server/ai/gateway.mjs";
 import { cleanTrainingData, trainingDigest, trainingTools } from "./server/coach-ai/training-tools.mjs";
 import { createAiLimiter } from "./server/ai/limiter.mjs";
 import { mountBilling } from "./server/billing/index.mjs";
+import { stripWebOnly, asksForAppVersion } from "./server/site/web-only.mjs";
 import { normalizeHealthEvent, verifyWebhookSignature } from "./server/integrations/health.mjs";
 import { calendarPublicConfig } from "./server/integrations/calendar.mjs";
 
@@ -2751,15 +2752,17 @@ const LEGAL_PAGES = {
 app.get(Object.keys(LEGAL_PAGES), async (req, res) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
   const file = LEGAL_PAGES[req.path];
+  const forApp = asksForAppVersion(req);
   const asked = String(req.query.lang || "").slice(0, 2).toLowerCase();
   const lang = SERVER_LANGS.includes(asked) ? asked : reqLang(req);
   if (lang !== "it") {
     try {
-      const html = await fs.readFile(path.join(__dirname, "web", "legal", lang, file), "utf8");
+      const html = (forApp ? stripWebOnly : (x) => x)(await fs.readFile(path.join(__dirname, "web", "legal", lang, file), "utf8"));
       const boot = '<script>window.__NURVAN_LANG=' + JSON.stringify(lang) + ';</script><script src="/i18n-runtime.js"></script>';
       return res.type("html").send(html.includes("</head>") ? html.replace("</head>", boot + "</head>") : boot + html);
     } catch (_) { /* no translation: the Italian page */ }
   }
+  if (forApp) return res.type("html").send(stripWebOnly(await fs.readFile(path.join(__dirname, "web", file), "utf8")));
   res.sendFile(path.join(__dirname, "web", file));
 });
 app.use(express.static(path.join(__dirname, "web")));

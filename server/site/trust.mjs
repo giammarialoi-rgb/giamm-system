@@ -12,6 +12,7 @@ import { SITE_LANGS, langPrefix, langOfPath, siteDict, st } from "./i18n.mjs";
 import { composeEmail, normalizeEmail, validEmail } from "../account/email-auth.mjs";
 import { FORM_SCRIPT, httpError, clean, notifyRecipients, waitlistPath } from "./waitlist.mjs";
 import { INSTAGRAM_APP, personLd } from "./seo.mjs";
+import { stripWebOnly, asksForAppVersion } from "./web-only.mjs";
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -254,7 +255,7 @@ export function mountTrust(app, { getAuthor, webDir, siteDir, shell, sendEmail, 
       try { html = await fs.readFile(file, "utf8"); break; } catch (_) { /* the next one */ }
     }
     if (!html) return next();
-    const inner = (/<main>([\s\S]*)<\/main>/.exec(html) || [])[1] || "";
+    const inner = (asksForAppVersion(req) ? stripWebOnly : (x) => x)((/<main>([\s\S]*)<\/main>/.exec(html) || [])[1] || "");
     const features = await legalOf(webDir);
     const legal = features.legal || {};
     const values = {

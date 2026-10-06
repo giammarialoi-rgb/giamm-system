@@ -609,7 +609,7 @@ function renderPlansPricing(c) {
         : (webPay ? webStripeButtonsHtml(p) : '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;" onclick="contactAboutPlan(\'' + p.id + '\')">CONTATTACI</button>');
     }
     const trial = p.id === 'coach' && !current && canStartCoachTrial()
-      ? '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;margin-top:6px;" onclick="startCoachTrialFromApp()">PROVA COACH ' + (reg.trialDays || 14) + ' GIORNI</button>'
+      ? '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;margin-top:6px;" onclick="startCoachTrialFromApp()">ATTIVA ' + (reg.trialDays || 14) + ' GIORNI DI COACH</button><div class="plan-trial-note" style="font-size:10px;color:#999;margin-top:4px;">Nessun addebito e nessun rinnovo automatico: alla fine torni al tuo piano.</div>'
       : '';
     return '<div class="card plan-card' + (current ? ' plan-card-current' : '') + '" data-plan="' + p.id + '" style="padding:14px;margin-bottom:12px;border:' + (current ? '2px solid var(--gold)' : '1px solid #333') + ';">' +
       '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;">' +
