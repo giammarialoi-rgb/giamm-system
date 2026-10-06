@@ -412,6 +412,12 @@ export function mergeAssignClientData(current, patch, kinds) {
     merged.programHistory = history;
     merged.assignmentId = assignmentId;
     merged.activeProgram = { ...curProg, ...patchProg };
+    // A program that was cleared leaves its marks on the record (clearedTraining, clearedAt). The program being
+    // assigned now is not cleared: with the marks left, the next save from the client view (which sends them back)
+    // emptied its weeks again and left only the title.
+    if (Array.isArray(merged.activeProgram.weeks) && merged.activeProgram.weeks.length) {
+      for (const mark of ["clearedTraining", "clearedAt", "__clearedWeeks"]) if (!(mark in patchProg)) delete merged.activeProgram[mark];
+    }
     merged.data = {};
     merged.customSets = {};
     merged.subs = {};
@@ -3032,7 +3038,10 @@ export function mountCoachPractice(app, deps) {
         if (k === "activeProgram" && patch.activeProgram && typeof patch.activeProgram === "object") {
           const curProg = current.activeProgram && typeof current.activeProgram === "object" ? current.activeProgram : {};
           merged.activeProgram = { ...curProg, ...patch.activeProgram };
-          const forceClearWeeks = !!(patch.activeProgram.clearedTraining || patch.activeProgram.__clearedWeeks);
+          // "Cleared" with weeks in the same copy contradicts itself: the weeks win (an old mark that travelled back).
+          const sentWeeks = Array.isArray(patch.activeProgram.weeks) && patch.activeProgram.weeks.length > 0;
+          const forceClearWeeks = !!(patch.activeProgram.clearedTraining || patch.activeProgram.__clearedWeeks) && !sentWeeks;
+          if (sentWeeks) { delete merged.activeProgram.clearedTraining; delete merged.activeProgram.__clearedWeeks; delete merged.activeProgram.clearedAt; }
           if (forceClearWeeks) {
             merged.activeProgram.weeks = [];
             if (patch.activeProgram.title != null) merged.activeProgram.title = patch.activeProgram.title;

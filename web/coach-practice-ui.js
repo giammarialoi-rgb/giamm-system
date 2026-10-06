@@ -2711,6 +2711,11 @@ function applyClientPayloadToLocal(payload) {
     console.error('[CLIENT_VIEW_NORMALIZE]', err);
     DATA = (prog && Array.isArray(prog.weeks) && prog.weeks.length) ? prog : { title: 'Cliente', weeks: [] };
   }
+  // A program with weeks is not a cleared one: marks left by an old CANCELLA must not travel back with the next save.
+  try {
+    if (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) { delete DATA.clearedTraining; delete DATA.clearedAt; delete DATA.__clearedWeeks; }
+  } catch (_) {}
+  store.__cpTrainingCleared = false;
   store.activeProgram = DATA;
   store.activeProgramId = (DATA && DATA.id) || ('client_view_' + Date.now());
   const nutr = preferFilledNutrition(payload.nutrition, DATA && DATA.nutrition);
