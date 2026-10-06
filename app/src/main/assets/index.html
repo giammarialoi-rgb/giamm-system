@@ -5088,7 +5088,7 @@ function validateDocumentSemantics(canonical) {
         if (Number.isFinite(load) && load > 5000) {
           issues.push({ level: "warning", code: "ANOMALY_LOAD", message: `Carico anomalo ${load} su ${ex.name}`, sourceRef: ex.sourceRef || null });
         }
-        (ex.sets || []).forEach((set, seti) => {
+        (Array.isArray(ex.sets) ? ex.sets : []).forEach((set, seti) => {
           const r = Number(set.reps ?? set.target_reps);
           if (Number.isFinite(r) && r < 0) {
             issues.push({ level: "error", code: "NEG_REPS", message: `Reps negative set ${seti + 1} ${ex.name}` });
@@ -60304,7 +60304,8 @@ function countImportLoadKinds(prog) {
   weeks.forEach(function (w) {
     (w.sessions || w.days || []).forEach(function (d) {
       (d.exercises || d.rows || []).forEach(function (ex) {
-        const sets = (ex && ex.sets) || [];
+        // "sets" can be a count (3) in a file written by hand: only a list has sets to look at.
+        const sets = (ex && Array.isArray(ex.sets)) ? ex.sets : [];
         let exPresumed = parseLoadKg(ex && (ex.plannedLoad || ex.load || ex.load_value || ex.load_target));
         sets.forEach(function (s) {
           const kg = parseLoadKg(s && (s.actual_load || s.logged_load || s.recorded_load || s.load || s.target_load));
@@ -60335,7 +60336,7 @@ function stripPresumedLoads(prog) {
         ex.load = null;
         ex.load_value = null;
         ex.load_target = null;
-        (ex.sets || []).forEach(function (s) {
+        (Array.isArray(ex.sets) ? ex.sets : []).forEach(function (s) {
           if (!s) return;
           s.load = null;
           s.target_load = null;
@@ -62829,9 +62830,9 @@ function applySsttStartInputs() {
       const wNum = wi + 1;
       (w.sessions || w.days || []).forEach((sess, di) => {
         (sess.exercises || []).forEach((ex, ei) => {
-          if (ex.sets && ex.sets[0] && ex.sets[0].load != null) ex.plannedLoad = ex.sets[0].load;
+          if (Array.isArray(ex.sets) && ex.sets[0] && ex.sets[0].load != null) ex.plannedLoad = ex.sets[0].load;
           if (ex.name_original) { ex.name = ex.name_original; ex.exercise = ex.name_original; }
-          (ex.sets || []).forEach((st, si) => {
+          (Array.isArray(ex.sets) ? ex.sets : []).forEach((st, si) => {
             if (st.load == null && st.target_load == null) return;
             // The set's own keys: k already ends in _load, and the guards read
             // "..._load_done" / "..._load_load_user", which never exist - only
@@ -63960,7 +63961,8 @@ function renderTraining(c){
       try { persist(); } catch (_) {}
     }
   } catch(error) {
-    console.error('WORKOUT_RENDER_ERROR', error);
+    // No program yet is not an error: the card below says so and offers the ways to get one.
+    if (!/Nessuna settimana disponibile/.test(String((error && error.message) || ''))) console.error('WORKOUT_RENDER_ERROR', error);
     const hasWeeks = typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length;
     if (hasWeeks) {
       c.innerHTML = `
@@ -80815,6 +80817,8 @@ if (typeof window !== 'undefined') {
   window.onGenNutritionFreeCountChange = onGenNutritionFreeCountChange;
   window.onGenNutritionFreeDayChange = onGenNutritionFreeDayChange;
   window.refreshGenNutritionFreeDays = refreshGenNutritionFreeDays;
+  window.refreshGenNutritionPreview = refreshGenNutritionPreview;
+  window.renderProgressCenter = renderProgressCenter;
   window.onGenNutritionRestrictionChange = onGenNutritionRestrictionChange;
   window.confirmGenerateNutritionPlan = confirmGenerateNutritionPlan;
   window.filterFoodForRestrictions = filterFoodForRestrictions;

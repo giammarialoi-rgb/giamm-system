@@ -675,7 +675,7 @@ export function validateDocumentSemantics(canonical) {
         if (Number.isFinite(load) && load > 5000) {
           issues.push({ level: "warning", code: "ANOMALY_LOAD", message: `Carico anomalo ${load} su ${ex.name}`, sourceRef: ex.sourceRef || null });
         }
-        (ex.sets || []).forEach((set, seti) => {
+        (Array.isArray(ex.sets) ? ex.sets : []).forEach((set, seti) => {
           const r = Number(set.reps ?? set.target_reps);
           if (Number.isFinite(r) && r < 0) {
             issues.push({ level: "error", code: "NEG_REPS", message: `Reps negative set ${seti + 1} ${ex.name}` });
