@@ -282,7 +282,7 @@ console.log('--- 7. consensi nella pagina ---');
     /Informativa privacy/.test(card) && /\/privacy"/.test(card) && /\/termini"/.test(card) && /\/elimina-account"/.test(card)
     && /REVOCA/.test(card) && /ESPORTA I MIEI DATI/.test(card) && /openDeleteAccount\(\)/.test(card) && /dispositivo medico/.test(card));
   ctx.isAthleteRole = () => true;
-  ok('7l. atleta: niente pulsante di eliminazione (lo gestisce il coach), ma spiegato', !/openDeleteAccount\(\)/.test(ctx.renderPrivacySettingsCard()) && /gestito dal coach/.test(ctx.renderPrivacySettingsCard()));
+  ok('7l. anche l\'atleta puo\' eliminare il suo account (regola degli store)', /openDeleteAccount\(\)/.test(ctx.renderPrivacySettingsCard()));
 
   ok('7m. apiFetch chiede il consenso AI prima della prima richiesta AI', /async function apiFetch\(url, options, timeoutMs=90000\) \{\n  if \(isAiRequest\(url, options\) && !\(await ensureAiConsent\(\)\)\) throw aiConsentDeclinedError\(\);/.test(SRC));
   ok('7n. registrazione: tre caselle obbligatorie, consenso inviato col modulo', /id="consent-age"/.test(SRC) && /id="consent-terms"/.test(SRC) && /id="consent-health"/.test(SRC) && /body\.consent = \{ version: legalConfig\(\)\.version, age: true, terms: true, health: true \}/.test(SRC));
