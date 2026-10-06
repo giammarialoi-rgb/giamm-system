@@ -41,8 +41,50 @@
       '<div style="font-weight:900;color:var(--gold);margin-bottom:8px;">' + escText(T('Presenza e chiamate')) + '</div>' +
       toggle('Nascondi che sei online ai clienti', !!(store && store.coachHidePresence), 'toggleCoachHidePresence') +
       toggle('Consenti videocall interne con i clienti', !(store && store.coachAllowVideocall === false), 'toggleCoachVideocall') +
-      '</div></div>';
+      '</div>' +
+      '<div class="coach-os-card" style="padding:14px;margin-top:10px;" id="coach-notify-card"></div></div>';
+    paintNotify();
+    loadNotify();
   };
+
+  /* ---- notifications: each thing as it happens, or one summary a day ---- */
+  const nf = { mode: 'instant', hour: 18, loaded: false };
+  function paintNotify() {
+    const box = document.getElementById('coach-notify-card');
+    if (!box) return;
+    const radio = function (value, text, hint) {
+      return '<label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#eee;padding:10px;background:#141414;border:1px solid ' + (nf.mode === value ? 'var(--gold)' : '#333') + ';border-radius:10px;margin-bottom:8px;">' +
+        '<input type="radio" name="coach-notify-mode" ' + (nf.mode === value ? 'checked ' : '') + 'onchange="CoachOS.notifySet(\'' + value + '\')" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
+        '<span style="flex:1;line-height:1.35;">' + escText(T(text)) + '<span style="display:block;font-size:11px;color:#999;margin-top:2px;">' + escText(T(hint)) + '</span></span></label>';
+    };
+    let hours = '';
+    for (let h = 6; h <= 22; h++) hours += '<option value="' + h + '"' + (h === nf.hour ? ' selected' : '') + '>' + (h < 10 ? '0' : '') + h + ':00</option>';
+    box.innerHTML = '<div style="font-weight:900;color:var(--gold);margin-bottom:4px;">' + escText(T('Notifiche')) + '</div>' +
+      '<p class="coach-os-subtitle" style="margin:0 0 10px;">' + escText(T('Con molti clienti le notifiche una per volta sono tante: scegli come riceverle.')) + '</p>' +
+      radio('instant', 'Una per volta', 'Un avviso quando succede qualcosa (messaggio, check-in, richiesta).') +
+      radio('digest', 'Un riepilogo al giorno', 'Un solo avviso con quanti clienti hanno novità e quante richieste aspettano. Le novità restano nell’app.') +
+      (nf.mode === 'digest' ? '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;margin-top:4px;">' + escText(T('A che ora (ora italiana)')) +
+        '<select onchange="CoachOS.notifyHour(this.value)" style="width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:16px;box-sizing:border-box;">' + hours + '</select></label>' : '') +
+      '<div id="coach-notify-msg" style="font-size:12px;color:#8fd19e;min-height:16px;margin-top:8px;"></div>';
+  }
+  async function loadNotify() {
+    try {
+      const data = await window.practiceFetch('/api/coach/settings/notify', { headers: window.practiceHeaders(false) });
+      if (data && data.notify) { nf.mode = data.notify.mode; nf.hour = data.notify.hour; nf.loaded = true; paintNotify(); }
+    } catch (_) {}
+  }
+  async function saveNotify() {
+    const msg = document.getElementById('coach-notify-msg');
+    try {
+      const data = await window.practiceFetch('/api/coach/settings/notify', { method: 'PUT', headers: window.practiceHeaders(true), body: JSON.stringify({ mode: nf.mode, hour: nf.hour }) });
+      if (data && data.notify) { nf.mode = data.notify.mode; nf.hour = data.notify.hour; }
+      if (msg) msg.textContent = T('Salvato');
+    } catch (error) {
+      if (msg) { msg.style.color = '#ff8a80'; msg.textContent = (error && error.message) || T('Non salvato. Riprova.'); }
+    }
+  }
+  CoachOS.notifySet = function (mode) { nf.mode = mode === 'digest' ? 'digest' : 'instant'; paintNotify(); saveNotify(); };
+  CoachOS.notifyHour = function (hour) { nf.hour = Number(hour) || 18; saveNotify(); };
 
   /* ---- the questionnaire editor ---- */
   const ed = { rows: {}, custom: [], loaded: false, busy: false };

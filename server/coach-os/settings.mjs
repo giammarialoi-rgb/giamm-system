@@ -137,3 +137,43 @@ export async function saveIntakeConfig(pool, coachId, config) {
   );
   return config;
 }
+
+// How the coach is notified: a push for each thing ("instant"), or one a day with what is waiting ("digest").
+export const NOTIFY_MODES = ["instant", "digest"];
+export function cleanNotify(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const mode = NOTIFY_MODES.includes(String(r.mode)) ? String(r.mode) : "instant";
+  const hour = Math.max(6, Math.min(22, Math.round(Number(r.hour)) || 18));
+  return { mode, hour };
+}
+
+export async function getNotifySettings(pool, coachId) {
+  try {
+    const r = await pool.query("SELECT notify_mode, notify_hour FROM coach_settings WHERE coach_user_id = $1", [coachId]);
+    const row = r.rows[0];
+    return row ? cleanNotify({ mode: row.notify_mode, hour: row.notify_hour }) : cleanNotify({});
+  } catch (_) {
+    return cleanNotify({});
+  }
+}
+
+export async function saveNotifySettings(pool, coachId, raw) {
+  const n = cleanNotify(raw);
+  await pool.query(
+    `INSERT INTO coach_settings(coach_user_id, notify_mode, notify_hour, updated_at) VALUES($1,$2,$3,NOW())
+     ON CONFLICT (coach_user_id) DO UPDATE SET notify_mode = EXCLUDED.notify_mode, notify_hour = EXCLUDED.notify_hour, updated_at = NOW()`,
+    [coachId, n.mode, n.hour]
+  );
+  return n;
+}
+
+// The text of the daily digest from what is waiting: clients with something unread, the total, requests to answer.
+export function digestText(waiting) {
+  const clients = Number(waiting && waiting.clients) || 0;
+  const total = Number(waiting && waiting.total) || 0;
+  const requests = Number(waiting && waiting.requests) || 0;
+  if (!clients || !total) return null;
+  const parts = [total + (total === 1 ? " novità" : " novità") + " da " + clients + (clients === 1 ? " cliente" : " clienti")];
+  if (requests) parts.push(requests + (requests === 1 ? " richiesta da valutare" : " richieste da valutare"));
+  return parts.join(" · ");
+}

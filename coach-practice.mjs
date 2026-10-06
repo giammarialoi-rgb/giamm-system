@@ -98,7 +98,7 @@ import {
   dueClients,
   EXPENSE_CATEGORIES
 } from "./server/coach-os/business.mjs";
-import { sanitizeIntakeConfig, sanitizeCustomAnswers, requiredKeys, getIntakeConfig, saveIntakeConfig } from "./server/coach-os/settings.mjs";
+import { sanitizeIntakeConfig, sanitizeCustomAnswers, requiredKeys, getIntakeConfig, saveIntakeConfig, getNotifySettings, saveNotifySettings, digestText } from "./server/coach-os/settings.mjs";
 import { getBranding, saveBranding, removeBranding, brandForInvite, iconForInvite, forgetBrandCache, ICON_SIZES } from "./server/coach-os/branding.mjs";
 import {
   listQuickReplies,
@@ -731,6 +731,8 @@ export function mountCoachPractice(app, deps) {
   async function notifyCoachPush(coachUserId, title, body, route, badge) {
     if (!coachUserId) return;
     try {
+      // A coach who chose the daily summary gets no push for each thing: it all waits for the summary.
+      if ((await getNotifySettings(pool, coachUserId)).mode === "digest") return;
       const q = await pool.query(
         "SELECT push_subscription FROM coach_licenses WHERE user_id = $1 AND status = 'active'",
         [coachUserId]
@@ -765,6 +767,52 @@ export function mountCoachPractice(app, deps) {
       console.warn("[WEB_PUSH_COACH]", err && err.message);
     }
   }
+
+  // The daily summary, for the coaches who chose it: once a day, from their hour on (Rome time), only if something waits.
+  // Returns what it sent (for the tests).
+  async function runCoachDigests(now = new Date()) {
+    const sent = [];
+    const zone = { timeZone: "Europe/Rome" };
+    const hourNow = Number(new Intl.DateTimeFormat("en-GB", { ...zone, hour: "2-digit", hour12: false }).format(now)) % 24;
+    const today = now.toLocaleDateString("sv-SE", zone);
+    let due;
+    try {
+      due = await pool.query(
+        `SELECT s.coach_user_id, l.push_subscription FROM coach_settings s
+         JOIN coach_licenses l ON l.user_id = s.coach_user_id AND l.status = 'active' AND l.push_subscription IS NOT NULL
+         WHERE s.notify_mode = 'digest' AND s.notify_hour <= $1 AND (s.notify_digest_on IS NULL OR s.notify_digest_on < $2::date)`,
+        [hourNow, today]
+      );
+    } catch (_) { return sent; }
+    for (const row of due.rows) {
+      try {
+        const w = await pool.query(
+          `SELECT COUNT(*) FILTER (WHERE unread_count > 0)::int AS clients, COALESCE(SUM(unread_count),0)::int AS total,
+                  COUNT(*) FILTER (WHERE pending_change IS NOT NULL)::int AS requests
+           FROM coach_clients WHERE coach_user_id = $1 AND status = 'active'`,
+          [row.coach_user_id]
+        );
+        const text = digestText(w.rows[0]);
+        await pool.query("UPDATE coach_settings SET notify_digest_on = $2::date WHERE coach_user_id = $1", [row.coach_user_id, today]);
+        if (!text) continue;
+        const result = await sendWebPush(row.push_subscription, {
+          title: "Riepilogo di oggi",
+          body: text,
+          tag: "coach:digest",
+          badge: Number(w.rows[0].total) || undefined,
+          data: { path: "/", route: { view: "coachHub" }, badge: Number(w.rows[0].total) || undefined }
+        });
+        if (result === "gone") await clearCoachPush(row.coach_user_id);
+        sent.push({ coachId: row.coach_user_id, text, result });
+      } catch (err) { console.warn("[COACH_DIGEST]", err && err.message); }
+    }
+    return sent;
+  }
+  try {
+    const timer = setInterval(() => { runCoachDigests().catch(() => {}); }, 10 * 60 * 1000);
+    if (timer && timer.unref) timer.unref();
+  } catch (_) {}
+  if (typeof app !== "undefined" && app && app.locals) app.locals.runCoachDigests = runCoachDigests;
 
   async function requireUser(req) {
     const auth = await accountFromBearer(req.headers.authorization);
@@ -3939,6 +3987,19 @@ export function mountCoachPractice(app, deps) {
     const config = sanitizeIntakeConfig(req.body && req.body.config, INTAKE_KEYS, INTAKE_SELECT_KEYS);
     await saveIntakeConfig(pool, coach.id, config);
     return res.json({ ok: true, config });
+  });
+
+  // How the coach is notified: each thing as it happens, or one summary a day.
+  app.get("/api/coach/settings/notify", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    return res.json({ ok: true, notify: await getNotifySettings(pool, coach.id) });
+  });
+
+  app.put("/api/coach/settings/notify", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    return res.json({ ok: true, notify: await saveNotifySettings(pool, coach.id, req.body) });
   });
 
   app.get("/api/client/intake-config", async (req, res) => {

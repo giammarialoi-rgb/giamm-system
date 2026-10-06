@@ -1,6 +1,7 @@
 // Fewer useless notices to the coach (a coach with 200 clients): no "wants to change the program" before there is a
 // program or while the questionnaire is open, one pending request = one notice, no push for a warm-up, pushes with a tag.
 import fs from 'node:fs';
+import { cleanNotify, digestText } from './server/coach-os/settings.mjs';
 let failed = 0;
 const ok = (m, v) => { if (v) console.log('OK   ' + m); else { failed++; console.log('FAIL ' + m); } };
 const ui = fs.readFileSync('web/coach-practice-ui.js', 'utf8');
@@ -13,5 +14,8 @@ ok('2a. a request still pending is refreshed, not announced again', /const waiti
 ok('2b. edits of a client with full freedom within ten minutes are one notice', /INTERVAL '10 minutes'/.test(api));
 ok('3a. a warm-up does not push to the coach', !/"Warm-up completato"/.test(api));
 ok('3b. coach pushes carry a tag and the service worker uses it', /tag: "coach:"/.test(api) && /options\.tag = String\(payload\.tag\)/.test(sw));
+ok('4a. the choice is one at a time by default; wrong values fall back', cleanNotify({}).mode === 'instant' && cleanNotify({ mode: 'x', hour: 99 }).hour === 22 && cleanNotify({ mode: 'digest', hour: 3 }).hour === 6);
+ok('4b. the digest says how many clients and requests, and nothing when nothing waits', /5 novità da 2 clienti · 1 richiesta/.test(digestText({ clients: 2, total: 5, requests: 1 })) && digestText({ clients: 0, total: 0, requests: 0 }) === null);
+ok('4c. a coach on the digest gets no push for each thing', api.includes('mode === "digest") return'));
 console.log(failed ? '\n' + failed + ' controlli falliti.' : '\nNotifiche al coach: meno rumore, tutto in regola.');
 process.exit(failed ? 1 : 0);
