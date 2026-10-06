@@ -3214,7 +3214,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0030",
+        schemaTarget: "0031",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -39311,7 +39311,9 @@ var NURVAN_DOMAIN_FIELDS = [
   'mapStamps', 'mapDeletes', 'mapSyncBase',
   // The other active programs (parked with their loads): the person's own,
   // like the active one.
-  'parkedPrograms', 'parkedProgramsAt'
+  'parkedPrograms', 'parkedProgramsAt',
+  // The workout in progress: its clock and its undo list. A coach who starts a client's workout must not start their own.
+  'sessionStartedAt', 'sessionStartedDate', 'sessionPausedMs', 'sessionPausedAt', 'sessionClockRunning', 'workoutUndo'
 ];
 
 var NurvanMemory = {
@@ -39367,15 +39369,23 @@ function nurvanActivateArea(name) {
   const area = NurvanMemory[name];
   if (!area) return false;
   const leaving = nurvanActiveArea();
-  if (leaving && leaving !== area) {
+  const switching = !!(leaving && leaving !== area);
+  if (switching) {
     leaving.DATA = DATA;
     leaving.currentWeek = currentWeek;
     leaving.currentDay = currentDay;
+    // The rest timer between sets belongs to the workout it was started in, like the session clock.
+    leaving.restTimer = window.__restTimer || null;
+    leaving.restOverrides = window.__restOverrides || null;
   }
   NurvanMemory.active = name;
   DATA = area.DATA;
   currentWeek = area.currentWeek;
   currentDay = area.currentDay;
+  if (switching) {
+    window.__restTimer = area.restTimer || null;
+    window.__restOverrides = area.restOverrides || {};
+  }
   return true;
 }
 
@@ -51546,6 +51556,13 @@ var PAGE_TUTORIALS = {
   ] },
   coachAgent: { label: 'Agente Nurvan', icon: '🧠', who: 'coach', steps: [
     { t: 'Chiedi all’agente', d: 'Scrivi cosa vuoi fare sui tuoi clienti: l’agente prepara l’azione e ti mostra l’anteprima. Parte solo se confermi.' }
+  ] },
+  coachSettings: { label: 'Coach · Impostazioni coaching', icon: '⚙️', who: 'coach', steps: [
+    { t: 'Le tue impostazioni', d: 'Qui trovi tutto quello che personalizzi del tuo modo di lavorare: il marchio, il questionario dei nuovi clienti, il testo dell’invito, il gestionale e la presenza online.' }
+  ] },
+  coachIntake: { label: 'Coach · Questionario', icon: '📝', who: 'coach', steps: [
+    { t: 'Le domande dell’app', d: 'Per ogni domanda decidi se farla, se è obbligatoria, come si chiama e, quando è a scelta, quali sono le risposte. Alcune servono a scrivere le schede: se le togli quei dati restano vuoti.' },
+    { t: 'Le tue domande', d: 'Con AGGIUNGI DOMANDA scrivi una domanda tua: a testo libero, a una risposta o a più risposte. Per quelle a scelta scrivi prima le risposte, una per riga. ANTEPRIMA mostra come la vede il cliente; SALVA la rende attiva per i nuovi clienti.' }
   ] },
   coachBrand: { label: 'Coach · Il tuo marchio', icon: '🏷️', who: 'coach', steps: [
     { t: 'Il tuo nome e il tuo logo', d: 'Scrivi il nome della tua palestra o il tuo, scegli il logo e ritaglialo: trascina per spostarlo, il cursore ingrandisce. Sul bordo in basso si sovrappone “powered by Nurvan”.' },
@@ -80915,6 +80932,51 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'rmMilitary', label: '1RM Military press (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '30 kg', '40 kg', '50 kg', '60 kg', '70 kg', '80 kg', '90 kg', '100+ kg'] }
 ];
 
+// The coach's version of the questionnaire (Impostazioni coaching): fixed questions hidden / renamed / required or not /
+// with other choices, and questions of the coach's own (open, one choice, several choices). Without one: the fixed list.
+window.__cpIntakeConfig = null;
+function intakeFields() {
+  const cfg = window.__cpIntakeConfig;
+  if (!cfg || typeof cfg !== 'object') return CLIENT_INTAKE_FIELDS;
+  const hidden = {};
+  (cfg.hidden || []).forEach(function (k) { hidden[k] = true; });
+  const ov = cfg.overrides || {};
+  const out = [];
+  CLIENT_INTAKE_FIELDS.forEach(function (f) {
+    if (hidden[f.key]) return;
+    const o = ov[f.key] || {};
+    out.push(Object.assign({}, f, {
+      label: o.label || f.label,
+      required: typeof o.required === 'boolean' ? o.required : f.required,
+      options: (f.type === 'select' && Array.isArray(o.options) && o.options.length) ? o.options : f.options
+    }));
+  });
+  (cfg.custom || []).forEach(function (q) {
+    out.push({ key: 'custom:' + q.id, id: q.id, custom: true, label: q.label, type: q.type === 'text' ? 'text' : (q.type === 'multi' ? 'multi' : 'select'), required: !!q.required, options: q.options || [] });
+  });
+  return out;
+}
+// The answer to one of the coach's own questions, from the stored list ([{ id, answer }]) or from the form's map ({ id: answer }).
+function intakeCustomAnswer(values, id) {
+  const c = values && values.custom;
+  if (Array.isArray(c)) { const hit = c.filter(function (e) { return e && e.id === id; })[0]; return hit ? hit.answer : ''; }
+  if (c && typeof c === 'object' && c[id] != null) return c[id];
+  return '';
+}
+async function ensureIntakeConfig(force) {
+  const owner = String((store && store.accountUser && store.accountUser.id) || '');
+  if (window.__cpIntakeConfig && window.__cpIntakeConfigFor === owner && !force) return window.__cpIntakeConfig;
+  try {
+    const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+    const r = await practiceFetch(athlete ? '/api/client/intake-config' : '/api/coach/settings/intake', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+    if (r && r.config) { window.__cpIntakeConfig = r.config; window.__cpIntakeConfigFor = owner; }
+  } catch (_) {}
+  return window.__cpIntakeConfig || null;
+}
+window.ensureIntakeConfig = ensureIntakeConfig;
+window.intakeFields = intakeFields;
+window.intakeCustomAnswer = intakeCustomAnswer;
+
 var CLIENT_TUTORIAL_STEPS = [
   { t: 'La scheda arriva dal coach', d: 'Non importi PDF da solo: il tuo coach ti assegna il programma. Se non vedi nulla, chiedila dalla Home.' },
   { t: 'Allena e finalizza', d: 'Apri Allenati, registra le serie e tocca Finalizza. Così il coach vede che hai lavorato.' },
@@ -81042,7 +81104,7 @@ function gatePracticeView(v) {
       generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1,
       coachToday: 1, coachInbox: 1, coachChat: 1, coachPrograms: 1, coachImport: 1,
       coachCalendar: 1, coachLibrary: 1, coachCheckIns: 1, coachNutrition: 1,
-      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1, coachBrand: 1,
+      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachSettings: 1, coachIntake: 1,
       coachCrm: 1, coachActionCenter: 1, coachFormReview: 1,
       coachMealAi: 1, coachAgentAudit: 1
     };
@@ -81055,7 +81117,7 @@ function gatePracticeView(v) {
       coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
       coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
       coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-      coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
+      coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachSettings: 1, coachIntake: 1, coachCrm: 1,
       coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
       home: 1, settings: 1, ai: 1
     };
@@ -81850,24 +81912,37 @@ function intakeFormHtml(prefix, values, opts) {
   opts = opts || {};
   values = values || {};
   const skipName = !!opts.skipName;
-  const fields = CLIENT_INTAKE_FIELDS.filter(function (f) {
+  const fields = intakeFields().filter(function (f) {
     return !(skipName && (f.key === 'firstName' || f.key === 'lastName'));
   }).map(function (f) {
     const id = prefix + '-' + f.key;
-    const val = values[f.key] || '';
+    const val = f.custom ? intakeCustomAnswer(values, f.id) : (values[f.key] || '');
     const req = f.required ? ' *' : '';
     if (f.type === 'text') {
-      return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
-        '<input id="' + id + '" type="text" value="' + esc(val) + '" autocomplete="name"></div>';
+      return '<div class="cp-field"><label for="' + id + '">' + esc(f.label) + req + '</label>' +
+        '<input id="' + id + '" type="text" value="' + esc(Array.isArray(val) ? val.join(', ') : val) + '"' + (f.custom ? ' maxlength="500"' : ' autocomplete="name"') + '></div>';
+    }
+    if (f.type === 'multi') {
+      const picked = Array.isArray(val) ? val : [];
+      return '<div class="cp-field"><label>' + esc(f.label) + req + '</label>' +
+        '<div id="' + id + '" data-multi="1" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">' +
+        f.options.map(function (o) {
+          return '<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #333;border-radius:8px;background:#111;font-size:13px;color:#eee;">' +
+            '<input type="checkbox" value="' + esc(o) + '"' + (picked.indexOf(o) >= 0 ? ' checked' : '') + '> ' + esc(o) + '</label>';
+        }).join('') + '</div></div>';
     }
     const optsHtml = '<option value="">Seleziona…</option>' + f.options.map(function (o) {
       return '<option value="' + esc(o) + '"' + (val === o ? ' selected' : '') + '>' + esc(o) + '</option>';
     }).join('');
-    return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
+    return '<div class="cp-field"><label for="' + id + '">' + esc(f.label) + req + '</label>' +
       '<select id="' + id + '">' + optsHtml + '</select></div>';
   }).join('');
   return fields + intakeAllergiesHtml(prefix, values.allergies) + intakeEnhancedHtml(prefix, values);
 }
+
+window.intakeFormHtml = function () { return intakeFormHtml.apply(null, arguments); };
+window.readIntakeForm = function () { return readIntakeForm.apply(null, arguments); };
+window.intakeFormMissing = function () { return intakeFormMissing.apply(null, arguments); };
 
 function intakeEnhancedHtml(prefix, values) {
   values = values || {};
@@ -81973,9 +82048,16 @@ function readIntakeAllergies(prefix) {
 
 function readIntakeForm(prefix) {
   const out = {};
-  CLIENT_INTAKE_FIELDS.forEach(function (f) {
+  intakeFields().forEach(function (f) {
     const el = document.getElementById(prefix + '-' + f.key);
-    if (el) out[f.key] = String(el.value || '').trim();
+    if (!el) return;
+    let v;
+    if (f.type === 'multi') {
+      v = Array.prototype.map.call(el.querySelectorAll('input[type=checkbox]:checked'), function (i) { return i.value; });
+    } else {
+      v = String(el.value || '').trim();
+    }
+    if (f.custom) { if (!out.custom) out.custom = {}; out.custom[f.id] = v; } else out[f.key] = v;
   });
   out.allergies = readIntakeAllergies(prefix);
   Object.assign(out, readIntakeEnhanced(prefix));
@@ -81996,8 +82078,10 @@ function intakeAllergyLabels(ids) {
 }
 
 function intakeFormMissing(data) {
-  return CLIENT_INTAKE_FIELDS.filter(function (f) {
-    return f.required && !data[f.key];
+  return intakeFields().filter(function (f) {
+    if (!f.required) return false;
+    if (f.custom) { const a = intakeCustomAnswer(data, f.id); return Array.isArray(a) ? !a.length : !a; }
+    return !data[f.key];
   }).map(function (f) { return f.label; });
 }
 
@@ -83038,6 +83122,7 @@ async function showClientIntake(prefill, force) {
   }
   window.__cpIntakeShowGen = (window.__cpIntakeShowGen || 0) + 1;
   const gen = window.__cpIntakeShowGen;
+  try { await ensureIntakeConfig(); } catch (_) {}
   try {
     if (typeof ensureAllergenIntoleranceCatalog === 'function') await ensureAllergenIntoleranceCatalog();
   } catch (_) {}
@@ -83163,6 +83248,7 @@ async function showCoachClientIntake(clientId, prefill) {
   ensurePracticeOverlays();
   const p = document.getElementById('cp-intake-panel');
   if (!p) return;
+  try { await ensureIntakeConfig(); } catch (_) {}
   try {
     if (typeof ensureAllergenIntoleranceCatalog === 'function') await ensureAllergenIntoleranceCatalog();
   } catch (_) {}
@@ -84389,6 +84475,7 @@ function openAddClientWizard() {
   window.__cpAddMode = window.__cpAddMode || 'new';
   drawAddClientWizard();
   showOverlay('cp-add', true);
+  try { ensureIntakeConfig().then(function () { if (window.__cpAddMode === 'transition') drawAddClientWizard(); }); } catch (_) {}
   try {
     if (typeof ensureAllergenIntoleranceCatalog === 'function') {
       ensureAllergenIntoleranceCatalog().then(function () {
@@ -85215,7 +85302,11 @@ async function renderCoachWorkspace(c) {
       ['Peso', intakeOrProfile('weightBand', ['weight', 'weightBand'])],
       ['Obiettivo', intakeOrProfile('goal', ['goal', 'primaryGoal'])]
     ].filter(function (row) { return row[1]; });
-    const intakeRows = CLIENT_INTAKE_FIELDS.filter(function (f) {
+    const customRows = (Array.isArray(intake.custom) ? intake.custom : []).map(function (e) {
+      const a = Array.isArray(e.answer) ? e.answer.join(', ') : String(e.answer || '');
+      return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(e.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(a) + '</span></div>';
+    }).join('');
+    const intakeRows = customRows + CLIENT_INTAKE_FIELDS.filter(function (f) {
       return intake[f.key] || intakeOrProfile(f.key);
     }).map(function (f) {
       const val = intake[f.key] || intakeOrProfile(f.key);
@@ -85434,6 +85525,12 @@ function resetSandboxSessionState() {
   store.warmups = {};
   store.warmupProgress = {};
   store.warmupAssignment = null;
+  store.sessionStartedAt = null;
+  store.sessionStartedDate = null;
+  store.sessionPausedMs = 0;
+  store.sessionPausedAt = null;
+  store.sessionClockRunning = null;
+  store.workoutUndo = null;
 }
 
 function stripProgramSessionPerformance(prog) {
@@ -87715,6 +87812,7 @@ async function refreshAthleteMe() {
     store.coachOnline = !!me.coachOnline;
     store.coachLastSeen = me.coachLastSeen || null;
     store.coachBrand = me.brand || null;
+    if (me.intakeConfig && typeof me.intakeConfig === 'object') { window.__cpIntakeConfig = me.intakeConfig; window.__cpIntakeConfigFor = String((store.accountUser && store.accountUser.id) || ''); }
     applyCoachBrand();
     store.role = 'athlete';
     store.clientShell = true;
@@ -88019,7 +88117,7 @@ function wrapPracticeHooks() {
           coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
           coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
           coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-          coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
+          coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachSettings: 1, coachIntake: 1, coachCrm: 1,
           coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
           home: 1, settings: 1, ai: 1
         };
@@ -89321,7 +89419,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       { view: 'coachAgentAudit', label: tx('coAgentAudit'), flag: 'agentV1' },
       { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
       { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
-      { view: 'coachBrand', label: (typeof window.tr === 'function' ? window.tr('Il tuo marchio') : 'Il tuo marchio') },
+      { view: 'coachSettings', label: (typeof window.tr === 'function' ? window.tr('Impostazioni coaching') : 'Impostazioni coaching') },
       { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
     ];
     // Meal AI and the agent log have no screen of their own yet: opened, they showed the athlete's dashboard.
@@ -93528,6 +93626,232 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
   };
 
   CoachOS.brandTestHooks = { drawIcon: drawIcon, state: state, SIZES: SIZES };
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+  function T(text) { return typeof window.tr === 'function' ? window.tr(text) : text; }
+  function builtins() { return (typeof CLIENT_INTAKE_FIELDS !== 'undefined' && Array.isArray(CLIENT_INTAKE_FIELDS)) ? CLIENT_INTAKE_FIELDS : []; }
+
+  /*
+   * Impostazioni coaching: everything the coach can set about how they work with clients, in one place - the brand
+   * (name and logo), the questionnaire a new client answers, the invite text, the presence and video-call switches, and the
+   * books. The questionnaire is the coach's own: the app's questions can be hidden, renamed, made required or not, given
+   * other choices; and the coach adds questions of their own (open, one choice, several choices - the choices decided
+   * first). See server/coach-os/settings.mjs for how they are stored and checked.
+   */
+  CoachOS.views.coachSettings = function (container) {
+    const card = function (title, text, action, label) {
+      return '<div class="coach-os-card" style="padding:14px;margin-bottom:10px;">' +
+        '<div style="font-weight:900;color:var(--gold);">' + escText(T(title)) + '</div>' +
+        '<p class="coach-os-subtitle" style="margin:6px 0 10px;">' + escText(T(text)) + '</p>' +
+        '<button type="button" class="btn btn-outline" style="width:100%;" onclick="' + action + '">' + escText(T(label)) + '</button></div>';
+    };
+    const toggle = function (text, checked, handler) {
+      return '<label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#eee;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;margin-bottom:8px;">' +
+        '<input type="checkbox" ' + (checked ? 'checked ' : '') + 'onchange="' + handler + '(this.checked)" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
+        '<span style="flex:1;line-height:1.35;">' + escText(T(text)) + '</span></label>';
+    };
+    container.innerHTML = '<div class="coach-os-page" id="coach-settings-page">' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(T('Coach')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(T('Impostazioni coaching')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(T('Tutto quello che puoi personalizzare del tuo modo di lavorare con i clienti.')) + '</p></div></div>' +
+      card('Il tuo marchio', 'Nome e logo che i clienti vedono nella loro app e come icona sulla Home.', "CoachOS.navigate('coachBrand')", 'APRI') +
+      card('Questionario dei nuovi clienti', 'Le domande che un nuovo cliente compila: cambiale, toglile, aggiungine di tue.', "CoachOS.navigate('coachIntake')", 'APRI') +
+      card('Testo dell’invito', 'Il messaggio con il link che mandi ai clienti.', 'openInviteTemplateEditor()', 'APRI') +
+      card('Gestionale', 'Incassi, spese, utile e scadenze.', "CoachOS.navigate('coachBusiness')", 'APRI') +
+      '<div class="coach-os-card" style="padding:14px;">' +
+      '<div style="font-weight:900;color:var(--gold);margin-bottom:8px;">' + escText(T('Presenza e chiamate')) + '</div>' +
+      toggle('Nascondi che sei online ai clienti', !!(store && store.coachHidePresence), 'toggleCoachHidePresence') +
+      toggle('Consenti videocall interne con i clienti', !(store && store.coachAllowVideocall === false), 'toggleCoachVideocall') +
+      '</div></div>';
+  };
+
+  /* ---- the questionnaire editor ---- */
+  const ed = { rows: {}, custom: [], loaded: false, busy: false };
+  const TYPES = [['text', 'Testo libero'], ['choice', 'Una risposta'], ['multi', 'Più risposte']];
+
+  function load(config) {
+    const cfg = config && typeof config === 'object' ? config : {};
+    const hidden = {};
+    (cfg.hidden || []).forEach(function (k) { hidden[k] = true; });
+    ed.rows = {};
+    builtins().forEach(function (f) {
+      const o = (cfg.overrides || {})[f.key] || {};
+      ed.rows[f.key] = {
+        ask: !hidden[f.key],
+        label: o.label || f.label,
+        required: typeof o.required === 'boolean' ? o.required : !!f.required,
+        optionsText: (f.type === 'select' ? (Array.isArray(o.options) && o.options.length ? o.options : f.options) : []).join('\n')
+      };
+    });
+    ed.custom = (cfg.custom || []).map(function (q) {
+      return { id: q.id, label: q.label || '', type: q.type || 'text', required: !!q.required, optionsText: (q.options || []).join('\n') };
+    });
+    ed.loaded = true;
+  }
+  const lines = function (text) { return String(text || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean); };
+
+  // The settings as the server stores them: only what differs from the app's own questions.
+  function toConfig() {
+    const cfg = { hidden: [], overrides: {}, custom: [] };
+    builtins().forEach(function (f) {
+      const r = ed.rows[f.key];
+      if (!r) return;
+      if (!r.ask) cfg.hidden.push(f.key);
+      const o = {};
+      if (String(r.label || '').trim() && r.label.trim() !== f.label) o.label = r.label.trim();
+      if (!!r.required !== !!f.required) o.required = !!r.required;
+      if (f.type === 'select') {
+        const opts = lines(r.optionsText);
+        if (opts.length >= 2 && opts.join('\n') !== f.options.join('\n')) o.options = opts;
+      }
+      if (Object.keys(o).length) cfg.overrides[f.key] = o;
+    });
+    ed.custom.forEach(function (q) {
+      const entry = { id: q.id, label: String(q.label || '').trim(), type: q.type, required: !!q.required };
+      if (q.type !== 'text') entry.options = lines(q.optionsText);
+      cfg.custom.push(entry);
+    });
+    return cfg;
+  }
+
+  function problem() {
+    for (let i = 0; i < ed.custom.length; i++) {
+      const q = ed.custom[i];
+      if (!String(q.label || '').trim()) return 'Scrivi il testo di ogni domanda.';
+      if (q.type !== 'text' && lines(q.optionsText).length < 2) return 'Una domanda a risposta multipla ha bisogno di almeno due risposte.';
+    }
+    const keys = Object.keys(ed.rows);
+    for (let j = 0; j < keys.length; j++) {
+      const r = ed.rows[keys[j]];
+      if (r.ask && !String(r.label || '').trim()) return 'Scrivi il testo di ogni domanda.';
+    }
+    return '';
+  }
+
+  function say(message) {
+    const el = document.getElementById('intake-msg');
+    if (el) el.textContent = message ? T(message) : '';
+  }
+
+  function render(container) {
+    const field = 'width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:15px;box-sizing:border-box;';
+    const small = 'font-size:10px;color:#ccc;font-weight:800;display:block;margin-top:8px;';
+    const check = function (checked, handler, text) {
+      return '<label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#eee;margin-right:14px;"><input type="checkbox" ' + (checked ? 'checked ' : '') + 'onchange="' + handler + '(this.checked)"> ' + escText(T(text)) + '</label>';
+    };
+    const builtinHtml = builtins().map(function (f) {
+      const r = ed.rows[f.key];
+      const k = escText(f.key);
+      return '<div style="padding:10px 0;border-bottom:1px solid #222;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">' +
+        '<div>' + check(r.ask, "CoachOS.intakeSet.bind(null,'" + k + "','ask')", 'Chiedila') + (r.ask ? check(r.required, "CoachOS.intakeSet.bind(null,'" + k + "','required')", 'Obbligatoria') : '') + '</div>' +
+        (r.ask && f.type === 'select' ? '<button type="button" class="btn btn-outline" style="font-size:9px;padding:4px 8px;" onclick="CoachOS.intakeToggleOptions(\'' + k + '\')">' + escText(T('SCELTE')) + '</button>' : '') + '</div>' +
+        (r.ask ? '<input type="text" maxlength="80" value="' + escText(r.label) + '" aria-label="' + escText(T('Testo della domanda')) + '" oninput="CoachOS.intakeSet(\'' + k + '\',\'label\',this.value)" style="' + field + '">' : '<div style="font-size:12px;color:#777;margin-top:4px;">' + escText(f.label) + '</div>') +
+        (r.ask && f.type === 'select' ? '<div id="ik-opts-' + k + '" style="display:none;"><label style="' + small + '">' + escText(T('Risposte (una per riga)')) + '<textarea rows="5" oninput="CoachOS.intakeSet(\'' + k + '\',\'optionsText\',this.value)" style="' + field + 'font-size:13px;">' + escText(r.optionsText) + '</textarea></label></div>' : '') +
+        '</div>';
+    }).join('');
+    const customHtml = ed.custom.map(function (q, i) {
+      return '<div style="padding:12px;margin-top:10px;border:1px solid #333;border-radius:10px;background:#141414;">' +
+        '<label style="' + small + 'margin-top:0;">' + escText(T('Testo della domanda')) + '<input type="text" maxlength="120" value="' + escText(q.label) + '" oninput="CoachOS.intakeCustomSet(' + i + ',\'label\',this.value)" style="' + field + '"></label>' +
+        '<label style="' + small + '">' + escText(T('Tipo')) + '<select onchange="CoachOS.intakeCustomSet(' + i + ',\'type\',this.value);CoachOS.intakeRedraw()" style="' + field + '">' +
+        TYPES.map(function (t) { return '<option value="' + t[0] + '"' + (q.type === t[0] ? ' selected' : '') + '>' + escText(T(t[1])) + '</option>'; }).join('') + '</select></label>' +
+        (q.type !== 'text' ? '<label style="' + small + '">' + escText(T('Risposte (una per riga)')) + '<textarea rows="4" oninput="CoachOS.intakeCustomSet(' + i + ',\'optionsText\',this.value)" style="' + field + 'font-size:13px;">' + escText(q.optionsText) + '</textarea></label>' : '') +
+        '<div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' + check(q.required, 'CoachOS.intakeCustomSet.bind(null,' + i + ",'required')", 'Obbligatoria') +
+        '<button type="button" class="btn btn-outline" style="font-size:9px;color:#c66;border-color:#c66;" onclick="CoachOS.intakeCustomRemove(' + i + ')">' + escText(T('ELIMINA')) + '</button></div></div>';
+    }).join('');
+    container.innerHTML = '<div class="coach-os-page" id="coach-intake-page">' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(T('Impostazioni coaching')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(T('Questionario dei nuovi clienti')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(T('È quello che compila un nuovo cliente al primo accesso. Puoi cambiare le domande che ci sono, toglierne e aggiungerne di tue, anche a risposta multipla (decidi prima le risposte). Alcune domande servono a scrivere le schede: se le togli, quei dati restano vuoti.')) + '</p></div></div>' +
+      '<div class="coach-os-card" style="padding:14px;">' +
+      '<div style="font-weight:900;color:var(--gold);">' + escText(T('Domande dell’app')) + '</div>' + builtinHtml + '</div>' +
+      '<div class="coach-os-card" style="padding:14px;margin-top:12px;">' +
+      '<div style="font-weight:900;color:var(--gold);">' + escText(T('Le tue domande')) + '</div>' + customHtml +
+      '<button type="button" class="btn btn-outline" style="width:100%;margin-top:12px;" onclick="CoachOS.intakeCustomAdd()">' + escText(T('AGGIUNGI DOMANDA')) + '</button></div>' +
+      '<div id="intake-msg" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
+      '<div style="display:grid;gap:8px;margin-top:6px;">' +
+      '<button type="button" class="btn btn-outline" onclick="CoachOS.intakePreview()">' + escText(T('ANTEPRIMA')) + '</button>' +
+      '<button type="button" class="btn btn-primary" id="intake-save" onclick="CoachOS.intakeSave()">' + escText(T('SALVA')) + '</button>' +
+      '<button type="button" class="btn btn-outline" style="color:#c66;border-color:#c66;" onclick="CoachOS.intakeReset()">' + escText(T('RIPRISTINA TUTTO')) + '</button></div></div>';
+  }
+  function redraw() {
+    const page = document.getElementById('coach-intake-page');
+    if (page && page.parentNode) { const y = window.scrollY; render(page.parentNode); try { window.scrollTo(0, y); } catch (_) {} }
+  }
+
+  CoachOS.intakeSet = function (key, field, value) { if (ed.rows[key]) { ed.rows[key][field] = value; if (field === 'ask' || field === 'required') redraw(); } };
+  CoachOS.intakeCustomSet = function (i, field, value) { if (ed.custom[i]) ed.custom[i][field] = value; };
+  CoachOS.intakeRedraw = redraw;
+  CoachOS.intakeToggleOptions = function (key) { const el = document.getElementById('ik-opts-' + key); if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'; };
+  CoachOS.intakeCustomAdd = function () {
+    ed.custom.push({ id: 'q' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), label: '', type: 'text', required: false, optionsText: '' });
+    redraw();
+  };
+  CoachOS.intakeCustomRemove = function (i) { ed.custom.splice(i, 1); redraw(); };
+
+  CoachOS.intakePreview = function () {
+    const message = problem();
+    if (message) { say(message); return; }
+    say('');
+    const backup = window.__cpIntakeConfig;
+    window.__cpIntakeConfig = toConfig();
+    let html = '';
+    try { html = intakeFormHtml('prev', {}); } finally { window.__cpIntakeConfig = backup; }
+    openCpModal('<h2>' + escText(T('Anteprima del questionario')) + '</h2><div style="max-height:60vh;overflow:auto;">' + html + '</div>' +
+      '<button class="btn btn-outline" style="width:100%;margin-top:10px;" onclick="closeCpModal()">' + escText(T('CHIUDI')) + '</button>');
+  };
+
+  CoachOS.intakeSave = async function () {
+    if (ed.busy) return;
+    const message = problem();
+    if (message) { say(message); return; }
+    ed.busy = true;
+    const btn = document.getElementById('intake-save');
+    if (btn) btn.disabled = true;
+    try {
+      const data = await window.practiceFetch('/api/coach/settings/intake', { method: 'PUT', headers: window.practiceHeaders(true), body: JSON.stringify({ config: toConfig() }) }, 20000);
+      window.__cpIntakeConfig = data.config;
+      window.__cpIntakeConfigFor = String((store && store.accountUser && store.accountUser.id) || '');
+      load(data.config);
+      if (typeof window.practiceToast === 'function') window.practiceToast(T('Questionario salvato'), 'success');
+      redraw();
+    } catch (error) {
+      say((error && error.message) || 'Questionario non salvato. Riprova.');
+      if (btn) btn.disabled = false;
+    }
+    ed.busy = false;
+  };
+
+  CoachOS.intakeReset = async function () {
+    if (!window.confirm(T('Ripristinare il questionario di Nurvan? Le tue modifiche e le tue domande vanno perse.'))) return;
+    try {
+      const data = await window.practiceFetch('/api/coach/settings/intake', { method: 'PUT', headers: window.practiceHeaders(true), body: JSON.stringify({ config: {} }) }, 20000);
+      window.__cpIntakeConfig = data.config;
+      load(data.config);
+      redraw();
+    } catch (error) {
+      say((error && error.message) || 'Questionario non salvato. Riprova.');
+    }
+  };
+
+  CoachOS.views.coachIntake = async function (container) {
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(T('Carico…')) + '</div>';
+    let cfg = null;
+    try { cfg = await window.ensureIntakeConfig(true); } catch (_) {}
+    load(cfg);
+    if (typeof currentView === 'undefined' || currentView === 'coachIntake') render(container);
+  };
+
+  CoachOS.intakeTestHooks = { load: load, toConfig: toConfig, problem: problem, ed: ed };
 })();
 
 (function () {

@@ -98,6 +98,7 @@ import {
   dueClients,
   EXPENSE_CATEGORIES
 } from "./server/coach-os/business.mjs";
+import { sanitizeIntakeConfig, sanitizeCustomAnswers, requiredKeys, getIntakeConfig, saveIntakeConfig } from "./server/coach-os/settings.mjs";
 import { getBranding, saveBranding, removeBranding, brandForInvite, iconForInvite, forgetBrandCache, ICON_SIZES } from "./server/coach-os/branding.mjs";
 import {
   listQuickReplies,
@@ -165,9 +166,18 @@ const INTAKE_REQUIRED = [
   "equipment", "injuryPrimary", "jobType", "sleepHours", "stress"
 ];
 
-function sanitizeIntake(raw) {
+// The fixed questions that are a list of choices (all but the name): the ones a coach may give other choices to.
+const INTAKE_SELECT_KEYS = INTAKE_KEYS.filter((k) => k !== "firstName" && k !== "lastName");
+
+// config: the coach's version of the questionnaire (settings.mjs); with it, the answers to the coach's own questions
+// are read and checked against them. Without it, an answer already stored (a list) is kept as it is.
+function sanitizeIntake(raw, config) {
   const out = {};
   if (!raw || typeof raw !== "object") return out;
+  if (raw.custom != null) {
+    const custom = sanitizeCustomAnswers(raw.custom, config);
+    if (custom.length) out.custom = custom;
+  }
   INTAKE_KEYS.forEach((k) => {
     const v = raw[k];
     if (v == null) return;
@@ -202,8 +212,15 @@ function sanitizeIntake(raw) {
   return out;
 }
 
-function intakeMissing(intake) {
-  return INTAKE_REQUIRED.filter((k) => !intake[k]);
+function intakeMissing(intake, config) {
+  const missing = requiredKeys(INTAKE_REQUIRED, INTAKE_KEYS, config).filter((k) => !intake[k]);
+  const answered = new Map((Array.isArray(intake.custom) ? intake.custom : []).map((e) => [e.id, e.answer]));
+  for (const q of (config && Array.isArray(config.custom)) ? config.custom : []) {
+    if (!q.required) continue;
+    const a = answered.get(q.id);
+    if (a == null || a === "" || (Array.isArray(a) && !a.length)) missing.push("custom:" + q.id);
+  }
+  return missing;
 }
 
 function bandMid(value) {
@@ -1309,6 +1326,7 @@ export function mountCoachPractice(app, deps) {
         client: clientRow(ctx.client, { includeIntake: true }),
         entitlement,
         coachName: coach.rows[0]?.name || "Coach",
+        intakeConfig: await getIntakeConfig(pool, ctx.client.coach_user_id),
         brand: await (async () => {
           try {
             const b = await getBranding(pool, ctx.client.coach_user_id);
@@ -1747,8 +1765,9 @@ export function mountCoachPractice(app, deps) {
   app.post("/api/client/intake", async (req, res) => {
     const ctx = await requireAthlete(req, res);
     if (!ctx) return;
-    const intake = sanitizeIntake(req.body?.intake || req.body);
-    const missing = intakeMissing(intake);
+    const intakeConfig = await getIntakeConfig(pool, ctx.client.coach_user_id);
+    const intake = sanitizeIntake(req.body?.intake || req.body, intakeConfig);
+    const missing = intakeMissing(intake, intakeConfig);
     if (missing.length) {
       return res.status(400).json({ error: "Completa tutti i campi obbligatori.", missing });
     }
@@ -2245,7 +2264,8 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const intakeMode = String(req.body?.intakeMode || req.body?.mode || "new") === "transition" ? "transition" : "new";
     const coachingMode = COACHING_MODES.includes(String(req.body?.coachingMode || "")) ? String(req.body.coachingMode) : "remote";
-    const intake = sanitizeIntake(req.body?.intake || {});
+    const intakeConfig = await getIntakeConfig(pool, coach.id);
+    const intake = sanitizeIntake(req.body?.intake || {}, intakeConfig);
     const firstName = String(req.body?.firstName || intake.firstName || "").trim();
     const lastName = String(req.body?.lastName || intake.lastName || "").trim();
     const displayName = String(req.body?.name || req.body?.displayName || [firstName, lastName].filter(Boolean).join(" ")).trim().slice(0, 80);
@@ -2254,8 +2274,8 @@ export function mountCoachPractice(app, deps) {
       return res.status(400).json({ error: "Nome e password (min. 4) sono obbligatori." });
     }
     if (intakeMode === "transition") {
-      const filled = sanitizeIntake({ ...intake, firstName: firstName || intake.firstName, lastName: lastName || intake.lastName });
-      const missing = intakeMissing(filled);
+      const filled = sanitizeIntake({ ...intake, firstName: firstName || intake.firstName, lastName: lastName || intake.lastName }, intakeConfig);
+      const missing = intakeMissing(filled, intakeConfig);
       if (missing.length) {
         return res.status(400).json({
           error: "In transizione il questionario lo compili tu: mancano dei campi.",
@@ -2824,8 +2844,9 @@ export function mountCoachPractice(app, deps) {
     if (!coach) return;
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
-    const intake = sanitizeIntake(req.body?.intake || req.body);
-    const missing = intakeMissing(intake);
+    const intakeConfig = await getIntakeConfig(pool, coach.id);
+    const intake = sanitizeIntake(req.body?.intake || req.body, intakeConfig);
+    const missing = intakeMissing(intake, intakeConfig);
     if (missing.length) {
       return res.status(400).json({ error: "Questionario incompleto.", missing });
     }
@@ -2853,8 +2874,9 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const pending = row.pending_intake && typeof row.pending_intake === "object" ? row.pending_intake : null;
-    const intake = pending && pending.intake ? sanitizeIntake(pending.intake) : null;
-    if (!intake || intakeMissing(intake).length) {
+    const intakeConfig = await getIntakeConfig(pool, coach.id);
+    const intake = pending && pending.intake ? sanitizeIntake(pending.intake, intakeConfig) : null;
+    if (!intake || intakeMissing(intake, intakeConfig).length) {
       return res.status(400).json({ error: "Nessun aggiornamento anagrafica in attesa." });
     }
     const profile = profileFromIntake(intake);
@@ -3890,6 +3912,27 @@ export function mountCoachPractice(app, deps) {
     const done = await deleteExpense(pool, coach.id, req.params.id);
     if (!done) return res.status(404).json({ error: "Spesa non trovata." });
     return res.json({ ok: true });
+  });
+
+  // The coach's version of the questionnaire a new client answers.
+  app.get("/api/coach/settings/intake", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    return res.json({ ok: true, config: await getIntakeConfig(pool, coach.id) });
+  });
+
+  app.put("/api/coach/settings/intake", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const config = sanitizeIntakeConfig(req.body && req.body.config, INTAKE_KEYS, INTAKE_SELECT_KEYS);
+    await saveIntakeConfig(pool, coach.id, config);
+    return res.json({ ok: true, config });
+  });
+
+  app.get("/api/client/intake-config", async (req, res) => {
+    const ctx = await requireAthlete(req, res);
+    if (!ctx) return;
+    return res.json({ ok: true, config: await getIntakeConfig(pool, ctx.client.coach_user_id) });
   });
 
   // The coach's (or gym's) name and logo, as their clients' web app shows them.

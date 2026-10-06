@@ -3729,7 +3729,9 @@ var NURVAN_DOMAIN_FIELDS = [
   'mapStamps', 'mapDeletes', 'mapSyncBase',
   // The other active programs (parked with their loads): the person's own,
   // like the active one.
-  'parkedPrograms', 'parkedProgramsAt'
+  'parkedPrograms', 'parkedProgramsAt',
+  // The workout in progress: its clock and its undo list. A coach who starts a client's workout must not start their own.
+  'sessionStartedAt', 'sessionStartedDate', 'sessionPausedMs', 'sessionPausedAt', 'sessionClockRunning', 'workoutUndo'
 ];
 
 var NurvanMemory = {
@@ -3785,15 +3787,23 @@ function nurvanActivateArea(name) {
   const area = NurvanMemory[name];
   if (!area) return false;
   const leaving = nurvanActiveArea();
-  if (leaving && leaving !== area) {
+  const switching = !!(leaving && leaving !== area);
+  if (switching) {
     leaving.DATA = DATA;
     leaving.currentWeek = currentWeek;
     leaving.currentDay = currentDay;
+    // The rest timer between sets belongs to the workout it was started in, like the session clock.
+    leaving.restTimer = window.__restTimer || null;
+    leaving.restOverrides = window.__restOverrides || null;
   }
   NurvanMemory.active = name;
   DATA = area.DATA;
   currentWeek = area.currentWeek;
   currentDay = area.currentDay;
+  if (switching) {
+    window.__restTimer = area.restTimer || null;
+    window.__restOverrides = area.restOverrides || {};
+  }
   return true;
 }
 
@@ -15964,6 +15974,13 @@ var PAGE_TUTORIALS = {
   ] },
   coachAgent: { label: 'Agente Nurvan', icon: '🧠', who: 'coach', steps: [
     { t: 'Chiedi all’agente', d: 'Scrivi cosa vuoi fare sui tuoi clienti: l’agente prepara l’azione e ti mostra l’anteprima. Parte solo se confermi.' }
+  ] },
+  coachSettings: { label: 'Coach · Impostazioni coaching', icon: '⚙️', who: 'coach', steps: [
+    { t: 'Le tue impostazioni', d: 'Qui trovi tutto quello che personalizzi del tuo modo di lavorare: il marchio, il questionario dei nuovi clienti, il testo dell’invito, il gestionale e la presenza online.' }
+  ] },
+  coachIntake: { label: 'Coach · Questionario', icon: '📝', who: 'coach', steps: [
+    { t: 'Le domande dell’app', d: 'Per ogni domanda decidi se farla, se è obbligatoria, come si chiama e, quando è a scelta, quali sono le risposte. Alcune servono a scrivere le schede: se le togli quei dati restano vuoti.' },
+    { t: 'Le tue domande', d: 'Con AGGIUNGI DOMANDA scrivi una domanda tua: a testo libero, a una risposta o a più risposte. Per quelle a scelta scrivi prima le risposte, una per riga. ANTEPRIMA mostra come la vede il cliente; SALVA la rende attiva per i nuovi clienti.' }
   ] },
   coachBrand: { label: 'Coach · Il tuo marchio', icon: '🏷️', who: 'coach', steps: [
     { t: 'Il tuo nome e il tuo logo', d: 'Scrivi il nome della tua palestra o il tuo, scegli il logo e ritaglialo: trascina per spostarlo, il cursore ingrandisce. Sul bordo in basso si sovrappone “powered by Nurvan”.' },

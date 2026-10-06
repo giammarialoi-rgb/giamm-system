@@ -32,6 +32,51 @@ var CLIENT_INTAKE_FIELDS = [
   { key: 'rmMilitary', label: '1RM Military press (presunto)', type: 'select', required: false, options: ['Non so / Mai fatti', '20 kg', '30 kg', '40 kg', '50 kg', '60 kg', '70 kg', '80 kg', '90 kg', '100+ kg'] }
 ];
 
+// The coach's version of the questionnaire (Impostazioni coaching): fixed questions hidden / renamed / required or not /
+// with other choices, and questions of the coach's own (open, one choice, several choices). Without one: the fixed list.
+window.__cpIntakeConfig = null;
+function intakeFields() {
+  const cfg = window.__cpIntakeConfig;
+  if (!cfg || typeof cfg !== 'object') return CLIENT_INTAKE_FIELDS;
+  const hidden = {};
+  (cfg.hidden || []).forEach(function (k) { hidden[k] = true; });
+  const ov = cfg.overrides || {};
+  const out = [];
+  CLIENT_INTAKE_FIELDS.forEach(function (f) {
+    if (hidden[f.key]) return;
+    const o = ov[f.key] || {};
+    out.push(Object.assign({}, f, {
+      label: o.label || f.label,
+      required: typeof o.required === 'boolean' ? o.required : f.required,
+      options: (f.type === 'select' && Array.isArray(o.options) && o.options.length) ? o.options : f.options
+    }));
+  });
+  (cfg.custom || []).forEach(function (q) {
+    out.push({ key: 'custom:' + q.id, id: q.id, custom: true, label: q.label, type: q.type === 'text' ? 'text' : (q.type === 'multi' ? 'multi' : 'select'), required: !!q.required, options: q.options || [] });
+  });
+  return out;
+}
+// The answer to one of the coach's own questions, from the stored list ([{ id, answer }]) or from the form's map ({ id: answer }).
+function intakeCustomAnswer(values, id) {
+  const c = values && values.custom;
+  if (Array.isArray(c)) { const hit = c.filter(function (e) { return e && e.id === id; })[0]; return hit ? hit.answer : ''; }
+  if (c && typeof c === 'object' && c[id] != null) return c[id];
+  return '';
+}
+async function ensureIntakeConfig(force) {
+  const owner = String((store && store.accountUser && store.accountUser.id) || '');
+  if (window.__cpIntakeConfig && window.__cpIntakeConfigFor === owner && !force) return window.__cpIntakeConfig;
+  try {
+    const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+    const r = await practiceFetch(athlete ? '/api/client/intake-config' : '/api/coach/settings/intake', { method: 'GET', headers: practiceHeaders(false) }, 12000);
+    if (r && r.config) { window.__cpIntakeConfig = r.config; window.__cpIntakeConfigFor = owner; }
+  } catch (_) {}
+  return window.__cpIntakeConfig || null;
+}
+window.ensureIntakeConfig = ensureIntakeConfig;
+window.intakeFields = intakeFields;
+window.intakeCustomAnswer = intakeCustomAnswer;
+
 var CLIENT_TUTORIAL_STEPS = [
   { t: 'La scheda arriva dal coach', d: 'Non importi PDF da solo: il tuo coach ti assegna il programma. Se non vedi nulla, chiedila dalla Home.' },
   { t: 'Allena e finalizza', d: 'Apri Allenati, registra le serie e tocca Finalizza. Così il coach vede che hai lavorato.' },
@@ -159,7 +204,7 @@ function gatePracticeView(v) {
       generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1,
       coachToday: 1, coachInbox: 1, coachChat: 1, coachPrograms: 1, coachImport: 1,
       coachCalendar: 1, coachLibrary: 1, coachCheckIns: 1, coachNutrition: 1,
-      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1, coachBrand: 1,
+      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachSettings: 1, coachIntake: 1,
       coachCrm: 1, coachActionCenter: 1, coachFormReview: 1,
       coachMealAi: 1, coachAgentAudit: 1
     };
@@ -172,7 +217,7 @@ function gatePracticeView(v) {
       coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
       coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
       coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-      coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
+      coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachSettings: 1, coachIntake: 1, coachCrm: 1,
       coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
       home: 1, settings: 1, ai: 1
     };
@@ -967,24 +1012,37 @@ function intakeFormHtml(prefix, values, opts) {
   opts = opts || {};
   values = values || {};
   const skipName = !!opts.skipName;
-  const fields = CLIENT_INTAKE_FIELDS.filter(function (f) {
+  const fields = intakeFields().filter(function (f) {
     return !(skipName && (f.key === 'firstName' || f.key === 'lastName'));
   }).map(function (f) {
     const id = prefix + '-' + f.key;
-    const val = values[f.key] || '';
+    const val = f.custom ? intakeCustomAnswer(values, f.id) : (values[f.key] || '');
     const req = f.required ? ' *' : '';
     if (f.type === 'text') {
-      return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
-        '<input id="' + id + '" type="text" value="' + esc(val) + '" autocomplete="name"></div>';
+      return '<div class="cp-field"><label for="' + id + '">' + esc(f.label) + req + '</label>' +
+        '<input id="' + id + '" type="text" value="' + esc(Array.isArray(val) ? val.join(', ') : val) + '"' + (f.custom ? ' maxlength="500"' : ' autocomplete="name"') + '></div>';
+    }
+    if (f.type === 'multi') {
+      const picked = Array.isArray(val) ? val : [];
+      return '<div class="cp-field"><label>' + esc(f.label) + req + '</label>' +
+        '<div id="' + id + '" data-multi="1" style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">' +
+        f.options.map(function (o) {
+          return '<label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #333;border-radius:8px;background:#111;font-size:13px;color:#eee;">' +
+            '<input type="checkbox" value="' + esc(o) + '"' + (picked.indexOf(o) >= 0 ? ' checked' : '') + '> ' + esc(o) + '</label>';
+        }).join('') + '</div></div>';
     }
     const optsHtml = '<option value="">Seleziona…</option>' + f.options.map(function (o) {
       return '<option value="' + esc(o) + '"' + (val === o ? ' selected' : '') + '>' + esc(o) + '</option>';
     }).join('');
-    return '<div class="cp-field"><label for="' + id + '">' + f.label + req + '</label>' +
+    return '<div class="cp-field"><label for="' + id + '">' + esc(f.label) + req + '</label>' +
       '<select id="' + id + '">' + optsHtml + '</select></div>';
   }).join('');
   return fields + intakeAllergiesHtml(prefix, values.allergies) + intakeEnhancedHtml(prefix, values);
 }
+
+window.intakeFormHtml = function () { return intakeFormHtml.apply(null, arguments); };
+window.readIntakeForm = function () { return readIntakeForm.apply(null, arguments); };
+window.intakeFormMissing = function () { return intakeFormMissing.apply(null, arguments); };
 
 function intakeEnhancedHtml(prefix, values) {
   values = values || {};
@@ -1090,9 +1148,16 @@ function readIntakeAllergies(prefix) {
 
 function readIntakeForm(prefix) {
   const out = {};
-  CLIENT_INTAKE_FIELDS.forEach(function (f) {
+  intakeFields().forEach(function (f) {
     const el = document.getElementById(prefix + '-' + f.key);
-    if (el) out[f.key] = String(el.value || '').trim();
+    if (!el) return;
+    let v;
+    if (f.type === 'multi') {
+      v = Array.prototype.map.call(el.querySelectorAll('input[type=checkbox]:checked'), function (i) { return i.value; });
+    } else {
+      v = String(el.value || '').trim();
+    }
+    if (f.custom) { if (!out.custom) out.custom = {}; out.custom[f.id] = v; } else out[f.key] = v;
   });
   out.allergies = readIntakeAllergies(prefix);
   Object.assign(out, readIntakeEnhanced(prefix));
@@ -1113,8 +1178,10 @@ function intakeAllergyLabels(ids) {
 }
 
 function intakeFormMissing(data) {
-  return CLIENT_INTAKE_FIELDS.filter(function (f) {
-    return f.required && !data[f.key];
+  return intakeFields().filter(function (f) {
+    if (!f.required) return false;
+    if (f.custom) { const a = intakeCustomAnswer(data, f.id); return Array.isArray(a) ? !a.length : !a; }
+    return !data[f.key];
   }).map(function (f) { return f.label; });
 }
 
@@ -2155,6 +2222,7 @@ async function showClientIntake(prefill, force) {
   }
   window.__cpIntakeShowGen = (window.__cpIntakeShowGen || 0) + 1;
   const gen = window.__cpIntakeShowGen;
+  try { await ensureIntakeConfig(); } catch (_) {}
   try {
     if (typeof ensureAllergenIntoleranceCatalog === 'function') await ensureAllergenIntoleranceCatalog();
   } catch (_) {}
@@ -2280,6 +2348,7 @@ async function showCoachClientIntake(clientId, prefill) {
   ensurePracticeOverlays();
   const p = document.getElementById('cp-intake-panel');
   if (!p) return;
+  try { await ensureIntakeConfig(); } catch (_) {}
   try {
     if (typeof ensureAllergenIntoleranceCatalog === 'function') await ensureAllergenIntoleranceCatalog();
   } catch (_) {}
@@ -3506,6 +3575,7 @@ function openAddClientWizard() {
   window.__cpAddMode = window.__cpAddMode || 'new';
   drawAddClientWizard();
   showOverlay('cp-add', true);
+  try { ensureIntakeConfig().then(function () { if (window.__cpAddMode === 'transition') drawAddClientWizard(); }); } catch (_) {}
   try {
     if (typeof ensureAllergenIntoleranceCatalog === 'function') {
       ensureAllergenIntoleranceCatalog().then(function () {
@@ -4332,7 +4402,11 @@ async function renderCoachWorkspace(c) {
       ['Peso', intakeOrProfile('weightBand', ['weight', 'weightBand'])],
       ['Obiettivo', intakeOrProfile('goal', ['goal', 'primaryGoal'])]
     ].filter(function (row) { return row[1]; });
-    const intakeRows = CLIENT_INTAKE_FIELDS.filter(function (f) {
+    const customRows = (Array.isArray(intake.custom) ? intake.custom : []).map(function (e) {
+      const a = Array.isArray(e.answer) ? e.answer.join(', ') : String(e.answer || '');
+      return '<div class="cp-row"><span style="color:#888;font-size:11px;">' + esc(e.label) + '</span><span style="font-size:12px;color:#fff;">' + esc(a) + '</span></div>';
+    }).join('');
+    const intakeRows = customRows + CLIENT_INTAKE_FIELDS.filter(function (f) {
       return intake[f.key] || intakeOrProfile(f.key);
     }).map(function (f) {
       const val = intake[f.key] || intakeOrProfile(f.key);
@@ -4551,6 +4625,12 @@ function resetSandboxSessionState() {
   store.warmups = {};
   store.warmupProgress = {};
   store.warmupAssignment = null;
+  store.sessionStartedAt = null;
+  store.sessionStartedDate = null;
+  store.sessionPausedMs = 0;
+  store.sessionPausedAt = null;
+  store.sessionClockRunning = null;
+  store.workoutUndo = null;
 }
 
 function stripProgramSessionPerformance(prog) {
@@ -6832,6 +6912,7 @@ async function refreshAthleteMe() {
     store.coachOnline = !!me.coachOnline;
     store.coachLastSeen = me.coachLastSeen || null;
     store.coachBrand = me.brand || null;
+    if (me.intakeConfig && typeof me.intakeConfig === 'object') { window.__cpIntakeConfig = me.intakeConfig; window.__cpIntakeConfigFor = String((store.accountUser && store.accountUser.id) || ''); }
     applyCoachBrand();
     store.role = 'athlete';
     store.clientShell = true;
@@ -7136,7 +7217,7 @@ function wrapPracticeHooks() {
           coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
           coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
           coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-          coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
+          coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachSettings: 1, coachIntake: 1, coachCrm: 1,
           coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
           home: 1, settings: 1, ai: 1
         };
