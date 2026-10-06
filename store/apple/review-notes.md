@@ -1,5 +1,7 @@
 # App Store Connect › Versione › Informazioni per la revisione dell'app
 
+> **Dopo la bocciatura (Guideline 2.1) il testo in inglese da incollare nel campo Note è in `docs/APPLE-REVIEW-NOTES.md`**: sostituisce quello qui sotto, che resta come riferimento in italiano.
+
 ## Account di prova
 Le password NON stanno in questo file. Creale con lo script (vedi `../README.md`, passo 3) e incollale nei campi di App Store Connect.
 
