@@ -39,7 +39,7 @@ import { mountProgramShare } from "./server/program/share.mjs";
 import { reqLang, SERVER_LANGS } from "./server/i18n.mjs";
 import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDict, translateHtml } from "./server/site/i18n.mjs";
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
-import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, mountConsentRoutes } from "./server/account/consent.mjs";
+import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, aiConsentActive, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
 import { createAnalytics } from "./server/admin/analytics.mjs";
 import { adminSlug } from "./server/admin/link.mjs";
@@ -167,6 +167,11 @@ app.post(AI_ROUTES, async (req, res, next) => {
       const row = await readConsentRow(pool, auth.id);
       if (aiConsentWithdrawn(row)) {
         return res.status(403).json({ error: "Hai revocato il consenso alle funzioni AI. Puoi riattivarlo da Impostazioni > Privacy e dati.", code: "AI_CONSENT_WITHDRAWN" });
+      }
+      // Nothing goes to the AI provider without a consent the server knows (the app asks before the first use; a request
+      // with no consent on record is refused and the app asks, then tries again).
+      if (!aiConsentActive(row)) {
+        return res.status(403).json({ error: "Per usare le funzioni AI serve il tuo consenso: attivale da Impostazioni > Privacy e dati.", code: "AI_CONSENT_REQUIRED" });
       }
     } catch (err) {
       console.warn("AI_CONSENT_CHECK", err && err.message);

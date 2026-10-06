@@ -139,7 +139,7 @@ console.log('--- 6. consensi sul server ---');
     && !validMainConsent({ version: v, age: 'true', terms: true, health: true }, v));
   const t0 = '2026-09-01T10:00:00Z', t1 = '2026-09-10T10:00:00Z';
   ok('6b. AI: dato, revocato, ridato', aiConsentActive({ ai_consent_at: t0 }) && !aiConsentActive({ ai_consent_at: t0, ai_consent_withdrawn_at: t1 }) && aiConsentActive({ ai_consent_at: t1, ai_consent_withdrawn_at: t0 }));
-  ok('6c. il server rifiuta l\'AI solo dopo una revoca (mai chiesto = decide l\'app)', aiConsentWithdrawn({ ai_consent_withdrawn_at: t1 }) && !aiConsentWithdrawn({}) && !aiConsentWithdrawn(null));
+  ok('6c. il server rifiuta l\'AI senza un consenso registrato (mai dato o revocato)', aiConsentWithdrawn({ ai_consent_withdrawn_at: t1 }) && !aiConsentWithdrawn({}) && !aiConsentActive({}) && !aiConsentActive(null) && aiConsentActive({ ai_consent_at: t0 }));
   const st = consentState({ consent_version: v, consent_at: t0, age_confirmed_at: t0, health_consent_at: t0 }, v);
   ok('6d. stato: ok solo per la versione in vigore', st.ok === true && consentState({ consent_version: '2020-01-01', age_confirmed_at: t0, health_consent_at: t0 }, v).ok === false);
 
@@ -284,7 +284,8 @@ console.log('--- 7. consensi nella pagina ---');
   ctx.isAthleteRole = () => true;
   ok('7l. anche l\'atleta puo\' eliminare il suo account (regola degli store)', /openDeleteAccount\(\)/.test(ctx.renderPrivacySettingsCard()));
 
-  ok('7m. apiFetch chiede il consenso AI prima della prima richiesta AI', /async function apiFetch\(url, options, timeoutMs=90000\) \{\n  if \(isAiRequest\(url, options\) && !\(await ensureAiConsent\(\)\)\) throw aiConsentDeclinedError\(\);/.test(SRC));
+  ok('7m. apiFetch chiede il consenso AI prima della prima richiesta AI', SRC.includes('if (aiCall && !(await ensureAiConsent())) throw aiConsentDeclinedError();'));
+  ok('7m2. se il server risponde AI_CONSENT_REQUIRED l\'app chiede il consenso e riprova una volta', SRC.includes("code === 'AI_CONSENT_REQUIRED'") && /AI_CONSENT_REQUIRED[\s\S]{0,260}ensureAiConsent\(\)/.test(SRC));
   ok('7n. registrazione: tre caselle obbligatorie, consenso inviato col modulo', /id="consent-age"/.test(SRC) && /id="consent-terms"/.test(SRC) && /id="consent-health"/.test(SRC) && /body\.consent = \{ version: legalConfig\(\)\.version, age: true, terms: true, health: true \}/.test(SRC));
   ok('7o. il controllo parte all\'avvio, dopo ogni accesso e per gli atleti', (SRC.match(/ensurePrivacyConsent\(\); \} catch \(_\) \{\}/g) || []).length >= 4 && /ensurePrivacyConsent/.test(read('web/coach-practice-ui.js')));
   ok('7p. link a informativa e termini nella schermata di accesso', /id="account-legal-links"/.test(SRC));

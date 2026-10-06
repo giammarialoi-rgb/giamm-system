@@ -32,5 +32,10 @@ console.log('--- 4. avvisi medici fissi in Esami, Integratori, Terapia, Coach AI
 const fnBody = (name) => { const a = page.search(new RegExp('function ' + name + String.raw`\(c\) ?\{`)); return page.slice(a, a + 9000); };
 ok('4a. Esami, Integratori, Terapia e Coach AI mostrano l’avviso in cima, non chiudibile', [['renderExams', 'exams'], ['renderSupplements', 'supplements'], ['renderTherapy', 'therapy'], ['renderAI', 'ai']].every(([fn, kind]) => fnBody(fn).includes("domainNoticeHtml('" + kind + "')")) && !/domain-notice[^>]*onclick/.test(page));
 ok('4b. gli avvisi dicono medico / non prescrizione / non diagnosi', /non diagnosi/.test(page) && /non prescrizione/.test(page) && /non un medico/.test(page));
+console.log('--- 5. consenso AI: testo chiaro e controllo lato server ---');
+const apiSrc = read('coach-api.mjs');
+ok('5a. il foglio del consenso dice cosa viene inviato, a chi e come viene usato (niente addestramento)', page.includes('Cosa viene inviato:') && page.includes('Come vengono usati:') && page.includes('non li usa per addestrare modelli di AI'));
+ok('5b. il server rifiuta le richieste AI senza un consenso registrato (AI_CONSENT_REQUIRED)', apiSrc.includes('!aiConsentActive(row)') && apiSrc.includes('AI_CONSENT_REQUIRED'));
+ok('5c. l’app manda il consenso prima della richiesta e, se il server lo chiede, mostra il foglio e riprova', page.includes('await sendPendingConsents()') && page.includes("code === 'AI_CONSENT_REQUIRED'"));
 console.log(failed ? '\n' + failed + ' controlli falliti.' : '\nBlocchi della review Apple: tutto in regola.');
 process.exit(failed ? 1 : 0);

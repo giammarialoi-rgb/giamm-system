@@ -6395,6 +6395,10 @@ function ensureAiConsent() {
   if (aiConsentAsk) return aiConsentAsk;
   aiConsentAsk = new Promise(function (resolve) {
     showAiConsentSheet(resolve);
+  }).then(async function (granted) {
+    // The server refuses the AI without a consent it knows: it is sent first, then the request goes.
+    if (granted) { try { await sendPendingConsents(); } catch (_) {} }
+    return granted;
   }).finally(function () { aiConsentAsk = null; });
   return aiConsentAsk;
 }
@@ -6410,6 +6414,8 @@ function showAiConsentSheet(done) {
     '<div class="card" style="max-width:440px;width:100%;max-height:92vh;overflow:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
     '<div style="font-size:12px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">FUNZIONI AI</div>' +
     '<div style="font-size:12px;color:#ccc;line-height:1.55;">Coach AI, l’import dei programmi da file e il riconoscimento di pasti, etichette e codici a barre usano <b style="color:#fff;">Google Gemini</b>. Per rispondere inviamo a Google il testo della richiesta, il file o la foto e il contesto necessario (per esempio il programma attivo o i tuoi obiettivi), che possono contenere dati sulla salute. Google li tratta per conto di Nurvan, come indicato nell’' + legalLinkHtml('privacy', 'informativa privacy') + '.</div>' +
+    '<div style="font-size:12px;color:#ccc;line-height:1.55;margin-top:10px;"><b style="color:#fff;">Cosa viene inviato:</b> <span>solo quello che scrivi, carichi o fotografi per quella richiesta, più il contesto che serve a rispondere (programma attivo, obiettivi, dati di allenamento e, se li usi nella domanda, esami o dati di salute). Prima del tuo consenso non parte nulla.</span></div>' +
+    '<div style="font-size:12px;color:#ccc;line-height:1.55;margin-top:10px;"><b style="color:#fff;">Come vengono usati:</b> <span>Google li elabora per rispondere, secondo i termini dell’API Gemini; Nurvan non li usa per addestrare modelli di AI, né per pubblicità, e non li vende.</span></div>' +
     '<div style="font-size:11px;color:#999;line-height:1.5;margin-top:10px;">Le risposte dell’AI possono essere sbagliate e non sono un parere medico. Puoi revocare il consenso in ogni momento da Impostazioni › Privacy e dati.</div>' +
     '<button type="button" class="btn btn-primary" id="ai-consent-yes" style="width:100%;height:44px;font-weight:800;margin-top:14px;">ATTIVA LE FUNZIONI AI</button>' +
     '<button type="button" class="btn btn-outline" id="ai-consent-no" style="width:100%;margin-top:8px;">NON ORA</button>' +
@@ -11199,12 +11205,25 @@ function withAccountAuth(url, options) {
 }
 
 async function apiFetch(url, options, timeoutMs=90000) {
-  if (isAiRequest(url, options) && !(await ensureAiConsent())) throw aiConsentDeclinedError();
+  const aiCall = isAiRequest(url, options);
+  if (aiCall && !(await ensureAiConsent())) throw aiConsentDeclinedError();
+  if (aiCall && store && store.aiConsent && store.aiConsent.granted && store.aiConsent.synced === false) { try { await sendPendingConsents(); } catch (_) {} }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   console.debug('[Coach AI] request', url);
   try {
-    const response = await fetch(url, { ...withAccountAuth(url, options), signal: controller.signal });
+    let response = await fetch(url, { ...withAccountAuth(url, options), signal: controller.signal });
+    // The server knows no consent for this account (a new device, a choice never sent): the sheet is shown and the request
+    // goes once more, if the person agrees.
+    if (aiCall && response.status === 403) {
+      let code = '';
+      try { code = (await response.clone().json()).code || ''; } catch (_) {}
+      if (code === 'AI_CONSENT_REQUIRED') {
+        store.aiConsent = { granted: false, withdrawn: false, at: null, synced: true };
+        if (!(await ensureAiConsent())) throw aiConsentDeclinedError();
+        response = await fetch(url, { ...withAccountAuth(url, options), signal: controller.signal });
+      }
+    }
     console.debug('[Coach AI] response', response.status, url);
     return response;
   } catch(err) {
