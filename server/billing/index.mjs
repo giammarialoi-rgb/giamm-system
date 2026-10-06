@@ -213,7 +213,21 @@ export function createBilling({ pool, initDb, env = process.env, fetchImpl = glo
     return { ok: true, plan: account.plan, changed: false };
   }
 
-  return { apply, refresh, ensure };
+  // The account is deleted: the person is removed from RevenueCat too (its API: DELETE subscriber). It does not cancel a
+  // subscription: only the store can, which is why the app says so before the account is deleted. Best effort.
+  async function forget(userId) {
+    const key = String(env.REVENUECAT_SECRET_KEY || "").trim();
+    if (!key) return { ok: false, reason: "not-configured" };
+    try {
+      const r = await fetchImpl("https://api.revenuecat.com/v1/subscribers/" + encodeURIComponent(String(userId)), { method: "DELETE", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" } });
+      return { ok: r.ok || r.status === 404, status: r.status };
+    } catch (err) {
+      console.warn("BILLING_FORGET", err && err.message);
+      return { ok: false, reason: "network" };
+    }
+  }
+
+  return { apply, refresh, ensure, forget };
 }
 
 function sameSecret(a, b) {

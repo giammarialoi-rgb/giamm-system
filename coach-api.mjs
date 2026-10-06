@@ -2404,11 +2404,15 @@ mountCoachPractice(app, {
 });
 
 mountPlanRoutes(app, { pool, initDb, accountFromBearer });
-mountBilling(app, { pool, initDb, accountFromBearer });
+const billing = mountBilling(app, { pool, initDb, accountFromBearer });
 const appleAuth = mountAppleAuth(app, { pool, initDb, secret: JWT_SECRET, accountFromBearer, issueAccountToken });
 mountGoogleAppAuth(app, { pool, initDb, secret: JWT_SECRET, verifyGoogleCredential, resolveIdentityUser, clientId: publicGoogleClientId });
 appleCallbackTarget.handle = appleAuth.callbackHandler;
-mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted: (gone) => appleAuth.revokeIdentities(gone.identities) });
+mountAccountDeletion(app, { pool, initDb, accountFromBearer, onDeleted: async (gone) => {
+  await appleAuth.revokeIdentities(gone.identities);
+  // RevenueCat knows the person by the account id: they are removed there too (the athletes of a deleted coach as well).
+  for (const id of [gone.id].concat(gone.athleteIds || [])) { try { await billing.forget(id); } catch (_) {} }
+} });
 mountConsentRoutes(app, { pool, initDb, accountFromBearer, featuresPath: FEATURES_PATH });
 
 // Programs shared with a code: anyone sends, a paid plan receives.

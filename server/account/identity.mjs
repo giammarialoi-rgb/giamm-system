@@ -152,12 +152,13 @@ export async function deleteAccount(pool, userId) {
   const found = await pool.query("SELECT id, email, provider FROM app_users WHERE id = $1", [userId]);
   const user = found.rows[0];
   if (!user) throw httpError(404, "Account non trovato.");
-  if (user.provider === "coach_client") throw httpError(403, "Questo account è gestito dal tuo coach: chiedi a lui di rimuoverlo.");
+  // A coach's athlete can delete their own account too (store rule): their record in the coach's list goes with it.
   const identities = await pool.query(
     "SELECT provider, refresh_token_enc FROM app_user_identities WHERE user_id = $1",
     [userId]
   );
   let athletesRemoved = 0;
+  let athleteIds = [];
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -174,6 +175,11 @@ export async function deleteAccount(pool, userId) {
       [userId]
     );
     athletesRemoved = athletes.rows.length;
+    athleteIds = athletes.rows.map((r) => r.id);
+    if (user.provider === "coach_client") await client.query("DELETE FROM coach_clients WHERE athlete_user_id = $1", [userId]);
+    // The history of store events kept for the account (no foreign key: it is only text and ids).
+    await client.query("DELETE FROM billing_state WHERE user_id = $1", [userId]);
+    await client.query("DELETE FROM billing_events WHERE user_id = $1", [userId]);
     await client.query("DELETE FROM app_users WHERE id = $1", [userId]);
     await client.query("COMMIT");
   } catch (error) {
@@ -182,7 +188,7 @@ export async function deleteAccount(pool, userId) {
   } finally {
     client.release();
   }
-  return { email: user.email, identities: identities.rows, athletesRemoved };
+  return { id: userId, email: user.email, identities: identities.rows, athletesRemoved, athleteIds };
 }
 
 // DELETE /api/account, confirmed by typing ELIMINA. It works the same for

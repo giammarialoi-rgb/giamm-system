@@ -42038,9 +42038,8 @@ function renderPrivacySettingsCard() {
     '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
     '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="exportFullDatabaseBackup()">ESPORTA I MIEI DATI</button>' +
     ((logged && !athlete && typeof trainingSafetyCopies === 'function' && trainingSafetyCopies().length) ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="restoreTrainingFromSafetyUi()">RIPRISTINA I CARICHI SALVATI</button>' : '') +
-    ((logged && !athlete) ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()">ELIMINA ACCOUNT</button>' : '') +
+    (logged ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()">ELIMINA ACCOUNT</button>' : '') +
     '</div>' +
-    (athlete ? '<div style="font-size:10px;color:#888;line-height:1.4;margin-top:8px;">Il tuo account è gestito dal coach: per eliminarlo chiediglielo, oppure scrivi al contatto privacy.</div>' : '') +
     (cfg.privacyEmail ? '<div style="font-size:10px;color:#888;margin-top:10px;">Contatto privacy: <a href="mailto:' + esc(cfg.privacyEmail) + '" style="color:var(--gold);">' + esc(cfg.privacyEmail) + '</a></div>' : '') +
     '<div style="font-size:10px;color:#777;line-height:1.4;margin-top:8px;">' + esc(NOT_MEDICAL_TEXT) + '</div>' +
     '</div>';
@@ -42049,6 +42048,20 @@ function renderPrivacySettingsCard() {
 // Deleting the account: on the server first (everything of the account goes,
 // and the Apple link is revoked), then this device's copy of that account.
 // Confirmed by typing ELIMINA; it works the same whatever the way in was.
+// An active subscription is not cancelled by deleting the account: only the store (or the website) can, so the person is
+// told before and sent to the place where it is done.
+function deleteAccountSubscriptionNotice() {
+  let ent = null;
+  try { ent = typeof currentAccountEntitlement === 'function' ? currentAccountEntitlement() : null; } catch (_) {}
+  const source = ent && ent.planSource;
+  if (!ent || !ent.plan || ent.plan === 'free' || ['apple', 'play', 'stripe'].indexOf(source) === -1) return '';
+  const where = source === 'apple' ? 'da Impostazioni › il tuo nome › Abbonamenti' : (source === 'play' ? 'da Google Play › Pagamenti e abbonamenti' : 'dalla pagina Piani del sito (Gestisci abbonamento)');
+  const button = source === 'stripe'
+    ? (typeof webStripePortal === 'function' ? '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:8px;margin-top:8px;" onclick="webStripePortal()">GESTISCI ABBONAMENTO</button>' : '')
+    : '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:8px;margin-top:8px;" onclick="billingManage()">GESTISCI ABBONAMENTO</button>';
+  return '<div style="font-size:12px;color:#ffd27a;line-height:1.5;margin-bottom:10px;padding:10px;border:1px solid #6b5420;border-radius:8px;background:#1a1405;"><b>Hai un abbonamento attivo.</b> <span>Eliminare l’account non lo annulla e continuerai a essere addebitato:</span> <span>annullalo prima</span> <span>' + where + '</span>.' + button + '</div>';
+}
+
 function openDeleteAccount() {
   if (!store.accountToken || !store.accountUser) return;
   const old = document.getElementById('delete-account-overlay');
@@ -42063,6 +42076,8 @@ function openDeleteAccount() {
     '<div style="font-size:12px;color:#ccc;line-height:1.5;margin-bottom:10px;">Si cancellano l’account <b style="color:#fff;">' + esc(store.accountUser.email || '') + '</b> e tutti i suoi dati sul server, e la copia su questo dispositivo.' +
     ((typeof isCoachUnlocked === 'function' && isCoachUnlocked()) ? ' Anche gli account degli atleti che hai creato con gli inviti vengono eliminati.' : '') +
     ' Non si può annullare.</div>' +
+    ((typeof isAthleteRole === 'function' && isAthleteRole()) ? '<div style="font-size:12px;color:#ccc;line-height:1.5;margin-bottom:10px;">Il tuo coach non vedrà più i tuoi dati.</div>' : '') +
+    deleteAccountSubscriptionNotice() +
     '<label for="delete-account-confirm" style="font-size:11px;color:#aaa;">Scrivi ELIMINA per confermare</label>' +
     '<input id="delete-account-confirm" type="text" autocomplete="off" autocapitalize="characters" style="width:100%;margin:6px 0 10px;box-sizing:border-box;">' +
     '<div id="delete-account-msg" style="font-size:11px;color:var(--accent-red);min-height:14px;margin-bottom:8px;"></div>' +

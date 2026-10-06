@@ -121,6 +121,11 @@ function fakeDb(users) {
   let f = await b2.refresh(7, NOW);
   ok('asked to RevenueCat with the secret key, for this account only', asked.url.endsWith('/v1/subscribers/7') && asked.auth === 'Bearer sk_test');
   ok('the best subscription becomes the plan', f.changed && db.users[7].plan === 'coach' && db.users[7].plan_source === 'play');
+  let deleted = null;
+  const b3 = createBilling({ pool, initDb: async () => {}, env: { REVENUECAT_SECRET_KEY: 'sk_test' }, fetchImpl: async (url, opts) => { deleted = { url, method: opts.method }; return { ok: true, status: 200 }; } });
+  const gone = await b3.forget(7);
+  ok('a deleted account is removed from RevenueCat too (DELETE subscriber, for this account only)', gone.ok && deleted.method === 'DELETE' && deleted.url.endsWith('/v1/subscribers/7'));
+  ok('without the secret key it does nothing and does not fail', (await createBilling({ pool, initDb: async () => {}, env: {} }).forget(7)).ok === false);
   f = await b2.refresh(7, NOW);
   ok('asking again changes nothing', f.changed === false);
   answers.json = async () => ({ subscriber: { entitlements: {}, subscriptions: {} } });

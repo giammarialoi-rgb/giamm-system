@@ -122,6 +122,8 @@ function fakeDb() {
       db.clients.forEach((c) => { if (gone.some((u) => String(u.id) === String(c.athlete_user_id))) c.athlete_user_id = null; });
       return rows(gone.map((u) => ({ id: u.id })));
     }
+    if (/^DELETE FROM coach_clients WHERE athlete_user_id = \$1$/.test(s)) { db.clients = db.clients.filter((c) => String(c.athlete_user_id) !== String(p[0])); return rows([]); }
+    if (/^DELETE FROM billing_(state|events) WHERE user_id = \$1$/.test(s)) { db.billingDeleted = (db.billingDeleted || 0) + 1; return rows([]); }
     if (/^DELETE FROM app_users WHERE id = \$1$/.test(s)) {
       // The foreign keys cascade.
       db.users = db.users.filter((x) => String(x.id) !== String(p[0]));
@@ -406,7 +408,8 @@ await withServer(ENV, async ({ base, db, calls, issueAccountToken }) => {
   db.users.push({ id: db.nextId++, email: 'c.x@client.nurvan.internal', name: 'Atleta', provider: 'coach_client', provider_id: null, avatar_url: null, password_hash: 'h' });
   const ath = db.users[db.users.length - 1];
   const athDel = await fetch(base + '/api/account', { method: 'DELETE', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + issueAccountToken(ath) }, body: JSON.stringify({ confirm: 'ELIMINA' }) });
-  ok('7f. l\'account di un atleta lo rimuove il coach, non l\'atleta', athDel.status === 403 && db.users.some((u) => u.id === ath.id));
+  ok('7f. anche un atleta puo\' eliminare il suo account (regola degli store): sparisce con il suo record nella lista del coach', athDel.status === 200 && !db.users.some((u) => u.id === ath.id) && !db.clients.some((c) => String(c.athlete_user_id) === String(ath.id)));
+  ok('7f2. e lo storico degli eventi di acquisto dell\'account viene cancellato', db.billingDeleted >= 2);
   const page = read('web/index.base.html');
   const logout = page.slice(page.indexOf('function logoutAccount()'), page.indexOf('function syncAccountFormMode()'));
   ok('7g. il logout non dipende da password o provider', !/password|provider|apple|google/i.test(logout) && /store\.accountToken = null/.test(logout));

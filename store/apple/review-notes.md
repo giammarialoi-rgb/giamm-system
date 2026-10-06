@@ -38,7 +38,7 @@ DATI SANITARI E AI (5.1.1, 5.1.2)
 I dati di salute sono inseriti dall'utente; non usati per pubblicità né venduti. L'invio di testo/foto al servizio AI (Google Gemini) avviene solo dopo un consenso esplicito e revocabile (Impostazioni › Privacy e dati). L'app non è un dispositivo medico (avviso in app e nei termini).
 
 ELIMINAZIONE ACCOUNT (5.1.1(v))
-Impostazioni › Privacy e dati › Elimina account (conferma scrivendo ELIMINA). Elimina anche l'identificativo su RevenueCat.
+Impostazioni › Privacy e dati › Elimina account (conferma scrivendo ELIMINA). Vale per tutti gli account, anche per i clienti di un coach. Cancella l'account e i dati sul server, lo storico degli eventi di acquisto associato e la persona su RevenueCat. Se c'è un abbonamento attivo, la schermata lo segnala e rimanda a Impostazioni › il tuo nome › Abbonamenti: l'abbonamento lo annulla solo Apple, eliminare l'account non lo annulla.
 
 L'app è un'interfaccia web impacchettata con Capacitor, con funzioni native: notifiche locali, fotocamera e microfono (solo all'uso), acquisti in-app (StoreKit tramite RevenueCat), Accedi con Apple.
 Contatto tecnico: info@nurvan.app
