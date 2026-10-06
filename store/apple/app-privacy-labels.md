@@ -25,12 +25,13 @@ Per ogni tipo Apple chiede: *collegato all'identità dell'utente?* · *usato per
 | Contenuti utente | **Altri contenuti dell'utente** | Sì | Funzionalità dell'app | file dei programmi importati, allegati |
 | Identificativi | **ID utente** | Sì | Funzionalità dell'app | ID account Nurvan (usato anche come ID cliente di RevenueCat) |
 | Acquisti | **Cronologia degli acquisti** | Sì | Funzionalità dell'app | quale abbonamento ha l'account e fino a quando (da App Store via RevenueCat) |
+| Dati di utilizzo | **Interazione con il prodotto** | **No** (non collegato) | Analisi | un conteggio: all'apertura l'app invia al massimo una volta al giorno la piattaforma (iPhone/Android/web) e se è la prima apertura; il server conta i dispositivi con un codice giornaliero che dimentica dopo 2 giorni; nessun identificativo né account |
 | Diagnostica | **Altri dati diagnostici** | Sì | Analisi | solo eventi di errore, senza contenuti |
 
-Cose che **non** si dichiarano (non le raccogliamo): posizione, contatti della rubrica, cronologia di navigazione, ricerche, ID del dispositivo o pubblicitario, dati finanziari (la carta la gestisce Apple, mai Nurvan), informazioni sensibili oltre alla salute, dati di utilizzo/prodotto per analytics.
+Cose che **non** si dichiarano (non le raccogliamo): posizione, contatti della rubrica, cronologia di navigazione, ricerche, ID del dispositivo o pubblicitario, dati finanziari (la carta la gestisce Apple, mai Nurvan), informazioni sensibili oltre alla salute. Il conteggio delle aperture si dichiara (riga «Interazione con il prodotto», non collegato) anche se anonimo.
 
 ## 4. Dopo la compilazione
-- Apple mostra l'anteprima «etichetta»: deve dire *Dati collegati all'utente* (Informazioni di contatto, Salute e fitness, Contenuti utente, Acquisti, Identificativi, Diagnostica) e *Dati non utilizzati per tracciarti: tutto*, senza la sezione «Dati utilizzati per tracciarti».
+- Apple mostra l'anteprima «etichetta»: deve dire *Dati collegati all'utente* (Informazioni di contatto, Salute e fitness, Contenuti utente, Acquisti, Identificativi, Diagnostica), *Dati non collegati all'utente* (Dati di utilizzo) e *Dati non utilizzati per tracciarti: tutto*, senza la sezione «Dati utilizzati per tracciarti».
 - Pubblica le risposte (**Pubblica**), poi collega la versione 1.0 alla build.
 
 ## 5. Altri campi correlati in App Store Connect
@@ -51,4 +52,4 @@ Cose che **non** si dichiarano (non le raccogliamo): posizione, contatti della r
 **Eliminazione account**: in app (Impostazioni › Privacy e dati › Elimina account) e dalla pagina https://nurvan.app/elimina-account.
 
 ## 6. Manifest di privacy (`PrivacyInfo.xcprivacy`)
-Il progetto iOS non ha ancora un `PrivacyInfo.xcprivacy` proprio (i plugin Capacitor e RevenueCat portano i loro). Verifica, dopo la prima build su TestFlight, che l'archivio non dia avvisi «ITMS-91053 missing API declaration»: se capitano, aggiungi le *required reason API* indicate nell'email di Apple.
+Il progetto iOS ha il proprio `ios/App/App/PrivacyInfo.xcprivacy` (aggiunto al progetto Xcode tra le risorse): senza tracciamento, con gli stessi tipi di dati della tabella sopra (stessi collegamenti e finalità) e la required-reason API `UserDefaults` (CA92.1). I plugin Capacitor e RevenueCat portano i loro manifest. Se cambi cosa raccoglie l'app, aggiorna tabella, manifest e informativa insieme. Dopo la prima build su TestFlight controlla che l'archivio non dia avvisi «ITMS-91053 missing API declaration».

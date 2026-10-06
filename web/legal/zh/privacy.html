@@ -92,11 +92,14 @@
     <tr><td>Apple Inc.</td><td>使用 Apple 登录。</td><td>Apple 身份。</td></tr>
     <tr><td>jsDelivr (Prospect One / Cloudflare, Fastly)</td><td>仅在您使用时下载在您设备上读取照片和 PDF 的程序库（文字识别、iPhone 的 HEIC 照片、无文字 PDF 的页面）。通过设备端读取，照片和 PDF 不会离开您的手机；通过高级读取（由您针对每份文档选择），页面会像其他 AI 功能一样发送给 Google Gemini。</td><td>IP 地址和请求的技术数据。</td></tr>
     <tr><td>Resend (Plus Five Five, Inc.)</td><td>发送账户电子邮件：地址确认、密码找回和修改。</td><td>电子邮件地址、一次性验证码和链接。</td></tr>
+    <tr><td>PeerJS (PeerServer) / Google（STUN 服务器）</td><td>在教练与客户的视频通话中连接两台设备，仅在你发起或接听通话时使用。音频和视频在设备之间直接传输，不经过 Nurvan。</td><td>IP 地址和临时通话标识。</td></tr>
   </table>
   </div>
   <p>食物搜索会查询公共数据库（Open Food Facts、FatSecret、USDA FoodData Central），仅发送搜索的文本或条形码，绝不发送您的账户数据。</p>
   <p>通用食物的营养数值来自 CREA 表（食品与营养研究中心，2019 年更新）和 Ciqual 表（Anses. 2025. Table de composition nutritionnelle des aliments Ciqual，Licence Ouverte Etalab 2.0；名称由 Nurvan 翻译为意大利语）。在读取饮食计划时，无法自动匹配的食物名称，如果您已启用 AI 功能，可能会被发送给 Google Gemini，以便在数据库的食物中选出对应项：数值仍然是数据库中的数值。</p>
   <p>除非在法律规定的情形下应主管机关的要求，否则我们不会向其他方披露数据。</p>
+
+  <p>其他处理，简述。使用计数：打开应用时，应用每天最多发送一次平台（iPhone、Android、网页）以及是否首次打开；服务器用每日代码统计不同设备，该代码两天后即被遗忘，不含标识符、账户或内容，也不属于跟踪。食物名称：搜索到的名称可通过 Google Gemini 翻译成你的语言（仅食物名称，不含个人数据），即使未同意 AI 功能也是如此。AI 功能：Nurvan 不会将发送的内容用于训练模型或广告，也不会出售；Google 按 Gemini API 条款处理。</p>
 
   <h2>6. 向欧盟境外传输</h2>
   <p>部分服务提供商（Google、Apple、Render、Cloudflare、Resend）总部位于美国，可能在欧洲经济区之外处理数据。对于已获认证的服务提供商，传输依据欧盟-美国充分性决定（EU-US Data Privacy Framework）进行，或依据欧盟委员会批准的标准合同条款进行。</p>
