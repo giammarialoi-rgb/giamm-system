@@ -9,7 +9,14 @@
 //   - review-athlete@nurvan.app free plan: the athlete side (a coach can link it by invite)
 // Run it again to set new passwords (e.g. after a review). The accounts have the source "manual", so a store
 // purchase never touches them, and they are plain accounts: they can be deleted from the app like any other.
+//
+// Each account also gets the demo data of tools/review-demo/demo-account-data.json (made up, no real person): an active
+// program, workouts with ticked sets, a day of meals, a supplement, a therapy entry, an exam, body checks. The dates are
+// moved to the day the script runs. Run with --no-data to leave the accounts' data as it is. Rebuilding the data file:
+// tools/review-demo/build_demo.mjs. How to recreate everything: docs/REVIEW-DEMO-ACCOUNT.md.
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
 
@@ -22,6 +29,34 @@ const ACCOUNTS = [
   { email: 'review-free@nurvan.app', name: 'Revisore Free', plan: 'free' },
   { email: 'review-athlete@nurvan.app', name: 'Revisore Atleta', plan: 'free' }
 ];
+const withData = !process.argv.includes('--no-data');
+const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+
+// The demo data with its dates moved from the day it was built to today.
+function demoData() {
+  const raw = JSON.parse(fs.readFileSync(path.join(here, 'review-demo', 'demo-account-data.json'), 'utf8'));
+  const dayMs = 86400000;
+  const delta = Math.round((Date.parse(new Date().toISOString().slice(0, 10)) - Date.parse(raw.builtOn)) / dayMs);
+  const shift = (v) => {
+    if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(v)) return v;
+    const t = Date.parse(v) + delta * dayMs;
+    return v.length === 10 ? new Date(t).toISOString().slice(0, 10) : new Date(t).toISOString();
+  };
+  (raw.logs || []).forEach((l) => { l.at = shift(l.at); l.finalizedAt = shift(l.finalizedAt); });
+  (raw.bodyChecks || []).forEach((c) => { c.at = shift(c.at); });
+  ((raw.exams && raw.exams.records) || []).forEach((r) => { r.date = shift(r.date); });
+  const daily = {};
+  Object.keys(raw.nutritionDaily || {}).forEach((k) => {
+    const e = raw.nutritionDaily[k];
+    if (e && e.diary && e.diary.at) e.diary.at = shift(e.diary.at);
+    daily[shift(k)] = e;
+  });
+  raw.nutritionDaily = daily;
+  delete raw.builtOn;
+  return raw;
+}
+const demo = withData ? demoData() : null;
+
 const newPassword = () => crypto.randomBytes(9).toString('base64').replace(/[+/=]/g, 'x') + '7!';
 
 const out = [];
@@ -41,9 +76,14 @@ for (const a of ACCOUNTS) {
   const cur = await pool.query('SELECT plan FROM app_users WHERE id = $1', [id]);
   await pool.query("UPDATE app_users SET plan = $2, plan_source = 'manual', plan_until = NULL, updated_at = NOW() WHERE id = $1", [id, a.plan]);
   await pool.query("INSERT INTO app_plan_history(user_id, from_plan, to_plan, source, note, actor) VALUES($1,$2,$3,'manual','account per i revisori degli store','seed_review_accounts')", [id, cur.rows[0].plan, a.plan]);
+  if (demo) {
+    const row = await pool.query('SELECT data FROM app_account_data WHERE user_id = $1', [id]);
+    const merged = Object.assign({}, (row.rows[0] && row.rows[0].data) || {}, demo, { lastSyncedAt: new Date().toISOString() });
+    await pool.query("INSERT INTO app_account_data(user_id, data) VALUES($1, $2::jsonb) ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, revision = app_account_data.revision + 1, updated_at = NOW()", [id, JSON.stringify(merged)]);
+  }
   out.push({ email: a.email, password, plan: a.plan });
 }
 await pool.end();
 console.log('\nAccount per i revisori (le password si vedono solo ora, copiale subito):\n');
 out.forEach((o) => console.log('  ' + o.email.padEnd(28) + o.password.padEnd(18) + 'piano ' + o.plan));
-console.log('');
+console.log(demo ? '  Dati di esempio caricati su tutti e tre (programma, allenamenti, pasto, integratore, terapia, esame, check).\n' : '');
