@@ -7224,6 +7224,16 @@ function queueAthleteProgramChange(kind, summary, data) {
   }, 700);
 }
 
+// A program with at least one exercise: only changes to a real program are worth the coach's attention.
+function sliceHasExercises(slice) {
+  try {
+    return !!(slice && Array.isArray(slice.weeks) && slice.weeks.some(function (w) {
+      const sessions = (w && (w.sessions || w.days)) || [];
+      return sessions.some(function (d) { return d && Array.isArray(d.exercises) && d.exercises.length; });
+    }));
+  } catch (_) { return false; }
+}
+
 function gateAthleteProgramPersist() {
   if (window.__cpProgramLock) return;
   if (typeof isAthleteRole !== 'function' || !isAthleteRole()) return;
@@ -7239,6 +7249,12 @@ function gateAthleteProgramPersist() {
     return;
   }
   if (fp === store.clientApprovedFp) return;
+  // No "the client wants to change the program" before there is a program of the coach to change, and not while the
+  // client has not even answered the questionnaire: what changes then is the app loading, not the client asking.
+  if (!sliceHasExercises(store.clientApprovedProgram) || (store.clientProfile && store.clientProfile.needIntake)) {
+    rememberApprovedProgram();
+    return;
+  }
   const summary = summarizeProgramDiff(store.clientApprovedProgram, slice);
   if (store.clientProfile && store.clientProfile.allowMaxFreedom) {
     rememberApprovedProgram();

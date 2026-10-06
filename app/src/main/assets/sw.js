@@ -177,6 +177,8 @@ self.addEventListener('push', (event) => {
     icon: './icon-192.png',
     badge: './icon-192.png'
   };
+  // Same client and kind: the new notification replaces the one already on the phone.
+  if (payload.tag) options.tag = String(payload.tag);
   const badgeN = (payload.data && typeof payload.data.badge === 'number')
     ? payload.data.badge
     : (typeof payload.badge === 'number' ? payload.badge : null);

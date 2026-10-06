@@ -748,9 +748,11 @@ export function mountCoachPractice(app, deps) {
           badgeCount = Number(uq.rows[0]?.n || 0);
         } catch (_) { badgeCount = undefined; }
       }
+      const tagKind = route && (route.kind || route.view) ? String(route.kind || route.view) : "coach";
       const result = await sendWebPush(sub, {
         title: title || "Nurvan",
         body: body || "",
+        tag: "coach:" + tagKind + ":" + (route && route.clientId ? route.clientId : "all"),
         badge: typeof badgeCount === "number" ? badgeCount : undefined,
         data: {
           path: "/",
@@ -1413,14 +1415,7 @@ export function mountCoachPractice(app, deps) {
     }
     try {
       const completion = await recordWarmupCompletion(pool, assignmentId, ctx.client.id, req.body || {});
-      if (completion.status !== "skipped") {
-        notifyCoachPush(
-          ctx.client.coach_user_id,
-          "Warm-up completato",
-          (ctx.client.display_name || "Atleta") + " ha " + (completion.status === "completed" ? "completato" : "svolto parzialmente") + " il warm-up",
-          { view: "client", clientId: String(ctx.client.id) }
-        ).catch(() => {});
-      }
+      // No push to the coach for a warm-up: with many clients it is noise; it stays in the client's page.
       return res.status(201).json({ ok: true, completion });
     } catch (error) {
       console.error("CLIENT_WARMUP_COMPLETE", error && error.message ? error.message : error);
@@ -1574,14 +1569,19 @@ export function mountCoachPractice(app, deps) {
     if (!ctx) return;
     const summary = String(req.body?.summary || "modifica programma").slice(0, 200);
     const data = req.body?.data && typeof req.body.data === "object" ? req.body.data : {};
+    // A request that is still waiting for the coach is only brought up to date: one request, one notice (the app can
+    // send the same one several times while it saves).
+    const waiting = !!ctx.client.pending_change;
     await pool.query(
-      "UPDATE coach_clients SET pending_change = $2, unread_count = unread_count + 1 WHERE id = $1",
-      [ctx.client.id, JSON.stringify({ summary, data, at: new Date().toISOString() })]
+      "UPDATE coach_clients SET pending_change = $2, unread_count = unread_count + $3 WHERE id = $1",
+      [ctx.client.id, JSON.stringify({ summary, data, at: new Date().toISOString() }), waiting ? 0 : 1]
     );
-    await pool.query(
-      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_request',$2)",
-      [ctx.client.id, JSON.stringify({ summary, name: ctx.client.display_name })]
-    );
+    if (!waiting) {
+      await pool.query(
+        "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_request',$2)",
+        [ctx.client.id, JSON.stringify({ summary, name: ctx.client.display_name })]
+      );
+    }
     return res.json({ ok: true, pending: true });
   });
 
@@ -1596,6 +1596,15 @@ export function mountCoachPractice(app, deps) {
     if (data && ctx.client.athlete_user_id) {
       await updateAccountData(pool, ctx.client.athlete_user_id, (current) =>
         applyAthleteEditedDomains(current, data, { lastAthleteEditAt: new Date().toISOString() }));
+    }
+    // Edits within ten minutes of the last notice are one notice, brought up to date.
+    const last = await pool.query(
+      "SELECT id FROM coach_events WHERE client_id = $1 AND kind = 'change_notice' AND read_at IS NULL AND created_at > NOW() - INTERVAL '10 minutes' ORDER BY id DESC LIMIT 1",
+      [ctx.client.id]
+    );
+    if (last.rows[0]) {
+      await pool.query("UPDATE coach_events SET payload = $2, created_at = NOW() WHERE id = $1", [last.rows[0].id, JSON.stringify({ summary, name: ctx.client.display_name, freedom: true })]);
+      return res.json({ ok: true });
     }
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'change_notice',$2)",
