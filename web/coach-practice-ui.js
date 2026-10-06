@@ -159,7 +159,7 @@ function gatePracticeView(v) {
       generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1,
       coachToday: 1, coachInbox: 1, coachChat: 1, coachPrograms: 1, coachImport: 1,
       coachCalendar: 1, coachLibrary: 1, coachCheckIns: 1, coachNutrition: 1,
-      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1,
+      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1, coachBrand: 1,
       coachCrm: 1, coachActionCenter: 1, coachFormReview: 1,
       coachMealAi: 1, coachAgentAudit: 1
     };
@@ -172,7 +172,7 @@ function gatePracticeView(v) {
       coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
       coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
       coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-      coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
+      coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
       coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
       home: 1, settings: 1, ai: 1
     };
@@ -299,8 +299,44 @@ window.previewInviteTemplate = previewInviteTemplate;
 window.saveInviteTemplate = saveInviteTemplate;
 window.resetInviteTemplate = resetInviteTemplate;
 
+// The coach's (or gym's) brand, in the client's own app: the icon with "powered by Nurvan" in place of the N in the header,
+// and the page named after the coach. The brand comes from the invite page (before login) or from /api/client/me.
+var __cpStockLogo = null;
+var __cpStockTitle = null;
+function currentCoachBrand() {
+  try {
+    const boot = window.__NURVAN_CLIENT_BOOT;
+    if (store && store.coachBrand && typeof isAthleteRole === 'function' && isAthleteRole()) return store.coachBrand;
+    if (boot && boot.token && boot.brand) {
+      const b = boot.brand;
+      return { name: b.name || '', hasLogo: !!b.hasLogo, iconUrl: b.hasLogo ? '/c/' + encodeURIComponent(boot.token) + '/icon-192.png?v=' + (b.version || 0) : '' };
+    }
+  } catch (_) {}
+  return null;
+}
+function applyCoachBrand() {
+  try {
+    const img = document.querySelector('header .logo-container img');
+    if (img && __cpStockLogo === null) __cpStockLogo = img.getAttribute('src') || '';
+    if (__cpStockTitle === null) __cpStockTitle = document.title;
+    const brand = currentCoachBrand();
+    if (img) {
+      if (brand && brand.hasLogo && brand.iconUrl) {
+        if (img.getAttribute('src') !== brand.iconUrl) { img.onerror = null; img.setAttribute('src', brand.iconUrl); }
+        img.setAttribute('alt', brand.name || 'Logo');
+        img.style.borderRadius = '22%';
+      } else if (__cpStockLogo && img.getAttribute('src') !== __cpStockLogo) {
+        img.setAttribute('src', __cpStockLogo); img.setAttribute('alt', 'Nurvan'); img.style.borderRadius = '';
+      }
+    }
+    document.title = (brand && brand.name) ? brand.name : __cpStockTitle;
+  } catch (_) {}
+}
+window.applyCoachBrand = applyCoachBrand;
+
 function applyClientChrome() {
   try {
+    applyCoachBrand();
     const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
     const unlocked = typeof isCoachUnlocked === 'function' && isCoachUnlocked();
     const coachSession = !!(store && store.coachSessionActive && !athlete);
@@ -3371,6 +3407,31 @@ function ensureCoachDomainToolbar(domain) {
   }
 }
 
+// While a draft for a client is on screen, its two ways out - send, leave - are also drawn at the top of the page itself.
+// The floating bar (ensureAssignBanner) is the same thing, but a bar that is hidden by a sheet closed the wrong way, or
+// covered by the system, left a coach with a draft and no way to send it. This one is part of the page: it cannot hide.
+function ensureAssignStrip(domain) {
+  const c = document.getElementById('view-container');
+  let strip = document.getElementById('cp-assign-strip');
+  const job = store && store.coachAssigning;
+  const views = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, programs: 1, import: 1, hyrox: 1, disciplines: 1, stats: 1 };
+  const d = domain || currentView;
+  if (!c || !job || !views[d]) {
+    if (strip) strip.remove();
+    return;
+  }
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.id = 'cp-assign-strip';
+    strip.style.cssText = 'margin:0 0 12px;padding:10px;border:1px solid var(--gold);border-radius:12px;background:#111;';
+  }
+  strip.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">BOZZA PER ' + esc(job.name || 'cliente') + ' · NON ANCORA INVIATA</div>' +
+    '<div style="display:flex;gap:6px;">' +
+    '<button type="button" class="btn btn-primary" style="flex:2;font-size:11px;padding:10px 6px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" onclick="cancelAssignSandbox()">ESCI</button></div>';
+  if (strip.parentElement !== c || c.firstChild !== strip) c.insertBefore(strip, c.firstChild);
+}
+
 async function clearCoachClientDomain(domain) {
   if (!(store && store.coachViewingClient)) return;
   const labels = {
@@ -4792,6 +4853,18 @@ function ensureAssignBanner() {
   // One bar, always open while a draft exists: what it is, and the three things to do with it, one tap each.
   // (It used to be a chip that had to be opened, then a button to see the training, then the chip again to send.)
   const more = !!store.__cpAssignBarExpanded;   // the other sections of the draft
+  // The bar hides while a sheet is open (openCpModal) and comes back when it closes (closeCpModal). A sheet closed any
+  // other way left it hidden for good: the coach saw the draft and had no way to send it. Whatever hid it, the bar is
+  // back as soon as no sheet or busy screen is really on screen.
+  try {
+    const modal = document.getElementById('cp-modal');
+    const modalOpen = !!(modal && modal.style.display && modal.style.display !== 'none');
+    const busy = document.getElementById('nurvan-busy-overlay');
+    const busyOpen = !!(busy && busy.classList.contains('visible'));
+    if (!modalOpen && document.body) document.body.classList.remove('cp-modal-open');
+    if (!busyOpen && document.body) document.body.classList.remove('cp-busy');
+    if (!modalOpen && !busyOpen) bar.style.visibility = 'visible';
+  } catch (_) {}
   bar.style.display = 'block';
   bar.classList.add('cp-assign-expanded');
   bar.classList.remove('cp-assign-collapsed');
@@ -6758,6 +6831,8 @@ async function refreshAthleteMe() {
     onEntitlementReceived(me.entitlement);
     store.coachOnline = !!me.coachOnline;
     store.coachLastSeen = me.coachLastSeen || null;
+    store.coachBrand = me.brand || null;
+    applyCoachBrand();
     store.role = 'athlete';
     store.clientShell = true;
     if (typeof persist === 'function') persist();
@@ -7061,7 +7136,7 @@ function wrapPracticeHooks() {
           coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
           coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
           coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-          coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
+          coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
           coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
           home: 1, settings: 1, ai: 1
         };
@@ -7176,6 +7251,7 @@ function wrapPracticeHooks() {
         }
         if (c && (currentView === 'athlete' || currentView === 'settings' || currentView === 'home' || currentView === 'pricing')) injectCoachUnlockInto(c);
         ensureCoachDomainToolbar(currentView);
+        ensureAssignStrip(currentView);
       } catch (_) {}
       applyClientChrome();
       ensureAssignBanner();

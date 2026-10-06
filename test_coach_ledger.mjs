@@ -88,7 +88,7 @@ const cal = fs.readFileSync('web/coach-os/calendar.js', 'utf8');
   vm.runInContext(biz, c);
   const P = c.window.CoachOS.ledgerTestHooks.parseAmount;
   ok('4e. la cifra si scrive come viene: 80, 80,50, 1.250,00, 12.5 — vuoto vuol dire senza cifra', P('80') === 8000 && P('80,50') === 8050 && P('1.250,00') === 125000 && P('12.5') === 1250 && P('€ 30') === 3000 && P('') === null && isNaN(P('abc')) && isNaN(P('-5')));
-  ok('4f. il registro ha totali, dettaglio per cliente, sedute fatte, eliminazione ed esportazione', /Totale incassato/.test(biz) && /Per cliente/.test(biz) && /Sedute fatte negli ultimi 12 mesi/.test(biz) && /CoachOS\.deletePayment/.test(biz) && /CoachOS\.exportLedgerCsv/.test(biz) && /dall’app non passa nessun pagamento/.test(biz));
+  ok('4f. il registro ha totali, dettaglio per cliente, sedute fatte, eliminazione ed esportazione', /Totale incassato/.test(biz) && /Per cliente/.test(biz) && /Sedute fatte negli ultimi 12 mesi/.test(biz) && /CoachOS\.deletePayment/.test(biz) && /CoachOS\.exportLedgerCsv/.test(biz) && /dall’app non passa nessun pagamento/i.test(biz));
 }
 {
   ok('5a. il server rifiuta l’assistente AI a un cliente del coaching', /who\.role === "athlete" \|\| who\.provider === "coach_client"/.test(api) && /AI_NOT_FOR_CLIENTS/.test(api));

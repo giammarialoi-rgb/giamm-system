@@ -90,8 +90,15 @@ import {
   ledgerTotals,
   deletePaymentEvent,
   updateCrmStage,
-  upsertClientPlan
+  upsertClientPlan,
+  recordExpense,
+  listExpenses,
+  deleteExpense,
+  financeReport,
+  dueClients,
+  EXPENSE_CATEGORIES
 } from "./server/coach-os/business.mjs";
+import { getBranding, saveBranding, removeBranding, brandForInvite, iconForInvite, forgetBrandCache, ICON_SIZES } from "./server/coach-os/branding.mjs";
 import {
   listQuickReplies,
   loadCoachInbox,
@@ -592,16 +599,34 @@ function clientCookieOptions(req) {
   return { path: "/", maxAge: 31536000 * 1000, sameSite: "lax", secure, httpOnly: false };
 }
 
-function injectClientPwaHtml(html, token) {
+const escAttrHtml = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+
+// brand: { name, hasLogo, version } of the coach behind this link, or null (the page is then Nurvan's own).
+function injectClientPwaHtml(html, token, brand) {
   const start = "/c/" + encodeURIComponent(token);
   let out = String(html || "");
   out = out.replace(
     /<link\s+rel=["']manifest["'][^>]*>/i,
     '<link rel="manifest" href="' + start + '/manifest.webmanifest">'
   );
+  if (brand) {
+    const v = "?v=" + brand.version;
+    if (brand.name) {
+      out = out.replace(/<title>[\s\S]*?<\/title>/i, "<title>" + escAttrHtml(brand.name) + "</title>");
+      out = out.replace(/(<meta name="apple-mobile-web-app-title" content=")[^"]*(")/i, "$1" + escAttrHtml(brand.name) + "$2");
+      out = out.replace(/(<meta name="application-name" content=")[^"]*(")/i, "$1" + escAttrHtml(brand.name) + "$2");
+    }
+    if (brand.hasLogo) {
+      out = out.replace(/<link rel="apple-touch-icon"[^>]*>\s*/gi, "");
+      out = out.replace(/<link rel="icon"[^>]*>\s*/gi, "");
+      const links = '<link rel="icon" type="image/png" sizes="192x192" href="' + start + '/icon-192.png' + v + '">\n' +
+        '<link rel="apple-touch-icon" sizes="180x180" href="' + start + '/icon-180.png' + v + '">\n';
+      out = /<\/head>/i.test(out) ? out.replace(/<\/head>/i, links + "</head>") : links + out;
+    }
+  }
   // Inside a <script>: "<" is escaped so no value can close the tag. The
   // route only lets safe tokens through anyway (isSafeInviteToken).
-  const bootJson = JSON.stringify({ token, mode: "client" }).replace(/</g, "\\u003c");
+  const bootJson = JSON.stringify(brand ? { token, mode: "client", brand: { name: brand.name, hasLogo: brand.hasLogo, version: brand.version } } : { token, mode: "client" }).replace(/</g, "\\u003c");
   const boot = "<script>window.__NURVAN_CLIENT_BOOT=" + bootJson + ";</script>";
   if (/<head[^>]*>/i.test(out)) {
     out = out.replace(/<head[^>]*>/i, (open) => open + "\n" + boot);
@@ -1036,7 +1061,7 @@ export function mountCoachPractice(app, deps) {
   // one visit to /c/... took the normal app away from the browser for a year.
   // An installed client app opens at its own link (its manifest's start_url);
   // an older install that opens at the root is sent there by the page itself.
-  app.get("/c/:token", (req, res, next) => {
+  app.get("/c/:token", async (req, res, next) => {
     const tok = String(req.params.token || "");
     if (/\.(png|jpe?g|gif|webp|svg|ico|js|css|json|map|webmanifest|html|txt|woff2?)$/i.test(tok)) {
       return next();
@@ -1046,7 +1071,8 @@ export function mountCoachPractice(app, deps) {
     // (a link with </script> in it ran code on the app's origin).
     if (!isSafeInviteToken(tok)) return res.status(404).send("Invito non valido");
     if (!fs.existsSync(indexHtml)) return res.status(404).send("App non disponibile");
-    const html = injectClientPwaHtml(fs.readFileSync(indexHtml, "utf8"), tok);
+    const brand = await brandForInvite(pool, tok);
+    const html = injectClientPwaHtml(fs.readFileSync(indexHtml, "utf8"), tok, brand);
     res.cookie("nurvan_client_ctx", tok, clientCookieOptions(req));
     res.cookie("nurvan_app_mode", "client", clientCookieOptions(req));
     res.setHeader("Cache-Control", "no-store");
@@ -1054,17 +1080,44 @@ export function mountCoachPractice(app, deps) {
     return res.send(html);
   });
 
-  app.get("/c/:token/manifest.webmanifest", (req, res) => {
+  // The coach's icons, under the client's own link: what the web app puts on the Home screen.
+  app.get("/c/:token/icon-:size.png", async (req, res) => {
+    const tok = String(req.params.token || "").trim();
+    const size = Number(req.params.size);
+    if (!isSafeInviteToken(tok) || !ICON_SIZES.includes(size)) return res.status(404).end();
+    const icon = await iconForInvite(pool, tok, size).catch(() => null);
+    if (!icon) return res.status(404).end();
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=300");
+    return res.send(icon.png);
+  });
+
+  app.get("/c/:token/manifest.webmanifest", async (req, res) => {
     const tok = String(req.params.token || "").trim();
     if (!isSafeInviteToken(tok)) return res.status(400).json({ error: "token non valido" });
     const start = "/c/" + encodeURIComponent(tok);
+    const brand = await brandForInvite(pool, tok);
+    const iconV = brand ? "?v=" + brand.version : "";
+    const icons = brand && brand.hasLogo
+      ? [
+        { src: start + "/icon-192.png" + iconV, sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: start + "/icon-512.png" + iconV, sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: start + "/icon-180.png" + iconV, sizes: "180x180", type: "image/png", purpose: "any" }
+      ]
+      : [
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png", purpose: "any" }
+      ];
+    const brandName = brand && brand.name ? brand.name : "";
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Content-Type", "application/manifest+json");
     res.json({
       id: start,
-      name: "Nurvan",
-      short_name: "Nurvan",
-      description: "Train. Fuel. Recover. Track. Evolve.",
+      name: brandName || "Nurvan",
+      short_name: (brandName || "Nurvan").slice(0, 12),
+      description: brandName ? brandName + " · powered by Nurvan" : "Train. Fuel. Recover. Track. Evolve.",
       lang: "it",
       dir: "ltr",
       start_url: start,
@@ -1075,12 +1128,7 @@ export function mountCoachPractice(app, deps) {
       background_color: "#000000",
       theme_color: "#000000",
       categories: ["health", "fitness", "lifestyle"],
-      icons: [
-        { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-        { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-        { src: "/icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-        { src: "/apple-touch-icon.png", sizes: "180x180", type: "image/png", purpose: "any" }
-      ]
+      icons
     });
   });
 
@@ -1261,6 +1309,14 @@ export function mountCoachPractice(app, deps) {
         client: clientRow(ctx.client, { includeIntake: true }),
         entitlement,
         coachName: coach.rows[0]?.name || "Coach",
+        brand: await (async () => {
+          try {
+            const b = await getBranding(pool, ctx.client.coach_user_id);
+            if (!b.name && !b.hasLogo) return null;
+            const tok = encodeURIComponent(ctx.client.invite_token || "");
+            return { name: b.name, hasLogo: b.hasLogo, version: b.version, iconUrl: b.hasLogo && tok ? "/c/" + tok + "/icon-192.png?v=" + b.version : "" };
+          } catch (_) { return null; }
+        })(),
         coachOnline: !hide && isOnlineAt(coachLastSeen),
         coachLastSeen,
         coachHidePresence: hide,
@@ -3799,14 +3855,70 @@ export function mountCoachPractice(app, deps) {
     const events = await listPaymentEvents(pool, coach.id);
     let sessions = [];
     try { sessions = await sessionsReport(pool, coach.id); } catch (err) { console.warn("COACH_SESSIONS_REPORT", err && err.message); }
+    let expenses = [];
+    let due = null;
+    try { expenses = await listExpenses(pool, coach.id); } catch (err) { console.warn("COACH_EXPENSES", err && err.message); }
+    try { due = await dueClients(pool, coach.id); } catch (err) { console.warn("COACH_DUE", err && err.message); }
     return res.json({
       ok: true,
       plans,
       events,
       totals: ledgerTotals(events),
       sessions,
-      summary: summarizeBusiness(plans, events)
+      summary: summarizeBusiness(plans, events),
+      expenses,
+      finance: financeReport(events, expenses),
+      due,
+      expenseCategories: EXPENSE_CATEGORIES
     });
+  });
+
+  app.post("/api/coach/business/expenses", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    try {
+      const expense = await recordExpense(pool, coach.id, req.body || {});
+      return res.status(201).json({ ok: true, expense });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/coach/business/expenses/:id", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const done = await deleteExpense(pool, coach.id, req.params.id);
+    if (!done) return res.status(404).json({ error: "Spesa non trovata." });
+    return res.json({ ok: true });
+  });
+
+  // The coach's (or gym's) name and logo, as their clients' web app shows them.
+  app.get("/api/coach/branding", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const branding = await getBranding(pool, coach.id);
+    return res.json({ ok: true, branding });
+  });
+
+  app.put("/api/coach/branding", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    if (!(await requireCoachFeature(coach, "branding", res))) return;
+    try {
+      const branding = await saveBranding(pool, coach.id, req.body || {});
+      forgetBrandCache();
+      return res.json({ ok: true, branding });
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/coach/branding", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    await removeBranding(pool, coach.id);
+    forgetBrandCache();
+    return res.json({ ok: true });
   });
 
   app.delete("/api/coach/business/payments/:id", async (req, res) => {

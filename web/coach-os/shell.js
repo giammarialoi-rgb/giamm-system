@@ -93,6 +93,7 @@
       { view: 'coachAgentAudit', label: tx('coAgentAudit'), flag: 'agentV1' },
       { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
       { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
+      { view: 'coachBrand', label: (typeof window.tr === 'function' ? window.tr('Il tuo marchio') : 'Il tuo marchio') },
       { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
     ];
     // Meal AI and the agent log have no screen of their own yet: opened, they showed the athlete's dashboard.

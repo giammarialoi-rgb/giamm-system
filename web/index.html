@@ -3214,7 +3214,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0029",
+        schemaTarget: "0030",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -51547,9 +51547,14 @@ var PAGE_TUTORIALS = {
   coachAgent: { label: 'Agente Nurvan', icon: '🧠', who: 'coach', steps: [
     { t: 'Chiedi all’agente', d: 'Scrivi cosa vuoi fare sui tuoi clienti: l’agente prepara l’azione e ti mostra l’anteprima. Parte solo se confermi.' }
   ] },
+  coachBrand: { label: 'Coach · Il tuo marchio', icon: '🏷️', who: 'coach', steps: [
+    { t: 'Il tuo nome e il tuo logo', d: 'Scrivi il nome della tua palestra o il tuo, scegli il logo e ritaglialo: trascina per spostarlo, il cursore ingrandisce. Sul bordo in basso si sovrappone “powered by Nurvan”.' },
+    { t: 'Dove lo vedono i clienti', d: 'Il link che mandi apre una web app con il tuo nome e il tuo logo; aggiunta alla Home, l’icona è la tua. Nell’app degli store l’icona resta quella di Nurvan, ma dentro l’app il cliente vede il tuo logo.' }
+  ] },
   coachBusiness: { label: 'Coach · Incassi', icon: '💼', who: 'coach', steps: [
     { t: 'Il tuo registro degli incassi', d: 'Con REGISTRA INCASSO scrivi chi ti ha pagato, quanto (la cifra è facoltativa), quando, per cosa e come. Dall’app non passa nessun pagamento: è la tua contabilità.' },
-    { t: 'Totali e resoconti', d: 'In alto il totale incassato, quest’anno, questo mese e negli ultimi 30 giorni; sotto, il dettaglio per cliente e mese per mese. Le sedute fatte sono contate in presenza e a distanza. Esporti tutto in CSV.' }
+    { t: 'Totali e resoconti', d: 'In alto il totale incassato, quest’anno, questo mese e negli ultimi 30 giorni; sotto, il dettaglio per cliente e mese per mese. Le sedute fatte sono contate in presenza e a distanza. Esporti tutto in CSV.' },
+    { t: 'Spese, utile e scadenze', d: 'Con REGISTRA SPESA scrivi affitto, attrezzatura, software e il resto: l’utile è le entrate con cifra meno le spese. “Da incassare” elenca i clienti non segnati come pagati o con la scadenza passata, e “Mese per mese” mette entrate, spese e utile in fila. Tutto lo scrivi tu: l’app non muove denaro.' }
   ] },
   coachCrm: { label: 'Coach · Pipeline', icon: '📇', who: 'coach', steps: [
     { t: 'L’elenco dei contatti', d: 'I tuoi clienti in un unico elenco, per vedere a che punto è ognuno.' }
@@ -81037,7 +81042,7 @@ function gatePracticeView(v) {
       generate: 1, catalog: 1, library: 1, db: 1, programs: 1, unlock: 1,
       coachToday: 1, coachInbox: 1, coachChat: 1, coachPrograms: 1, coachImport: 1,
       coachCalendar: 1, coachLibrary: 1, coachCheckIns: 1, coachNutrition: 1,
-      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1,
+      coachAnalytics: 1, coachAgent: 1, coachAutomations: 1, coachBusiness: 1, coachBrand: 1,
       coachCrm: 1, coachActionCenter: 1, coachFormReview: 1,
       coachMealAi: 1, coachAgentAudit: 1
     };
@@ -81050,7 +81055,7 @@ function gatePracticeView(v) {
       coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
       coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
       coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-      coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
+      coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
       coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
       home: 1, settings: 1, ai: 1
     };
@@ -81177,8 +81182,44 @@ window.previewInviteTemplate = previewInviteTemplate;
 window.saveInviteTemplate = saveInviteTemplate;
 window.resetInviteTemplate = resetInviteTemplate;
 
+// The coach's (or gym's) brand, in the client's own app: the icon with "powered by Nurvan" in place of the N in the header,
+// and the page named after the coach. The brand comes from the invite page (before login) or from /api/client/me.
+var __cpStockLogo = null;
+var __cpStockTitle = null;
+function currentCoachBrand() {
+  try {
+    const boot = window.__NURVAN_CLIENT_BOOT;
+    if (store && store.coachBrand && typeof isAthleteRole === 'function' && isAthleteRole()) return store.coachBrand;
+    if (boot && boot.token && boot.brand) {
+      const b = boot.brand;
+      return { name: b.name || '', hasLogo: !!b.hasLogo, iconUrl: b.hasLogo ? '/c/' + encodeURIComponent(boot.token) + '/icon-192.png?v=' + (b.version || 0) : '' };
+    }
+  } catch (_) {}
+  return null;
+}
+function applyCoachBrand() {
+  try {
+    const img = document.querySelector('header .logo-container img');
+    if (img && __cpStockLogo === null) __cpStockLogo = img.getAttribute('src') || '';
+    if (__cpStockTitle === null) __cpStockTitle = document.title;
+    const brand = currentCoachBrand();
+    if (img) {
+      if (brand && brand.hasLogo && brand.iconUrl) {
+        if (img.getAttribute('src') !== brand.iconUrl) { img.onerror = null; img.setAttribute('src', brand.iconUrl); }
+        img.setAttribute('alt', brand.name || 'Logo');
+        img.style.borderRadius = '22%';
+      } else if (__cpStockLogo && img.getAttribute('src') !== __cpStockLogo) {
+        img.setAttribute('src', __cpStockLogo); img.setAttribute('alt', 'Nurvan'); img.style.borderRadius = '';
+      }
+    }
+    document.title = (brand && brand.name) ? brand.name : __cpStockTitle;
+  } catch (_) {}
+}
+window.applyCoachBrand = applyCoachBrand;
+
 function applyClientChrome() {
   try {
+    applyCoachBrand();
     const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
     const unlocked = typeof isCoachUnlocked === 'function' && isCoachUnlocked();
     const coachSession = !!(store && store.coachSessionActive && !athlete);
@@ -84249,6 +84290,31 @@ function ensureCoachDomainToolbar(domain) {
   }
 }
 
+// While a draft for a client is on screen, its two ways out - send, leave - are also drawn at the top of the page itself.
+// The floating bar (ensureAssignBanner) is the same thing, but a bar that is hidden by a sheet closed the wrong way, or
+// covered by the system, left a coach with a draft and no way to send it. This one is part of the page: it cannot hide.
+function ensureAssignStrip(domain) {
+  const c = document.getElementById('view-container');
+  let strip = document.getElementById('cp-assign-strip');
+  const job = store && store.coachAssigning;
+  const views = { training: 1, nutrition: 1, supplements: 1, therapy: 1, exams: 1, programs: 1, import: 1, hyrox: 1, disciplines: 1, stats: 1 };
+  const d = domain || currentView;
+  if (!c || !job || !views[d]) {
+    if (strip) strip.remove();
+    return;
+  }
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.id = 'cp-assign-strip';
+    strip.style.cssText = 'margin:0 0 12px;padding:10px;border:1px solid var(--gold);border-radius:12px;background:#111;';
+  }
+  strip.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">BOZZA PER ' + esc(job.name || 'cliente') + ' · NON ANCORA INVIATA</div>' +
+    '<div style="display:flex;gap:6px;">' +
+    '<button type="button" class="btn btn-primary" style="flex:2;font-size:11px;padding:10px 6px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" onclick="cancelAssignSandbox()">ESCI</button></div>';
+  if (strip.parentElement !== c || c.firstChild !== strip) c.insertBefore(strip, c.firstChild);
+}
+
 async function clearCoachClientDomain(domain) {
   if (!(store && store.coachViewingClient)) return;
   const labels = {
@@ -85670,6 +85736,18 @@ function ensureAssignBanner() {
   // One bar, always open while a draft exists: what it is, and the three things to do with it, one tap each.
   // (It used to be a chip that had to be opened, then a button to see the training, then the chip again to send.)
   const more = !!store.__cpAssignBarExpanded;   // the other sections of the draft
+  // The bar hides while a sheet is open (openCpModal) and comes back when it closes (closeCpModal). A sheet closed any
+  // other way left it hidden for good: the coach saw the draft and had no way to send it. Whatever hid it, the bar is
+  // back as soon as no sheet or busy screen is really on screen.
+  try {
+    const modal = document.getElementById('cp-modal');
+    const modalOpen = !!(modal && modal.style.display && modal.style.display !== 'none');
+    const busy = document.getElementById('nurvan-busy-overlay');
+    const busyOpen = !!(busy && busy.classList.contains('visible'));
+    if (!modalOpen && document.body) document.body.classList.remove('cp-modal-open');
+    if (!busyOpen && document.body) document.body.classList.remove('cp-busy');
+    if (!modalOpen && !busyOpen) bar.style.visibility = 'visible';
+  } catch (_) {}
   bar.style.display = 'block';
   bar.classList.add('cp-assign-expanded');
   bar.classList.remove('cp-assign-collapsed');
@@ -87636,6 +87714,8 @@ async function refreshAthleteMe() {
     onEntitlementReceived(me.entitlement);
     store.coachOnline = !!me.coachOnline;
     store.coachLastSeen = me.coachLastSeen || null;
+    store.coachBrand = me.brand || null;
+    applyCoachBrand();
     store.role = 'athlete';
     store.clientShell = true;
     if (typeof persist === 'function') persist();
@@ -87939,7 +88019,7 @@ function wrapPracticeHooks() {
           coachToday: 1, coachHub: 1, coachClient: 1, coachInbox: 1, coachChat: 1,
           coachPrograms: 1, coachImport: 1, coachCalendar: 1, coachLibrary: 1,
           coachCheckIns: 1, coachNutrition: 1, coachAnalytics: 1, coachAgent: 1,
-          coachAutomations: 1, coachBusiness: 1, coachCrm: 1,
+          coachAutomations: 1, coachBusiness: 1, coachBrand: 1, coachCrm: 1,
           coachActionCenter: 1, coachMealAi: 1, coachFormReview: 1, coachAgentAudit: 1,
           home: 1, settings: 1, ai: 1
         };
@@ -88054,6 +88134,7 @@ function wrapPracticeHooks() {
         }
         if (c && (currentView === 'athlete' || currentView === 'settings' || currentView === 'home' || currentView === 'pricing')) injectCoachUnlockInto(c);
         ensureCoachDomainToolbar(currentView);
+        ensureAssignStrip(currentView);
       } catch (_) {}
       applyClientChrome();
       ensureAssignBanner();
@@ -89240,6 +89321,7 @@ window.rememberApprovedProgram = rememberApprovedProgram;
       { view: 'coachAgentAudit', label: tx('coAgentAudit'), flag: 'agentV1' },
       { view: 'coachAutomations', label: tx('coAutomations'), flag: 'businessV1' },
       { view: 'coachBusiness', label: tx('coBusiness'), flag: 'businessV1' },
+      { view: 'coachBrand', label: (typeof window.tr === 'function' ? window.tr('Il tuo marchio') : 'Il tuo marchio') },
       { view: 'coachCrm', label: tx('coCrm'), flag: 'businessV1' }
     ];
     // Meal AI and the agent log have no screen of their own yet: opened, they showed the athlete's dashboard.
@@ -92834,7 +92916,12 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
    */
   const METHODS = [['cash', 'Contanti'], ['transfer', 'Bonifico'], ['card', 'Carta'], ['other', 'Altro']];
   const LABELS = ['Mensile coaching', 'Pacchetto di sedute', 'Seduta in presenza', 'Programma', 'Altro'];
-  const ledger = { events: [], totals: null, sessions: [], clients: [], failed: false };
+  const EXPENSE_CATEGORIES = [['rent', 'Affitto'], ['equipment', 'Attrezzatura'], ['software', 'Software e abbonamenti'], ['marketing', 'Pubblicità'], ['travel', 'Trasferte'], ['taxes', 'Tasse e contributi'], ['training', 'Formazione'], ['other', 'Altro']];
+  const ledger = { events: [], totals: null, sessions: [], clients: [], failed: false, expenses: [], finance: null, due: null };
+  function categoryLabel(id) {
+    const hit = EXPENSE_CATEGORIES.filter(function (c) { return c[0] === id; })[0];
+    return T(hit ? hit[1] : 'Altro');
+  }
   function T(text) { return typeof window.tr === 'function' ? window.tr(text) : text; }
   // The stages of the pipeline as the coach reads them (the keys are the server's ids).
   const CRM_STAGE_LABEL = { LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' };
@@ -92863,6 +92950,46 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     return Math.round(n * 100);
   }
 
+  // The books: what came in, what went out, what is left; who still owes; month by month; the expenses.
+  function financeHtml() {
+    const f = ledger.finance;
+    if (!f) return '';
+    const due = ledger.due || { unpaid: [], overdue: [], paidCount: 0, activeCount: 0 };
+    const kpi = [[T('Entrate quest’anno'), money(f.yearIncomeCents)], [T('Spese quest’anno'), money(f.yearExpenseCents)], [T('Utile quest’anno'), money(f.yearNetCents)], [T('Utile questo mese'), money(f.monthNetCents)]];
+    const owes = {};
+    due.unpaid.forEach(function (c) { owes[c.id] = { c: c, why: T('non segnato come pagato') }; });
+    due.overdue.forEach(function (c) { owes[c.id] = { c: c, why: (owes[c.id] ? owes[c.id].why + ' · ' : '') + T('scadenza passata il') + ' ' + dayLabel(c.nextDueAt) }; });
+    const oweRows = Object.keys(owes).map(function (k) { return owes[k]; });
+    return '<div class="coach-os-card coach-os-kpis" style="margin-top:12px;">' +
+      kpi.map(function (row) { return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>'; }).join('') + '</div>' +
+      '<p class="coach-os-subtitle" style="margin:8px 0 0;">' + escText(T('Utile = entrate con cifra meno le spese che scrivi tu.')) + '</p>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Da incassare')) + ' · ' + escText(due.paidCount + '/' + due.activeCount + ' ' + T('clienti in regola')) + '</h2></div>' +
+      (oweRows.length
+        ? '<div class="coach-os-list">' + oweRows.map(function (o) {
+          return '<button type="button" class="coach-os-row" style="text-align:left;cursor:pointer;" onclick="openCoachClient(\'' + escText(o.c.id) + '\')"><span class="coach-os-row-main"><strong>' + escText(o.c.name) + '</strong><span>' + escText(o.why) + '</span></span></button>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Tutti i clienti attivi sono segnati come pagati e nessuna scadenza è passata.')) + '</div>') + '</section>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Mese per mese')) + '</h2></div>' +
+      ((f.byMonth || []).length
+        ? '<div class="coach-os-list">' + f.byMonth.slice(0, 12).map(function (m) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(monthLabel(m.month)) + '</strong><span>' + escText(T('entrate') + ' ' + money(m.incomeCents) + ' · ' + T('spese') + ' ' + money(m.expenseCents)) + '</span></span><strong>' + escText(money(m.netCents)) + '</strong></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Compare qui appena registri un incasso o una spesa.')) + '</div>') + '</section>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Spese')) + '</h2>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="CoachOS.openExpenseForm()">' + escText(T('REGISTRA SPESA')) + '</button></div>' +
+      ((f.byCategory || []).length
+        ? '<p class="coach-os-subtitle" style="margin:0 0 8px;">' + escText(f.byCategory.map(function (c) { return categoryLabel(c.category) + ' ' + money(c.cents); }).join(' · ')) + '</p>'
+        : '') +
+      ((ledger.expenses || []).length
+        ? '<div class="coach-os-list">' + ledger.expenses.slice(0, 40).map(function (x) {
+          const bits = [dayLabel(x.occurredAt), categoryLabel(x.category), x.note].filter(Boolean);
+          return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;"><span class="coach-os-row-main"><strong>' + escText(x.label || categoryLabel(x.category)) + '</strong><span>' + escText(bits.join(' · ')) + '</span></span>' +
+            '<strong>' + escText(money(x.amountCents)) + '</strong>' +
+            '<button class="btn btn-outline" style="font-size:9px;color:#c66;border-color:#c66;" onclick="CoachOS.deleteExpense(\'' + escText(x.id) + '\')">' + escText(T('ELIMINA')) + '</button></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Nessuna spesa. Con REGISTRA SPESA scrivi affitto, attrezzatura, software…')) + '</div>') + '</section>';
+  }
+
   function renderLedger(container) {
     const t = ledger.totals || { allCents: 0, yearCents: 0, monthCents: 0, last30Cents: 0, count: 0, withoutAmount: 0, byMonth: [], byClient: [] };
     const paid = ledger.events.filter(function (e) { return e.kind === 'paid'; });
@@ -92881,8 +93008,8 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     container.innerHTML =
       '<div class="coach-os-page" id="coach-ledger-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(T('Coach')) + '</div>' +
-      '<h1 class="coach-os-title">' + escText(T('Incassi')) + '</h1>' +
-      '<p class="coach-os-subtitle">' + escText(T('Il tuo registro di quello che i clienti ti pagano. Lo tieni tu: dall’app non passa nessun pagamento.')) + '</p></div>' +
+      '<h1 class="coach-os-title">' + escText(T('Gestionale')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(T('Incassi, spese e scadenze dei tuoi clienti, scritti da te. Dall’app non passa nessun pagamento: è il tuo registro.')) + '</p></div>' +
       '<button class="btn btn-primary" onclick="CoachOS.openPaymentForm()">' + escText(T('REGISTRA INCASSO')) + '</button></div>' +
       (ledger.failed ? '<div class="coach-os-empty">' + escText(T('Registro non disponibile adesso. Riprova tra poco.')) + '</div>' : '') +
       '<div class="coach-os-card coach-os-kpis">' +
@@ -92890,7 +93017,9 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
         .map(function (row) { return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>'; }).join('') + '</div>' +
       '<p class="coach-os-subtitle" style="margin:8px 0 0;">' + escText(t.count + ' ' + T(t.count === 1 ? 'incasso registrato' : 'incassi registrati')) +
       (t.withoutAmount ? ' · ' + escText(t.withoutAmount + ' ' + T('senza cifra, non contati nei totali')) : '') + '</p>' +
-      '<div class="coach-os-quick-actions"><button class="coach-os-action" onclick="CoachOS.exportLedgerCsv()">' + escText(T('Esporta in CSV')) + '</button></div>' +
+      financeHtml() +
+      '<div class="coach-os-quick-actions"><button class="coach-os-action" onclick="CoachOS.exportLedgerCsv()">' + escText(T('Esporta gli incassi in CSV')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.exportExpensesCsv()">' + escText(T('Esporta le spese in CSV')) + '</button></div>' +
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Per cliente')) + '</h2></div>' +
       ((t.byClient || []).length
         ? '<div class="coach-os-list">' + t.byClient.map(function (c) {
@@ -92922,6 +93051,9 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     ledger.events = data.events || [];
     ledger.totals = data.totals || null;
     ledger.sessions = data.sessions || [];
+    ledger.expenses = data.expenses || [];
+    ledger.finance = data.finance || null;
+    ledger.due = data.due || null;
     ledger.failed = false;
   }
   async function refreshLedger() {
@@ -93016,6 +93148,75 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       if (typeof window.practiceToast === 'function') window.practiceToast((error && error.message) || T('Incasso non eliminato.'), 'danger');
     }
   };
+  function closeExpenseForm() { const el = document.getElementById('coach-expense-form'); if (el) el.remove(); }
+  CoachOS.closeExpenseForm = closeExpenseForm;
+  CoachOS.openExpenseForm = function () {
+    closeExpenseForm();
+    const today = new Date();
+    const iso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const field = 'width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:16px;box-sizing:border-box;';
+    const label = function (text) { return '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;margin-top:10px;">' + escText(T(text)); };
+    const el = document.createElement('div');
+    el.id = 'coach-expense-form';
+    el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100015;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    el.onclick = function (ev) { if (ev.target === el) closeExpenseForm(); };
+    el.innerHTML = '<div class="card" style="max-width:440px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
+      '<div style="font-size:14px;font-weight:900;color:var(--gold);">' + escText(T('Registra una spesa')) + '</div>' +
+      label('Importo in euro') + '<input id="exp-amount" type="text" inputmode="decimal" placeholder="0,00" style="' + field + '"></label>' +
+      label('Data') + '<input id="exp-date" type="date" value="' + iso + '" style="' + field + '"></label>' +
+      label('Categoria') + '<select id="exp-category" style="' + field + '">' + EXPENSE_CATEGORIES.map(function (c) { return '<option value="' + c[0] + '">' + escText(T(c[1])) + '</option>'; }).join('') + '</select></label>' +
+      label('Descrizione (facoltativa)') + '<input id="exp-label" type="text" maxlength="80" style="' + field + '"></label>' +
+      label('Nota (facoltativa)') + '<input id="exp-note" type="text" maxlength="200" style="' + field + '"></label>' +
+      '<div id="exp-error" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
+      '<div style="display:grid;gap:8px;margin-top:6px;">' +
+      '<button type="button" class="btn btn-primary" id="exp-save" onclick="CoachOS.saveExpenseForm()">' + escText(T('SALVA')) + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="CoachOS.closeExpenseForm()">' + escText(T('CHIUDI')) + '</button>' +
+      '</div></div>';
+    document.body.appendChild(el);
+  };
+  CoachOS.saveExpenseForm = async function () {
+    const val = function (x) { const el = document.getElementById(x); return el ? String(el.value || '').trim() : ''; };
+    const err = document.getElementById('exp-error');
+    const say = function (m) { if (err) err.textContent = T(m); };
+    const cents = parseAmount(val('exp-amount'));
+    if (cents === null || isNaN(cents) || cents <= 0) { say('Importo non valido: scrivi una cifra, per esempio 80 o 80,50.'); return; }
+    const date = val('exp-date');
+    const btn = document.getElementById('exp-save');
+    if (btn) btn.disabled = true;
+    try {
+      await window.practiceFetch('/api/coach/business/expenses', {
+        method: 'POST', headers: window.practiceHeaders(true),
+        body: JSON.stringify({ amountCents: cents, category: val('exp-category'), label: val('exp-label'), note: val('exp-note'), occurredAt: date ? new Date(date + 'T12:00:00').toISOString() : null })
+      });
+      closeExpenseForm();
+      if (typeof window.practiceToast === 'function') window.practiceToast(T('Spesa registrata'), 'success');
+      await refreshLedger();
+    } catch (error) {
+      say((error && error.message) || 'Spesa non salvata. Riprova.');
+      if (btn) btn.disabled = false;
+    }
+  };
+  CoachOS.deleteExpense = async function (id) {
+    if (!window.confirm(T('Eliminare questa spesa dal registro?'))) return;
+    try {
+      await window.practiceFetch('/api/coach/business/expenses/' + encodeURIComponent(id), { method: 'DELETE', headers: window.practiceHeaders(false) });
+      await refreshLedger();
+    } catch (error) {
+      if (typeof window.practiceToast === 'function') window.practiceToast((error && error.message) || T('Spesa non eliminata.'), 'danger');
+    }
+  };
+  CoachOS.exportExpensesCsv = function () {
+    const cell = function (v) { const s = String(v == null ? '' : v); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const rows = [['data', 'categoria', 'descrizione', 'importo', 'nota'].join(';')].concat(
+      (ledger.expenses || []).map(function (x) {
+        return [String(x.occurredAt).slice(0, 10), categoryLabel(x.category), x.label || '', ((Number(x.amountCents) || 0) / 100).toFixed(2).replace('.', ','), x.note || ''].map(cell).join(';');
+      }));
+    const blob = new Blob(['﻿' + rows.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' });
+    if (typeof window.downloadBlobHelper === 'function') { window.downloadBlobHelper(blob, 'nurvan-spese.csv'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'nurvan-spese.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
   CoachOS.exportLedgerCsv = function () {
     const cell = function (v) { const s = String(v == null ? '' : v); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
     const rows = [['data', 'cliente', 'per cosa', 'come', 'importo', 'nota'].join(';')].concat(
@@ -93028,7 +93229,7 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     a.href = URL.createObjectURL(blob); a.download = 'nurvan-incassi.csv';
     document.body.appendChild(a); a.click(); a.remove();
   };
-  CoachOS.ledgerTestHooks = { parseAmount: parseAmount, ledger: ledger, METHODS: METHODS, LABELS: LABELS };
+  CoachOS.ledgerTestHooks = { parseAmount: parseAmount, ledger: ledger, METHODS: METHODS, LABELS: LABELS, EXPENSE_CATEGORIES: EXPENSE_CATEGORIES };
 
   CoachOS.views.coachCrm = async function (container) {
     let rows = [];
@@ -93125,6 +93326,208 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       practiceToast(failed ? tx('coAutomationFailed') : tx('coAutomationRan'), failed ? 'danger' : 'success');
     }
   };
+})();
+
+(function () {
+  'use strict';
+  const CoachOS = window.CoachOS;
+  if (!CoachOS) return;
+
+  function escText(value) {
+    if (typeof window.esc === 'function') return window.esc(String(value || ''));
+    return String(value || '').replace(/[&<>"']/g, '');
+  }
+  function T(text) { return typeof window.tr === 'function' ? window.tr(text) : text; }
+
+  /*
+   * Il tuo marchio: the coach's (or gym's) name and logo. The coach picks an image, crops it to a square by dragging
+   * and zooming, and "powered by Nurvan" is laid over its lower edge; what is drawn here is the icon itself, made in
+   * the three sizes a Home-screen icon needs and sent to the server (see server/coach-os/branding.mjs). The icon is
+   * the one of the web app a client installs from the coach's link: a store app has one icon for everybody.
+   */
+  const PREVIEW = 280;
+  const SIZES = [512, 192, 180];
+  const state = { img: null, zoom: 1, ox: 0, oy: 0, name: '', saved: { name: '', hasLogo: false }, busy: false };
+
+  // Draws the icon at `size`: the picture covering the square, the strip "powered by Nurvan" on its lower edge.
+  function drawIcon(canvas, size) {
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0b0b0b';
+    ctx.fillRect(0, 0, size, size);
+    const img = state.img;
+    if (img) {
+      const base = size / Math.min(img.naturalWidth, img.naturalHeight);
+      const scale = base * state.zoom;
+      const k = size / PREVIEW;
+      const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+      ctx.drawImage(img, (size - w) / 2 + state.ox * k, (size - h) / 2 + state.oy * k, w, h);
+    }
+    const band = Math.round(size * 0.2);
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0, size - band, size, band);
+    const label = 'powered by NURVAN';
+    let px = Math.round(band * 0.42);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 ' + px + 'px -apple-system, "Helvetica Neue", Arial, sans-serif';
+    while (ctx.measureText(label).width > size * 0.9 && px > 6) { px -= 1; ctx.font = '700 ' + px + 'px -apple-system, "Helvetica Neue", Arial, sans-serif'; }
+    ctx.fillStyle = '#d4af37';
+    ctx.fillText(label, size / 2, size - band / 2);
+  }
+
+  function clampOffsets() {
+    const img = state.img;
+    if (!img) return;
+    const scale = (PREVIEW / Math.min(img.naturalWidth, img.naturalHeight)) * state.zoom;
+    const maxX = Math.max(0, (img.naturalWidth * scale - PREVIEW) / 2);
+    const maxY = Math.max(0, (img.naturalHeight * scale - PREVIEW) / 2);
+    state.ox = Math.max(-maxX, Math.min(maxX, state.ox));
+    state.oy = Math.max(-maxY, Math.min(maxY, state.oy));
+  }
+  function paintPreview() {
+    const c = document.getElementById('brand-canvas');
+    if (c) drawIcon(c, PREVIEW);
+  }
+
+  function iconDataUrls() {
+    const out = {};
+    SIZES.forEach(function (size) {
+      const c = document.createElement('canvas');
+      drawIcon(c, size);
+      out[size] = c.toDataURL('image/png');
+    });
+    return out;
+  }
+
+  function loadFile(file) {
+    if (!file || !/^image\//.test(file.type || '')) { say('Scegli un’immagine (PNG o JPG).'); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () {
+      state.img = img; state.zoom = 1; state.ox = 0; state.oy = 0;
+      say('');
+      const z = document.getElementById('brand-zoom');
+      if (z) z.value = '1';
+      paintPreview();
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = function () { say('Scegli un’immagine (PNG o JPG).'); URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+
+  function say(message) {
+    const el = document.getElementById('brand-msg');
+    if (el) el.textContent = message ? T(message) : '';
+  }
+
+  function render(container) {
+    const field = 'width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:16px;box-sizing:border-box;';
+    container.innerHTML =
+      '<div class="coach-os-page" id="coach-brand-page">' +
+      '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(T('Coach')) + '</div>' +
+      '<h1 class="coach-os-title">' + escText(T('Il tuo marchio')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(T('Nome e logo che vedono i tuoi clienti. Il link che mandi apre una web app con il tuo marchio e “powered by Nurvan”: l’icona che il cliente mette sulla Home è la tua.')) + '</p></div></div>' +
+      '<div class="coach-os-card" style="padding:14px;">' +
+      '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;">' + escText(T('Nome (palestra o coach)')) +
+      '<input id="brand-name" type="text" maxlength="40" placeholder="Fitness Gym X" value="' + escText(state.name) + '" style="' + field + '"></label>' +
+      '<div style="font-size:10px;color:#ccc;font-weight:800;margin-top:14px;">' + escText(T('Logo')) + '</div>' +
+      '<input id="brand-file" type="file" accept="image/*" style="display:none;">' +
+      '<button type="button" class="btn btn-outline" style="width:100%;margin-top:6px;" onclick="document.getElementById(\'brand-file\').click()">' + escText(T('SCEGLI IL LOGO')) + '</button>' +
+      (state.saved.hasLogo && !state.img ? '<p class="coach-os-subtitle" style="margin:8px 0 0;">' + escText(T('Hai già un logo salvato. Sceglierne un altro lo sostituisce.')) + '</p>' : '') +
+      '<div id="brand-crop" style="display:' + (state.img ? 'block' : 'none') + ';margin-top:12px;text-align:center;">' +
+      '<canvas id="brand-canvas" width="' + PREVIEW + '" height="' + PREVIEW + '" style="width:' + PREVIEW + 'px;height:' + PREVIEW + 'px;max-width:100%;border-radius:22%;border:1px solid #333;touch-action:none;cursor:grab;"></canvas>' +
+      '<div style="font-size:11px;color:#aaa;margin-top:6px;">' + escText(T('Trascina per spostare, usa il cursore per ingrandire. Così appare l’icona sulla Home dei clienti.')) + '</div>' +
+      '<input id="brand-zoom" type="range" min="1" max="4" step="0.02" value="' + state.zoom + '" aria-label="Zoom" style="width:80%;margin-top:8px;"></div>' +
+      '<div id="brand-msg" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
+      '<div style="display:grid;gap:8px;margin-top:6px;">' +
+      '<button type="button" class="btn btn-primary" id="brand-save">' + escText(T('SALVA IL MARCHIO')) + '</button>' +
+      ((state.saved.hasLogo || state.saved.name) ? '<button type="button" class="btn btn-outline" id="brand-remove" style="color:#c66;border-color:#c66;">' + escText(T('TOGLI IL MARCHIO')) + '</button>' : '') +
+      '</div></div>' +
+      '<p class="coach-os-subtitle" style="margin-top:12px;">' + escText(T('Nell’app degli store l’icona resta quella di Nurvan, uguale per tutti: il tuo logo compare in alto dentro l’app dei tuoi clienti e come icona della web app che aggiungono alla Home. Chi l’ha già aggiunta deve toglierla e aggiungerla di nuovo per vedere la nuova icona.')) + '</p>' +
+      '</div>';
+    const file = document.getElementById('brand-file');
+    if (file) file.onchange = function () { loadFile(file.files && file.files[0]); };
+    const name = document.getElementById('brand-name');
+    if (name) name.oninput = function () { state.name = name.value; };
+    const zoom = document.getElementById('brand-zoom');
+    if (zoom) zoom.oninput = function () { state.zoom = Number(zoom.value) || 1; clampOffsets(); paintPreview(); };
+    const canvas = document.getElementById('brand-canvas');
+    if (canvas) {
+      let drag = null;
+      canvas.onpointerdown = function (ev) { drag = { x: ev.clientX, y: ev.clientY, ox: state.ox, oy: state.oy }; try { canvas.setPointerCapture(ev.pointerId); } catch (_) {} canvas.style.cursor = 'grabbing'; };
+      canvas.onpointermove = function (ev) {
+        if (!drag) return;
+        const k = PREVIEW / canvas.getBoundingClientRect().width;
+        state.ox = drag.ox + (ev.clientX - drag.x) * k;
+        state.oy = drag.oy + (ev.clientY - drag.y) * k;
+        clampOffsets(); paintPreview();
+      };
+      const end = function () { drag = null; canvas.style.cursor = 'grab'; };
+      canvas.onpointerup = end; canvas.onpointercancel = end;
+      paintPreview();
+    }
+    const save = document.getElementById('brand-save');
+    if (save) save.onclick = CoachOS.saveBrand;
+    const remove = document.getElementById('brand-remove');
+    if (remove) remove.onclick = CoachOS.removeBrand;
+  }
+
+  CoachOS.saveBrand = async function () {
+    if (state.busy) return;
+    const nameEl = document.getElementById('brand-name');
+    const name = nameEl ? String(nameEl.value || '').trim() : state.name;
+    if (!name && !state.img) { say('Scrivi il nome o scegli il logo.'); return; }
+    state.busy = true;
+    const btn = document.getElementById('brand-save');
+    if (btn) btn.disabled = true;
+    try {
+      const body = { name: name };
+      if (state.img) body.icons = iconDataUrls();
+      const data = await window.practiceFetch('/api/coach/branding', { method: 'PUT', headers: window.practiceHeaders(true), body: JSON.stringify(body) }, 40000);
+      state.saved = { name: (data.branding && data.branding.name) || name, hasLogo: !!(data.branding && data.branding.hasLogo) };
+      state.name = state.saved.name;
+      state.img = null;
+      if (typeof window.practiceToast === 'function') window.practiceToast(T('Marchio salvato'), 'success');
+      const page = document.getElementById('coach-brand-page');
+      if (page && page.parentNode) render(page.parentNode);
+    } catch (error) {
+      say((error && error.message) || 'Il marchio non è stato salvato. Riprova.');
+      if (btn) btn.disabled = false;
+    }
+    state.busy = false;
+  };
+
+  CoachOS.removeBrand = async function () {
+    if (!window.confirm(T('Togliere il marchio? I clienti rivedranno quello di Nurvan.'))) return;
+    try {
+      await window.practiceFetch('/api/coach/branding', { method: 'DELETE', headers: window.practiceHeaders(false) });
+      state.saved = { name: '', hasLogo: false }; state.name = ''; state.img = null;
+      if (typeof window.practiceToast === 'function') window.practiceToast(T('Marchio tolto'), 'success');
+      const page = document.getElementById('coach-brand-page');
+      if (page && page.parentNode) render(page.parentNode);
+    } catch (error) {
+      say((error && error.message) || 'Il marchio non è stato tolto. Riprova.');
+    }
+  };
+
+  CoachOS.views.coachBrand = async function (container) {
+    // Branding belongs to the Coach Pro plan (web/features.json).
+    if (typeof planCan === 'function' && !planCan('branding')) {
+      container.innerHTML = '<div class="coach-os-page">' + planLockedHtml('branding') + '</div>';
+      return;
+    }
+    container.innerHTML = '<div class="coach-os-skeleton">' + escText(T('Carico…')) + '</div>';
+    try {
+      const data = await window.practiceFetch('/api/coach/branding', { headers: window.practiceHeaders(false) });
+      const b = (data && data.branding) || {};
+      state.saved = { name: b.name || '', hasLogo: !!b.hasLogo };
+      if (!state.name) state.name = state.saved.name;
+    } catch (_) {}
+    if (typeof currentView === 'undefined' || currentView === 'coachBrand') render(container);
+  };
+
+  CoachOS.brandTestHooks = { drawIcon: drawIcon, state: state, SIZES: SIZES };
 })();
 
 (function () {

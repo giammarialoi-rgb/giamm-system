@@ -26,7 +26,12 @@
    */
   const METHODS = [['cash', 'Contanti'], ['transfer', 'Bonifico'], ['card', 'Carta'], ['other', 'Altro']];
   const LABELS = ['Mensile coaching', 'Pacchetto di sedute', 'Seduta in presenza', 'Programma', 'Altro'];
-  const ledger = { events: [], totals: null, sessions: [], clients: [], failed: false };
+  const EXPENSE_CATEGORIES = [['rent', 'Affitto'], ['equipment', 'Attrezzatura'], ['software', 'Software e abbonamenti'], ['marketing', 'Pubblicità'], ['travel', 'Trasferte'], ['taxes', 'Tasse e contributi'], ['training', 'Formazione'], ['other', 'Altro']];
+  const ledger = { events: [], totals: null, sessions: [], clients: [], failed: false, expenses: [], finance: null, due: null };
+  function categoryLabel(id) {
+    const hit = EXPENSE_CATEGORIES.filter(function (c) { return c[0] === id; })[0];
+    return T(hit ? hit[1] : 'Altro');
+  }
   function T(text) { return typeof window.tr === 'function' ? window.tr(text) : text; }
   // The stages of the pipeline as the coach reads them (the keys are the server's ids).
   const CRM_STAGE_LABEL = { LEAD: 'Contatto', TRIAL: 'In prova', ACTIVE: 'Attivo', PAUSED: 'In pausa', CHURN_RISK: 'A rischio', CHURNED: 'Perso' };
@@ -55,6 +60,46 @@
     return Math.round(n * 100);
   }
 
+  // The books: what came in, what went out, what is left; who still owes; month by month; the expenses.
+  function financeHtml() {
+    const f = ledger.finance;
+    if (!f) return '';
+    const due = ledger.due || { unpaid: [], overdue: [], paidCount: 0, activeCount: 0 };
+    const kpi = [[T('Entrate quest’anno'), money(f.yearIncomeCents)], [T('Spese quest’anno'), money(f.yearExpenseCents)], [T('Utile quest’anno'), money(f.yearNetCents)], [T('Utile questo mese'), money(f.monthNetCents)]];
+    const owes = {};
+    due.unpaid.forEach(function (c) { owes[c.id] = { c: c, why: T('non segnato come pagato') }; });
+    due.overdue.forEach(function (c) { owes[c.id] = { c: c, why: (owes[c.id] ? owes[c.id].why + ' · ' : '') + T('scadenza passata il') + ' ' + dayLabel(c.nextDueAt) }; });
+    const oweRows = Object.keys(owes).map(function (k) { return owes[k]; });
+    return '<div class="coach-os-card coach-os-kpis" style="margin-top:12px;">' +
+      kpi.map(function (row) { return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>'; }).join('') + '</div>' +
+      '<p class="coach-os-subtitle" style="margin:8px 0 0;">' + escText(T('Utile = entrate con cifra meno le spese che scrivi tu.')) + '</p>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Da incassare')) + ' · ' + escText(due.paidCount + '/' + due.activeCount + ' ' + T('clienti in regola')) + '</h2></div>' +
+      (oweRows.length
+        ? '<div class="coach-os-list">' + oweRows.map(function (o) {
+          return '<button type="button" class="coach-os-row" style="text-align:left;cursor:pointer;" onclick="openCoachClient(\'' + escText(o.c.id) + '\')"><span class="coach-os-row-main"><strong>' + escText(o.c.name) + '</strong><span>' + escText(o.why) + '</span></span></button>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Tutti i clienti attivi sono segnati come pagati e nessuna scadenza è passata.')) + '</div>') + '</section>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Mese per mese')) + '</h2></div>' +
+      ((f.byMonth || []).length
+        ? '<div class="coach-os-list">' + f.byMonth.slice(0, 12).map(function (m) {
+          return '<div class="coach-os-row"><span class="coach-os-row-main"><strong>' + escText(monthLabel(m.month)) + '</strong><span>' + escText(T('entrate') + ' ' + money(m.incomeCents) + ' · ' + T('spese') + ' ' + money(m.expenseCents)) + '</span></span><strong>' + escText(money(m.netCents)) + '</strong></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Compare qui appena registri un incasso o una spesa.')) + '</div>') + '</section>' +
+      '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Spese')) + '</h2>' +
+      '<button class="btn btn-outline" style="font-size:10px;" onclick="CoachOS.openExpenseForm()">' + escText(T('REGISTRA SPESA')) + '</button></div>' +
+      ((f.byCategory || []).length
+        ? '<p class="coach-os-subtitle" style="margin:0 0 8px;">' + escText(f.byCategory.map(function (c) { return categoryLabel(c.category) + ' ' + money(c.cents); }).join(' · ')) + '</p>'
+        : '') +
+      ((ledger.expenses || []).length
+        ? '<div class="coach-os-list">' + ledger.expenses.slice(0, 40).map(function (x) {
+          const bits = [dayLabel(x.occurredAt), categoryLabel(x.category), x.note].filter(Boolean);
+          return '<div class="coach-os-row" style="flex-wrap:wrap;gap:8px;"><span class="coach-os-row-main"><strong>' + escText(x.label || categoryLabel(x.category)) + '</strong><span>' + escText(bits.join(' · ')) + '</span></span>' +
+            '<strong>' + escText(money(x.amountCents)) + '</strong>' +
+            '<button class="btn btn-outline" style="font-size:9px;color:#c66;border-color:#c66;" onclick="CoachOS.deleteExpense(\'' + escText(x.id) + '\')">' + escText(T('ELIMINA')) + '</button></div>';
+        }).join('') + '</div>'
+        : '<div class="coach-os-empty">' + escText(T('Nessuna spesa. Con REGISTRA SPESA scrivi affitto, attrezzatura, software…')) + '</div>') + '</section>';
+  }
+
   function renderLedger(container) {
     const t = ledger.totals || { allCents: 0, yearCents: 0, monthCents: 0, last30Cents: 0, count: 0, withoutAmount: 0, byMonth: [], byClient: [] };
     const paid = ledger.events.filter(function (e) { return e.kind === 'paid'; });
@@ -73,8 +118,8 @@
     container.innerHTML =
       '<div class="coach-os-page" id="coach-ledger-page">' +
       '<div class="coach-os-page-header"><div><div class="coach-os-eyebrow">' + escText(T('Coach')) + '</div>' +
-      '<h1 class="coach-os-title">' + escText(T('Incassi')) + '</h1>' +
-      '<p class="coach-os-subtitle">' + escText(T('Il tuo registro di quello che i clienti ti pagano. Lo tieni tu: dall’app non passa nessun pagamento.')) + '</p></div>' +
+      '<h1 class="coach-os-title">' + escText(T('Gestionale')) + '</h1>' +
+      '<p class="coach-os-subtitle">' + escText(T('Incassi, spese e scadenze dei tuoi clienti, scritti da te. Dall’app non passa nessun pagamento: è il tuo registro.')) + '</p></div>' +
       '<button class="btn btn-primary" onclick="CoachOS.openPaymentForm()">' + escText(T('REGISTRA INCASSO')) + '</button></div>' +
       (ledger.failed ? '<div class="coach-os-empty">' + escText(T('Registro non disponibile adesso. Riprova tra poco.')) + '</div>' : '') +
       '<div class="coach-os-card coach-os-kpis">' +
@@ -82,7 +127,9 @@
         .map(function (row) { return '<div class="coach-os-kpi"><strong>' + escText(row[1]) + '</strong><span>' + escText(row[0]) + '</span></div>'; }).join('') + '</div>' +
       '<p class="coach-os-subtitle" style="margin:8px 0 0;">' + escText(t.count + ' ' + T(t.count === 1 ? 'incasso registrato' : 'incassi registrati')) +
       (t.withoutAmount ? ' · ' + escText(t.withoutAmount + ' ' + T('senza cifra, non contati nei totali')) : '') + '</p>' +
-      '<div class="coach-os-quick-actions"><button class="coach-os-action" onclick="CoachOS.exportLedgerCsv()">' + escText(T('Esporta in CSV')) + '</button></div>' +
+      financeHtml() +
+      '<div class="coach-os-quick-actions"><button class="coach-os-action" onclick="CoachOS.exportLedgerCsv()">' + escText(T('Esporta gli incassi in CSV')) + '</button>' +
+      '<button class="coach-os-action" onclick="CoachOS.exportExpensesCsv()">' + escText(T('Esporta le spese in CSV')) + '</button></div>' +
       '<section class="coach-os-section"><div class="coach-os-section-head"><h2 class="coach-os-section-title">' + escText(T('Per cliente')) + '</h2></div>' +
       ((t.byClient || []).length
         ? '<div class="coach-os-list">' + t.byClient.map(function (c) {
@@ -114,6 +161,9 @@
     ledger.events = data.events || [];
     ledger.totals = data.totals || null;
     ledger.sessions = data.sessions || [];
+    ledger.expenses = data.expenses || [];
+    ledger.finance = data.finance || null;
+    ledger.due = data.due || null;
     ledger.failed = false;
   }
   async function refreshLedger() {
@@ -208,6 +258,75 @@
       if (typeof window.practiceToast === 'function') window.practiceToast((error && error.message) || T('Incasso non eliminato.'), 'danger');
     }
   };
+  function closeExpenseForm() { const el = document.getElementById('coach-expense-form'); if (el) el.remove(); }
+  CoachOS.closeExpenseForm = closeExpenseForm;
+  CoachOS.openExpenseForm = function () {
+    closeExpenseForm();
+    const today = new Date();
+    const iso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    const field = 'width:100%;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:16px;box-sizing:border-box;';
+    const label = function (text) { return '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;margin-top:10px;">' + escText(T(text)); };
+    const el = document.createElement('div');
+    el.id = 'coach-expense-form';
+    el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:100015;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    el.onclick = function (ev) { if (ev.target === el) closeExpenseForm(); };
+    el.innerHTML = '<div class="card" style="max-width:440px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
+      '<div style="font-size:14px;font-weight:900;color:var(--gold);">' + escText(T('Registra una spesa')) + '</div>' +
+      label('Importo in euro') + '<input id="exp-amount" type="text" inputmode="decimal" placeholder="0,00" style="' + field + '"></label>' +
+      label('Data') + '<input id="exp-date" type="date" value="' + iso + '" style="' + field + '"></label>' +
+      label('Categoria') + '<select id="exp-category" style="' + field + '">' + EXPENSE_CATEGORIES.map(function (c) { return '<option value="' + c[0] + '">' + escText(T(c[1])) + '</option>'; }).join('') + '</select></label>' +
+      label('Descrizione (facoltativa)') + '<input id="exp-label" type="text" maxlength="80" style="' + field + '"></label>' +
+      label('Nota (facoltativa)') + '<input id="exp-note" type="text" maxlength="200" style="' + field + '"></label>' +
+      '<div id="exp-error" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
+      '<div style="display:grid;gap:8px;margin-top:6px;">' +
+      '<button type="button" class="btn btn-primary" id="exp-save" onclick="CoachOS.saveExpenseForm()">' + escText(T('SALVA')) + '</button>' +
+      '<button type="button" class="btn btn-outline" onclick="CoachOS.closeExpenseForm()">' + escText(T('CHIUDI')) + '</button>' +
+      '</div></div>';
+    document.body.appendChild(el);
+  };
+  CoachOS.saveExpenseForm = async function () {
+    const val = function (x) { const el = document.getElementById(x); return el ? String(el.value || '').trim() : ''; };
+    const err = document.getElementById('exp-error');
+    const say = function (m) { if (err) err.textContent = T(m); };
+    const cents = parseAmount(val('exp-amount'));
+    if (cents === null || isNaN(cents) || cents <= 0) { say('Importo non valido: scrivi una cifra, per esempio 80 o 80,50.'); return; }
+    const date = val('exp-date');
+    const btn = document.getElementById('exp-save');
+    if (btn) btn.disabled = true;
+    try {
+      await window.practiceFetch('/api/coach/business/expenses', {
+        method: 'POST', headers: window.practiceHeaders(true),
+        body: JSON.stringify({ amountCents: cents, category: val('exp-category'), label: val('exp-label'), note: val('exp-note'), occurredAt: date ? new Date(date + 'T12:00:00').toISOString() : null })
+      });
+      closeExpenseForm();
+      if (typeof window.practiceToast === 'function') window.practiceToast(T('Spesa registrata'), 'success');
+      await refreshLedger();
+    } catch (error) {
+      say((error && error.message) || 'Spesa non salvata. Riprova.');
+      if (btn) btn.disabled = false;
+    }
+  };
+  CoachOS.deleteExpense = async function (id) {
+    if (!window.confirm(T('Eliminare questa spesa dal registro?'))) return;
+    try {
+      await window.practiceFetch('/api/coach/business/expenses/' + encodeURIComponent(id), { method: 'DELETE', headers: window.practiceHeaders(false) });
+      await refreshLedger();
+    } catch (error) {
+      if (typeof window.practiceToast === 'function') window.practiceToast((error && error.message) || T('Spesa non eliminata.'), 'danger');
+    }
+  };
+  CoachOS.exportExpensesCsv = function () {
+    const cell = function (v) { const s = String(v == null ? '' : v); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const rows = [['data', 'categoria', 'descrizione', 'importo', 'nota'].join(';')].concat(
+      (ledger.expenses || []).map(function (x) {
+        return [String(x.occurredAt).slice(0, 10), categoryLabel(x.category), x.label || '', ((Number(x.amountCents) || 0) / 100).toFixed(2).replace('.', ','), x.note || ''].map(cell).join(';');
+      }));
+    const blob = new Blob(['﻿' + rows.join('\n') + '\n'], { type: 'text/csv;charset=utf-8' });
+    if (typeof window.downloadBlobHelper === 'function') { window.downloadBlobHelper(blob, 'nurvan-spese.csv'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'nurvan-spese.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
   CoachOS.exportLedgerCsv = function () {
     const cell = function (v) { const s = String(v == null ? '' : v); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
     const rows = [['data', 'cliente', 'per cosa', 'come', 'importo', 'nota'].join(';')].concat(
@@ -220,7 +339,7 @@
     a.href = URL.createObjectURL(blob); a.download = 'nurvan-incassi.csv';
     document.body.appendChild(a); a.click(); a.remove();
   };
-  CoachOS.ledgerTestHooks = { parseAmount: parseAmount, ledger: ledger, METHODS: METHODS, LABELS: LABELS };
+  CoachOS.ledgerTestHooks = { parseAmount: parseAmount, ledger: ledger, METHODS: METHODS, LABELS: LABELS, EXPENSE_CATEGORIES: EXPENSE_CATEGORIES };
 
   CoachOS.views.coachCrm = async function (container) {
     let rows = [];

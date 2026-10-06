@@ -343,4 +343,105 @@ function automationRow(row) {
   };
 }
 
-export const BusinessTestHelpers = Object.freeze({ money, summarizeBusiness, ledgerTotals, paymentAmount });
+// What the coach spends: rent, equipment, software... kept by hand beside what clients paid. Nothing moves through the app.
+export const EXPENSE_CATEGORIES = ["rent", "equipment", "software", "marketing", "travel", "taxes", "training", "other"];
+
+function expenseRow(row) {
+  return {
+    id: String(row.id),
+    category: row.category || "other",
+    label: row.label || "",
+    amountCents: money(row.amount_cents),
+    occurredAt: row.occurred_at,
+    note: row.note || ""
+  };
+}
+
+export async function recordExpense(pool, coachId, input = {}) {
+  const category = EXPENSE_CATEGORIES.includes(String(input.category || "")) ? String(input.category) : "other";
+  const cents = Math.round(Number(input.amountCents));
+  if (!Number.isFinite(cents) || cents <= 0 || cents > 100000000) throw new Error("Scrivi l’importo della spesa.");
+  const when = input.occurredAt ? new Date(input.occurredAt) : new Date();
+  if (Number.isNaN(when.getTime())) throw new Error("Data non valida.");
+  const result = await pool.query(
+    `INSERT INTO coach_expenses(coach_user_id, occurred_at, category, label, amount_cents, note)
+     VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [coachId, when.toISOString(), category, clean(input.label, 80) || null, cents, clean(input.note, 200) || null]
+  );
+  return expenseRow(result.rows[0]);
+}
+
+export async function listExpenses(pool, coachId, { limit = 2000 } = {}) {
+  const result = await pool.query(
+    "SELECT * FROM coach_expenses WHERE coach_user_id = $1 ORDER BY occurred_at DESC LIMIT $2",
+    [coachId, Math.min(5000, Math.max(1, Number(limit) || 2000))]
+  );
+  return (result.rows || []).map(expenseRow);
+}
+
+export async function deleteExpense(pool, coachId, id) {
+  const result = await pool.query("DELETE FROM coach_expenses WHERE id = $1 AND coach_user_id = $2 RETURNING id", [id, coachId]);
+  return !!result.rows[0];
+}
+
+// The year's and the month's books: what came in (payments with a figure), what went out, what is left; month by month.
+export function financeReport(events, expenses, now = Date.now()) {
+  const today = new Date(now);
+  const yearKey = String(today.getFullYear());
+  const monthKey = yearKey + "-" + String(today.getMonth() + 1).padStart(2, "0");
+  const keyOf = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  const months = new Map();
+  const slot = (key) => { let m = months.get(key); if (!m) { m = { month: key, incomeCents: 0, expenseCents: 0 }; months.set(key, m); } return m; };
+  const byCategory = {};
+  const out = { yearIncomeCents: 0, yearExpenseCents: 0, monthIncomeCents: 0, monthExpenseCents: 0, allExpenseCents: 0, byMonth: [], byCategory: [] };
+  for (const e of events || []) {
+    if (!e || e.kind !== "paid" || e.hasAmount === false) continue;
+    const when = new Date(e.occurredAt);
+    const cents = money(e.amountCents);
+    slot(keyOf(when)).incomeCents += cents;
+    if (String(when.getFullYear()) === yearKey) out.yearIncomeCents += cents;
+    if (keyOf(when) === monthKey) out.monthIncomeCents += cents;
+  }
+  for (const x of expenses || []) {
+    const when = new Date(x.occurredAt);
+    const cents = money(x.amountCents);
+    out.allExpenseCents += cents;
+    slot(keyOf(when)).expenseCents += cents;
+    if (String(when.getFullYear()) === yearKey) {
+      out.yearExpenseCents += cents;
+      byCategory[x.category] = (byCategory[x.category] || 0) + cents;
+    }
+    if (keyOf(when) === monthKey) out.monthExpenseCents += cents;
+  }
+  out.yearNetCents = out.yearIncomeCents - out.yearExpenseCents;
+  out.monthNetCents = out.monthIncomeCents - out.monthExpenseCents;
+  out.byMonth = [...months.values()].map((m) => ({ ...m, netCents: m.incomeCents - m.expenseCents })).sort((a, b) => (a.month < b.month ? 1 : -1));
+  out.byCategory = Object.keys(byCategory).map((c) => ({ category: c, cents: byCategory[c] })).sort((a, b) => b.cents - a.cents);
+  return out;
+}
+
+// Who owes something: clients not marked as paid, and clients whose next due date has passed. The coach's own flags.
+export async function dueClients(pool, coachId, now = Date.now()) {
+  const result = await pool.query(
+    `SELECT id, display_name, paid, next_due_at, program_expires_at
+     FROM coach_clients WHERE coach_user_id = $1 AND status = 'active' ORDER BY display_name ASC`,
+    [coachId]
+  );
+  const rows = (result.rows || []).map((r) => {
+    const due = r.next_due_at ? new Date(r.next_due_at).getTime() : null;
+    return {
+      id: String(r.id), name: r.display_name, paid: !!r.paid,
+      nextDueAt: r.next_due_at || null,
+      overdue: due != null && due < now,
+      expiresAt: r.program_expires_at || null
+    };
+  });
+  return {
+    unpaid: rows.filter((r) => !r.paid),
+    overdue: rows.filter((r) => r.overdue),
+    paidCount: rows.filter((r) => r.paid).length,
+    activeCount: rows.length
+  };
+}
+
+export const BusinessTestHelpers = Object.freeze({ money, summarizeBusiness, ledgerTotals, paymentAmount, financeReport });

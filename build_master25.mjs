@@ -39,6 +39,7 @@ const coachOsCode = [
   'web/coach-os/calendar.js',
   'web/coach-os/analytics.js',
   'web/coach-os/business.js',
+  'web/coach-os/brand.js',
   'web/coach-os/inbox.js',
   'web/coach-os/media-ai.js'
 ].filter((file) => fs.existsSync(file))
