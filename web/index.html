@@ -81757,6 +81757,7 @@ function ensureCoachDrawer() {
       ? ('<button type="button" class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="closeCoachDrawer();pushCoachClientEdits()">' + cpt('coSaveEdits').toUpperCase() + '</button>' +
         '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;color:#d4af37 !important;-webkit-text-fill-color:#d4af37 !important;" onclick="closeCoachDrawer();leaveCoachClientView()">' + cpt('coBackToSheet').toUpperCase() + '</button>')
       : '') +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:14px;" onclick="closeCoachDrawer();navigate(\'coachSettings\')">' + coachSettingsLabel() + '</button>' +
     '<button type="button" class="btn btn-outline" style="width:100%;margin-top:16px;color:#c66 !important;-webkit-text-fill-color:#c66 !important;" onclick="closeCoachDrawer();exitCoachSession()">' + cpt('coExitCoach').toUpperCase() + '</button>';
 }
 
@@ -84248,6 +84249,12 @@ async function sendProgramRequest(extra) {
   }
 }
 
+// "IMPOSTAZIONI COACHING": marchio, questionario dei nuovi clienti, testo dell'invito, gestionale, presenza.
+function coachSettingsLabel() {
+  const text = (typeof window.tr === 'function') ? window.tr('Impostazioni coaching') : 'Impostazioni coaching';
+  return esc(String(text).toUpperCase());
+}
+
 function renderCoachHub(c) {
   if (typeof isCoachUnlocked === 'function' && !isCoachUnlocked()) {
     c.innerHTML = renderCoachUnlockCardHtml();
@@ -84269,7 +84276,8 @@ function renderCoachHub(c) {
     '<span style="flex:1;min-width:0;color:#eee !important;-webkit-text-fill-color:#eee !important;line-height:1.35;">Consenti videocall interne con i clienti</span></label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button>' +
-    '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="openInviteTemplateEditor()">TESTO DELL’INVITO</button></div>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="openInviteTemplateEditor()">TESTO DELL’INVITO</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="navigate(\'coachSettings\')">' + coachSettingsLabel() + '</button></div>' +
     '<div id="cp-checkin-counter"></div>' +
     '<div id="cp-seats-summary"></div>' +
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
