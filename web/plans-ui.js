@@ -308,6 +308,17 @@ async function billingConfig() {
   return __billing.cfg;
 }
 
+// What the person reads when the store does not answer or a purchase fails: never the technical message (it goes to the
+// console), always something they can act on.
+function billingFriendlyError(err, fallback) {
+  const raw = String((err && err.message) || err || '');
+  try { console.warn('[billing]', raw); } catch (_) {}
+  if (/network|internet|offline|connession|timeout|non risponde|fetch/i.test(raw)) return 'Connessione assente o lenta: controlla la rete e riprova.';
+  if (/pending|ask to buy|in attesa/i.test(raw)) return 'L’acquisto è in attesa di approvazione. Appena confermato, il piano si attiva.';
+  if (/not allowed|disabled|restricted|non consentit/i.test(raw)) return 'Gli acquisti non sono consentiti su questo dispositivo (controlla le restrizioni di Tempo di utilizzo).';
+  return fallback;
+}
+
 function billingRedraw() {
   try { if (typeof currentView !== 'undefined' && currentView === 'pricing' && typeof render === 'function') render(); } catch (_) {}
 }
@@ -333,6 +344,7 @@ async function billingLoad(force) {
   } catch (err) {
     __billing.state = 'unavailable';
     __billing.error = String((err && err.message) || err || '');
+    try { console.warn('[billing] store not ready:', __billing.error); } catch (_) {}
   }
   billingRedraw();
 }
@@ -362,7 +374,7 @@ async function billingBuy(productId) {
     await billingSyncPlan();
     if (typeof showToast === 'function') showToast('Abbonamento attivo. Grazie!', 'ok');
   } catch (err) {
-    if (!billingCancelled(err) && typeof showToast === 'function') showToast((err && err.message) || 'Acquisto non riuscito', 'error');
+    if (!billingCancelled(err) && typeof showToast === 'function') showToast(billingFriendlyError(err, 'Acquisto non riuscito. Riprova tra poco.'), 'error');
   } finally {
     __billing.busy = false;
     billingRedraw();
@@ -387,7 +399,7 @@ async function billingRestore() {
       else showToast('Nessun acquisto da ripristinare', 'info');
     }
   } catch (err) {
-    if (typeof showToast === 'function') showToast((err && err.message) || 'Ripristino non riuscito', 'error');
+    if (typeof showToast === 'function') showToast(billingFriendlyError(err, 'Ripristino non riuscito. Riprova tra poco.'), 'error');
   } finally {
     __billing.busy = false;
     billingRedraw();
@@ -401,6 +413,7 @@ function billingManage() {
   try { window.open(url, '_blank'); } catch (_) { try { window.location.href = url; } catch (__) {} }
 }
 window.billingManage = billingManage;
+window.billingLoad = billingLoad;
 
 const BILLING_PERIOD_LABEL = { month: 'mese', year: 'anno' };
 
@@ -411,7 +424,7 @@ function billingButtonsHtml(planId) {
   const st = __billing.state;
   if (st === 'login') return '<button type="button" class="btn btn-primary" style="width:100%;font-size:11px;" onclick="openAccount()">ACCEDI PER ABBONARTI</button>';
   if (st === 'loading' || st === 'idle') return '<div class="plan-store-note" style="font-size:11px;color:#888;">Carico i prezzi dallo store…</div>';
-  if (st !== 'ready') return '<div class="plan-store-note" style="font-size:11px;color:#888;">Gli acquisti non sono disponibili in questo momento. Riprova più tardi.' + (__billing.error ? '<div style="font-size:9px;color:#666;margin-top:4px;word-break:break-word;">' + esc(String(__billing.error).slice(0, 220)) + '</div>' : '') + '</div>';
+  if (st !== 'ready') return '<div class="plan-store-note" style="font-size:11px;color:#aaa;line-height:1.45;"><div>Non riusciamo a caricare i piani dallo store in questo momento. Controlla la connessione e riprova.</div><button type="button" class="btn btn-outline" style="width:100%;font-size:11px;margin-top:8px;" onclick="billingLoad(true)">RIPROVA</button></div>';
   const mine = __billing.packs.filter(function (x) { return x.plan === planId; });
   if (!mine.length) return '';
   const off = __billing.busy ? ' disabled' : '';

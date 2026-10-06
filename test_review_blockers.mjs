@@ -47,5 +47,11 @@ ok('6c. il manifest è nel progetto Xcode, tra le risorse', pbx.includes('Privac
 ok('6d. i testi dei permessi dicono anche videochiamate, check fisici, esami', /NSCameraUsageDescription<\/key>\s*<string>[^<]*videochiamate/.test(plist) && /NSMicrophoneUsageDescription<\/key>\s*<string>[^<]*videochiamate/.test(plist) && /NSPhotoLibraryUsageDescription<\/key>\s*<string>[^<]*esami/.test(plist));
 const privacyIt = read('web/privacy.html');
 ok('6e. l’informativa (10 lingue) dice di videochiamate PeerJS/STUN, conteggio utilizzi, nomi alimenti e niente addestramento AI', ['web/privacy.html'].concat(LANGS.map((l) => 'web/legal/' + l + '/privacy.html')).every((f) => read(f).includes('PeerJS (PeerServer)') && /Gemini/.test(read(f).slice(read(f).indexOf('PeerJS (PeerServer)')))) && /addestrare modelli/.test(privacyIt) && /Conteggio degli utilizzi/.test(privacyIt));
+console.log('--- 7. segnalazioni, nomi e messaggi del paywall ---');
+const adminOps = read('admin/page-ops.js');
+ok('7a. dalle segnalazioni il segnalato si sospende e si riattiva (sessioni chiuse subito)', adminOps.includes('Sospendi account') && adminOps.includes('Riattiva account') && adminOps.includes('/suspend') && read('server/admin/reports.mjs').includes('reportedSuspended'));
+ok('7b. la funzione non si chiama più «Incasso dai clienti» (i soldi non passano dall’app)', !read('web/features.json').includes('Incasso dai clienti') && read('web/features.json').includes('Registro dei pagamenti dei clienti'));
+ok('7c. se lo store non risponde l’utente legge un messaggio chiaro con RIPROVA, non l’errore tecnico', plansUi.includes('billingFriendlyError') && plansUi.includes('onclick="billingLoad(true)">RIPROVA') && !plansUi.includes('esc(String(__billing.error)'));
+ok('7d. acquisto e ripristino non mostrano il messaggio tecnico dello store', plansUi.includes("billingFriendlyError(err, 'Acquisto non riuscito. Riprova tra poco.')") && plansUi.includes("billingFriendlyError(err, 'Ripristino non riuscito. Riprova tra poco.')"));
 console.log(failed ? '\n' + failed + ' controlli falliti.' : '\nBlocchi della review Apple: tutto in regola.');
 process.exit(failed ? 1 : 0);

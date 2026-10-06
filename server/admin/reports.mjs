@@ -22,7 +22,7 @@ export async function listChatReports(pool, { status = "open", limit = 100 } = {
   return safe(async () => {
     const rows = (await pool.query(
       `SELECT r.id, r.reporter_role, r.reason, r.details, r.excerpt, r.message_id, r.status, r.created_at, r.handled_at, r.handled_note,
-              rep.email AS reporter_email, rep.name AS reporter_name, tgt.email AS reported_email, tgt.name AS reported_name,
+              rep.email AS reporter_email, rep.name AS reporter_name, tgt.id AS reported_id, tgt.email AS reported_email, tgt.name AS reported_name, tgt.disabled_at AS reported_disabled_at,
               c.chat_blocked_by
          FROM chat_reports r
          LEFT JOIN app_users rep ON rep.id = r.reporter_user_id
@@ -34,7 +34,7 @@ export async function listChatReports(pool, { status = "open", limit = 100 } = {
     return rows.map((r) => ({
       id: String(r.id), status: r.status, at: r.created_at, handledAt: r.handled_at, handledNote: r.handled_note,
       reporterRole: r.reporter_role, reporter: r.reporter_email || "", reporterName: r.reporter_name || "",
-      reported: r.reported_email || "", reportedName: r.reported_name || "",
+      reported: r.reported_email || "", reportedName: r.reported_name || "", reportedId: r.reported_id ? String(r.reported_id) : "", reportedSuspended: !!r.reported_disabled_at,
       reason: r.reason, reasonLabel: REASONS[r.reason] || r.reason, details: r.details || "", excerpt: Array.isArray(r.excerpt) ? r.excerpt : [],
       blockedBy: r.chat_blocked_by || null
     }));

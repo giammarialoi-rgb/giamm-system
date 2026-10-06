@@ -23,7 +23,14 @@ async function reportsTab() {
       r.excerpt.length ? el('details', null, [el('summary', { class: 'muted' }, 'Messaggi allegati (' + r.excerpt.length + ')'), el('div', { class: 'muted', style: 'white-space:pre-wrap' }, r.excerpt.map((m) => (m.from === 'coach' ? 'Coach' : 'Atleta') + ': ' + m.text).join('\n'))]) : null,
       r.handledNote ? el('div', { class: 'muted' }, 'Nota: ' + r.handledNote) : null]),
     el('td', null, (r.reporterRole === 'coach' ? 'Coach ' : 'Atleta ') + (r.reporter || '—')),
-    el('td', null, (r.reported || '—') + (r.blockedBy ? ' · chat bloccata' : '')),
+    el('td', null, [(r.reported || '—') + (r.blockedBy ? ' · chat bloccata' : ''), r.reportedSuspended ? el('div', null, badge('account sospeso', 'bad')) : null,
+      // The step a store asks for after a report: the account that broke the rules can be suspended from here (its sessions end at once).
+      r.reportedId ? el('div', null, el('button', { class: 'btn small' + (r.reportedSuspended ? '' : ' danger'), type: 'button', onclick: async () => {
+        const suspend = !r.reportedSuspended;
+        if (!confirm(suspend ? 'Sospendere l\'account ' + r.reported + '? Non potrà più entrare finché non lo riattivi.' : 'Riattivare l\'account ' + r.reported + '?')) return;
+        await api('/api/admin/profiles/' + r.reportedId + '/suspend', { method: 'POST', body: { suspended: suspend } });
+        toast(suspend ? 'Account sospeso' : 'Account riattivato', 'ok'); pageOperations('reports');
+      } }, r.reportedSuspended ? 'Riattiva account' : 'Sospendi account')) : null]),
     el('td', null, r.status === 'open'
       ? el('button', { class: 'btn small primary', type: 'button', onclick: async () => { const note = prompt('Nota su come l\'hai gestita (facoltativa):', ''); if (note === null) return; await api('/api/admin/chat-reports/' + r.id, { method: 'POST', body: { note } }); toast('Segnalazione chiusa', 'ok'); pageOperations('reports'); } }, 'Gestita')
       : el('button', { class: 'btn small', type: 'button', onclick: async () => { await api('/api/admin/chat-reports/' + r.id, { method: 'POST', body: { reopen: true } }); pageOperations('reports'); } }, 'Riapri'))

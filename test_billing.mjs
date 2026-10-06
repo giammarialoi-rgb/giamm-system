@@ -241,7 +241,7 @@ const iosOfferings = [
 
   const off = phone({ platform: 'ios', offerings: iosOfferings, cfg: { enabled: false, products: features.billing.products } });
   await off.run('billingLoad()');
-  ok('with the store keys not set the page says purchases are unavailable, it does not send anyone elsewhere', off.run('__billing.state') === 'unavailable' && /non sono disponibili/.test(off.run("billingButtonsHtml('coach')")) && !/CONTATTACI|scrivici|mailto/i.test(off.run("billingButtonsHtml('coach')")));
+  ok('with the store keys not set the page says purchases are unavailable, it does not send anyone elsewhere', off.run('__billing.state') === 'unavailable' && /Non riusciamo a caricare i piani/.test(off.run("billingButtonsHtml('coach')")) && !/CONTATTACI|scrivici|mailto/i.test(off.run("billingButtonsHtml('coach')")));
   const empty = phone({ platform: 'ios', offerings: [] });
   await empty.run('billingLoad()');
   ok('a store with no offering configured is the same: unavailable', empty.run('__billing.state') === 'unavailable');
