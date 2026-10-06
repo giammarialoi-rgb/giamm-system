@@ -41806,6 +41806,19 @@ function fillLegalLinks() {
   if (age) age.textContent = 'Ho almeno ' + legalConfig().minAge + ' anni.';
 }
 const HEALTH_CONSENT_TEXT = 'Acconsento al trattamento dei miei dati sulla salute (peso, misure, foto dei check fisici, alimentazione, integratori, terapie, esami) per le funzioni dell’app e, se ho un coach, per condividerli con lui (art. 9 GDPR).';
+// A notice that stays at the top of the screens where health data or advice is: not dismissible, in the app's language.
+const DOMAIN_NOTICES = {
+  exams: ['Informazione, non diagnosi.', 'I valori e i confronti che vedi non sostituiscono il parere del medico: per interpretare gli esami rivolgiti a lui.'],
+  supplements: ['Informazione, non prescrizione.', 'Gli integratori non sostituiscono una dieta varia e non curano malattie: parlane con il medico, soprattutto se sei in terapia, in gravidanza o hai patologie.'],
+  therapy: ['Promemoria, non prescrizione.', 'Nurvan non decide né modifica le terapie: segui sempre le indicazioni del tuo medico.'],
+  ai: ['Assistente automatico, non un medico.', 'Il Coach AI può sbagliare e non è un professionista sanitario: per salute, esami, farmaci e dolori chiedi al tuo medico.']
+};
+function domainNoticeHtml(kind) {
+  const n = DOMAIN_NOTICES[kind];
+  if (!n) return '';
+  return '<div class="domain-notice" data-notice="' + kind + '" role="note" style="font-size:11px;line-height:1.45;color:#ddd;background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.35);border-radius:10px;padding:9px 11px;margin:0 0 12px;"><b style="color:var(--gold);">' + n[0] + '</b> <span>' + n[1] + '</span></div>';
+}
+window.domainNoticeHtml = domainNoticeHtml;
 const NOT_MEDICAL_TEXT = 'Nurvan non è un dispositivo medico: stime, statistiche e suggerimenti non sostituiscono il parere di un medico.';
 
 function privacyConsentCurrent() {
@@ -55995,7 +56008,7 @@ function renderSupplements(c) {
   const visibleSupps = items.filter(function (it) { return !isWaterSupplement(it); });
   const suppDirty = !!(typeof store !== 'undefined' && store && store.__cpSupplementsDirty);
 
-  let html = `
+  let html = domainNoticeHtml('supplements') + `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
       <div>
         ${domainTitleTapHtml('PIANO E PROMEMORIA', t('supplementation'))}
@@ -56834,7 +56847,7 @@ function renderTherapy(c) {
     return therapyWeekStartNum(a) - therapyWeekStartNum(b) || String(a.title || a.weekRange || '').localeCompare(String(b.title || b.weekRange || ''), 'it');
   });
 
-  let html = `
+  let html = domainNoticeHtml('therapy') + `
     <div style="display:flex;flex-direction:column;align-items:stretch;gap:10px;margin-bottom:12px;">
       <div>
         ${domainTitleTapHtml('SALUTE', t('therapy'))}
@@ -57170,7 +57183,7 @@ function renderExams(c) {
   }
   const attachments = Array.isArray(DATA.exams.attachments) ? DATA.exams.attachments : [];
 
-  let html = `
+  let html = domainNoticeHtml('exams') + `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
       ${domainTitleTapHtml('SALUTE', 'Esami Ematochimici')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -72721,6 +72734,7 @@ function renderAI(c){
   c.innerHTML = `
     <h1 class="text-gold" style="font-size:24px;font-weight:900;margin-bottom:5px;">${t('coachAI')}</h1>
     <div style="font-size:10px; color:#777; margin-bottom:10px; font-weight:700; letter-spacing:1px;">Domande, analisi e modifiche alla scheda</div>
+    ${domainNoticeHtml('ai')}
 
     <div class="card" style="padding:12px;margin-bottom:12px;border:1px solid rgba(212,175,55,0.35);background:rgba(212,175,55,0.04);">
       <div style="font-size:10px;font-weight:800;color:var(--gold);margin-bottom:6px;">STATO ATLETA (dai tuoi log)</div>

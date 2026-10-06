@@ -28,5 +28,9 @@ ok('3c. le pagine per il sito restano complete (Stripe, recesso)', /Stripe/.test
 ok('3d. l’app chiede la versione per l’app (?app=1) e il server la serve', page.includes('app=1') && read('coach-api.mjs').includes('asksForAppVersion(req)') && read('server/site/trust.mjs').includes('asksForAppVersion(req)'));
 const plansUi = read('web/plans-ui.js');
 ok('3e. la prova di 14 giorni dice che non c’è addebito né rinnovo', plansUi.includes("GIORNI DI COACH</button>") && plansUi.includes('Nessun addebito e nessun rinnovo automatico'));
+console.log('--- 4. avvisi medici fissi in Esami, Integratori, Terapia, Coach AI ---');
+const fnBody = (name) => { const a = page.search(new RegExp('function ' + name + String.raw`\(c\) ?\{`)); return page.slice(a, a + 9000); };
+ok('4a. Esami, Integratori, Terapia e Coach AI mostrano l’avviso in cima, non chiudibile', [['renderExams', 'exams'], ['renderSupplements', 'supplements'], ['renderTherapy', 'therapy'], ['renderAI', 'ai']].every(([fn, kind]) => fnBody(fn).includes("domainNoticeHtml('" + kind + "')")) && !/domain-notice[^>]*onclick/.test(page));
+ok('4b. gli avvisi dicono medico / non prescrizione / non diagnosi', /non diagnosi/.test(page) && /non prescrizione/.test(page) && /non un medico/.test(page));
 console.log(failed ? '\n' + failed + ' controlli falliti.' : '\nBlocchi della review Apple: tutto in regola.');
 process.exit(failed ? 1 : 0);
