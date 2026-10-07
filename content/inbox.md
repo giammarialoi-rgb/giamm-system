@@ -6,9 +6,8 @@ Per decidere: sposta una riga in **PRIORITÀ** (in cima) per farla uscire per pr
 In ogni sezione le righe sono già ordinate: in alto i temi più cercati e più vicini a Nurvan (programmazione: serie, ripetizioni, recupero), in basso i temi di nicchia.
 Le righe con "poco contenuto" sono promo o meme: probabilmente non vale la pena farne un articolo.
 
-## PRIORITÀ — ordine di uscita, alternando gli argomenti (9)
+## PRIORITÀ — ordine di uscita, alternando gli argomenti (8)
 
-* \[ ] https://www.instagram.com/p/DdtXZsPxbYU/ — Somatotipo (ecto/meso) e crescita muscolare: nuovo studio su 40 uomini (Brad Schoenfeld)
 * \[ ] https://www.instagram.com/p/Dd_qscdm4cy/ — Classifica degli integratori da S a F per la forza (Alfred Jong)
 * \[ ] https://www.instagram.com/p/DdnB85NFZca/ — Lo split di allenamento deve cambiare con l'esperienza: principiante vs avanzato (Dale Hansford)
 * \[ ] https://www.instagram.com/p/DdNDHgthiYV/ — Caffeina ed emivita: quanta ne resta alle 23 e come cambia il sonno (Todd Anderson)
@@ -61,6 +60,7 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 * Arnold Sports Festival USA — Columbus, Ohio (USA), 4-7 marzo 2027 (aggiunto dalla task il 2026-10-05, fonte: arnoldsports.com/schedule)
 * Arnold Classic UK — NEC Birmingham (Regno Unito), 19-21 marzo 2027 (aggiunto dalla task il 2026-10-05, fonte: stampa di settore, da confermare sul sito ufficiale)
 * HYROX World Championships — Hong Kong, 10-13 giugno 2027 (aggiunto dalla task il 2026-10-05, fonte: hyrox.com)
+* Controllo eventi del 2026-10-07: nessun evento nuovo verificabile da aggiungere; i Mondiali IPF di Reno (14-25 ottobre) iniziano fra 7 giorni, oltre la finestra dei 5 giorni, quindi l'anteprima va scritta dal 2026-10-09 in poi.
 * Da verificare dalla task di volta in volta: Mondiali IPF Equipped e Bench, Mr. Olympia 2027, CrossFit Games, FIBO, RiminiWellness, altri mondiali ed europei di powerlifting, bodybuilding, HYROX e calisthenics
 
 ## DA VERIFICARE (1)
@@ -69,7 +69,7 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 
 ## SCARTATI
 
-## GIÀ PUBBLICATI (12)
+## GIÀ PUBBLICATI (13)
 
 * \[x] https://www.instagram.com/p/Ddf-0MRF7p0/ (2026-09-30, genetica-high-low-responder)
 * \[x] https://www.instagram.com/p/Dd6ncPLF7mI/ (2026-10-01, proteine-in-definizione)
@@ -83,3 +83,4 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 * \[x] https://www.fanpage.it/innovazione/scienze/nuovo-farmaco-per-perdere-peso-distrugge-il-grasso-sottocutaneo-come-una-liposuzione-ben-tollerato-negli-studi/ (2026-10-04, cbl-514-farmaco-grasso-sottocutaneo)
 * \[x] https://www.instagram.com/p/DdL7UjGG2wg/ + https://www.instagram.com/p/Ddon1AtEWJb/ + https://www.instagram.com/p/DdRXFzGkTrY/ + https://www.instagram.com/p/Dc6T7q5iJCr/ (2026-10-05, ripetizioni-serie-recupero-ipertrofia — UNITI: 4 post; verificato che il PMID 7928218 citato da iwannaburnfat è un lavoro del 1994 sui mezzi di contrasto, non uno studio sull'allenamento; "linee guida NSCA aggiornate" non verificabile sulla fonte primaria, usato il position stand ACSM 2026)
 * \[x] https://www.instagram.com/p/Dd_OSqQiFfi/ (2026-10-06, carboidrati-fanno-ingrassare-grassi-nascosti — verificato sulle tabelle CREA del repo che lasagna 49%, patatine 51%, crackers al formaggio 45% delle calorie vengono dai grassi, mentre pane bianco 2% e pasta cotta 3%; PMID 2369116 "Invisible fats" confermato; aggiunto il dato Hall 2021 non citato dal post, la dieta povera di grassi fa mangiare 689 kcal/die in meno della chetogenica)
+* \[x] https://www.instagram.com/p/DdtXZsPxbYU/ (2026-10-07, somatotipo-ectomorfo-mesomorfo-massa-muscolare — verificato che lo studio citato dal post è un PREPRINT SportRxiv del 24/09/2026, DOI 10.51224/SportRxiv.1085, non ancora revisionato tra pari e non indicizzato su PubMed: il post non lo dice. Recuperato lo studio opposto citato nella bibliografia del preprint stesso, Van Etten 1994 PMID 8201909, che su 21 uomini trovò +1,6 kg di massa magra nei soggetti di corporatura solida e nessun aumento significativo negli snelli, ma pari guadagno di forza (+13,8%). Aggiunto il dato chiave assente dal post: il somatotipo predice la forza ATTUALE, la mesomorfia spiega il 31,4% della varianza nella panca 3RM, Ryan-Stewart 2018 PMID 29787610)
