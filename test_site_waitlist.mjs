@@ -81,6 +81,9 @@ try {
   const alt = page.alternates;
   ok('1i. gli hreflang sono reciproci: la stessa mappa su ogni pagina, con tutte le lingue (x-default lo aggiunge il guscio dall’italiano)', SITE_LANGS.every((l) => alt[l] === waitlistPath(l)) && w.pages.every((p) => JSON.stringify(p.alternates) === JSON.stringify(alt)) && !!alt.it);
 
+  ok('1j. ordine: titolo e form della lista, link ai coach, blocco coach fondatori e solo dopo «Cosa trovi in Nurvan»', (() => { const at = (t) => html.indexOf(t); return at('Nurvan sta arrivando') < at('id="waitlist-form"') && at('id="waitlist-form"') < at('href="#coach"') && at('href="#coach"') < at('id="coach"') && at('id="coach"') < at('id="coach-form"') && at('id="coach-form"') < at('Cosa trovi in Nurvan'); })());
+  ok('1k. il campo trappola non si vede in nessuno dei due form: nascosto, aria-hidden, senza tabulazione né autocompletamento, e resta nel DOM', (html.match(/<div class="hp" aria-hidden="true" hidden style="display:none"><label>[^]*?<input type="text" name="website" tabindex="-1" autocomplete="off">/g) || []).length === 2 && /\.hp \{ display: none !important; \}/.test(fs.readFileSync('site/assets/site.css', 'utf8')));
+
   // --- the waiting list ----------------------------------------------------
   const r1 = await w.post('/api/site/waitlist', waitBody());
   const j1 = await r1.json();
@@ -142,6 +145,7 @@ const home = fs.readFileSync('site/home.html', 'utf8');
 const shellHtml = fs.readFileSync('site/shell.html', 'utf8');
 const hero = home.slice(home.indexOf('<div class="cta">'), home.indexOf('</div>', home.indexOf('<div class="cta">')));
 ok('6a. il bottone principale della home è un vero link alla lista', /<a class="btn primary" href="\{\{WAITLIST\}\}">Entra nella lista d’attesa<\/a>/.test(hero) && !/aria-disabled|soon/.test(hero));
+ok('6a2. nella home «Scopri come funziona →» porta a #funzioni (che esiste), non alla pagina Salute e recupero; il link ai coach porta a #coach', /<a href="\{\{HOME\}\}#funzioni">Scopri come funziona →<\/a>/.test(home) && !/\{\{HEALTH\}\}">Scopri come funziona/.test(home) && /<section id="funzioni">/.test(home) && /href="\{\{WAITLIST\}\}#coach">Sei un personal trainer\? Candidati come coach fondatore</.test(home) && /<a class="btn primary" href="\{\{WAITLIST\}\}">Entra nella lista d’attesa<\/a>/.test(home));
 ok('6b. il piè di pagina ha la voce Lista d’attesa', /<a href="\{\{WAITLIST\}\}">Lista d'attesa<\/a>/.test(shellHtml.slice(shellHtml.indexOf('<footer>'))));
 ok('6c. ogni articolo del blog rimanda alla lista, sotto il riquadro Nurvan', /post-cta[\s\S]{0,400}post-wait[^`]*waitlistPath\(lang\)/.test(fs.readFileSync('server/site/blog.mjs', 'utf8')));
 ok('6d. la tabella è una migrazione, e c’è un file per il titolare nell’admin', /CREATE TABLE IF NOT EXISTS waitlist/.test(fs.readFileSync('server/db/migrations/0024_site_waitlist.sql', 'utf8')) && /CREATE TABLE IF NOT EXISTS coach_applications/.test(fs.readFileSync('server/db/migrations/0024_site_waitlist.sql', 'utf8')) && /waitlist\.csv/.test(fs.readFileSync('server/admin/index.mjs', 'utf8')));

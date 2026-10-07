@@ -144,7 +144,7 @@ const FEATURES = [
 function formHtml({ id, endpoint, lang, dict, fields, button, after }) {
   return `<form id="${id}" class="wl-form" data-endpoint="${endpoint}" data-lang="${esc(lang)}" data-wait="${esc(st(dict, "Invio in corso…"))}" data-fail="${esc(st(dict, "Invio non riuscito. Riprova tra poco."))}" novalidate>` +
     fields +
-    `<div class="hp" aria-hidden="true"><label>Non compilare questo campo<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>` +
+    `<div class="hp" aria-hidden="true" hidden style="display:none"><label>Non compilare questo campo<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>` +
     `<label class="check"><input type="checkbox" name="consent" required><span>${esc(WAITLIST_CONSENT_TEXT)}</span></label>` +
     `<button type="submit" class="btn primary">${button}</button>` +
     `<p class="form-msg" role="status"></p>` +
@@ -180,9 +180,6 @@ export function waitlistMain(lang, dict) {
     `<div class="card sample-form-card"><h2>Avvisami al lancio</h2>${waitForm}</div>` +
     `<p class="wl-coach-link"><a href="#coach">Sei un personal trainer o un coach? Candidati come coach fondatore →</a></p>` +
     `</div></section>` +
-    `<section class="wl-features"><div class="wrap"><div class="head"><h2>Cosa trovi in Nurvan</h2></div><div class="cards">` +
-    FEATURES.map(([t, p]) => `<article class="card"><h3>${t}</h3><p>${p}</p></article>`).join("") +
-    `</div></div></section>` +
     `<section id="coach" class="wl coach-apply"><div class="wrap narrow">` +
     `<div class="head"><div class="eyebrow">Per i coach</div><h2>Cerchiamo 10 coach fondatori</h2>` +
     `<p class="lead">Schede, check-in e alimentazione dei tuoi atleti in un'unica app. Niente file sparsi e messaggi persi.</p></div>` +
@@ -193,7 +190,10 @@ export function waitlistMain(lang, dict) {
     `<li>Le tue richieste passano davanti</li>` +
     `<li>Al rilascio inviti i tuoi clienti con un link</li></ul>` +
     `</div><div class="card sample-form-card"><h3>Candidati</h3>${coachForm}</div></div>` +
-    `</div></section>` + FORM_SCRIPT;
+    `</div></section>` +
+    `<section class="wl-features"><div class="wrap"><div class="head"><h2>Cosa trovi in Nurvan</h2></div><div class="cards">` +
+    FEATURES.map(([t, p]) => `<article class="card"><h3>${t}</h3><p>${p}</p></article>`).join("") +
+    `</div></div></section>` + FORM_SCRIPT;
 }
 
 // Who is told when someone signs up: WAITLIST_NOTIFY_EMAIL, else the admins.

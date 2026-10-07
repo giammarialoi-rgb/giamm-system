@@ -250,7 +250,7 @@ form.done .field, form.done .check, form.done button { display: none; }
 @media (max-width: 900px) { .sample-split { grid-template-columns: 1fr; } .sample-phone-col { position: static; } }
 
 /* Waiting list: the form, the coach section, the honeypot nobody sees */
-.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.hp { display: none !important; }
 .wl .sample-form-card { margin-top: 24px; }
 .wl .sample-form-card h2, .wl .sample-form-card h3 { margin: 0; }
 .wl-coach-link { margin: 22px 0 0; font-weight: 800; }
