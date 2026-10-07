@@ -2635,8 +2635,10 @@ async function siteShell(req, page) {
     ABOUT: aboutPath(lang),
     HEALTH: wellbeingPath("hub", lang),
     // Italian only: the landing pages, the comparisons and the tools have no translations.
-    NAV_EXTRA: lang === "it" ? '<a href="/app-per-personal-trainer">Per i coach</a><a href="/app-allenamento-palestra">Per gli atleti</a><a href="/strumenti">Strumenti</a>' : "",
-    FOOT_EXTRA: lang === "it" ? '<a href="/app-per-personal-trainer">Per i coach</a><a href="/app-allenamento-palestra">Per gli atleti</a><a href="/strumenti">Strumenti</a>' : "",
+    // The landing pages exist in Italian only: the other languages point at the sections of their own home.
+    FOR_ATHLETES: lang === "it" ? "/app-allenamento-palestra" : homeOf(lang) + "#casa",
+    FOR_COACHES: lang === "it" ? "/app-per-personal-trainer" : homeOf(lang) + "#coach",
+    FOOT_EXTRA: lang === "it" ? '<a href="/strumenti">Strumenti</a>' : "",
     CONTACT: contactPath(lang),
     PRIVACY: legalPath(lang, "privacy"),
     TERMS: legalPath(lang, "termini"),
@@ -2709,7 +2711,7 @@ async function siteShotsHtml() {
 }
 // Italian home only (brief W4): what Nurvan is, in the words people search for, and the two doors.
 const HOME_LEAD_IT = '<p class="lead">Nurvan è un’<strong>app di allenamento</strong> per chi si allena con metodo e un’<strong>app per personal trainer e coach</strong> che seguono i propri atleti. Non è ancora uscita: puoi entrare nella lista d’attesa.</p>';
-const HOME_AUDIENCE_IT = '<section id="per-chi"><div class="wrap"><div class="head"><div class="eyebrow">Per chi è Nurvan</div><h2>Due modi di usarla.</h2></div><div class="cards"><article class="card"><h3>Per i coach</h3><p>Schede da creare o importare, check-in, chat e area coach per seguire i tuoi atleti in un posto solo.</p><p><a href="/app-per-personal-trainer">App per personal trainer →</a></p></article><article class="card"><h3>Per gli atleti</h3><p>Schede, carichi e progressi in palestra e a casa, con programmi per HYROX e powerlifting.</p><p><a href="/app-allenamento-palestra">App per l’allenamento in palestra →</a></p></article></div></div></section>';
+const HOME_AUDIENCE_IT = '<section id="per-chi"><div class="wrap"><div class="head"><div class="eyebrow">Per chi è Nurvan</div><h2>Due modi di usarla.</h2>' + HOME_LEAD_IT + '</div><div class="cards"><article class="card"><h3>Per i coach</h3><p>Schede da creare o importare, check-in, chat e area coach per seguire i tuoi atleti in un posto solo.</p><p><a href="/app-per-personal-trainer">App per personal trainer →</a></p></article><article class="card"><h3>Per gli atleti</h3><p>Schede, carichi e progressi in palestra e a casa.</p><p><a href="/app-allenamento-palestra">App per l’allenamento in palestra →</a></p></article></div></div></section>';
 async function sitePage(req, res) {
   try {
     const lang = langOfPath(req.path);

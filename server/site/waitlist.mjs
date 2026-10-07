@@ -17,6 +17,11 @@ import { normalizeEmail, validEmail, composeEmail } from "../account/email-auth.
 
 export const WAITLIST_CONSENT_TEXT = "Acconsento a essere ricontattato via email per il lancio di Nurvan e l'accesso anticipato. Ho letto l'informativa sulla privacy.";
 export const ATHLETE_BANDS = ["1-5", "6-20", "21-50", "oltre 50"];
+// The waiting list asks who signs up, the days a week and where they train. A value outside these is refused; an empty one
+// is kept empty (a page cached before this change posts only the email).
+export const WAIT_PROFILES = ["solo", "coach"];
+export const WAIT_DAYS = ["2", "3", "4", "5+"];
+export const WAIT_PLACES = ["palestra", "casa", "entrambi"];
 export const MAX_PER_HOUR = 6;
 
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -28,42 +33,53 @@ export const waitlistPath = (lang) => (!lang || lang === "it" ? "/lista-attesa" 
 
 /* ------------------------------- the rows ----------------------------- */
 
-export async function joinWaitlist(pool, { email, lang, consent, now = Date.now() }) {
+const choice = (v, allowed, message) => {
+  const x = String(v == null ? "" : v).trim();
+  if (x && !allowed.includes(x)) throw httpError(400, message);
+  return x;
+};
+
+export async function joinWaitlist(pool, { email, lang, consent, profile, days, place, now = Date.now() }) {
   email = normalizeEmail(email);
   if (!validEmail(email) || email.length > 200) throw httpError(400, "Scrivi un indirizzo email valido.");
   if (consent !== true) throw httpError(400, "Per iscriverti spunta la casella sulla privacy.");
+  profile = choice(profile, WAIT_PROFILES, "Scegli se ti alleni da solo o se sei un coach.");
+  days = choice(days, WAIT_DAYS, "Scegli quanti giorni a settimana ti alleni.");
+  place = choice(place, WAIT_PLACES, "Scegli dove ti alleni.");
   lang = SERVER_LANGS.includes(lang) ? lang : "it";
   const when = new Date(now).toISOString();
   // The same address again is not an error: the row is only refreshed.
   await pool.query(
-    `INSERT INTO waitlist(email, lang, consent_at, consent_text, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $3, $3)
-     ON CONFLICT (email) DO UPDATE SET lang = EXCLUDED.lang, consent_at = EXCLUDED.consent_at, consent_text = EXCLUDED.consent_text, updated_at = EXCLUDED.updated_at`,
-    [email, lang, when, WAITLIST_CONSENT_TEXT]
+    `INSERT INTO waitlist(email, lang, profile, days, place, consent_at, consent_text, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $6)
+     ON CONFLICT (email) DO UPDATE SET lang = EXCLUDED.lang, profile = EXCLUDED.profile, days = EXCLUDED.days, place = EXCLUDED.place,
+       consent_at = EXCLUDED.consent_at, consent_text = EXCLUDED.consent_text, updated_at = EXCLUDED.updated_at`,
+    [email, lang, profile, days, place, when, WAITLIST_CONSENT_TEXT]
   );
-  return { email };
+  return { email, profile, days, place };
 }
 
 export async function applyAsCoach(pool, body, now = Date.now()) {
   const email = normalizeEmail(body.email);
   const name = clean(body.name, 100);
+  const city = clean(body.city, 100);
   const social = clean(body.social, 200);
   const qualification = clean(body.qualification, 300);
   const notes = String(body.notes == null ? "" : body.notes).replace(/\r/g, "").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, " ").trim().slice(0, 1000);
   if (!name) throw httpError(400, "Scrivi il tuo nome.");
   if (!validEmail(email) || email.length > 200) throw httpError(400, "Scrivi un indirizzo email valido.");
+  if (!city) throw httpError(400, "Scrivi la tua città.");
   if (!social) throw httpError(400, "Scrivi il tuo profilo Instagram o il tuo sito.");
   if (!ATHLETE_BANDS.includes(String(body.athletes || ""))) throw httpError(400, "Scegli quanti atleti segui adesso.");
-  if (!qualification) throw httpError(400, "Scrivi la tua qualifica o certificazione.");
   if (body.consent !== true) throw httpError(400, "Per candidarti spunta la casella sulla privacy.");
   const lang = SERVER_LANGS.includes(String(body.lang || "")) ? String(body.lang) : "it";
   const when = new Date(now).toISOString();
   await pool.query(
-    `INSERT INTO coach_applications(email, name, social, athletes, qualification, notes, lang, consent_at, consent_text, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $8, $8)
-     ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, social = EXCLUDED.social, athletes = EXCLUDED.athletes, qualification = EXCLUDED.qualification,
+    `INSERT INTO coach_applications(email, name, city, social, athletes, qualification, notes, lang, consent_at, consent_text, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $9, $9)
+     ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, city = EXCLUDED.city, social = EXCLUDED.social, athletes = EXCLUDED.athletes, qualification = EXCLUDED.qualification,
        notes = EXCLUDED.notes, lang = EXCLUDED.lang, consent_at = EXCLUDED.consent_at, consent_text = EXCLUDED.consent_text, updated_at = EXCLUDED.updated_at`,
-    [email, name, social, String(body.athletes), qualification, notes, lang, when, WAITLIST_CONSENT_TEXT]
+    [email, name, city, social, String(body.athletes), qualification, notes, lang, when, WAITLIST_CONSENT_TEXT]
   );
   return { email };
 }
@@ -74,20 +90,20 @@ const cell = (v) => { const s = String(v == null ? "" : v); const safe = /^[=+\-
 const csv = (head, rows) => [head.join(",")].concat(rows.map((r) => r.map(cell).join(","))).join("\n") + "\n";
 
 export async function listWaitlist(pool, { limit = 20000 } = {}) {
-  return (await pool.query(`SELECT email, lang, consent_at, created_at FROM waitlist ORDER BY created_at DESC LIMIT $1`, [Math.min(50000, Math.max(1, Number(limit) || 20000))])).rows;
+  return (await pool.query(`SELECT email, lang, profile, days, place, consent_at, created_at FROM waitlist ORDER BY created_at DESC LIMIT $1`, [Math.min(50000, Math.max(1, Number(limit) || 20000))])).rows;
 }
 export function waitlistCsv(rows) {
-  return csv(["email", "lingua", "consenso_il", "iscritto_il"], rows.map((r) => [r.email, r.lang, iso(r.consent_at), iso(r.created_at)]));
+  return csv(["email", "chi_e", "giorni_a_settimana", "dove", "lingua", "consenso_il", "iscritto_il"], rows.map((r) => [r.email, r.profile || "", r.days || "", r.place || "", r.lang, iso(r.consent_at), iso(r.created_at)]));
 }
 export async function listCoachApplications(pool, { limit = 5000 } = {}) {
   return (await pool.query(
-    `SELECT email, name, social, athletes, qualification, notes, lang, consent_at, created_at FROM coach_applications ORDER BY created_at DESC LIMIT $1`,
+    `SELECT email, name, city, social, athletes, qualification, notes, lang, consent_at, created_at FROM coach_applications ORDER BY created_at DESC LIMIT $1`,
     [Math.min(20000, Math.max(1, Number(limit) || 5000))]
   )).rows;
 }
 export function coachApplicationsCsv(rows) {
-  return csv(["email", "nome", "instagram_o_sito", "atleti", "qualifica", "note", "lingua", "consenso_il", "candidato_il"],
-    rows.map((r) => [r.email, r.name, r.social, r.athletes, r.qualification, r.notes, r.lang, iso(r.consent_at), iso(r.created_at)]));
+  return csv(["email", "nome", "citta", "instagram_o_sito", "atleti", "qualifica", "note", "lingua", "consenso_il", "candidato_il"],
+    rows.map((r) => [r.email, r.name, r.city || "", r.social, r.athletes, r.qualification, r.notes, r.lang, iso(r.consent_at), iso(r.created_at)]));
 }
 
 /* ------------------------------- the page ----------------------------- */
@@ -125,32 +141,38 @@ const FEATURES = [
   ["Enciclopedia esercizi", "Oltre 250 esercizi con immagini, esecuzione, errori comuni e video. Sempre a portata di mano, anche offline."]
 ];
 
-function formHtml({ id, endpoint, lang, dict, fields, button, legal }) {
+function formHtml({ id, endpoint, lang, dict, fields, button, after }) {
   return `<form id="${id}" class="wl-form" data-endpoint="${endpoint}" data-lang="${esc(lang)}" data-wait="${esc(st(dict, "Invio in corso…"))}" data-fail="${esc(st(dict, "Invio non riuscito. Riprova tra poco."))}" novalidate>` +
     fields +
     `<div class="hp" aria-hidden="true"><label>Non compilare questo campo<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>` +
     `<label class="check"><input type="checkbox" name="consent" required><span>${esc(WAITLIST_CONSENT_TEXT)}</span></label>` +
     `<button type="submit" class="btn primary">${button}</button>` +
     `<p class="form-msg" role="status"></p>` +
+    (after || "") +
     `<p class="form-legal"><a href="{{PRIVACY}}">Informativa sulla privacy</a></p>` +
     `</form>`;
 }
 const field = (label, input) => `<label class="field"><span>${label}</span>${input}</label>`;
 
 export function waitlistMain(lang, dict) {
+  const options = (list) => list.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join("");
   const waitForm = formHtml({
-    id: "waitlist-form", endpoint: "/api/site/waitlist", lang, dict, button: "Entra nella lista",
-    fields: field("La tua email", `<input type="email" name="email" required autocomplete="email" inputmode="email" placeholder="nome@esempio.it">`)
+    id: "waitlist-form", endpoint: "/api/site/waitlist", lang, dict, button: "Avvisami quando esce",
+    fields:
+      field("La tua email", `<input type="email" name="email" required autocomplete="email" inputmode="email" placeholder="nome@esempio.it">`) +
+      field("Chi sei", `<select name="profile" required><option value="">Scegli</option>` + options([["solo", "Mi alleno da solo"], ["coach", "Sono un coach"]]) + `</select>`) +
+      field("Quanti giorni a settimana ti alleni", `<select name="days" required><option value="">Scegli</option>` + options([["2", "2"], ["3", "3"], ["4", "4"], ["5+", "5+"]]) + `</select>`) +
+      field("Dove ti alleni", `<select name="place" required><option value="">Scegli</option>` + options([["palestra", "Palestra"], ["casa", "Casa"], ["entrambi", "Entrambi"]]) + `</select>`),
+    after: `<p class="form-note">Niente spam. Ti scriviamo per l'accesso anticipato e il giorno del rilascio su App Store e Google Play.</p>`
   });
   const coachForm = formHtml({
     id: "coach-form", endpoint: "/api/site/coach-application", lang, dict, button: "Candidati come coach fondatore",
     fields:
       field("Nome", `<input type="text" name="name" required autocomplete="name" maxlength="100">`) +
       field("La tua email", `<input type="email" name="email" required autocomplete="email" inputmode="email" placeholder="nome@esempio.it">`) +
+      field("Città", `<input type="text" name="city" required autocomplete="address-level2" maxlength="100">`) +
       field("Instagram o sito", `<input type="text" name="social" required maxlength="200" placeholder="@nome o https://…">`) +
-      field("Atleti che segui adesso", `<select name="athletes" required><option value="">Scegli</option>` + ATHLETE_BANDS.map((b) => `<option value="${esc(b)}">${esc(b === "oltre 50" ? "Oltre 50" : b)}</option>`).join("") + `</select>`) +
-      field("Qualifica o certificazione", `<input type="text" name="qualification" required maxlength="300">`) +
-      field("Note (facoltative)", `<textarea name="notes" rows="3" maxlength="1000"></textarea>`)
+      field("Atleti che segui adesso", `<select name="athletes" required><option value="">Scegli</option>` + ATHLETE_BANDS.map((b) => `<option value="${esc(b)}">${esc(b === "oltre 50" ? "Oltre 50" : b)}</option>`).join("") + `</select>`)
   });
   return `<section class="blog wl"><div class="wrap narrow">` +
     `<div class="head"><div class="eyebrow">Lista d'attesa</div><h1 class="blog-title">Nurvan sta arrivando. Entra nella lista.</h1>` +
@@ -162,15 +184,14 @@ export function waitlistMain(lang, dict) {
     FEATURES.map(([t, p]) => `<article class="card"><h3>${t}</h3><p>${p}</p></article>`).join("") +
     `</div></div></section>` +
     `<section id="coach" class="wl coach-apply"><div class="wrap narrow">` +
-    `<div class="head"><div class="eyebrow">Per i coach</div><h2>Sei un personal trainer o un coach?</h2><h2 class="wl-sub">Cerchiamo 10 coach fondatori.</h2></div>` +
+    `<div class="head"><div class="eyebrow">Per i coach</div><h2>Cerchiamo 10 coach fondatori</h2>` +
+    `<p class="lead">Schede, check-in e alimentazione dei tuoi atleti in un'unica app. Niente file sparsi e messaggi persi.</p></div>` +
     `<div class="split"><div>` +
-    `<h3>Cosa offriamo</h3><ul>` +
-    `<li>Coach Pro gratuito per 12 mesi (valore 390 €)</li>` +
-    `<li>Accesso diretto allo sviluppo</li>` +
-    `<li>Le tue richieste hanno priorità</li></ul>` +
-    `<h3>Cosa chiediamo</h3><ul>` +
-    `<li>Che lo usi davvero con i tuoi atleti</li>` +
-    `<li>Che ci dia il tuo parere, con franchezza</li></ul>` +
+    `<h3>L'offerta</h3><ul>` +
+    `<li>Coach Pro gratis per 12 mesi, valore 390 €</li>` +
+    `<li>Fino a 20 atleti già nel piano Coach, illimitati su Pro</li>` +
+    `<li>Le tue richieste passano davanti</li>` +
+    `<li>Al rilascio inviti i tuoi clienti con un link</li></ul>` +
     `</div><div class="card sample-form-card"><h3>Candidati</h3>${coachForm}</div></div>` +
     `</div></section>` + FORM_SCRIPT;
 }
@@ -184,8 +205,8 @@ export function signupEmail(kind, body) {
   const line = (k, v) => (v ? k + ": " + v : "");
   const coach = kind === "coach";
   const intro = coach
-    ? [line("Nome", body.name), line("Email", body.email), line("Instagram o sito", body.social), line("Atleti", body.athletes), line("Qualifica", body.qualification), line("Note", body.notes), line("Lingua", body.lang)]
-    : [line("Email", body.email), line("Lingua", body.lang)];
+    ? [line("Nome", body.name), line("Email", body.email), line("Città", body.city), line("Instagram o sito", body.social), line("Atleti", body.athletes), line("Qualifica", body.qualification), line("Note", body.notes), line("Lingua", body.lang)]
+    : [line("Email", body.email), line("Chi è", body.profile), line("Giorni a settimana", body.days), line("Dove", body.place), line("Lingua", body.lang)];
   return Object.assign({ subject: coach ? "NURVAN — nuova candidatura coach: " + (body.name || body.email) : "NURVAN — nuova iscrizione alla lista d'attesa: " + body.email },
     composeEmail({ title: coach ? "Nuova candidatura coach fondatore" : "Nuova iscrizione alla lista d'attesa", intro: intro.filter(Boolean).join("\n") }, "it"));
 }
@@ -240,9 +261,9 @@ export function mountWaitlist(app, { siteDir, shell, pool, initDb, sendEmail, en
     }
   };
 
-  app.post("/api/site/waitlist", handle(async (body, lang) => { const r = await joinWaitlist(pool, { email: body.email, lang, consent: body.consent === true }); notify("waitlist", { email: r.email, lang }); },
+  app.post("/api/site/waitlist", handle(async (body, lang) => { const r = await joinWaitlist(pool, { email: body.email, lang, consent: body.consent === true, profile: body.profile, days: body.days, place: body.place }); notify("waitlist", { email: r.email, profile: r.profile, days: r.days, place: r.place, lang }); },
     "Sei nella lista d'attesa. Ti scriviamo solo quando c'è qualcosa di concreto."));
-  app.post("/api/site/coach-application", handle(async (body, lang) => { const full = Object.assign({}, body, { lang }); const r = await applyAsCoach(pool, full); notify("coach", { name: String(full.name || "").trim().slice(0, 100), email: r.email, social: String(full.social || "").slice(0, 200), athletes: full.athletes, qualification: String(full.qualification || "").slice(0, 300), notes: String(full.notes || "").slice(0, 1000), lang }); },
+  app.post("/api/site/coach-application", handle(async (body, lang) => { const full = Object.assign({}, body, { lang }); const r = await applyAsCoach(pool, full); notify("coach", { name: String(full.name || "").trim().slice(0, 100), email: r.email, city: String(full.city || "").trim().slice(0, 100), social: String(full.social || "").slice(0, 200), athletes: full.athletes, qualification: String(full.qualification || "").slice(0, 300), notes: String(full.notes || "").slice(0, 1000), lang }); },
     "Candidatura ricevuta. La leggiamo e ti rispondiamo per email."));
 
   app.get("/lista-attesa", page);

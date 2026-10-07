@@ -142,8 +142,8 @@ try {
   ok(/Nurvan – App di allenamento, nutrizione e coaching/.test(api) && /app di allenamento<\/strong>/.test(api) && /app per personal trainer e coach<\/strong>/.test(api) && /Per chi è Nurvan/.test(api) && /href="\/app-per-personal-trainer"/.test(api) && /href="\/app-allenamento-palestra"/.test(api), '7a. home: titolo, lead con le due espressioni e blocco "Per chi è Nurvan" con due schede');
   const descIt = /description: it \? "([^"]+)"/.exec(api)[1];
   ok(descIt.length >= 140 && descIt.length <= 160 && /lista d’attesa/.test(descIt), '7b. descrizione della home di ' + descIt.length + ' caratteri');
-  ok(/<h1>Allenati con metodo\./.test(fs.readFileSync('site/home.html', 'utf8')), '7c. l’H1 della home non cambia');
-  ok(/NAV_EXTRA: lang === "it"/.test(api) && /FOOT_EXTRA: lang === "it"/.test(api) && /Per i coach/.test(api) && /Per gli atleti/.test(api) && /Strumenti/.test(api), '7d. menu e piè di pagina: Per i coach, Per gli atleti, Strumenti (solo italiano)');
+  ok(/<h1>Nurvan<\/h1>/.test(fs.readFileSync('site/home.html', 'utf8')), '7c. l’H1 della home è Nurvan (scheda del 07-10: un solo titolo, il resto sotto)');
+  ok(/FOR_COACHES: lang === "it" \? "\/app-per-personal-trainer"/.test(api) && /FOR_ATHLETES: lang === "it" \? "\/app-allenamento-palestra"/.test(api) && /FOOT_EXTRA: lang === "it"[^\n]*Strumenti/.test(api), '7d. menu: Per chi si allena e Per i coach portano alle pagine italiane (altrove alle sezioni della home); Strumenti nel piè di pagina');
   const sw = softwareLd('https://nurvan.app', 'D');
   ok(sw.offers.availability === 'https://schema.org/PreOrder' && !sw.aggregateRating, '7e. SoftwareApplication in prevendita, senza valutazione');
   ok(/mountLandings\(app/.test(api), '7f. le pagine sono montate');

@@ -23,21 +23,21 @@ function fakePool() {
     async query(sql, p = []) {
       const s = sql.replace(/\s+/g, ' ').trim();
       if (s.startsWith('INSERT INTO waitlist')) {
-        const [email, lang, when, text] = p;
+        const [email, lang, profile, days, place, when, text] = p;
         const cur = waitlist.find((r) => r.email === email);
-        if (cur) Object.assign(cur, { lang, consent_at: when, consent_text: text, updated_at: when });
-        else waitlist.push({ email, lang, consent_at: when, consent_text: text, created_at: when, updated_at: when });
+        if (cur) Object.assign(cur, { lang, profile, days, place, consent_at: when, consent_text: text, updated_at: when });
+        else waitlist.push({ email, lang, profile, days, place, consent_at: when, consent_text: text, created_at: when, updated_at: when });
         return { rows: [] };
       }
       if (s.startsWith('INSERT INTO coach_applications')) {
-        const [email, name, social, athletes, qualification, notes, lang, when, text] = p;
-        const row = { email, name, social, athletes, qualification, notes, lang, consent_at: when, consent_text: text, created_at: when, updated_at: when };
+        const [email, name, city, social, athletes, qualification, notes, lang, when, text] = p;
+        const row = { email, name, city, social, athletes, qualification, notes, lang, consent_at: when, consent_text: text, created_at: when, updated_at: when };
         const i = coaches.findIndex((r) => r.email === email);
         if (i >= 0) coaches[i] = Object.assign(coaches[i], row, { created_at: coaches[i].created_at }); else coaches.push(row);
         return { rows: [] };
       }
-      if (s.startsWith('SELECT email, lang, consent_at, created_at FROM waitlist')) return { rows: waitlist.slice().reverse() };
-      if (s.startsWith('SELECT email, name, social')) return { rows: coaches.slice().reverse() };
+      if (s.startsWith('SELECT email, lang, profile, days, place, consent_at, created_at FROM waitlist')) return { rows: waitlist.slice().reverse() };
+      if (s.startsWith('SELECT email, name, city, social')) return { rows: coaches.slice().reverse() };
       throw new Error('unexpected SQL: ' + s.slice(0, 80));
     }
   };
@@ -58,7 +58,8 @@ async function world(maxPerHour = 1000) {
   return { pool, mails, pages, base, post, close: () => new Promise((r) => server.close(r)) };
 }
 
-const coachBody = (extra = {}) => Object.assign({ name: 'Luca Rossi', email: 'Luca@Example.com', social: '@lucacoach', athletes: '6-20', qualification: 'ISSA Personal Trainer', notes: '', consent: true, lang: 'it' }, extra);
+const coachBody = (extra = {}) => Object.assign({ name: 'Luca Rossi', email: 'Luca@Example.com', city: 'Milano', social: '@lucacoach', athletes: '6-20', consent: true, lang: 'it' }, extra);
+const waitBody = (extra = {}) => Object.assign({ email: ' Mario@Example.com ', profile: 'solo', days: '3', place: 'palestra', consent: true, lang: 'it' }, extra);
 
 const w = await world();
 try {
@@ -69,9 +70,10 @@ try {
   ok('1a. /lista-attesa risponde 200 e il contenuto è nell’HTML', res.status === 200 && /<h1[^>]*>Nurvan sta arrivando\. Entra nella lista\.<\/h1>/.test(html));
   ok('1b. title ≤ 60 caratteri, description tra 140 e 160', page.title.length <= 60 && page.description.length >= 140 && page.description.length <= 160);
   ok('1c. c’è il modulo email, la casella privacy non preselezionata, il link all’informativa e il campo trappola', /id="waitlist-form"/.test(html) && /type="email"/.test(html) && /<input type="checkbox" name="consent" required>/.test(html) && !/name="consent"[^>]*checked/.test(html) && /href="\{\{PRIVACY\}\}"/.test(html) && /name="website"/.test(html));
+  ok('1c2. il modulo della lista chiede email, chi sei, giorni a settimana e dove; il bottone dice Avvisami quando esce, sotto c’è la frase senza spam', ['email', 'profile', 'days', 'place'].every((n) => new RegExp('id="waitlist-form"[\\s\\S]*name="' + n + '"').test(html)) && />Avvisami quando esce<\/button>/.test(html) && />Mi alleno da solo</.test(html) && />Sono un coach</.test(html) && />5\+</.test(html) && />Entrambi</.test(html) && /Niente spam\. Ti scriviamo per l'accesso anticipato e il giorno del rilascio su App Store e Google Play\./.test(html));
   ok('1d. cinque punti sulle funzioni', (html.match(/<article class="card">/g) || []).length === 5);
-  ok('1e. la sezione coach: 10 fondatori, Coach Pro gratis per 12 mesi, il suo modulo con tutti i campi', /id="coach"/.test(html) && /Cerchiamo 10 coach fondatori\./.test(html) && /Coach Pro gratuito per 12 mesi \(valore 390 €\)/.test(html) &&
-    ['name', 'email', 'social', 'athletes', 'qualification', 'notes'].every((n) => new RegExp('id="coach-form"[\\s\\S]*name="' + n + '"').test(html)) && ['1-5', '6-20', '21-50', 'Oltre 50'].every((b) => html.includes('>' + b + '<')));
+  ok('1e. la sezione coach: 10 fondatori, Coach Pro gratis per 12 mesi, il suo modulo con tutti i campi', /id="coach"/.test(html) && /Cerchiamo 10 coach fondatori</.test(html) && /Coach Pro gratis per 12 mesi, valore 390 €/.test(html) && /Fino a 20 atleti già nel piano Coach, illimitati su Pro/.test(html) && /Le tue richieste passano davanti/.test(html) && /Al rilascio inviti i tuoi clienti con un link/.test(html) &&
+    ['name', 'email', 'city', 'social', 'athletes'].every((n) => new RegExp('id="coach-form"[\\s\\S]*name="' + n + '"').test(html)) && ['1-5', '6-20', '21-50', 'Oltre 50'].every((b) => html.includes('>' + b + '<')));
   ok('1f. dalla parte iniziale si arriva alla sezione coach', /href="#coach"/.test(html));
   const en = await (await fetch(w.base + '/en/waitlist')).text();
   ok('1g. in inglese la pagina è tradotta', /Nurvan is coming. Join the list./.test(en) && !/Nurvan sta arrivando/.test(en.slice(en.indexOf('<body>'))));
@@ -80,45 +82,47 @@ try {
   ok('1i. gli hreflang sono reciproci: la stessa mappa su ogni pagina, con tutte le lingue (x-default lo aggiunge il guscio dall’italiano)', SITE_LANGS.every((l) => alt[l] === waitlistPath(l)) && w.pages.every((p) => JSON.stringify(p.alternates) === JSON.stringify(alt)) && !!alt.it);
 
   // --- the waiting list ----------------------------------------------------
-  const r1 = await w.post('/api/site/waitlist', { email: ' Mario@Example.com ', consent: true, lang: 'it' });
+  const r1 = await w.post('/api/site/waitlist', waitBody());
   const j1 = await r1.json();
-  ok('2a. l’iscrizione salva l’indirizzo (in minuscolo), la lingua, data e testo del consenso', r1.status === 200 && j1.ok && /lista d'attesa/.test(j1.message) && w.pool.waitlist.length === 1 && w.pool.waitlist[0].email === 'mario@example.com' && !!w.pool.waitlist[0].consent_at && w.pool.waitlist[0].consent_text === WAITLIST_CONSENT_TEXT);
-  ok('2b. senza consenso privacy non salva nulla', (await w.post('/api/site/waitlist', { email: 'b@example.com', consent: false })).status === 400 && (await w.post('/api/site/waitlist', { email: 'b@example.com' })).status === 400 && w.pool.waitlist.length === 1);
-  ok('2c. con il campo trappola pieno non salva nulla', (await w.post('/api/site/waitlist', { email: 'bot@example.com', consent: true, website: 'http://spam' })).status === 400 && w.pool.waitlist.length === 1);
-  ok('2d. un indirizzo non valido è rifiutato', (await w.post('/api/site/waitlist', { email: 'non-una-mail', consent: true })).status === 400 && w.pool.waitlist.length === 1);
-  await w.post('/api/site/waitlist', { email: 'mario@example.com', consent: true, lang: 'en' });
-  ok('2e. lo stesso indirizzo due volte è una riga sola', w.pool.waitlist.length === 1 && w.pool.waitlist[0].lang === 'en');
+  ok('2a. l’iscrizione salva l’indirizzo (in minuscolo), la lingua, data e testo del consenso', r1.status === 200 && j1.ok && /lista d'attesa/.test(j1.message) && w.pool.waitlist.length === 1 && w.pool.waitlist[0].email === 'mario@example.com' && !!w.pool.waitlist[0].consent_at && w.pool.waitlist[0].consent_text === WAITLIST_CONSENT_TEXT && w.pool.waitlist[0].profile === 'solo' && w.pool.waitlist[0].days === '3' && w.pool.waitlist[0].place === 'palestra');
+  ok('2a2. chi sei, giorni e luogo fuori dall’elenco sono rifiutati; vuoti restano vuoti (pagina in cache)', (await w.post('/api/site/waitlist', waitBody({ email: 'p1@example.com', profile: 'robot' }))).status === 400 && (await w.post('/api/site/waitlist', waitBody({ email: 'p2@example.com', days: '9' }))).status === 400 && (await w.post('/api/site/waitlist', waitBody({ email: 'p3@example.com', place: 'luna' }))).status === 400 && w.pool.waitlist.length === 1 && (await w.post('/api/site/waitlist', { email: 'old@example.com', consent: true })).status === 200 && w.pool.waitlist.find((r) => r.email === 'old@example.com').profile === '');
+  ok('2b. senza consenso privacy non salva nulla', (await w.post('/api/site/waitlist', { email: 'b@example.com', consent: false })).status === 400 && (await w.post('/api/site/waitlist', { email: 'b@example.com' })).status === 400 && w.pool.waitlist.length === 2);
+  ok('2c. con il campo trappola pieno non salva nulla', (await w.post('/api/site/waitlist', { email: 'bot@example.com', consent: true, website: 'http://spam' })).status === 400 && w.pool.waitlist.length === 2);
+  ok('2d. un indirizzo non valido è rifiutato', (await w.post('/api/site/waitlist', { email: 'non-una-mail', consent: true })).status === 400 && w.pool.waitlist.length === 2);
+  await w.post('/api/site/waitlist', waitBody({ email: 'mario@example.com', lang: 'en', days: '5+' }));
+  ok('2e. lo stesso indirizzo due volte è una riga sola, con i dati aggiornati', w.pool.waitlist.filter((r) => r.email === 'mario@example.com').length === 1 && w.pool.waitlist.find((r) => r.email === 'mario@example.com').lang === 'en' && w.pool.waitlist.find((r) => r.email === 'mario@example.com').days === '5+');
   const bad = await (await w.post('/api/site/waitlist', { email: 'x', consent: true, lang: 'de' })).json();
   ok('2f. i messaggi di errore sono nella lingua di chi scrive', /E-Mail/i.test(bad.error));
 
   // --- the coach application -----------------------------------------------
   const c1 = await w.post('/api/site/coach-application', coachBody());
   const cj = await c1.json();
-  ok('3a. la candidatura salva tutti i campi e il consenso', c1.status === 200 && cj.ok && w.pool.coaches.length === 1 && w.pool.coaches[0].email === 'luca@example.com' && w.pool.coaches[0].name === 'Luca Rossi' && w.pool.coaches[0].athletes === '6-20' && w.pool.coaches[0].social === '@lucacoach' && w.pool.coaches[0].qualification === 'ISSA Personal Trainer' && !!w.pool.coaches[0].consent_at);
+  ok('3a. la candidatura salva tutti i campi e il consenso', c1.status === 200 && cj.ok && w.pool.coaches.length === 1 && w.pool.coaches[0].email === 'luca@example.com' && w.pool.coaches[0].name === 'Luca Rossi' && w.pool.coaches[0].athletes === '6-20' && w.pool.coaches[0].social === '@lucacoach' && w.pool.coaches[0].city === 'Milano' && !!w.pool.coaches[0].consent_at);
   ok('3b. il messaggio è diverso da quello della lista d’attesa', /Candidatura ricevuta/.test(cj.message) && cj.message !== j1.message);
   ok('3c. senza consenso, con la trappola piena o con una fascia inventata nulla viene salvato', (await w.post('/api/site/coach-application', coachBody({ email: 'c1@example.com', consent: false }))).status === 400 &&
     (await w.post('/api/site/coach-application', coachBody({ email: 'c2@example.com', website: 'x' }))).status === 400 &&
     (await w.post('/api/site/coach-application', coachBody({ email: 'c3@example.com', athletes: '1000' }))).status === 400 && w.pool.coaches.length === 1);
-  ok('3d. nome, profilo e qualifica sono obbligatori; le note no', (await w.post('/api/site/coach-application', coachBody({ email: 'd1@example.com', name: '  ' }))).status === 400 &&
+  ok('3d. nome, città, profilo e atleti sono obbligatori; qualifica e note non servono più', (await w.post('/api/site/coach-application', coachBody({ email: 'd1@example.com', name: '  ' }))).status === 400 &&
     (await w.post('/api/site/coach-application', coachBody({ email: 'd2@example.com', social: '' }))).status === 400 &&
-    (await w.post('/api/site/coach-application', coachBody({ email: 'd3@example.com', qualification: '' }))).status === 400 &&
+    (await w.post('/api/site/coach-application', coachBody({ email: 'd3@example.com', city: '' }))).status === 400 &&
+    (await w.post('/api/site/coach-application', coachBody({ email: 'd5@example.com', qualification: '' }))).status === 200 &&
     (await w.post('/api/site/coach-application', coachBody({ email: 'd4@example.com', notes: undefined }))).status === 200);
   ok('3e. i testi lunghissimi vengono tagliati', (await w.post('/api/site/coach-application', coachBody({ email: 'e@example.com', notes: 'x'.repeat(5000), name: 'n'.repeat(500) }))).status === 200 && w.pool.coaches.find((r) => r.email === 'e@example.com').notes.length === 1000 && w.pool.coaches.find((r) => r.email === 'e@example.com').name.length === 100);
 
   // --- the owner is told ---------------------------------------------------
   await new Promise((r) => setTimeout(r, 50));
-  const nl = w.mails.filter((m) => /lista d'attesa/.test(m.subject));
+  const nl = w.mails.filter((m) => /lista d'attesa/.test(m.subject) && /mario@example/.test(m.text));
   const nc = w.mails.filter((m) => /candidatura coach/.test(m.subject));
-  ok('7a. ogni iscrizione riuscita avvisa il titolare, con indirizzo e lingua', nl.length === 2 && nl.every((m) => m.to === 'titolare@example.com') && /mario@example.com/.test(nl[0].text) && /Lingua: en/.test(nl[1].text));
-  ok('7b. ogni candidatura avvisa con tutti i campi', nc.length >= 1 && /Luca Rossi/.test(nc[0].text) && /@lucacoach/.test(nc[0].text) && /6-20/.test(nc[0].text) && /ISSA/.test(nc[0].text));
+  ok('7a. ogni iscrizione riuscita avvisa il titolare, con indirizzo, chi è, giorni, luogo e lingua', nl.length === 2 && nl.every((m) => m.to === 'titolare@example.com') && /mario@example.com/.test(nl[0].text) && /Chi è: solo/.test(nl[0].text) && /Giorni a settimana: 3/.test(nl[0].text) && /Dove: palestra/.test(nl[0].text) && /Lingua: en/.test(nl[1].text));
+  ok('7b. ogni candidatura avvisa con tutti i campi', nc.length >= 1 && /Luca Rossi/.test(nc[0].text) && /@lucacoach/.test(nc[0].text) && /6-20/.test(nc[0].text) && /Città: Milano/.test(nc[0].text));
   ok('7c. un invio rifiutato non manda nessun avviso', !w.mails.some((m) => /bot@example|b@example/.test(m.text)));
   ok('7d. i destinatari: WAITLIST_NOTIFY_EMAIL, altrimenti gli admin', notifyRecipients({ WAITLIST_NOTIFY_EMAIL: 'a@x.it' }).join() === 'a@x.it' && notifyRecipients({ ADMIN_EMAILS: 'A@x.it, b@x.it' }).join() === 'a@x.it,b@x.it' && notifyRecipients({}).length === 0);
 
   // --- the files for the owner ---------------------------------------------
   const csv = waitlistCsv(await listWaitlist(w.pool));
-  ok('4a. l’elenco per il titolare ha indirizzo, lingua e data del consenso', /^email,lingua,consenso_il,iscritto_il/.test(csv) && /mario@example\.com,en,\d{4}-/.test(csv));
+  ok('4a. l’elenco per il titolare ha indirizzo, chi è, giorni, luogo, lingua e data del consenso', /^email,chi_e,giorni_a_settimana,dove,lingua,consenso_il,iscritto_il/.test(csv) && /mario@example\.com,solo,5\+,palestra,en,\d{4}-/.test(csv));
   const ccsv = coachApplicationsCsv(await listCoachApplications(w.pool));
-  ok('4b. e quello dei coach ha tutti i campi, e non fa eseguire formule', /^email,nome,instagram_o_sito,atleti,qualifica,note/.test(ccsv) && /luca@example\.com,Luca Rossi,@lucacoach,6-20,ISSA Personal Trainer/.test(ccsv) &&
+  ok('4b. e quello dei coach ha tutti i campi, e non fa eseguire formule', /^email,nome,citta,instagram_o_sito,atleti,qualifica,note/.test(ccsv) && /luca@example\.com,Luca Rossi,Milano,@lucacoach,6-20,/.test(ccsv) &&
     !/(^|,)=/m.test(coachApplicationsCsv([{ email: 'a@b.it', name: '=SUM(1)', social: '', athletes: '1-5', qualification: '+1', notes: '', lang: 'it' }]).split('\n')[1]));
 
 } finally { await w.close(); }
@@ -137,7 +141,7 @@ try {
 const home = fs.readFileSync('site/home.html', 'utf8');
 const shellHtml = fs.readFileSync('site/shell.html', 'utf8');
 const hero = home.slice(home.indexOf('<div class="cta">'), home.indexOf('</div>', home.indexOf('<div class="cta">')));
-ok('6a. il bottone principale della home è un vero link alla lista', /<a class="btn primary" href="\{\{WAITLIST\}\}">Entra nella lista<\/a>/.test(hero) && !/aria-disabled|soon/.test(hero));
+ok('6a. il bottone principale della home è un vero link alla lista', /<a class="btn primary" href="\{\{WAITLIST\}\}">Entra nella lista d’attesa<\/a>/.test(hero) && !/aria-disabled|soon/.test(hero));
 ok('6b. il piè di pagina ha la voce Lista d’attesa', /<a href="\{\{WAITLIST\}\}">Lista d'attesa<\/a>/.test(shellHtml.slice(shellHtml.indexOf('<footer>'))));
 ok('6c. ogni articolo del blog rimanda alla lista, sotto il riquadro Nurvan', /post-cta[\s\S]{0,400}post-wait[^`]*waitlistPath\(lang\)/.test(fs.readFileSync('server/site/blog.mjs', 'utf8')));
 ok('6d. la tabella è una migrazione, e c’è un file per il titolare nell’admin', /CREATE TABLE IF NOT EXISTS waitlist/.test(fs.readFileSync('server/db/migrations/0024_site_waitlist.sql', 'utf8')) && /CREATE TABLE IF NOT EXISTS coach_applications/.test(fs.readFileSync('server/db/migrations/0024_site_waitlist.sql', 'utf8')) && /waitlist\.csv/.test(fs.readFileSync('server/admin/index.mjs', 'utf8')));
