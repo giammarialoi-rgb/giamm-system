@@ -6,6 +6,8 @@ Per decidere: sposta una riga in **PRIORITÀ** (in cima) per farla uscire per pr
 In ogni sezione le righe sono già ordinate: in alto i temi più cercati e più vicini a Nurvan (programmazione: serie, ripetizioni, recupero), in basso i temi di nicchia.
 Le righe con "poco contenuto" sono promo o meme: probabilmente non vale la pena farne un articolo.
 
+**Nota tecnica per i link interni (verificata il 2026-10-08):** sul sito l'italiano sta su `/blog/<slug>`, tutte le altre lingue su `/<lang>/blog/<slug>` (es. `/en/blog/<slug>`, `/zh/blog/<slug>`). Nelle traduzioni i link interni scritti come `/blog/<slug>` danno 404. La pagina autore è `/autore/giammaria-loi` in tutte le lingue.
+
 ## PRIORITÀ — ordine di uscita, alternando gli argomenti (7)
 
 * \[ ] https://www.instagram.com/p/DdnB85NFZca/ — Lo split di allenamento deve cambiare con l'esperienza: principiante vs avanzato (Dale Hansford)
