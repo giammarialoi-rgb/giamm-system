@@ -6,9 +6,8 @@ Per decidere: sposta una riga in **PRIORITÀ** (in cima) per farla uscire per pr
 In ogni sezione le righe sono già ordinate: in alto i temi più cercati e più vicini a Nurvan (programmazione: serie, ripetizioni, recupero), in basso i temi di nicchia.
 Le righe con "poco contenuto" sono promo o meme: probabilmente non vale la pena farne un articolo.
 
-## PRIORITÀ — ordine di uscita, alternando gli argomenti (8)
+## PRIORITÀ — ordine di uscita, alternando gli argomenti (7)
 
-* \[ ] https://www.instagram.com/p/Dd_qscdm4cy/ — Classifica degli integratori da S a F per la forza (Alfred Jong)
 * \[ ] https://www.instagram.com/p/DdnB85NFZca/ — Lo split di allenamento deve cambiare con l'esperienza: principiante vs avanzato (Dale Hansford)
 * \[ ] https://www.instagram.com/p/DdNDHgthiYV/ — Caffeina ed emivita: quanta ne resta alle 23 e come cambia il sonno (Todd Anderson)
 * \[ ] https://www.instagram.com/p/Dcyi6zGkUig/ + https://www.instagram.com/p/Dd9XGVUCCy9/ — UNITI: quadricipiti e retto femorale — leg extension vs leg press, leg extension da inclinati indietro (+73%) (Wallace, Azegra)
@@ -61,6 +60,7 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 * Arnold Classic UK — NEC Birmingham (Regno Unito), 19-21 marzo 2027 (aggiunto dalla task il 2026-10-05, fonte: stampa di settore, da confermare sul sito ufficiale)
 * HYROX World Championships — Hong Kong, 10-13 giugno 2027 (aggiunto dalla task il 2026-10-05, fonte: hyrox.com)
 * Controllo eventi del 2026-10-07: nessun evento nuovo verificabile da aggiungere; i Mondiali IPF di Reno (14-25 ottobre) iniziano fra 7 giorni, oltre la finestra dei 5 giorni, quindi l'anteprima va scritta dal 2026-10-09 in poi.
+* Controllo eventi del 2026-10-08: nessun evento nuovo verificabile da aggiungere; i Mondiali IPF Classic & Equipped Masters di Reno iniziano fra 6 giorni, ancora fuori dalla finestra dei 5 giorni, e il calendario fissa il prossimo articolo di evento non prima del 2026-10-10. L'anteprima di Reno resta da scrivere dal 2026-10-10 in poi.
 * Da verificare dalla task di volta in volta: Mondiali IPF Equipped e Bench, Mr. Olympia 2027, CrossFit Games, FIBO, RiminiWellness, altri mondiali ed europei di powerlifting, bodybuilding, HYROX e calisthenics
 
 ## DA VERIFICARE (1)
@@ -69,7 +69,7 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 
 ## SCARTATI
 
-## GIÀ PUBBLICATI (13)
+## GIÀ PUBBLICATI (14)
 
 * \[x] https://www.instagram.com/p/Ddf-0MRF7p0/ (2026-09-30, genetica-high-low-responder)
 * \[x] https://www.instagram.com/p/Dd6ncPLF7mI/ (2026-10-01, proteine-in-definizione)
@@ -84,3 +84,4 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 * \[x] https://www.instagram.com/p/DdL7UjGG2wg/ + https://www.instagram.com/p/Ddon1AtEWJb/ + https://www.instagram.com/p/DdRXFzGkTrY/ + https://www.instagram.com/p/Dc6T7q5iJCr/ (2026-10-05, ripetizioni-serie-recupero-ipertrofia — UNITI: 4 post; verificato che il PMID 7928218 citato da iwannaburnfat è un lavoro del 1994 sui mezzi di contrasto, non uno studio sull'allenamento; "linee guida NSCA aggiornate" non verificabile sulla fonte primaria, usato il position stand ACSM 2026)
 * \[x] https://www.instagram.com/p/Dd_OSqQiFfi/ (2026-10-06, carboidrati-fanno-ingrassare-grassi-nascosti — verificato sulle tabelle CREA del repo che lasagna 49%, patatine 51%, crackers al formaggio 45% delle calorie vengono dai grassi, mentre pane bianco 2% e pasta cotta 3%; PMID 2369116 "Invisible fats" confermato; aggiunto il dato Hall 2021 non citato dal post, la dieta povera di grassi fa mangiare 689 kcal/die in meno della chetogenica)
 * \[x] https://www.instagram.com/p/DdtXZsPxbYU/ (2026-10-07, somatotipo-ectomorfo-mesomorfo-massa-muscolare — verificato che lo studio citato dal post è un PREPRINT SportRxiv del 24/09/2026, DOI 10.51224/SportRxiv.1085, non ancora revisionato tra pari e non indicizzato su PubMed: il post non lo dice. Recuperato lo studio opposto citato nella bibliografia del preprint stesso, Van Etten 1994 PMID 8201909, che su 21 uomini trovò +1,6 kg di massa magra nei soggetti di corporatura solida e nessun aumento significativo negli snelli, ma pari guadagno di forza (+13,8%). Aggiunto il dato chiave assente dal post: il somatotipo predice la forza ATTUALE, la mesomorfia spiega il 31,4% della varianza nella panca 3RM, Ryan-Stewart 2018 PMID 29787610)
+* \[x] https://www.instagram.com/p/Dd_qscdm4cy/ (2026-10-08, classifica-integratori-forza-tier-list — tier list S-F per la forza; verificato ogni tier sulle meta-analisi. SMENTITO che la citrullina aumenti la forza massimale: Aguiar & Casonatto 2021 PMID 34176406 trova SMD 0,13 (−0,21–0,46) non significativo; l'unico effetto reale è +6,4% sulle ripetizioni a cedimento, Vårvik 2021 PMID 34010809. DA CORREGGERE la dose di caffeina: il post dice 0,9–2 mg/kg come dose minima efficace, il position stand ISSN 2021 PMID 33388079 dice 3–6 mg/kg come range costantemente efficace e soglia minima fino a 2 mg/kg, mai 0,9. NON VERIFICABILE il rapporto caffeina:teanina 1:2, la letteratura è solo cognitiva (Mancini 2017 PMID 28899506). Beta-alanina in tier D ha SMD complessivo 0,18 (Saunders 2017 PMID 27797728), uguale alla caffeina in tier A sulla forza 0,20 (Grgic 2018 PMID 29527137): il tier giusto dipende dall'obiettivo. Ashwagandha ha l'effetto più grande (0,60 panca 1RM) e la certezza GRADE più bassa (Lee & Heo 2026 PMID 42738987). Confermati creatina in S e HMB in F)

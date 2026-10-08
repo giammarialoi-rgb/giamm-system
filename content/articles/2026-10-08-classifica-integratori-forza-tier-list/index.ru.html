@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тир-лист добавок для силы: что говорит наука | Nurvan</title>
+<meta name="description" content="Карусель расставила добавки от S до F. Мы сверили каждый тир с мета-анализами: две позиции не выдерживают проверки, одна дозировка просто неверна.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Добавки · Тир-лист</div>
+<h1>Тир-лист добавок для силы: какие позиции выдерживают проверку</h1>
+<p class="lede">Тир-листы добавок ходят по сети годами: строка на каждую букву, от S до F, и ощущение, что за десять секунд ты всё понял. Недавно попался хорошо сделанный — с заявленными критериями и правильным выводом в конце. Мы нашли мета-анализ по каждой добавке из этого списка и положили цифры рядом с буквами. Две позиции не выдерживают, одна дозировка неверна, а одна добавка со дна заслуживает подъёма — но только если вы тренируетесь определённым образом.</p>
+<div class="meta"><span>8 октября 2026</span><span><b>12</b> мин чтения</span><span><b>11</b> источников</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 8 октября 2026</span></div>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Список прав наверху и путается в середине.</strong> Креатин на вершине бесспорен, но даже его измеренный эффект мал: по прямым измерениям гипертрофии суммарная оценка составляет 0,11, а интервал задевает ноль.</li><li><strong>Цитруллин не повышает максимальную силу.</strong> Мета-анализ у тренированных даёт 0,13 — незначимо. Что он действительно даёт, и скромно, — около 3 дополнительных повторений из 51 за тренировку.</li><li><strong>Бета-аланин в тире D имеет тот же общий эффект, что кофеин в тире A.</strong> 0,18 против 0,20. Разница в том, что бета-аланин работает на усилиях от полуминуты до десяти минут: бесполезен в разовом максимуме, полезен в подходе на 20 или на дистанции HYROX.</li><li><strong>Доза кофеина в посте слишком мала.</strong> Позиционный документ ISSN называет стабильно эффективным диапазон 3–6 мг на кг массы тела и говорит, что минимальный порог может опускаться <em>до</em> 2 мг/кг. Не до 0,9.</li><li><strong>У добавки с самым большим эффектом — самая слабая доказательная база.</strong> Ашваганда показывает 0,60 в жиме лёжа на максимум, наивысшее число всего списка, но уверенность в доказательствах низкая, а результат держится на одном исследовании.</li></ul></div>
+<figure class="cover"><img alt="Рука держит синий мерный совок с половиной порции моногидрата креатина над открытой банкой, на деревянном столе." src="images/cover.jpg" loading="lazy"/><figcaption class="cap">Связь между присвоенной буквой и измеренным эффектом куда менее аккуратна, чем подсказывает любой рейтинг. Фото: Shixart1985, Wikimedia Commons, CC BY 2.0.</figcaption></figure>
+<h2>Что говорил рейтинг</h2>
+<p>Карусель оценивает добавки по четырём заявленным критериям: цена и легальность, эффективность, доказанная на людях, объяснимый механизм и косвенные выгоды (например, для сна). Получившаяся шкала: моногидрат креатина в <strong>S</strong>; протеиновый порошок и кофеин с теанином в <strong>A</strong>; цитруллин в <strong>B</strong>; рыбий жир и ашваганда в <strong>C</strong>; бета-аланин и нитраты в <strong>D</strong>; бетаин, EAA и большинство предтренировочных формул в <strong>E</strong>; BCAA, l-тирозин, «бустеры тестостерона» и HMB в <strong>F</strong>.</p>
+<p>Две вещи верны ещё до взгляда на данные. Первая: критерии названы — тир-лист без критериев это мнение, переодетое в данные. Вторая: финальная фраза стоит больше всего рейтинга — добавки дополняют, а не заменяют разнообразное питание и сон.</p>
+<p>Проблема в том, что четыре разных критерия сжимаются в одну букву. Эта буква не говорит, стоит ли продукт высоко потому, что сильно работает, потому, что дёшев, или потому, что помогает спать. А когда проверяешь, насколько каждый работает на самом деле, порядок рассыпается.</p>
+<h2>Что на самом деле говорит наука</h2>
+<h3>Креатин в S — <strong>Подтверждено</strong>, с поправкой на масштаб</h3>
+<p>Креатин — самая изученная добавка в спорте, и позиционный документ International Society of Sports Nutrition описывает её как безопасную и хорошо переносимую: есть данные до 30 г в день на протяжении пяти лет у здоровых людей, а полезное привычное потребление — около 3 г в сутки (Kreider et al., 2017).</p>
+<p>Но «самый надёжный» не значит «самый мощный». Мета-анализ, ограниченный прямыми измерениями гипертрофии — МРТ, КТ, УЗИ — по 10 исследованиям и 44 исходам дал суммарную оценку <strong>0,11</strong> по стандартизованной шкале с интервалом доверия от −0,02 до 0,25 и прирост толщины мышцы <strong>0,10–0,16 см</strong> (Burke et al., 2023). Это маленький, устойчивый, дешёвый и безопасный эффект. Именно поэтому креатин в S: не потому, что он преобразит тренировки, а потому, что он единственный надёжно даёт это немногое.</p>
+<h3>Протеиновый порошок в A — <strong>Требует уточнения</strong></h3>
+<p>Эталонный мета-анализ, 49 исследований и 1863 человека, показывает, что добавление протеина во время силовой программы прибавляет <strong>2,49 кг к одноповторному максимуму</strong> (95% ДИ 0,64–4,33) и <strong>0,30 кг безжировой массы</strong> (0,09–0,52) (Morton et al., 2018).</p>
+<p>Деталь, которая меняет всё: выше суммарного потребления <strong>1,62 г белка на кг массы тела в сутки</strong> дополнительная польза исчезает. Порошок — не добавка в том смысле, в каком ею является креатин: это еда в удобном формате. Если вы и так набираете 1,6–1,8 г/кг едой, шейкер не сдвинет ничего. Если не набираете — шейкер самый простой способ дотянуть. В той же работе эффект больше у уже тренированных (+0,75 кг безжировой массы, p = 0,03) и меньше с возрастом.</p>
+<h3>Кофеин в A — <strong>Тир подтверждён, доза неверна</strong></h3>
+<p>Кофеин и сила: <strong>0,20</strong> по стандартизованной шкале (95% ДИ 0,03–0,36); мощность <strong>0,17</strong> (0,00–0,34). Подгрупповой анализ любопытен: эффект значим для верха тела (<strong>0,21</strong>) и не значим для низа (<strong>0,15</strong>) (Grgic et al., 2018).</p>
+<p>Критическая точка — доза. Карусель указывает <strong>0,9–2 мг на кг массы тела</strong> как минимальную эффективную дозу. Позиционный документ ISSN говорит иначе: кофеин стабильно улучшает работоспособность при <strong>3–6 мг/кг</strong>, минимальная эффективная доза <strong>остаётся неясной</strong> и <strong>может доходить до</strong> 2 мг/кг, а очень высокие дозы (9 мг/кг) дают побочные эффекты без дополнительной пользы (Guest et al., 2021). Для человека массой 80 кг разница не умозрительна: пост подразумевает 72–160 мг, литература — 240–480 мг. Нижняя граница 0,9 мг/кг в этом документе опоры не имеет.</p>
+<p>О соотношении <strong>кофеин:теанин 1:2</strong> со слайдов: стоящая за ним литература касается внимания, настроения и когнитивных функций, а не силы и повторений (Mancini et al., 2017). Мы относим это к <strong>непроверяемому</strong> применительно к тренировкам: не ложь, просто никогда не проверялось на том, что вас интересует в зале.</p>
+<h3>Цитруллин в B — <strong>Опровергнуто</strong> для силы</h3>
+<p>Здесь рейтинг утверждает то, чего наука не говорит. Карусель приписывает цитруллину «больше силы и мощности». Мета-анализ у тренированных взрослых, 4 исследования и 138 измерений, находит эффект на максимальную силу <strong>0,13</strong> с интервалом от −0,21 до 0,46: <strong>эффекта нет</strong> (Aguiar &amp; Casonatto, 2021).</p>
+<p>То, что цитруллин умеет, он делает в другом месте. Восемь исследований и 137 участников, 6–8 г за 40–60 минут до работы: <strong>+3 ± 5 повторения</strong> при среднем объёме 51 ± 23 повторения на упражнение, то есть <strong>+6,4%</strong>, величина эффекта 0,196 (p = 0,022) (Vårvik et al., 2021). И там подгрупповой анализ на грани: низ тела p = 0,051, верх p = 0,131. Тир B за выносливость в повторениях защитить можно. Тир B за силу — нет.</p>
+<h3>Бета-аланин в D — <strong>Требует уточнения</strong>, и зависит от вас</h3>
+<p>Это позиция, которая убеждает нас меньше всего. Самый крупный мета-анализ — 40 исследований, 1461 участник, 70 показателей — находит общий эффект <strong>0,18</strong> (95% ДИ 0,08–0,28) (Saunders et al., 2017). Практически то же число, что у кофеина на силу (0,20), который в том же списке стоит на две буквы выше.</p>
+<p>Настоящая разница не в величине эффекта, а в том, <strong>где</strong> он проявляется. Длительность усилия — значимый модератор (p = 0,004): в окне от <strong>30 секунд до 10 минут</strong> эффект на работоспособность поднимается до <strong>0,50</strong> (0,246–0,753), тогда как на результат остаётся 0,11 и незначим. Практическая деталь, которую часто упускают: <strong>общее принятое количество не является модератором</strong> (p = 0,438), так что грузить больше бессмысленно.</p>
+<p>В переводе на зал: если вы делаете тяжёлые тройки в жиме и тяге, бета-аланин в D уместен. Если ваша тренировка — подходы по 15–25, круговые, сани, HYROX или кроссфит, вы смотрите на правильную добавку в неправильной клетке.</p>
+<figure><div class="chart"><svg aria-label="Столбчатая диаграмма: бета-аланин даёт эффект 0,50 на работоспособность в усилиях от 30 секунд до 10 минут, 0,43 вместе с бикарбонатом натрия, 0,18 как общий эффект и 0,11 незначимо на результат." xmlns="http://www.w3.org/2000/svg" width="900" height="376" viewBox="0 0 900 376" role="img">
+<rect width="900" height="376" fill="#0c0c0c"/>
+<text x="28" y="38" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="700">Бета-аланин: эффект зависит от длительности усилия</text>
+<text x="28" y="62" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13">Величина эффекта по подгруппам, 95% ДИ</text>
+<line x1="330.0" y1="86" x2="330.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="330.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.4</text>
+<line x1="418.3" y1="86" x2="418.3" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="418.3" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.2</text>
+<line x1="506.7" y1="86" x2="506.7" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="506.7" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.0</text>
+<line x1="595.0" y1="86" x2="595.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="595.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.2</text>
+<line x1="683.3" y1="86" x2="683.3" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="683.3" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.4</text>
+<line x1="771.7" y1="86" x2="771.7" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="771.7" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.6</text>
+<line x1="860.0" y1="86" x2="860.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="860.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.8</text>
+<line x1="506.7" y1="86" x2="506.7" y2="286" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="316" y="117.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Усилия 0,5–10 мин —</text>
+<text x="316" y="133.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">работоспособность</text>
+<rect x="506.7" y="111.0" width="220.8" height="16" fill="#d4af37" rx="2"/>
+<line x1="615.3" y1="119.0" x2="839.2" y2="119.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="615.3" y1="114.0" x2="615.3" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="839.2" y1="114.0" x2="839.2" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="849.2" y="124.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,50</text>
+<text x="316" y="170.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">С бикарбонатом натрия</text>
+<rect x="506.7" y="157.0" width="189.9" height="16" fill="#d4af37" rx="2"/>
+<line x1="603.8" y1="165.0" x2="789.3" y2="165.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="603.8" y1="160.0" x2="603.8" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="789.3" y1="160.0" x2="789.3" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="799.3" y="170.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,43</text>
+<text x="316" y="216.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">Все усилия — общий эффект</text>
+<rect x="506.7" y="203.0" width="79.5" height="16" fill="#d4af37" rx="2"/>
+<line x1="542.0" y1="211.0" x2="630.3" y2="211.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="542.0" y1="206.0" x2="542.0" y2="216.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="630.3" y1="206.0" x2="630.3" y2="216.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="640.3" y="216.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,18</text>
+<text x="316" y="262.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">Усилия 0,5–10 мин — результат</text>
+<rect x="506.7" y="249.0" width="48.6" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="417.9" y1="257.0" x2="690.4" y2="257.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="417.9" y1="252.0" x2="417.9" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="690.4" y1="252.0" x2="690.4" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="700.4" y="262.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,11 (н.з.)</text>
+<text x="28" y="328" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">Данные: Saunders et al. 2017, Br J Sports Med (PMID 27797728). 40 исследований, 1461 участник. Контурный столбец —</text>
+<text x="28" y="343" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">незначимо.</text>
+<text x="872" y="38" fill="#aa8a2e" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div><figcaption class="cap">У бета-аланина не один эффект: для каждого типа усилия он свой. Данные: Saunders et al. 2017. График Nurvan.</figcaption></figure>
+<h3>Ашваганда в C — <strong>Требует уточнения</strong>: большой эффект, хрупкие данные</h3>
+<p>Мета-анализ 2026 года, ограниченный исследованиями со структурированными силовыми тренировками, находит самое высокое число всего списка: <strong>0,60</strong> в жиме лёжа на максимум (0,20–1,01) и <strong>0,52</strong> для низа тела (0,19–0,86). Но авторы сами высказываются прямо: при более осторожной статистической поправке обе оценки силы <strong>теряют значимость</strong>, каждая держится на одном влиятельном исследовании, а уверенность в доказательствах по GRADE <strong>низкая</strong>. На жировую массу эффекта нет (Lee &amp; Heo, 2026).</p>
+<p>Идеальная иллюстрация того, зачем читать два числа, а не одно: насколько велик эффект и насколько ему можно верить. Ашваганда выигрывает первое и проигрывает второе.</p>
+<h3>HMB в F — <strong>Подтверждено</strong></h3>
+<p>Одиннадцать исследований, 302 человека для состава тела и 248 для силы, от 18 до 45 лет: HMB даёт значимый эффект <strong>только на общую массу тела</strong> и никакого — на безжировую массу, жировую массу, суммарный одноповторный максимум, жим лёжа и низ тела (Jakubowski et al., 2020). Буква F заслужена.</p>
+<figure><div class="chart"><svg aria-label="Сравнение величины эффекта по мета-анализам и тира, присвоенного каруселью, для шести добавок." xmlns="http://www.w3.org/2000/svg" width="900" height="468" viewBox="0 0 900 468" role="img">
+<rect width="900" height="468" fill="#0c0c0c"/>
+<text x="28" y="38" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="700">Измеренный эффект против присвоенного тира</text>
+<text x="28" y="62" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13">Стандартизованная разность средних (SMD) по мета-анализам, 95% ДИ</text>
+<line x1="330.0" y1="86" x2="330.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="330.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.4</text>
+<line x1="400.7" y1="86" x2="400.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="400.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.2</text>
+<line x1="471.3" y1="86" x2="471.3" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="471.3" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.0</text>
+<line x1="542.0" y1="86" x2="542.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="542.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.2</text>
+<line x1="612.7" y1="86" x2="612.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="612.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.4</text>
+<line x1="683.3" y1="86" x2="683.3" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="683.3" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.6</text>
+<line x1="754.0" y1="86" x2="754.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="754.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.8</text>
+<line x1="824.7" y1="86" x2="824.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="824.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">1.0</text>
+<line x1="471.3" y1="86" x2="471.3" y2="378" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="316" y="117.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Ашваганда · тир C — жим лёжа</text>
+<text x="316" y="133.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">1ПМ</text>
+<rect x="471.3" y="111.0" width="212.0" height="16" fill="#d4af37" rx="2"/>
+<line x1="542.0" y1="119.0" x2="828.2" y2="119.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="542.0" y1="114.0" x2="542.0" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="828.2" y1="114.0" x2="828.2" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="838.2" y="124.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,60</text>
+<text x="316" y="170.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">Кофеин · тир A — сила 1ПМ</text>
+<rect x="471.3" y="157.0" width="70.7" height="16" fill="#d4af37" rx="2"/>
+<line x1="481.9" y1="165.0" x2="598.5" y2="165.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="481.9" y1="160.0" x2="481.9" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="598.5" y1="160.0" x2="598.5" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="608.5" y="170.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,20</text>
+<text x="316" y="209.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Цитруллин · тир B — повторения</text>
+<text x="316" y="225.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">до отказа</text>
+<rect x="471.3" y="203.0" width="69.3" height="16" fill="#d4af37" rx="2"/>
+<text x="550.6" y="216.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,196</text>
+<text x="316" y="255.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Бета-аланин · тир D —</text>
+<text x="316" y="271.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">работоспособность</text>
+<rect x="471.3" y="249.0" width="63.6" height="16" fill="#d4af37" rx="2"/>
+<line x1="499.6" y1="257.0" x2="570.3" y2="257.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="499.6" y1="252.0" x2="499.6" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="570.3" y1="252.0" x2="570.3" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="580.3" y="262.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,18</text>
+<text x="316" y="301.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Цитруллин · тир B —</text>
+<text x="316" y="317.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">максимальная сила</text>
+<rect x="471.3" y="295.0" width="45.9" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="397.1" y1="303.0" x2="633.9" y2="303.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="397.1" y1="298.0" x2="397.1" y2="308.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="633.9" y1="298.0" x2="633.9" y2="308.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="643.9" y="308.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,13 (н.з.)</text>
+<text x="316" y="347.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Креатин · тир S — гипертрофия</text>
+<text x="316" y="363.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">(визуализация)</text>
+<rect x="471.3" y="341.0" width="38.9" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="464.3" y1="349.0" x2="559.7" y2="349.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="464.3" y1="344.0" x2="464.3" y2="354.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="559.7" y1="344.0" x2="559.7" y2="354.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="569.7" y="354.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,11 (н.з.)</text>
+<text x="28" y="420" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">Разные исходы: значения нельзя сравнивать напрямую. Залитый столбец — значимый результат; контурный — незначимый.</text>
+<text x="28" y="435" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">Данные: Lee &amp; Heo 2026; Grgic 2018; Vårvik 2021; Saunders 2017; Aguiar 2021; Burke 2023.</text>
+<text x="872" y="38" fill="#aa8a2e" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div><figcaption class="cap">Величины эффекта (стандартизованная разность средних) по цитируемым мета-анализам, с 95% доверительным или вероятностным интервалом. Измеряемый исход у каждой добавки свой и указан в подписи: значения нельзя сравнивать напрямую, и именно поэтому одной буквы недостаточно. График Nurvan по источникам в конце статьи.</figcaption></figure>
+<h2>Как это применить</h2>
+<ol class="steps"><li><strong>Сначала фундамент.</strong> Пост это говорит, и он прав: калории, общий белок и сон весят больше любой клетки таблицы. Если вы спите шесть часов, никакая буква вас не спасёт.</li><li><strong>Начинайте с S и спускайтесь только по причине.</strong> Креатин 3–5 г в день, каждый день, без привязки ко времени. Единственная покупка, которую может оправдать почти каждый.</li><li><strong>Посчитайте белок прежде, чем покупать порошок.</strong> Если вы уже выше 1,6 г/кг в сутки, шейкер — это удобство, а не результат.</li><li><strong>Выбирайте дозу кофеина по исследованиям, а не по карусели.</strong> Изученный диапазон — 3–6 мг/кг, примерно за 60 минут. Если вы чувствительны, начинайте с малого и следите за сном: тренировка получше, оплаченная двумя часами сна, — плохая сделка.</li><li><strong>Выбирайте по цели, а не по букве.</strong> Максимумы и тяжёлые тройки: креатин, кофеин, белок. Длинные подходы, меткон, HYROX: бета-аланин поднимается, цитруллин осмыслен только для объёма повторений.</li><li><strong>Проверьте добавку на себе, с цифрами.</strong> Эффект 0,18 не виден за одну тренировку. Он виден за восемь недель записанных весов, при той же программе и том же целевом RIR.</li></ol>
+<div class="app"><div><h3>💡 Вместе с Nurvan</h3><p><strong>Записывайте, что принимаете, и проверяйте, меняется ли что-то на самом деле.</strong> В разделе добавок Nurvan вы отмечаете продукт, дозу и время; в дневнике тренировок остаются веса, повторения и RIR от занятия к занятию. Сопоставив одно с другим, вы увидите, сдвинулись ли ваши числа сильнее обычного за те восемь недель, когда вы что-то добавили, — вместо того чтобы доверять букве, которую кто-то поставил в Instagram.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Если купить только одну добавку для силы — какую?</summary><p>Моногидрат креатина: единственная с малым, но устойчивым эффектом по прямым измерениям, с задокументированным профилем долгосрочной безопасности и ничтожной ценой (Kreider et al., 2017; Burke et al., 2023).</p></details><details><summary>Поможет ли цитруллин поднять максимум?</summary><p>Нет. Мета-анализ у тренированных спортсменов не находит эффекта на максимальную силу (0,13, незначимо). Единственная задокументированная польза — скромный прирост повторений до отказа, около 6% (Aguiar &amp; Casonatto, 2021; Vårvik et al., 2021).</p></details><details><summary>Сколько кофеина перед тренировкой?</summary><p>В исследованиях используют 3–6 мг на кг массы тела, обычно примерно за 60 минут; очень высокие дозы пользы не добавляют и дают побочные эффекты (Guest et al., 2021). Это изученный диапазон, а не назначение: тем, кто принимает лекарства, беременным и людям с проблемами сердца или сна стоит сначала поговорить с врачом.</p></details><details><summary>Нужен ли бета-аланин, если я занимаюсь только пауэрлифтингом?</summary><p>Мало. Эффект сосредоточен в усилиях от 30 секунд до 10 минут, а разовый максимум лежит вне этого окна (Saunders et al., 2017). Если вы вдобавок делаете многоповторную работу или кондиционную, ответ меняется.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/blog/kreatin-vypadenie-volos">Креатин вызывает выпадение волос? Что на самом деле говорят исследования</a></li><li><a href="/blog/kreatin-bez-trenirovok-posle-45">Креатин без тренировок после 45: что показало исследование</a></li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>Kreider RB, Kalman DS, Antonio J, et al., 2017. <em>International Society of Sports Nutrition position stand: safety and efficacy of creatine supplementation in exercise, sport, and medicine.</em> J Int Soc Sports Nutr 14:18. PMID 28615996 — <a href="https://doi.org/10.1186/s12970-017-0173-z">doi:10.1186/s12970-017-0173-z</a></li><li>Burke R, Piñero A, Coleman M, et al., 2023. <em>The Effects of Creatine Supplementation Combined with Resistance Training on Regional Measures of Muscle Hypertrophy: A Systematic Review with Meta-Analysis.</em> Nutrients 15(9):2116. PMID 37432300 — <a href="https://doi.org/10.3390/nu15092116">doi:10.3390/nu15092116</a></li><li>Morton RW, Murphy KT, McKellar SR, et al., 2018. <em>A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults.</em> Br J Sports Med 52(6):376–384. PMID 28698222 — <a href="https://doi.org/10.1136/bjsports-2017-097608">doi:10.1136/bjsports-2017-097608</a></li><li>Grgic J, Trexler ET, Lazinica B, Pedisic Z, 2018. <em>Effects of caffeine intake on muscle strength and power: a systematic review and meta-analysis.</em> J Int Soc Sports Nutr 15:11. PMID 29527137 — <a href="https://doi.org/10.1186/s12970-018-0216-0">doi:10.1186/s12970-018-0216-0</a></li><li>Guest NS, VanDusseldorp TA, Nelson MT, et al., 2021. <em>International society of sports nutrition position stand: caffeine and exercise performance.</em> J Int Soc Sports Nutr 18(1):1. PMID 33388079 — <a href="https://doi.org/10.1186/s12970-020-00383-4">doi:10.1186/s12970-020-00383-4</a></li><li>Vårvik FT, Bjørnsen T, Gonzalez AM, 2021. <em>Acute Effect of Citrulline Malate on Repetition Performance During Strength Training: A Systematic Review and Meta-Analysis.</em> Int J Sport Nutr Exerc Metab 31(4):350–358. PMID 34010809 — <a href="https://doi.org/10.1123/ijsnem.2020-0295">doi:10.1123/ijsnem.2020-0295</a></li><li>Aguiar AF, Casonatto J, 2021. <em>Effects of Citrulline Malate Supplementation on Muscle Strength in Resistance-Trained Adults: A Systematic Review and Meta-Analysis of Randomized Controlled Trials.</em> J Diet Suppl 19(6):772–790. PMID 34176406 — <a href="https://doi.org/10.1080/19390211.2021.1939473">doi:10.1080/19390211.2021.1939473</a></li><li>Saunders B, Elliott-Sale K, Artioli GG, et al., 2017. <em>β-alanine supplementation to improve exercise capacity and performance: a systematic review and meta-analysis.</em> Br J Sports Med 51(8):658–669. PMID 27797728 — <a href="https://doi.org/10.1136/bjsports-2016-096396">doi:10.1136/bjsports-2016-096396</a></li><li>Jakubowski JS, Nunes EA, Teixeira FJ, et al., 2020. <em>Supplementation with the Leucine Metabolite β-hydroxy-β-methylbutyrate (HMB) does not Improve Resistance Exercise-Induced Changes in Body Composition or Strength in Young Subjects: A Systematic Review and Meta-Analysis.</em> Nutrients 12(5):1523. PMID 32456217 — <a href="https://doi.org/10.3390/nu12051523">doi:10.3390/nu12051523</a></li><li>Lee JC, Heo AS, 2026. <em>Adjunctive Ashwagandha Supplementation and Resistance-Training Adaptations in Healthy Adults: A Systematic Review and Random-Effects Meta-Analysis.</em> Nutrients 18(17):2815. PMID 42738987 — <a href="https://doi.org/10.3390/nu18172815">doi:10.3390/nu18172815</a></li><li>Mancini E, Beglinger C, Drewe J, et al., 2017. <em>Green tea effects on cognition, mood and human brain function: A systematic review.</em> Phytomedicine 34:26–37. PMID 28899506 — <a href="https://doi.org/10.1016/j.phymed.2017.07.008">doi:10.1016/j.phymed.2017.07.008</a></li></ol>
+<p>Метаданные и аннотации получены из PubMed. Отправная точка: карусель <a href="https://www.instagram.com/p/Dd_qscdm4cy/">Alfred Jong (@alfred.reformance)</a> для Reformance Training. Ни текст, ни изображения, ни структура поста не воспроизводились: утверждения были извлечены, переписаны и проверены независимо.</p>
+<p><strong>Giammaria Loi</strong> — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и коучем с сертификатом FIPE с 2013-го и выступает в пауэрлифтинге на национальном уровне с 2018-го. Каждая его статья начинается с научных работ и заканчивается тем, что действительно работает в зале.</p>
+<p class="note">Примечание: информационный материал, не заменяющий консультацию врача или профильного специалиста. Упомянутые добавки могут взаимодействовать с лекарствами или заболеваниями: перед приёмом обсудите это с врачом. Если вы выступаете на соревнованиях, всегда сверяйтесь с антидопинговым регламентом своей федерации.</p>
+</main>
+<footer>NURVAN · nurvan.app · 8 октября 2026</footer>
+</body>
+</html>

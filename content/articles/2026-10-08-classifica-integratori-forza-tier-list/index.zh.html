@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>力量补剂等级榜：研究到底怎么说 | Nurvan</title>
+<meta name="description" content="一张走红的图把补剂从S排到F。我们把每一级和荟萃分析逐条核对：两个位置站不住脚，一个剂量根本写错了。">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">训练</a><a href="#">营养</a><a href="#">补剂</a><a href="#" class="on">博客</a></nav><a class="cta" href="https://nurvan.app">下载应用</a></div></header>
+<main class="wrap" lang="zh">
+<div class="crumb">博客 · 补剂 · 等级榜</div>
+<h1>力量补剂等级榜：哪几级站得住脚</h1>
+<p class="lede">补剂等级榜已经流传了好几年：一个字母一行，从 S 排到 F，让人觉得十秒钟就把一切搞懂了。最近刷到的这一张做得不错，标明了评分标准，结尾那句话也说得对。于是我们把榜上每种补剂对应的荟萃分析都翻了出来，把数字和字母放在一起比。结果是：两个位置站不住，一个剂量写错了，还有一种排在底部的补剂该往上挪——但只有在你以某种方式训练时才成立。</p>
+<div class="meta"><span>2026年10月8日</span><span><b>5</b> 分钟阅读</span><span><b>11</b> 篇研究</span><span>作者 <a href="/autore/giammaria-loi">Giammaria Loi</a> · 更新于 2026 年 10 月 8 日</span></div>
+<div class="box"><h2>要点速览</h2><ul><li><strong>这张榜顶端是对的，中段乱了。</strong> 肌酸排在最上面毫无争议，但连它的实测效果也很小：在影像学直接测量的肌肥大上，合并估计值是 0.11，区间还碰到了零。</li><li><strong>瓜氨酸不能提高最大力量。</strong> 一项针对训练人群的荟萃分析给出 0.13，不显著。它真正能做的，而且很有限，是让你一次训练的 51 次总次数里多出大约 3 次。</li><li><strong>D 级的 β-丙氨酸，总体效应和 A 级的咖啡因一样大。</strong> 0.18 对 0.20。区别在于 β-丙氨酸作用于半分钟到十分钟的用力：对单次极限无用，对 20 次一组或 HYROX 比赛有用。</li><li><strong>帖子给的咖啡因剂量太低。</strong> ISSN 立场声明把稳定有效的区间定在每公斤体重 3–6 毫克，并说最低阈值可能低<em>至</em> 2 毫克/公斤，而不是 0.9。</li><li><strong>效应最大的那个补剂，证据最弱。</strong> 南非醉茄在卧推极限上显示 0.60，是全榜最高的数字，但证据确定性很低，而且结果取决于单独一项研究。</li></ul></div>
+<figure class="cover"><img alt="一只手拿着蓝色量勺，勺里是半份肌酸一水合物，正悬在打开的罐口上方，桌面是木质的。" src="images/cover.jpg" loading="lazy"/><figcaption class="cap">字母和实测效应之间的关系，远没有任何排行榜看上去那么整齐。图片：Shixart1985，Wikimedia Commons，CC BY 2.0。</figcaption></figure>
+<h2>这张榜说了什么</h2>
+<p>该图按四条公开标准给补剂打分：价格与合法性、在人体试验中证实的有效性、可解释的机制，以及间接收益（例如改善睡眠）。得到的等级是：肌酸一水合物 <strong>S</strong>；蛋白粉、咖啡因加茶氨酸 <strong>A</strong>；瓜氨酸 <strong>B</strong>；鱼油和南非醉茄 <strong>C</strong>；β-丙氨酸和硝酸盐 <strong>D</strong>；甜菜碱、EAA 和大多数训练前配方 <strong>E</strong>；BCAA、左旋酪氨酸、"睾酮助推剂"和 HMB <strong>F</strong>。</p>
+<p>还没看数据，就有两点是对的。第一，标准是公开的：没有标准的等级榜，不过是披着数据外衣的意见。第二，结尾那句话比整张榜更有价值——补剂是补充，替代不了多样化的饮食和睡眠。</p>
+<p>问题在于，四条不同的标准被压缩进了一个字母。这个字母不会告诉你：某样东西排得高，是因为作用大，还是因为便宜，还是因为帮助睡眠。而一旦你去核对每一种到底有多大作用，次序就散架了。</p>
+<h2>研究真正说了什么</h2>
+<h3>肌酸 S 级 —— <strong>确认</strong>，但要调整预期</h3>
+<p>肌酸是运动领域研究最多的补剂，国际运动营养学会（ISSN）的立场声明称其安全、耐受性好，健康人群中有每天 30 克、持续五年的数据，而有益的日常摄入量在每天 3 克左右（Kreider 等，2017）。</p>
+<p>但"最扎实"不等于"最强力"。一项只纳入直接肌肥大测量（核磁、CT、超声）的荟萃分析，覆盖 10 项研究、44 个结局，得到的合并估计是标准化尺度上的 <strong>0.11</strong>，可信区间 −0.02 到 0.25，肌肉厚度增加 <strong>0.10–0.16 厘米</strong>（Burke 等，2023）。这是一个小而稳定、便宜又安全的效果。它之所以在 S 级，不是因为它会改造你的训练，而是因为它是唯一能把这一点点可靠兑现的。</p>
+<h3>蛋白粉 A 级 —— <strong>需要限定</strong></h3>
+<p>参考性的荟萃分析，49 项研究、1863 人，发现在力量训练期间补充蛋白质可使<strong>一次最大重量增加 2.49 公斤</strong>（95% CI 0.64–4.33），<strong>去脂体重增加 0.30 公斤</strong>（0.09–0.52）（Morton 等，2018）。</p>
+<p>真正改变结论的细节是：总摄入量超过<strong>每公斤体重每天 1.62 克蛋白质</strong>之后，额外收益就消失了。蛋白粉不是肌酸那种意义上的补剂，它是换了方便形态的食物。如果你靠吃饭已经达到 1.6–1.8 克/公斤，再加一杯摇摇杯什么也不会改变；如果没达到，摇摇杯是最省事的补足方式。同一篇论文里，效果在已有训练基础的人身上更大（去脂体重 +0.75 公斤，p = 0.03），随年龄增长而变小。</p>
+<h3>咖啡因 A 级 —— <strong>等级确认，剂量错了</strong></h3>
+<p>咖啡因与力量：标准化尺度 <strong>0.20</strong>（95% CI 0.03–0.36）；功率 <strong>0.17</strong>（0.00–0.34）。亚组分析值得一看：上肢效果显著（<strong>0.21</strong>），下肢不显著（<strong>0.15</strong>）（Grgic 等，2018）。</p>
+<p>关键在剂量。该图把<strong>每公斤体重 0.9–2 毫克</strong>写成最低有效剂量。ISSN 立场声明说的是另一回事：咖啡因在 <strong>3–6 毫克/公斤</strong>时稳定提升表现，最低有效剂量<strong>仍不明确</strong>，<strong>可能低至</strong> 2 毫克/公斤，而极高剂量（9 毫克/公斤）只带来副作用，没有额外好处（Guest 等，2021）。对一个 80 公斤的人来说，这个差距不是纸上谈兵：帖子暗示 72–160 毫克，文献是 240–480 毫克。0.9 毫克/公斤这个下限在该文件里找不到依据。</p>
+<p>关于幻灯片上的<strong>咖啡因:茶氨酸 1:2</strong>：支撑这个比例的文献讲的是注意力、情绪和认知功能，不是力量或次数（Mancini 等，2017）。就训练而言我们把它归为<strong>无法核实</strong>——不是错，只是从未在你关心的健身房指标上测试过。</p>
+<h3>瓜氨酸 B 级 —— 就力量而言<strong>被推翻</strong></h3>
+<p>这里榜单说了研究没有说的话。图中给瓜氨酸写的是"提升力量与功率输出"。一项针对有抗阻训练经验成年人的荟萃分析，4 项研究、138 次测量，发现对最大力量的效应为 <strong>0.13</strong>，区间 −0.21 到 0.46：<strong>没有效果</strong>（Aguiar 与 Casonatto，2021）。</p>
+<p>瓜氨酸真正起作用的地方在别处。八项研究、137 名参与者，训练前 40–60 分钟摄入 6–8 克：在每个动作平均 51 ± 23 次总次数的基础上<strong>多出 3 ± 5 次</strong>，即 <strong>+6.4%</strong>，效应量 0.196（p = 0.022）（Vårvik 等，2021）。而且那里的亚组分析也在边缘：下肢 p = 0.051，上肢 p = 0.131。以"次数耐受"论，B 级说得过去；以力量论，不行。</p>
+<h3>β-丙氨酸 D 级 —— <strong>需要限定</strong>，而且取决于你</h3>
+<p>这是我们最不认同的一个位置。规模最大的荟萃分析——40 项研究、1461 名参与者、70 项运动指标——得到的总体效应是 <strong>0.18</strong>（95% CI 0.08–0.28）（Saunders 等，2017）。这与咖啡因对力量的 0.20 几乎相同，而咖啡因在同一张榜上高两个字母。</p>
+<p>真正的差别不是效应有多大，而是它出现在<strong>哪里</strong>。用力持续时间是显著的调节因素（p = 0.004）：在 <strong>30 秒到 10 分钟</strong>这个窗口里，对运动耐受能力的效应升到 <strong>0.50</strong>（0.246–0.753），而对成绩表现仍是 0.11 且不显著。一个常被忽略的实用细节：<strong>总摄入量不是调节因素</strong>（p = 0.438），所以加大囤积量没有意义。</p>
+<p>换成健身房的话：如果你练的是卧推和硬拉的大重量三连，β-丙氨酸放 D 级没问题。如果你的课表是 15–25 次的组、循环训练、雪橇、HYROX 或 CrossFit，那你是在错误的格子里看一个正确的补剂。</p>
+<figure><div class="chart"><svg aria-label="条形图：β-丙氨酸在30秒到10分钟的用力中对耐受能力的效应为0.50，与碳酸氢钠同服为0.43，总体效应为0.18，对成绩表现为0.11且不显著。" xmlns="http://www.w3.org/2000/svg" width="900" height="376" viewBox="0 0 900 376" role="img">
+<rect width="900" height="376" fill="#0c0c0c"/>
+<text x="28" y="38" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="700">β-丙氨酸：效果取决于用力持续时间</text>
+<text x="28" y="62" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13">各亚组效应量及95%置信区间</text>
+<line x1="330.0" y1="86" x2="330.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="330.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.4</text>
+<line x1="418.3" y1="86" x2="418.3" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="418.3" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.2</text>
+<line x1="506.7" y1="86" x2="506.7" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="506.7" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.0</text>
+<line x1="595.0" y1="86" x2="595.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="595.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.2</text>
+<line x1="683.3" y1="86" x2="683.3" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="683.3" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.4</text>
+<line x1="771.7" y1="86" x2="771.7" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="771.7" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.6</text>
+<line x1="860.0" y1="86" x2="860.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="860.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.8</text>
+<line x1="506.7" y1="86" x2="506.7" y2="286" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="316" y="124.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">0.5–10分钟的用力 — 耐受能力</text>
+<rect x="506.7" y="111.0" width="220.8" height="16" fill="#d4af37" rx="2"/>
+<line x1="615.3" y1="119.0" x2="839.2" y2="119.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="615.3" y1="114.0" x2="615.3" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="839.2" y1="114.0" x2="839.2" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="849.2" y="124.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.50</text>
+<text x="316" y="170.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">与碳酸氢钠同服</text>
+<rect x="506.7" y="157.0" width="189.9" height="16" fill="#d4af37" rx="2"/>
+<line x1="603.8" y1="165.0" x2="789.3" y2="165.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="603.8" y1="160.0" x2="603.8" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="789.3" y1="160.0" x2="789.3" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="799.3" y="170.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.43</text>
+<text x="316" y="216.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">全部用力 — 总体效应</text>
+<rect x="506.7" y="203.0" width="79.5" height="16" fill="#d4af37" rx="2"/>
+<line x1="542.0" y1="211.0" x2="630.3" y2="211.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="542.0" y1="206.0" x2="542.0" y2="216.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="630.3" y1="206.0" x2="630.3" y2="216.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="640.3" y="216.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.18</text>
+<text x="316" y="262.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">0.5–10分钟的用力 — 表现</text>
+<rect x="506.7" y="249.0" width="48.6" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="417.9" y1="257.0" x2="690.4" y2="257.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="417.9" y1="252.0" x2="417.9" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="690.4" y1="252.0" x2="690.4" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="700.4" y="262.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.11 (不显著)</text>
+<text x="28" y="328" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">数据：Saunders et al. 2017, Br J Sports Med (PMID</text>
+<text x="28" y="343" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">27797728)。40项研究，1461名受试者。空心条=不显著。</text>
+<text x="872" y="38" fill="#aa8a2e" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div><figcaption class="cap">β-丙氨酸没有单一的效果：每一种用力形式对应一个不同的效果。数据：Saunders 等，2017。图表由 Nurvan 制作。</figcaption></figure>
+<h3>南非醉茄 C 级 —— <strong>需要限定</strong>：效应大，证据脆</h3>
+<p>一项 2026 年、只纳入结构化抗阻训练试验的荟萃分析，给出全榜最高的数字：卧推极限 <strong>0.60</strong>（0.20–1.01），下肢极限 <strong>0.52</strong>（0.19–0.86）。但作者自己说得很直白：换用更保守的统计校正后，两个力量估计都<strong>失去显著性</strong>，各自依赖于单独一项影响力很大的试验，证据的 GRADE 确定性为<strong>低</strong>。对体脂则没有效果（Lee 与 Heo，2026）。</p>
+<p>这正好说明为什么要同时看两个数字：效应有多大，以及这个效应有多可信。南非醉茄赢了前者，输了后者。</p>
+<h3>HMB F 级 —— <strong>确认</strong></h3>
+<p>十一项研究，身体成分 302 人、力量 248 人，年龄 18 到 45 岁：HMB 只在<strong>总体重</strong>上产生显著效应，对去脂体重、脂肪量、总一次最大重量、卧推和下肢都没有效果（Jakubowski 等，2020）。这个 F 是应得的。</p>
+<figure><div class="chart"><svg aria-label="六种补剂的荟萃分析效应量与该图所给等级的对照。" xmlns="http://www.w3.org/2000/svg" width="900" height="468" viewBox="0 0 900 468" role="img">
+<rect width="900" height="468" fill="#0c0c0c"/>
+<text x="28" y="38" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="700">实测效应量与榜单等级的对比</text>
+<text x="28" y="62" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13">来自各项荟萃分析的标准化均数差(SMD)及95%置信区间</text>
+<line x1="330.0" y1="86" x2="330.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="330.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.4</text>
+<line x1="400.7" y1="86" x2="400.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="400.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.2</text>
+<line x1="471.3" y1="86" x2="471.3" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="471.3" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.0</text>
+<line x1="542.0" y1="86" x2="542.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="542.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.2</text>
+<line x1="612.7" y1="86" x2="612.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="612.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.4</text>
+<line x1="683.3" y1="86" x2="683.3" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="683.3" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.6</text>
+<line x1="754.0" y1="86" x2="754.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="754.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.8</text>
+<line x1="824.7" y1="86" x2="824.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="824.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">1.0</text>
+<line x1="471.3" y1="86" x2="471.3" y2="378" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="316" y="124.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">南非醉茄 · C级 — 卧推1RM</text>
+<rect x="471.3" y="111.0" width="212.0" height="16" fill="#d4af37" rx="2"/>
+<line x1="542.0" y1="119.0" x2="828.2" y2="119.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="542.0" y1="114.0" x2="542.0" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="828.2" y1="114.0" x2="828.2" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="838.2" y="124.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.60</text>
+<text x="316" y="170.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">咖啡因 · A级 — 1RM力量</text>
+<rect x="471.3" y="157.0" width="70.7" height="16" fill="#d4af37" rx="2"/>
+<line x1="481.9" y1="165.0" x2="598.5" y2="165.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="481.9" y1="160.0" x2="481.9" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="598.5" y1="160.0" x2="598.5" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="608.5" y="170.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.20</text>
+<text x="316" y="216.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">瓜氨酸 · B级 — 力竭次数</text>
+<rect x="471.3" y="203.0" width="69.3" height="16" fill="#d4af37" rx="2"/>
+<text x="550.6" y="216.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.196</text>
+<text x="316" y="255.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">β-丙氨酸 · D级 —</text>
+<text x="316" y="271.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">运动耐受能力</text>
+<rect x="471.3" y="249.0" width="63.6" height="16" fill="#d4af37" rx="2"/>
+<line x1="499.6" y1="257.0" x2="570.3" y2="257.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="499.6" y1="252.0" x2="499.6" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="570.3" y1="252.0" x2="570.3" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="580.3" y="262.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.18</text>
+<text x="316" y="308.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">瓜氨酸 · B级 — 最大力量</text>
+<rect x="471.3" y="295.0" width="45.9" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="397.1" y1="303.0" x2="633.9" y2="303.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="397.1" y1="298.0" x2="397.1" y2="308.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="633.9" y1="298.0" x2="633.9" y2="308.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="643.9" y="308.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.13 (不显著)</text>
+<text x="316" y="354.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">肌酸 · S级 — 肌肥大(影像学)</text>
+<rect x="471.3" y="341.0" width="38.9" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="464.3" y1="349.0" x2="559.7" y2="349.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="464.3" y1="344.0" x2="464.3" y2="354.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="559.7" y1="344.0" x2="559.7" y2="354.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="569.7" y="354.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0.11 (不显著)</text>
+<text x="28" y="420" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">各条结局指标不同，数值之间不能直接比较。实心条=结果显著；空心条=不显著。数据：Lee &amp; Heo</text>
+<text x="28" y="435" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">2026；Grgic 2018；Vårvik 2021；Saunders 2017；Aguiar</text>
+<text x="28" y="450" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">2021；Burke 2023。</text>
+<text x="872" y="38" fill="#aa8a2e" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div><figcaption class="cap">各引用荟萃分析报告的效应量（标准化均数差），附 95% 置信区间或可信区间。每种补剂测量的结局不同，已标注在标签上：数值之间不能一一比较，而这正是单个字母承载不了信息的原因。图表由 Nurvan 依据文末来源制作。</figcaption></figure>
+<h2>怎么用</h2>
+<ol class="steps"><li><strong>先把地基打好。</strong> 帖子说得对：热量、总蛋白和睡眠比表格里任何一格都重要。每天睡六小时，什么字母都救不了你。</li><li><strong>从 S 开始，有理由才往下走。</strong> 肌酸每天 3–5 克，天天吃，不必挑时间。这是几乎所有人都说得通的唯一一笔开销。</li><li><strong>买蛋白粉之前先算蛋白质。</strong> 如果你每天已经超过 1.6 克/公斤，摇摇杯买的是方便，不是表现。</li><li><strong>按研究选咖啡因剂量，不要按那张图。</strong> 被研究的区间是 3–6 毫克/公斤，大约提前 60 分钟。如果你敏感，从低量开始并盯住睡眠：用少睡两小时换一次更好的训练，是笔亏本买卖。</li><li><strong>按目标选，不要按字母选。</strong> 极限和大重量三连：肌酸、咖啡因、蛋白质。长组、metcon、HYROX：β-丙氨酸上移，瓜氨酸只在次数总量上说得通。</li><li><strong>用数字在自己身上验证。</strong> 0.18 的效应在一次训练里看不见，它出现在八周有记录的负荷里——同样的课表，同样的目标 RIR。</li></ol>
+<div class="app"><div><h3>💡 用 Nurvan</h3><p><strong>记下你吃了什么，再看它到底有没有带来变化。</strong> 在 Nurvan 的补剂模块里记录产品、剂量和时间；训练日志里逐次保存负荷、次数和 RIR。把两边交叉看，你就能知道在加了某种补剂的那八周里，自己的数字有没有比平时动得更多——而不是去相信别人在 Instagram 上给出的那个字母。</p></div><a class="cta" href="https://nurvan.app">试试 Nurvan</a></div>
+<h2>常见问题</h2>
+<details><summary>如果只买一种力量补剂，买哪种？</summary><p>肌酸一水合物。它是唯一一种在直接测量上效果虽小但稳定、长期安全性有据可查、而且价格低到可以忽略的补剂（Kreider 等，2017；Burke 等，2023）。</p></details><details><summary>瓜氨酸能帮我提高极限重量吗？</summary><p>不能。针对训练人群的荟萃分析没有发现对最大力量的效果（0.13，不显著）。唯一有据可查的好处是力竭次数小幅上升，约 6%（Aguiar 与 Casonatto，2021；Vårvik 等，2021）。</p></details><details><summary>训练前该喝多少咖啡因？</summary><p>研究使用的是每公斤体重 3–6 毫克，通常提前约 60 分钟；极高剂量不会带来额外好处，反而有副作用（Guest 等，2021）。这是被研究过的剂量范围，不是处方：正在服药、怀孕，或有心脏或睡眠问题的人，请先咨询医生。</p></details><details><summary>我只练力量举，β-丙氨酸有用吗？</summary><p>用处不大。它的效应集中在 30 秒到 10 分钟的用力上，单次极限不在这个窗口内（Saunders 等，2017）。如果你同时做高次数训练或体能训练，答案就不一样了。</p></details>
+<h2>延伸阅读</h2>
+<ul><li><a href="/blog/creatine-hair-loss-zh">肌酸会导致脱发吗？研究到底怎么说</a></li><li><a href="/blog/jirousuan-bu-jianshen-45sui">45岁后不健身也吃肌酸：研究到底说了什么</a></li></ul>
+<h2>参考文献</h2>
+<ol class="refs"><li>Kreider RB, Kalman DS, Antonio J, et al., 2017. <em>International Society of Sports Nutrition position stand: safety and efficacy of creatine supplementation in exercise, sport, and medicine.</em> J Int Soc Sports Nutr 14:18. PMID 28615996 — <a href="https://doi.org/10.1186/s12970-017-0173-z">doi:10.1186/s12970-017-0173-z</a></li><li>Burke R, Piñero A, Coleman M, et al., 2023. <em>The Effects of Creatine Supplementation Combined with Resistance Training on Regional Measures of Muscle Hypertrophy: A Systematic Review with Meta-Analysis.</em> Nutrients 15(9):2116. PMID 37432300 — <a href="https://doi.org/10.3390/nu15092116">doi:10.3390/nu15092116</a></li><li>Morton RW, Murphy KT, McKellar SR, et al., 2018. <em>A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults.</em> Br J Sports Med 52(6):376–384. PMID 28698222 — <a href="https://doi.org/10.1136/bjsports-2017-097608">doi:10.1136/bjsports-2017-097608</a></li><li>Grgic J, Trexler ET, Lazinica B, Pedisic Z, 2018. <em>Effects of caffeine intake on muscle strength and power: a systematic review and meta-analysis.</em> J Int Soc Sports Nutr 15:11. PMID 29527137 — <a href="https://doi.org/10.1186/s12970-018-0216-0">doi:10.1186/s12970-018-0216-0</a></li><li>Guest NS, VanDusseldorp TA, Nelson MT, et al., 2021. <em>International society of sports nutrition position stand: caffeine and exercise performance.</em> J Int Soc Sports Nutr 18(1):1. PMID 33388079 — <a href="https://doi.org/10.1186/s12970-020-00383-4">doi:10.1186/s12970-020-00383-4</a></li><li>Vårvik FT, Bjørnsen T, Gonzalez AM, 2021. <em>Acute Effect of Citrulline Malate on Repetition Performance During Strength Training: A Systematic Review and Meta-Analysis.</em> Int J Sport Nutr Exerc Metab 31(4):350–358. PMID 34010809 — <a href="https://doi.org/10.1123/ijsnem.2020-0295">doi:10.1123/ijsnem.2020-0295</a></li><li>Aguiar AF, Casonatto J, 2021. <em>Effects of Citrulline Malate Supplementation on Muscle Strength in Resistance-Trained Adults: A Systematic Review and Meta-Analysis of Randomized Controlled Trials.</em> J Diet Suppl 19(6):772–790. PMID 34176406 — <a href="https://doi.org/10.1080/19390211.2021.1939473">doi:10.1080/19390211.2021.1939473</a></li><li>Saunders B, Elliott-Sale K, Artioli GG, et al., 2017. <em>β-alanine supplementation to improve exercise capacity and performance: a systematic review and meta-analysis.</em> Br J Sports Med 51(8):658–669. PMID 27797728 — <a href="https://doi.org/10.1136/bjsports-2016-096396">doi:10.1136/bjsports-2016-096396</a></li><li>Jakubowski JS, Nunes EA, Teixeira FJ, et al., 2020. <em>Supplementation with the Leucine Metabolite β-hydroxy-β-methylbutyrate (HMB) does not Improve Resistance Exercise-Induced Changes in Body Composition or Strength in Young Subjects: A Systematic Review and Meta-Analysis.</em> Nutrients 12(5):1523. PMID 32456217 — <a href="https://doi.org/10.3390/nu12051523">doi:10.3390/nu12051523</a></li><li>Lee JC, Heo AS, 2026. <em>Adjunctive Ashwagandha Supplementation and Resistance-Training Adaptations in Healthy Adults: A Systematic Review and Random-Effects Meta-Analysis.</em> Nutrients 18(17):2815. PMID 42738987 — <a href="https://doi.org/10.3390/nu18172815">doi:10.3390/nu18172815</a></li><li>Mancini E, Beglinger C, Drewe J, et al., 2017. <em>Green tea effects on cognition, mood and human brain function: A systematic review.</em> Phytomedicine 34:26–37. PMID 28899506 — <a href="https://doi.org/10.1016/j.phymed.2017.07.008">doi:10.1016/j.phymed.2017.07.008</a></li></ol>
+<p>元数据与摘要取自 PubMed。最初的触发点：<a href="https://www.instagram.com/p/Dd_qscdm4cy/">Alfred Jong（@alfred.reformance）</a>为 Reformance Training 制作的图集。该贴的文字、图片与结构均未被复制：所有说法都经过独立提取、重写与核实。</p>
+<p><strong>Giammaria Loi</strong> 是 Nurvan 的创始人。他从 2012 年开始进行力量训练，自 2013 年起担任 FIPE 认证私人教练与教练，自 2018 年起在国家级力量举比赛中参赛。他署名的每一篇文章都从科学研究出发，落到健身房里真正有效的做法上。</p>
+<p class="note">注：本文为科普内容，不能替代医生或专业人士的意见。文中提到的补剂可能与药物或疾病相互作用：服用前请咨询你的医生。如果你参加比赛，请务必核对所属联合会的反兴奋剂规定。</p>
+</main>
+<footer>NURVAN · nurvan.app · 2026年10月8日</footer>
+</body>
+</html>

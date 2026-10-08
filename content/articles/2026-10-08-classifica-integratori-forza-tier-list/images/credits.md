@@ -1,0 +1,18 @@
+# Crediti immagini
+
+| File | Descrizione / alt | Autore | Fonte | Licenza |
+|---|---|---|---|---|
+| cover.jpg | IT: Una mano tiene un misurino azzurro con mezza dose di creatina monoidrato sopra il barattolo aperto, su un tavolo di legno · EN: A hand holding a blue scoop with half a serving of creatine monohydrate over the open tub, on a wooden table | Shixart1985 (opera propria, 04/07/2026) | https://commons.wikimedia.org/wiki/File:User_measures_a_scoop_of_protein_powder_from_a_container_in_a_kitchen.jpg | CC BY 2.0 (`{{self}} {{Cc-by-2.0}}`, licenza verificata sul wikitesto della pagina Commons l'08/10/2026) |
+| chart-effetti-tier.&lt;lang&gt;.svg (10 lingue) | Dimensione dell'effetto riportata dalle meta-analisi contro il tier assegnato dal carosello: ashwagandha tier C 0,60 (0,20–1,01) sulla panca 1RM; caffeina tier A 0,20 (0,03–0,36) sulla forza 1RM; citrullina tier B 0,196 sulle ripetizioni a cedimento; beta-alanina tier D 0,18 (0,08–0,28) sulla capacità di esercizio; citrullina tier B 0,13 (−0,21–0,46) non significativo sulla forza massimale; creatina tier S 0,11 (−0,02–0,25) sull'ipertrofia misurata con imaging | Nurvan | Dati: Lee & Heo 2026 (PMID 42738987); Grgic et al. 2018 (PMID 29527137); Vårvik et al. 2021 (PMID 34010809); Saunders et al. 2017 (PMID 27797728); Aguiar & Casonatto 2021 (PMID 34176406); Burke et al. 2023 (PMID 37432300) | Grafico originale Nurvan |
+| chart-beta-alanina-durata.&lt;lang&gt;.svg (10 lingue) | Effetto della beta-alanina per sottogruppo: capacità negli sforzi di 0,5–10 minuti 0,50 (0,246–0,753); con bicarbonato di sodio 0,43 (0,22–0,64); effetto complessivo su tutti gli sforzi 0,18 (0,08–0,28); prestazione negli sforzi di 0,5–10 minuti 0,11 (−0,201–0,416) non significativo | Nurvan | Dati: Saunders et al. 2017, Br J Sports Med (PMID 27797728) | Grafico originale Nurvan |
+
+## Note sulle licenze
+
+- La copertina è **CC BY 2.0**: l'attribuzione (autore + licenza) deve restare visibile sulla pagina pubblicata ed è riportata nella didascalia dell'immagine in tutte e dieci le lingue e nel campo `cover_credit` del frontmatter.
+- La licenza è stata verificata leggendo il **wikitesto** della pagina di descrizione del file su Wikimedia Commons (`{{self}} {{Cc-by-2.0}}`), non solo i metadati aggregati restituiti dall'API.
+- La foto è stata scaricata dall'endpoint thumbnail ufficiale di Wikimedia a 1280 px, poi ritagliata in 16:9 e ridimensionata a 1280×720 da Nurvan. Il ritaglio è una modifica consentita dalla CC BY 2.0 e non comporta obblighi di condivisione allo stesso modo.
+- La descrizione su Commons parla genericamente di "protein powder", ma l'etichetta visibile sul barattolo riporta **creatina monoidrato**: l'alt text e la didascalia Nurvan descrivono ciò che si vede davvero, non ciò che dice la descrizione del file.
+- Nessuna persona è identificabile nella foto (il volto non è inquadrato) e nessun marchio è leggibile in modo da costituire pubblicità.
+- Una seconda foto candidata (barattolo di integratore, `Bodybuilding supplement high protein drink mix 700g.jpg`, PD-self di Mike1024) è stata **scartata**: Wikimedia serviva quel file solo a 250 px di larghezza, risoluzione insufficiente per la pagina. Nessun file di bassa qualità è stato caricato nel repo.
+- **Nessuno screenshot delle slide del creator è stato scaricato, usato o ripubblicato.** Il carosello di Alfred Jong è citato solo come link e come spunto iniziale.
+- I due grafici sono interamente originali e riportano solo valori pubblicati negli abstract degli studi citati, senza interpolazioni né letture approssimate da figure. Le barre vuote segnalano i risultati non significativi; le etichette indicano l'esito misurato, diverso da riga a riga, perché i valori non sono confrontabili uno a uno.

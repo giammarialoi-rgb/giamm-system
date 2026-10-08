@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="pt" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tier list de suplementos para força: a evidência | Nurvan</title>
+<meta name="description" content="Um carrossel classifica suplementos de S a F. Comparámos cada tier com as meta-análises: duas posições não se sustentam e uma dose está errada.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Treino</a><a href="#">Nutrição</a><a href="#">Suplementação</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descarregar a app</a></div></header>
+<main class="wrap" lang="pt">
+<div class="crumb">Blog · Suplementação · Tier list</div>
+<h1>Tier list de suplementos para força: que posições se aguentam</h1>
+<p class="lede">As tier lists de suplementos circulam há anos: uma linha por letra, de S a F, e a sensação de ter percebido tudo em dez segundos. Passou agora uma bem feita, com critérios declarados e uma mensagem final correta. Fomos buscar a meta-análise de cada suplemento dessa lista e pusemos os números ao lado das letras. Duas posições não se aguentam, uma dose está errada e um suplemento do fundo merece subir — mas só se treinares de certa maneira.</p>
+<div class="meta"><span>8 de outubro de 2026</span><span><b>14</b> min de leitura</span><span><b>11</b> estudos citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · atualizado a 8 de outubro de 2026</span></div>
+<div class="box"><h2>Em resumo</h2><ul><li><strong>A lista acerta no topo e baralha-se no meio.</strong> A creatina no cimo é indiscutível, mas até o seu efeito medido é pequeno: em medidas diretas de hipertrofia a estimativa agregada é 0,11, com um intervalo que toca o zero.</li><li><strong>A citrulina não aumenta a força máxima.</strong> Uma meta-análise em treinados encontra 0,13, não significativo. O que faz, de forma modesta, é acrescentar cerca de 3 repetições às 51 de uma sessão.</li><li><strong>A beta-alanina no tier D tem o mesmo efeito global da cafeína no tier A.</strong> 0,18 contra 0,20. A diferença é que a beta-alanina funciona em esforços de meio minuto a dez minutos: inútil num máximo, útil numa série de 20 ou numa prova HYROX.</li><li><strong>A dose de cafeína do post é demasiado baixa.</strong> O position stand da ISSN coloca o intervalo consistentemente eficaz em 3–6 mg por kg de peso e diz que o limiar mínimo pode descer <em>até</em> 2 mg/kg. Não até 0,9.</li><li><strong>O suplemento com o maior efeito é o que tem a evidência mais fraca.</strong> A ashwagandha mostra 0,60 no supino máximo, o valor mais alto de toda a lista, mas a certeza da evidência é baixa e o resultado depende de um único estudo.</li></ul></div>
+<figure class="cover"><img alt="Uma mão segura uma colher doseadora azul com meia dose de creatina monohidratada sobre o frasco aberto, numa mesa de madeira." src="images/cover.jpg" loading="lazy"/><figcaption class="cap">A relação entre a letra atribuída e o efeito medido é menos arrumada do que qualquer ranking sugere. Foto: Shixart1985, Wikimedia Commons, CC BY 2.0.</figcaption></figure>
+<h2>O que dizia a classificação</h2>
+<p>O carrossel avalia os suplementos com quatro critérios declarados: preço e legalidade, eficácia provada em humanos, mecanismo explicável e benefícios indiretos (o sono, por exemplo). A escala resultante: creatina monohidratada em <strong>S</strong>; proteína em pó e cafeína com teanina em <strong>A</strong>; citrulina em <strong>B</strong>; óleo de peixe e ashwagandha em <strong>C</strong>; beta-alanina e nitratos em <strong>D</strong>; betaína, EAA e a maioria dos pré-treinos em <strong>E</strong>; BCAA, l-tirosina, "boosters de testosterona" e HMB em <strong>F</strong>.</p>
+<p>Duas coisas estão certas antes sequer de olhar para os dados. A primeira: os critérios estão declarados — uma tier list sem critérios é uma opinião disfarçada de dado. A segunda: a frase final vale mais do que toda a classificação — os suplementos complementam, não substituem uma alimentação variada nem o sono.</p>
+<p>O problema é que quatro critérios diferentes são comprimidos numa única letra. Essa letra não diz se algo está em cima porque funciona muito, porque custa pouco ou porque ajuda a dormir. E quando se verifica quanto cada um funciona de facto, a ordem desfaz-se.</p>
+<h2>O que diz realmente a investigação</h2>
+<h3>Creatina em S — <strong>Confirmado</strong>, com um ajuste de escala</h3>
+<p>A creatina é o suplemento mais estudado do desporto e o position stand da International Society of Sports Nutrition descreve-a como segura e bem tolerada, com dados até 30 g por dia durante cinco anos em pessoas saudáveis e um consumo habitual útil na ordem dos 3 g diários (Kreider et al., 2017).</p>
+<p>Mas "o mais sólido" não é "o mais potente". Uma meta-análise limitada a medidas diretas de hipertrofia — ressonância, TC, ecografia — em 10 estudos e 44 desfechos encontrou uma estimativa agregada de <strong>0,11</strong> em escala padronizada, intervalo de credibilidade de −0,02 a 0,25, e aumentos de espessura muscular de <strong>0,10–0,16 cm</strong> (Burke et al., 2023). É um efeito pequeno, consistente, barato e seguro. É por isso que está em S: não porque transforme o teu treino, mas porque é o único que faz esse pouco de forma fiável.</p>
+<h3>Proteína em pó em A — <strong>A precisar</strong></h3>
+<p>A meta-análise de referência, 49 estudos e 1.863 pessoas, mostra que suplementar proteína durante um programa de força acrescenta <strong>2,49 kg ao 1RM</strong> (IC 95% 0,64–4,33) e <strong>0,30 kg de massa isenta de gordura</strong> (0,09–0,52) (Morton et al., 2018).</p>
+<p>O detalhe que muda tudo: acima de <strong>1,62 g de proteína por kg de peso por dia</strong> de ingestão total, o benefício adicional desaparece. O pó não é um suplemento no sentido em que a creatina é — é comida em formato prático. Se já chegas a 1,6–1,8 g/kg a comer, juntar um batido não move nada. Se não chegas, o batido é a maneira mais simples de lá chegar. No mesmo trabalho o efeito é maior em quem já está treinado (+0,75 kg de massa isenta de gordura, p = 0,03) e menor com a idade.</p>
+<h3>Cafeína em A — <strong>Tier confirmado, dose errada</strong></h3>
+<p>Cafeína e força: <strong>0,20</strong> em escala padronizada (IC 95% 0,03–0,36); potência <strong>0,17</strong> (0,00–0,34). A subanálise vale a pena: o efeito é significativo no trem superior (<strong>0,21</strong>) e não no inferior (<strong>0,15</strong>, não significativo) (Grgic et al., 2018).</p>
+<p>O ponto crítico é a dose. O carrossel indica <strong>0,9–2 mg por kg de peso</strong> como dose mínima eficaz. O position stand da ISSN diz outra coisa: a cafeína melhora o desempenho de forma consistente a <strong>3–6 mg/kg</strong>, a dose mínima eficaz <strong>continua pouco clara</strong> e <strong>pode descer até</strong> 2 mg/kg, enquanto doses muito altas (9 mg/kg) trazem efeitos adversos sem vantagem (Guest et al., 2021). Para alguém de 80 kg a diferença não é teórica: o post sugere 72–160 mg, a literatura 240–480 mg. O piso de 0,9 mg/kg não tem apoio nesse documento.</p>
+<p>Sobre a proporção <strong>cafeína:teanina 1:2</strong> dos slides: a literatura que a sustenta trata de atenção, humor e função cognitiva, não de força nem de repetições (Mancini et al., 2017). Classificamo-la como <strong>não verificável</strong> para o treino: não é falsa, apenas nunca foi testada naquilo que te interessa no ginásio.</p>
+<h3>Citrulina em B — <strong>Desmentido</strong> para a força</h3>
+<p>Aqui a classificação afirma algo que a investigação não diz. O carrossel atribui à citrulina "mais força e potência". Uma meta-análise em adultos treinados, 4 estudos e 138 medições, encontra um efeito na força máxima de <strong>0,13</strong> com intervalo de −0,21 a 0,46: <strong>nenhum efeito</strong> (Aguiar e Casonatto, 2021).</p>
+<p>O que a citrulina faz, fá-lo noutro sítio. Oito estudos e 137 participantes, com 6–8 g tomados 40–60 minutos antes: <strong>+3 ± 5 repetições</strong> numa média de 51 ± 23 repetições totais por exercício, ou seja <strong>+6,4%</strong>, tamanho de efeito 0,196 (p = 0,022) (Vårvik et al., 2021). E mesmo aí a subanálise está no fio: trem inferior p = 0,051, superior p = 0,131. Tier B para resistência às repetições é defensável. Tier B para força, não.</p>
+<h3>Beta-alanina em D — <strong>A precisar</strong>, e depende de ti</h3>
+<p>É a posição que menos nos convence. A maior meta-análise — 40 estudos, 1.461 participantes, 70 medidas — encontra um efeito global de <strong>0,18</strong> (IC 95% 0,08–0,28) (Saunders et al., 2017). É praticamente o mesmo número da cafeína na força (0,20), que na mesma lista está duas letras acima.</p>
+<p>A diferença real não é a dimensão do efeito, é <strong>onde</strong> ele aparece. A duração do esforço é um moderador significativo (p = 0,004): na janela entre <strong>30 segundos e 10 minutos</strong> o efeito sobre a capacidade sobe para <strong>0,50</strong> (0,246–0,753), enquanto sobre o desempenho fica em 0,11 e não significativo. Um detalhe prático que costuma escapar: a <strong>quantidade total ingerida não é um moderador</strong> (p = 0,438), por isso carregar mais não serve.</p>
+<p>Traduzido para o ginásio: se fazes triplos pesados de supino e peso morto, a beta-alanina em D está bem. Se a tua sessão são séries de 15–25, circuitos, trenó, HYROX ou CrossFit, estás a olhar para o suplemento certo na casa errada.</p>
+<figure><div class="chart"><svg aria-label="Gráfico de barras: a beta-alanina mostra um efeito de 0,50 sobre a capacidade em esforços entre 30 segundos e 10 minutos, 0,43 com bicarbonato de sódio, 0,18 como efeito global e 0,11 não significativo sobre o desempenho." xmlns="http://www.w3.org/2000/svg" width="900" height="376" viewBox="0 0 900 376" role="img">
+<rect width="900" height="376" fill="#0c0c0c"/>
+<text x="28" y="38" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="700">Beta-alanina: o efeito depende da duração do esforço</text>
+<text x="28" y="62" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13">Tamanho do efeito por subgrupo, com IC 95%</text>
+<line x1="330.0" y1="86" x2="330.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="330.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.4</text>
+<line x1="418.3" y1="86" x2="418.3" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="418.3" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.2</text>
+<line x1="506.7" y1="86" x2="506.7" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="506.7" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.0</text>
+<line x1="595.0" y1="86" x2="595.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="595.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.2</text>
+<line x1="683.3" y1="86" x2="683.3" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="683.3" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.4</text>
+<line x1="771.7" y1="86" x2="771.7" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="771.7" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.6</text>
+<line x1="860.0" y1="86" x2="860.0" y2="286" stroke="#2a2a2a" stroke-width="1"/>
+<text x="860.0" y="304" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.8</text>
+<line x1="506.7" y1="86" x2="506.7" y2="286" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="316" y="117.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Esforços 0,5–10 min —</text>
+<text x="316" y="133.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">capacidade</text>
+<rect x="506.7" y="111.0" width="220.8" height="16" fill="#d4af37" rx="2"/>
+<line x1="615.3" y1="119.0" x2="839.2" y2="119.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="615.3" y1="114.0" x2="615.3" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="839.2" y1="114.0" x2="839.2" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="849.2" y="124.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,50</text>
+<text x="316" y="170.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">Com bicarbonato de sódio</text>
+<rect x="506.7" y="157.0" width="189.9" height="16" fill="#d4af37" rx="2"/>
+<line x1="603.8" y1="165.0" x2="789.3" y2="165.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="603.8" y1="160.0" x2="603.8" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="789.3" y1="160.0" x2="789.3" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="799.3" y="170.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,43</text>
+<text x="316" y="209.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Todos os esforços — efeito</text>
+<text x="316" y="225.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">global</text>
+<rect x="506.7" y="203.0" width="79.5" height="16" fill="#d4af37" rx="2"/>
+<line x1="542.0" y1="211.0" x2="630.3" y2="211.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="542.0" y1="206.0" x2="542.0" y2="216.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="630.3" y1="206.0" x2="630.3" y2="216.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="640.3" y="216.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,18</text>
+<text x="316" y="255.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Esforços 0,5–10 min —</text>
+<text x="316" y="271.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">desempenho</text>
+<rect x="506.7" y="249.0" width="48.6" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="417.9" y1="257.0" x2="690.4" y2="257.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="417.9" y1="252.0" x2="417.9" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="690.4" y1="252.0" x2="690.4" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="700.4" y="262.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,11 (n.s.)</text>
+<text x="28" y="328" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">Dados: Saunders et al. 2017, Br J Sports Med (PMID 27797728). 40 estudos, 1.461 participantes. Barra vazia = não</text>
+<text x="28" y="343" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">significativo.</text>
+<text x="872" y="38" fill="#aa8a2e" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div><figcaption class="cap">A beta-alanina não tem um só efeito: tem um diferente para cada tipo de esforço. Dados: Saunders et al. 2017. Gráfico Nurvan.</figcaption></figure>
+<h3>Ashwagandha em C — <strong>A precisar</strong>: efeito grande, evidência frágil</h3>
+<p>Uma meta-análise de 2026 limitada a ensaios com treino estruturado encontra o valor mais alto de toda a lista: <strong>0,60</strong> no supino máximo (0,20–1,01) e <strong>0,52</strong> no trem inferior (0,19–0,86). Mas os próprios autores são diretos: com uma correção estatística mais prudente ambas as estimativas de força <strong>perdem significância</strong>, cada uma depende de um único estudo influente e a certeza GRADE da evidência é <strong>baixa</strong>. Sobre a massa gorda não há efeito (Lee e Heo, 2026).</p>
+<p>É o exemplo perfeito de por que se leem dois números e não um: quanto é o efeito e quanto se pode acreditar nele. A ashwagandha ganha no primeiro e perde no segundo.</p>
+<h3>HMB em F — <strong>Confirmado</strong></h3>
+<p>Onze estudos, 302 pessoas para composição corporal e 248 para força, dos 18 aos 45 anos: o HMB produz efeito significativo <strong>apenas sobre o peso corporal total</strong> e nenhum sobre massa isenta de gordura, massa gorda, 1RM total, supino ou trem inferior (Jakubowski et al., 2020). O F é merecido.</p>
+<figure><div class="chart"><svg aria-label="Comparação entre o tamanho do efeito reportado pelas meta-análises e o tier atribuído pelo carrossel, para seis suplementos." xmlns="http://www.w3.org/2000/svg" width="900" height="468" viewBox="0 0 900 468" role="img">
+<rect width="900" height="468" fill="#0c0c0c"/>
+<text x="28" y="38" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="700">Efeito medido face ao tier atribuído</text>
+<text x="28" y="62" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13">Diferença média padronizada (SMD) das meta-análises, com IC 95%</text>
+<line x1="330.0" y1="86" x2="330.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="330.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.4</text>
+<line x1="400.7" y1="86" x2="400.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="400.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">−0.2</text>
+<line x1="471.3" y1="86" x2="471.3" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="471.3" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.0</text>
+<line x1="542.0" y1="86" x2="542.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="542.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.2</text>
+<line x1="612.7" y1="86" x2="612.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="612.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.4</text>
+<line x1="683.3" y1="86" x2="683.3" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="683.3" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.6</text>
+<line x1="754.0" y1="86" x2="754.0" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="754.0" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">0.8</text>
+<line x1="824.7" y1="86" x2="824.7" y2="378" stroke="#2a2a2a" stroke-width="1"/>
+<text x="824.7" y="396" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="middle">1.0</text>
+<line x1="471.3" y1="86" x2="471.3" y2="378" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="316" y="117.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Ashwagandha · tier C — supino</text>
+<text x="316" y="133.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">1RM</text>
+<rect x="471.3" y="111.0" width="212.0" height="16" fill="#d4af37" rx="2"/>
+<line x1="542.0" y1="119.0" x2="828.2" y2="119.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="542.0" y1="114.0" x2="542.0" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="828.2" y1="114.0" x2="828.2" y2="124.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="838.2" y="124.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,60</text>
+<text x="316" y="170.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="13" text-anchor="end">Cafeína · tier A — força 1RM</text>
+<rect x="471.3" y="157.0" width="70.7" height="16" fill="#d4af37" rx="2"/>
+<line x1="481.9" y1="165.0" x2="598.5" y2="165.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="481.9" y1="160.0" x2="481.9" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="598.5" y1="160.0" x2="598.5" y2="170.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="608.5" y="170.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,20</text>
+<text x="316" y="209.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Citrulina · tier B —</text>
+<text x="316" y="225.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">repetições até à falha</text>
+<rect x="471.3" y="203.0" width="69.3" height="16" fill="#d4af37" rx="2"/>
+<text x="550.6" y="216.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,196</text>
+<text x="316" y="255.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Beta-alanina · tier D —</text>
+<text x="316" y="271.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">capacidade de exercício</text>
+<rect x="471.3" y="249.0" width="63.6" height="16" fill="#d4af37" rx="2"/>
+<line x1="499.6" y1="257.0" x2="570.3" y2="257.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="499.6" y1="252.0" x2="499.6" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="570.3" y1="252.0" x2="570.3" y2="262.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="580.3" y="262.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,18</text>
+<text x="316" y="301.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Citrulina · tier B — força</text>
+<text x="316" y="317.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">máxima</text>
+<rect x="471.3" y="295.0" width="45.9" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="397.1" y1="303.0" x2="633.9" y2="303.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="397.1" y1="298.0" x2="397.1" y2="308.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="633.9" y1="298.0" x2="633.9" y2="308.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="643.9" y="308.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,13 (n.s.)</text>
+<text x="316" y="347.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">Creatina · tier S —</text>
+<text x="316" y="363.0" fill="#f0f0f0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" text-anchor="end">hipertrofia (imagem)</text>
+<rect x="471.3" y="341.0" width="38.9" height="16" fill="none" stroke="#aa8a2e" stroke-width="1.5" rx="2"/>
+<line x1="464.3" y1="349.0" x2="559.7" y2="349.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="464.3" y1="344.0" x2="464.3" y2="354.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<line x1="559.7" y1="344.0" x2="559.7" y2="354.0" stroke="#f3e5ab" stroke-width="1.5"/>
+<text x="569.7" y="354.0" fill="#f3e5ab" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="12.5" font-weight="700">0,11 (n.s.)</text>
+<text x="28" y="420" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">Desfechos diferentes: os valores não são comparáveis um a um. Barra cheia = resultado significativo; barra vazia = não</text>
+<text x="28" y="435" fill="#a0a0a0" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11">significativo. Dados: Lee &amp; Heo 2026; Grgic 2018; Vårvik 2021; Saunders 2017; Aguiar 2021; Burke 2023.</text>
+<text x="872" y="38" fill="#aa8a2e" font-family="'Noto Sans','Helvetica Neue',Arial,sans-serif" font-size="11" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div><figcaption class="cap">Tamanhos de efeito (diferença média padronizada) reportados pelas meta-análises citadas, com intervalo de confiança ou credibilidade a 95%. O desfecho medido difere em cada suplemento e está na etiqueta: os valores não são comparáveis um a um, e é precisamente por isso que uma única letra não chega. Gráfico Nurvan com os dados das fontes no fim.</figcaption></figure>
+<h2>Como aplicar</h2>
+<ol class="steps"><li><strong>Primeiro as fundações.</strong> O post di-lo e tem razão: calorias, proteína total e sono pesam mais do que qualquer casa da tabela. Se dormes seis horas, nenhuma letra te salva.</li><li><strong>Começa no S e desce só com motivo.</strong> Creatina 3–5 g por dia, todos os dias, sem horário especial. É a única compra que quase toda a gente pode justificar.</li><li><strong>Conta a tua proteína antes de comprar pó.</strong> Se já passas de 1,6 g/kg por dia, o batido é conveniência, não desempenho.</li><li><strong>Escolhe a dose de cafeína pela investigação, não pelo carrossel.</strong> O intervalo estudado é 3–6 mg/kg, cerca de 60 minutos antes. Se és sensível, começa baixo e vigia o sono: uma sessão melhor paga com duas horas de sono a menos é mau negócio.</li><li><strong>Escolhe por objetivo, não por letra.</strong> Máximos e triplos pesados: creatina, cafeína, proteína. Séries longas, metcon, HYROX: a beta-alanina sobe, a citrulina só faz sentido para o volume de repetições.</li><li><strong>Testa o suplemento em ti, com números.</strong> Um efeito de 0,18 não se vê numa sessão. Vê-se em oito semanas de cargas registadas, com o mesmo programa e o mesmo RIR de referência.</li></ol>
+<div class="app"><div><h3>💡 Com a Nurvan</h3><p><strong>Regista o que tomas e vê se muda mesmo alguma coisa.</strong> Na secção de suplementação da Nurvan anotas produto, dose e horário; no diário de treino ficam cargas, repetições e RIR sessão a sessão. Cruzando as duas coisas percebes se, nas oito semanas em que acrescentaste um suplemento, os teus números se mexeram mais do que o habitual — em vez de confiares na letra que alguém atribuiu no Instagram.</p></div><a class="cta" href="https://nurvan.app">Experimenta a Nurvan</a></div>
+<h2>Perguntas frequentes</h2>
+<details><summary>Se só comprar um suplemento para a força, qual?</summary><p>Creatina monohidratada: é o único com efeito pequeno mas consistente em medidas diretas, um perfil de segurança documentado a longo prazo e um custo irrisório (Kreider et al., 2017; Burke et al., 2023).</p></details><details><summary>A citrulina serve para subir o máximo?</summary><p>Não. A meta-análise em atletas treinados não encontra efeitos na força máxima (0,13, não significativo). O único benefício documentado é um aumento modesto das repetições até à falha, cerca de 6% (Aguiar e Casonatto, 2021; Vårvik et al., 2021).</p></details><details><summary>Quanta cafeína antes de treinar?</summary><p>Os estudos usam 3–6 mg por kg de peso corporal, normalmente cerca de 60 minutos antes; doses muito altas não acrescentam benefício e trazem efeitos adversos (Guest et al., 2021). É um intervalo estudado, não uma prescrição: quem toma medicação, está grávida ou tem problemas cardíacos ou de sono deve falar antes com o seu médico.</p></details><details><summary>A beta-alanina vale a pena se só faço powerlifting?</summary><p>Pouco. O efeito concentra-se em esforços entre 30 segundos e 10 minutos, e um máximo fica fora dessa janela (Saunders et al., 2017). Se também fazes trabalho de altas repetições ou condicionamento, a resposta muda.</p></details>
+<h2>Lê também</h2>
+<ul><li><a href="/blog/creatina-queda-cabelo">Creatina faz cair o cabelo? O que os estudos realmente dizem</a></li><li><a href="/blog/creatina-sem-treino-depois-dos-45">Creatina sem treino depois dos 45: o que diz o estudo</a></li></ul>
+<h2>Fontes</h2>
+<ol class="refs"><li>Kreider RB, Kalman DS, Antonio J, et al., 2017. <em>International Society of Sports Nutrition position stand: safety and efficacy of creatine supplementation in exercise, sport, and medicine.</em> J Int Soc Sports Nutr 14:18. PMID 28615996 — <a href="https://doi.org/10.1186/s12970-017-0173-z">doi:10.1186/s12970-017-0173-z</a></li><li>Burke R, Piñero A, Coleman M, et al., 2023. <em>The Effects of Creatine Supplementation Combined with Resistance Training on Regional Measures of Muscle Hypertrophy: A Systematic Review with Meta-Analysis.</em> Nutrients 15(9):2116. PMID 37432300 — <a href="https://doi.org/10.3390/nu15092116">doi:10.3390/nu15092116</a></li><li>Morton RW, Murphy KT, McKellar SR, et al., 2018. <em>A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults.</em> Br J Sports Med 52(6):376–384. PMID 28698222 — <a href="https://doi.org/10.1136/bjsports-2017-097608">doi:10.1136/bjsports-2017-097608</a></li><li>Grgic J, Trexler ET, Lazinica B, Pedisic Z, 2018. <em>Effects of caffeine intake on muscle strength and power: a systematic review and meta-analysis.</em> J Int Soc Sports Nutr 15:11. PMID 29527137 — <a href="https://doi.org/10.1186/s12970-018-0216-0">doi:10.1186/s12970-018-0216-0</a></li><li>Guest NS, VanDusseldorp TA, Nelson MT, et al., 2021. <em>International society of sports nutrition position stand: caffeine and exercise performance.</em> J Int Soc Sports Nutr 18(1):1. PMID 33388079 — <a href="https://doi.org/10.1186/s12970-020-00383-4">doi:10.1186/s12970-020-00383-4</a></li><li>Vårvik FT, Bjørnsen T, Gonzalez AM, 2021. <em>Acute Effect of Citrulline Malate on Repetition Performance During Strength Training: A Systematic Review and Meta-Analysis.</em> Int J Sport Nutr Exerc Metab 31(4):350–358. PMID 34010809 — <a href="https://doi.org/10.1123/ijsnem.2020-0295">doi:10.1123/ijsnem.2020-0295</a></li><li>Aguiar AF, Casonatto J, 2021. <em>Effects of Citrulline Malate Supplementation on Muscle Strength in Resistance-Trained Adults: A Systematic Review and Meta-Analysis of Randomized Controlled Trials.</em> J Diet Suppl 19(6):772–790. PMID 34176406 — <a href="https://doi.org/10.1080/19390211.2021.1939473">doi:10.1080/19390211.2021.1939473</a></li><li>Saunders B, Elliott-Sale K, Artioli GG, et al., 2017. <em>β-alanine supplementation to improve exercise capacity and performance: a systematic review and meta-analysis.</em> Br J Sports Med 51(8):658–669. PMID 27797728 — <a href="https://doi.org/10.1136/bjsports-2016-096396">doi:10.1136/bjsports-2016-096396</a></li><li>Jakubowski JS, Nunes EA, Teixeira FJ, et al., 2020. <em>Supplementation with the Leucine Metabolite β-hydroxy-β-methylbutyrate (HMB) does not Improve Resistance Exercise-Induced Changes in Body Composition or Strength in Young Subjects: A Systematic Review and Meta-Analysis.</em> Nutrients 12(5):1523. PMID 32456217 — <a href="https://doi.org/10.3390/nu12051523">doi:10.3390/nu12051523</a></li><li>Lee JC, Heo AS, 2026. <em>Adjunctive Ashwagandha Supplementation and Resistance-Training Adaptations in Healthy Adults: A Systematic Review and Random-Effects Meta-Analysis.</em> Nutrients 18(17):2815. PMID 42738987 — <a href="https://doi.org/10.3390/nu18172815">doi:10.3390/nu18172815</a></li><li>Mancini E, Beglinger C, Drewe J, et al., 2017. <em>Green tea effects on cognition, mood and human brain function: A systematic review.</em> Phytomedicine 34:26–37. PMID 28899506 — <a href="https://doi.org/10.1016/j.phymed.2017.07.008">doi:10.1016/j.phymed.2017.07.008</a></li></ol>
+<p>Metadados e resumos obtidos no PubMed. Ponto de partida: carrossel de <a href="https://www.instagram.com/p/Dd_qscdm4cy/">Alfred Jong (@alfred.reformance)</a> para a Reformance Training. Nenhum texto, imagem ou estrutura do post foi reproduzido: as afirmações foram extraídas, reescritas e verificadas de forma independente.</p>
+<p><strong>Giammaria Loi</strong> é o fundador da Nurvan. Treina com pesos desde 2012, trabalha como personal trainer e coach certificado FIPE desde 2013 e compete em powerlifting a nível nacional desde 2018. Cada artigo que assina parte dos estudos científicos e chega ao que funciona mesmo no ginásio.</p>
+<p class="note">Nota: conteúdo informativo, não substitui a opinião de um médico ou profissional. Os suplementos citados podem interagir com medicamentos ou condições clínicas: fala com o teu médico antes de os tomares. Se competes, verifica sempre o regulamento antidopagem da tua federação.</p>
+</main>
+<footer>NURVAN · nurvan.app · 8 de outubro de 2026</footer>
+</body>
+</html>
