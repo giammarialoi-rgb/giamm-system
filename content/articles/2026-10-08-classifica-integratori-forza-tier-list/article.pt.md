@@ -48,7 +48,7 @@ O problema é que quatro critérios diferentes são comprimidos numa única letr
 
 A creatina é o suplemento mais estudado do desporto e o position stand da International Society of Sports Nutrition descreve-a como segura e bem tolerada, com dados até 30 g por dia durante cinco anos em pessoas saudáveis e um consumo habitual útil na ordem dos 3 g diários (Kreider et al., 2017).
 
-Mas "o mais sólido" não é "o mais potente". Uma meta-análise limitada a medidas diretas de hipertrofia — ressonância, TC, ecografia — em 10 estudos e 44 desfechos encontrou uma estimativa agregada de **0,11** em escala padronizada, intervalo de credibilidade de −0,02 a 0,25, e aumentos de espessura muscular de **0,10–0,16 cm** (Burke et al., 2023). É um efeito pequeno, consistente, barato e seguro. É por isso que está em S: não porque transforme o teu treino, mas porque é o único que faz esse pouco de forma fiável.
+Mas "o mais sólido" não é "o mais potente". Uma meta-análise limitada a medidas diretas de hipertrofia — ressonância, TC, ecografia — em 10 estudos e 44 desfechos encontrou uma estimativa agregada de **0,11** em escala padronizada, intervalo de credibilidade de −0,02 a 0,25, e aumentos de espessura muscular de **0,10–0,16 cm** (Burke et al., 2023). É um efeito pequeno, consistente, barato e seguro. É por isso que está em S: não porque transforme o teu treino, mas porque é o único que faz esse pouco de forma fiável. Sobre as duas dúvidas mais repetidas temos artigos dedicados: a [creatina e a queda de cabelo](/pt/blog/creatina-queda-cabelo) e a [creatina sem treino depois dos 45](/pt/blog/creatina-sem-treino-depois-dos-45).
 
 ### Proteína em pó em A — **A precisar**
 
@@ -124,8 +124,8 @@ Pouco. O efeito concentra-se em esforços entre 30 segundos e 10 minutos, e um m
 
 ## Lê também
 
-- [Creatina faz cair o cabelo? O que os estudos realmente dizem](/blog/creatina-queda-cabelo)
-- [Creatina sem treino depois dos 45: o que diz o estudo](/blog/creatina-sem-treino-depois-dos-45)
+- [Creatina faz cair o cabelo? O que os estudos realmente dizem](/pt/blog/creatina-queda-cabelo)
+- [Creatina sem treino depois dos 45: o que diz o estudo](/pt/blog/creatina-sem-treino-depois-dos-45)
 
 ## Fontes
 

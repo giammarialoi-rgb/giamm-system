@@ -48,7 +48,7 @@ Il problema è che quattro criteri diversi vengono compressi in una sola lettera
 
 La creatina è l'integratore più studiato dello sport e il position stand della International Society of Sports Nutrition la descrive come sicura e ben tollerata, con dati fino a 30 g al giorno per cinque anni in persone sane e un'assunzione abituale utile intorno ai 3 g al giorno (Kreider et al., 2017).
 
-Ma "il più solido" non vuol dire "il più potente". Una meta-analisi che ha guardato solo misure dirette di ipertrofia — risonanza, TC, ecografia — su 10 studi e 44 esiti ha trovato una stima aggregata di **0,11** su scala standardizzata, con intervallo di credibilità da −0,02 a 0,25, e aumenti di spessore muscolare di **0,10–0,16 cm** (Burke et al., 2023). È un effetto piccolo, coerente, economico e sicuro. È per questo che sta in S: non perché trasformi il tuo allenamento, ma perché è l'unico che fa quel poco in modo affidabile.
+Ma "il più solido" non vuol dire "il più potente". Una meta-analisi che ha guardato solo misure dirette di ipertrofia — risonanza, TC, ecografia — su 10 studi e 44 esiti ha trovato una stima aggregata di **0,11** su scala standardizzata, con intervallo di credibilità da −0,02 a 0,25, e aumenti di spessore muscolare di **0,10–0,16 cm** (Burke et al., 2023). È un effetto piccolo, coerente, economico e sicuro. È per questo che sta in S: non perché trasformi il tuo allenamento, ma perché è l'unico che fa quel poco in modo affidabile. Sui due dubbi più ricorrenti abbiamo articoli dedicati: la [creatina e la caduta dei capelli](/blog/creatina-caduta-capelli) e la [creatina dopo i 45 anni senza allenarsi](/blog/creatina-senza-allenamento-over-45).
 
 ### Proteine in polvere in A — **Da precisare**
 

@@ -48,7 +48,7 @@ Das Problem: vier verschiedene Kriterien werden in einen einzigen Buchstaben gep
 
 Kreatin ist das meistuntersuchte Supplement des Sports, und das Position Stand der International Society of Sports Nutrition beschreibt es als sicher und gut verträglich, mit Daten bis 30 g täglich über fünf Jahre bei Gesunden und einer sinnvollen Gewohnheitszufuhr um 3 g pro Tag (Kreider et al., 2017).
 
-Doch „am solidesten" heißt nicht „am stärksten". Eine Meta-Analyse, die ausschließlich direkte Hypertrophiemessungen berücksichtigt — MRT, CT, Ultraschall — über 10 Studien und 44 Endpunkte fand eine gepoolte Schätzung von **0,11** auf standardisierter Skala, Glaubwürdigkeitsintervall −0,02 bis 0,25, und Zuwächse der Muskeldicke von **0,10–0,16 cm** (Burke et al., 2023). Ein kleiner, konsistenter, günstiger und sicherer Effekt. Deshalb steht es in S: nicht weil es dein Training umkrempelt, sondern weil es als Einziges dieses Wenige zuverlässig liefert.
+Doch „am solidesten" heißt nicht „am stärksten". Eine Meta-Analyse, die ausschließlich direkte Hypertrophiemessungen berücksichtigt — MRT, CT, Ultraschall — über 10 Studien und 44 Endpunkte fand eine gepoolte Schätzung von **0,11** auf standardisierter Skala, Glaubwürdigkeitsintervall −0,02 bis 0,25, und Zuwächse der Muskeldicke von **0,10–0,16 cm** (Burke et al., 2023). Ein kleiner, konsistenter, günstiger und sicherer Effekt. Deshalb steht es in S: nicht weil es dein Training umkrempelt, sondern weil es als Einziges dieses Wenige zuverlässig liefert. Zu den beiden häufigsten Fragen haben wir eigene Artikel: [Kreatin und Haarausfall](/de/blog/kreatin-haarausfall) und [Kreatin ohne Training ab 45](/de/blog/kreatin-ohne-training-ab-45).
 
 ### Proteinpulver in A — **Zu präzisieren**
 
@@ -124,8 +124,8 @@ Wenig. Der Effekt konzentriert sich auf Belastungen zwischen 30 Sekunden und 10 
 
 ## Lies auch
 
-- [Verursacht Kreatin Haarausfall? Was die Studien wirklich zeigen](/blog/kreatin-haarausfall)
-- [Kreatin ohne Training ab 45: was die Studie zeigt](/blog/kreatin-ohne-training-ab-45)
+- [Verursacht Kreatin Haarausfall? Was die Studien wirklich zeigen](/de/blog/kreatin-haarausfall)
+- [Kreatin ohne Training ab 45: was die Studie zeigt](/de/blog/kreatin-ohne-training-ab-45)
 
 ## Quellen
 

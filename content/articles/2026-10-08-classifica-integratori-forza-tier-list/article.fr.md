@@ -48,7 +48,7 @@ Le problème, c'est que quatre critères différents sont comprimés en une seul
 
 La créatine est le complément le plus étudié du sport, et le position stand de l'International Society of Sports Nutrition la décrit comme sûre et bien tolérée, avec des données jusqu'à 30 g par jour pendant cinq ans chez des personnes en bonne santé et un apport habituel utile autour de 3 g par jour (Kreider et al., 2017).
 
-Mais « le plus solide » n'est pas « le plus puissant ». Une méta-analyse limitée aux mesures directes d'hypertrophie — IRM, scanner, échographie — sur 10 études et 44 résultats a trouvé une estimation groupée de **0,11** sur échelle standardisée, intervalle de crédibilité de −0,02 à 0,25, et des gains d'épaisseur musculaire de **0,10–0,16 cm** (Burke et al., 2023). C'est un effet petit, constant, peu coûteux et sûr. Voilà pourquoi il est en S : pas parce qu'il transforme votre entraînement, mais parce qu'il est le seul à faire ce peu de façon fiable.
+Mais « le plus solide » n'est pas « le plus puissant ». Une méta-analyse limitée aux mesures directes d'hypertrophie — IRM, scanner, échographie — sur 10 études et 44 résultats a trouvé une estimation groupée de **0,11** sur échelle standardisée, intervalle de crédibilité de −0,02 à 0,25, et des gains d'épaisseur musculaire de **0,10–0,16 cm** (Burke et al., 2023). C'est un effet petit, constant, peu coûteux et sûr. Voilà pourquoi il est en S : pas parce qu'il transforme votre entraînement, mais parce qu'il est le seul à faire ce peu de façon fiable. Sur les deux questions qui reviennent le plus, nous avons des articles dédiés : la [créatine et la chute des cheveux](/fr/blog/creatine-chute-cheveux) et la [créatine après 45 ans sans musculation](/fr/blog/creatine-sans-musculation-apres-45-ans).
 
 ### Protéine en poudre en A — **À préciser**
 
@@ -124,8 +124,8 @@ Peu. L'effet se concentre sur des efforts de 30 secondes à 10 minutes, et un ma
 
 ## À lire aussi
 
-- [La créatine fait-elle perdre les cheveux ? Ce que disent vraiment les études](/blog/creatine-chute-cheveux)
-- [Créatine sans musculation après 45 ans : ce que dit l'étude](/blog/creatine-sans-musculation-apres-45-ans)
+- [La créatine fait-elle perdre les cheveux ? Ce que disent vraiment les études](/fr/blog/creatine-chute-cheveux)
+- [Créatine sans musculation après 45 ans : ce que dit l'étude](/fr/blog/creatine-sans-musculation-apres-45-ans)
 
 ## Sources
 

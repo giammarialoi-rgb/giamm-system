@@ -48,7 +48,7 @@ The problem is that four different criteria get compressed into one letter. That
 
 Creatine is the most studied supplement in sport, and the International Society of Sports Nutrition position stand describes it as safe and well tolerated, with data up to 30 g per day for five years in healthy people and a useful habitual intake around 3 g per day (Kreider et al., 2017).
 
-But "the most solid" is not "the most powerful." A meta-analysis restricted to direct hypertrophy measurements — MRI, CT, ultrasound — across 10 studies and 44 outcomes found a pooled estimate of **0.11** on a standardised scale, credible interval −0.02 to 0.25, and muscle thickness gains of **0.10–0.16 cm** (Burke et al., 2023). That is a small, consistent, cheap and safe effect. That is why it sits in S: not because it transforms your training, but because it is the only one that delivers that little bit reliably.
+But "the most solid" is not "the most powerful." A meta-analysis restricted to direct hypertrophy measurements — MRI, CT, ultrasound — across 10 studies and 44 outcomes found a pooled estimate of **0.11** on a standardised scale, credible interval −0.02 to 0.25, and muscle thickness gains of **0.10–0.16 cm** (Burke et al., 2023). That is a small, consistent, cheap and safe effect. That is why it sits in S: not because it transforms your training, but because it is the only one that delivers that little bit reliably. We have dedicated articles on the two questions that come up most: [creatine and hair loss](/en/blog/creatine-hair-loss) and [creatine after 45 without training](/en/blog/creatine-without-training-over-45).
 
 ### Protein powder in A — **Needs qualifying**
 
@@ -124,8 +124,8 @@ Not much. The effect concentrates in efforts between 30 seconds and 10 minutes, 
 
 ## Read next
 
-- [Does creatine cause hair loss? What the studies actually show](/blog/creatine-hair-loss)
-- [Creatine without the gym after 45: what the study shows](/blog/creatine-without-training-over-45)
+- [Does creatine cause hair loss? What the studies actually show](/en/blog/creatine-hair-loss)
+- [Creatine without the gym after 45: what the study shows](/en/blog/creatine-without-training-over-45)
 
 ## Sources
 

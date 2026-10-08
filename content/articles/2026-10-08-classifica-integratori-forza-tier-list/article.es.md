@@ -48,7 +48,7 @@ El problema es que cuatro criterios distintos se comprimen en una sola letra. Es
 
 La creatina es el suplemento más estudiado del deporte y el position stand de la International Society of Sports Nutrition la describe como segura y bien tolerada, con datos de hasta 30 g al día durante cinco años en personas sanas y un consumo habitual útil en torno a 3 g diarios (Kreider et al., 2017).
 
-Pero "el más sólido" no significa "el más potente". Un metaanálisis limitado a medidas directas de hipertrofia —resonancia, TC, ecografía— sobre 10 estudios y 44 resultados encontró una estimación agrupada de **0,11** en escala estandarizada, con intervalo de credibilidad de −0,02 a 0,25, y aumentos de grosor muscular de **0,10–0,16 cm** (Burke et al., 2023). Es un efecto pequeño, consistente, barato y seguro. Por eso está en S: no porque transforme tu entrenamiento, sino porque es el único que hace ese poco de forma fiable.
+Pero "el más sólido" no significa "el más potente". Un metaanálisis limitado a medidas directas de hipertrofia —resonancia, TC, ecografía— sobre 10 estudios y 44 resultados encontró una estimación agrupada de **0,11** en escala estandarizada, con intervalo de credibilidad de −0,02 a 0,25, y aumentos de grosor muscular de **0,10–0,16 cm** (Burke et al., 2023). Es un efecto pequeño, consistente, barato y seguro. Por eso está en S: no porque transforme tu entrenamiento, sino porque es el único que hace ese poco de forma fiable. Sobre las dos dudas más repetidas tenemos artículos dedicados: la [creatina y la caída del cabello](/es/blog/creatina-caida-cabello) y la [creatina después de los 45 sin entrenar](/es/blog/creatina-sin-entrenar-mas-de-45).
 
 ### Proteína en polvo en A — **A matizar**
 
@@ -124,8 +124,8 @@ Poco. El efecto se concentra en esfuerzos de 30 segundos a 10 minutos, y un máx
 
 ## Lee también
 
-- [¿La creatina provoca caída del cabello? Qué dicen de verdad los estudios](/blog/creatina-caida-cabello)
-- [Creatina sin entrenar después de los 45: qué dice el estudio](/blog/creatina-sin-entrenar-mas-de-45)
+- [¿La creatina provoca caída del cabello? Qué dicen de verdad los estudios](/es/blog/creatina-caida-cabello)
+- [Creatina sin entrenar después de los 45: qué dice el estudio](/es/blog/creatina-sin-entrenar-mas-de-45)
 
 ## Fuentes
 
