@@ -23,7 +23,7 @@ Demo accounts (all verified, no email confirmation needed):
 
 - Free user: review-free@nurvan.app / [PASSWORD]
 - Coach (Coach Pro plan): review-coach@nurvan.app / [PASSWORD]
-- Athlete linked to the coach: username "revisorecliente" (not an email) / [PASSWORD]. It has no AI Coach and no plans screen, as for any coach athlete.
+- Athlete linked to the coach: opens at its personal link https://app.nurvan.app/c/review-client-demo (the coach's clients use the same web app through the link their coach sends) with username "revisorecliente" (not an email) / [PASSWORD]. It has no AI Coach and no plans screen, as for any coach athlete.
 - Personal account with sample data: review-athlete@nurvan.app / [PASSWORD]
 
 On first login the app shows a privacy and consent sheet: please tick the age (16+), privacy/terms and health-data consents.
@@ -31,7 +31,7 @@ On first login the app shows a privacy and consent sheet: please tick the age (1
 - **Training:** open the TRAIN tab; the demo accounts already contain a program and workout history.
 - **AI Coach (review-free):** the AI Coach chat is part of the paid plans. With review-free, open MENU > Plans and tap "ACTIVATE 14 DAYS OF COACH". It is a free trial managed by the app, with no charge and no automatic renewal, and it unlocks the AI Coach chat. The first AI use asks for a separate AI consent (tap ACTIVATE).
 - **Paid content / purchases:** MENU > Plans and Pro. Subscriptions are In-App Purchases (auto-renewing), with price and duration shown from the App Store, links to Terms and Privacy, RESTORE PURCHASES and MANAGE SUBSCRIPTION at the bottom of the screen. The app does not link to any external payment. review-free is the account to use for testing a sandbox purchase.
-- **Chat, report and block:** log in as the athlete (username "revisorecliente") > COACH tab > Coach chat, or as review-coach > MENU > Coach mode > HUB > the client > CHAT tab. The "REPORT / BLOCK" button is in the chat bar.
+- **Chat, report and block:** log in as review-coach > MENU > Coach mode > HUB > "Revisore Cliente" > CHAT tab. The client side of the chat opens at https://app.nurvan.app/c/review-client-demo (username "revisorecliente"), COACH tab > chat. The "REPORT / BLOCK" button is in the chat bar.
 - **Account deletion:** MENU > Settings > Privacy and data > DELETE ACCOUNT (type DELETE to confirm). It deletes the account and data, revokes the Sign in with Apple token and removes the purchase history. An active subscription is not cancelled automatically: the app warns and offers MANAGE SUBSCRIPTION.
 
 ## 4. External services

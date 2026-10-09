@@ -27,7 +27,7 @@ Le date sono spostate al giorno in cui lanci lo script, così lo storico è semp
 Serve l'URL del database di produzione (Render → il database → *External Database URL*). Non incollarlo in nessuna chat.
 
 ```powershell
-$env:DATABASE_URL = "postgresql://coach_79my_user:rbycxoXYQlQ2fgXmlavCSJAti5Y3qN0X@dpg-da785ohsrm7s73fnp0tg-a.oregon-postgres.render.com/coach_79my"
+$env:DATABASE_URL = "postgres://..."
 node tools/seed_review_accounts.mjs
 ```
 
@@ -49,6 +49,21 @@ node tools/review-demo/build_demo.mjs
 ```
 
 I tre file da importare (PDF, CSV, immagine) si rifanno con `node tools/review-demo/build_samples.mjs`.
+
+## Quarto account: l'atleta collegato (review-client)
+
+Un atleta è sempre un account separato creato dal coach, non un account email normale: per questo `review-athlete` non può essere collegato a `review-coach`. Per far provare al revisore la chat coach-atleta, segnala e blocca c'è `review-client`:
+
+- un cliente di un coach non entra dall'app ma dal **link personale** (si apre in Safari, è la stessa web app): `https://app.nurvan.app/c/review-client-demo`, con **username `revisorecliente`** e la password stampata dallo script (non con l'email);
+- è collegato a `review-coach`, con un messaggio di benvenuto in chiaro; eredita almeno il piano Standard, ma non ha Coach AI né Piani e acquisti (per quelli si usa `review-free`);
+- si aggiunge **senza toccare le password degli altri tre account** (che possono essere già in revisione):
+
+```powershell
+$env:DATABASE_URL = "postgres://..."
+node tools/seed_review_accounts.mjs --only-client
+```
+
+Una esecuzione senza opzioni ora si ferma: per rimettere password nuove ai tre account dei revisori serve `--reset-reviewers`.
 
 ## File di esempio da importare
 

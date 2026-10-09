@@ -12,10 +12,10 @@ Si compilano nel menu **Criteri e programmi › Contenuti dell'app** (o «Config
   Questo account ha il piano Coach Pro assegnato manualmente: tutte le funzioni sono sbloccate, compresa la modalità Coach (scheda MENU › "Modalità coach").
   Per vedere la schermata degli abbonamenti e dell'acquisto usa il secondo account: review-free@nurvan.app (piano gratuito), scheda MENU › "Piani & Pro".
   L'invio di dati all'AI (Coach AI) richiede un consenso esplicito che si dà la prima volta che si usa. Con l'account gratuito la chat del Coach AI si sblocca da MENU › Piani & Pro › "ATTIVA 14 GIORNI DI COACH" (gratis, una volta per account, nessun addebito né rinnovo).
-  Per provare chat tra coach e atleta, segnala e blocca: entra come atleta con il nome utente "revisorecliente" (scheda COACH › chat con il coach), oppure come review-coach (MENU › Modalità coach › HUB › il cliente › CHAT). "SEGNALA · BLOCCA" è nella barra della chat.
+  Per provare chat tra coach e atleta, segnala e blocca: entra come review-coach (MENU › Modalità coach › HUB › "Revisore Cliente" › CHAT). Il lato cliente della chat si apre dal suo link personale https://app.nurvan.app/c/review-client-demo (nome utente "revisorecliente"), scheda COACH › chat. "SEGNALA · BLOCCA" è nella barra della chat.
   I pagamenti tra coach e clienti avvengono fuori dall'app e non passano da Nurvan; l'app mostra solo un promemoria.
   ```
-- Altre credenziali: `review-free@nurvan.app` (gratuito), `review-athlete@nurvan.app` (account personale con dati) e `review-client` (atleta collegato al coach: accede con il NOME UTENTE `revisorecliente`, non con l'email; password stampata da `tools/seed_review_accounts.mjs --only-client`).
+- Altre credenziali: `review-free@nurvan.app` (gratuito), `review-athlete@nurvan.app` (account personale con dati) e `review-client` (atleta collegato al coach: i clienti dei coach non entrano dall'app ma dal link personale https://app.nurvan.app/c/review-client-demo, con il NOME UTENTE `revisorecliente` e la password stampata da `tools/seed_review_accounts.mjs --only-client`).
 - «Nessuna altra azione richiesta» (niente 2FA, niente codici).
 
 ## Annunci
