@@ -15664,7 +15664,7 @@ function pullToRefreshAllowed(target) {
   return true;
 }
 (function installPullToRefresh() {
-  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  if (typeof document === 'undefined' || typeof window === 'undefined' || typeof document.addEventListener !== 'function') return;
   let startY = null, pulled = 0, busy = false, tip = null;
   const NEED = 80;
   function showTip(text, ready) {
