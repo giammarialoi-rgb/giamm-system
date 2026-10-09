@@ -131,7 +131,7 @@ assert.ok(html.includes("intelTargets") && !html.includes("programmedWeight"), "
 assert.ok(html.includes("function statsWeeksCount") && html.includes("TrainingAnalyticsEngine"), "stats tables use the analytics engine");
 assert.ok(html.includes("function setStatsZoom") && html.includes("stats-zoom-slider") && html.includes("function setStatsAxis"), "stats zoom is a training-week slider");
 assert.ok(html.includes("function pinTrainingDay") && html.includes("shouldStayOnPinnedTraining"), "finalized days stay open instead of auto-advancing");
-assert.ok(html.includes("function applySelectedSuperset") && html.includes("COLLEGA IN SUPERSET"), "training can pair supersets");
+assert.ok(html.includes("function applySelectedSuperset") && html.includes("function openSupersetModal") && html.includes("TUTTA LA PROGRAMMAZIONE"), "training can pair supersets");
 assert.ok(practice.includes("stayPinned") && practice.includes("__pinnedTraining"), "client-shell apply does not bounce a pinned finalized day");
 assert.ok(practice.includes("function openPersonalCoachAi") && practice.includes("navigate('ai')"), "personal COACH opens Coach AI");
 assert.ok(practice.includes("if (athlete) ai.style.display = 'none'"), "clients do not get Coach AI");

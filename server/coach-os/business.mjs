@@ -95,6 +95,13 @@ export async function recordPaymentEvent(pool, coachId, input = {}) {
     occurredAt = d.toISOString();
   }
   const method = PAYMENT_METHODS.includes(String(input.method || "")) ? String(input.method) : null;
+  // The next due date, if the coach gives one: it also turns on that client's payment reminder.
+  let nextDue = null;
+  if (input.nextDueAt) {
+    const nd = new Date(input.nextDueAt);
+    if (Number.isNaN(nd.getTime())) throw new Error("Data di scadenza non valida.");
+    nextDue = nd.toISOString();
+  }
   const result = await pool.query(
     `INSERT INTO coach_payment_events(
        coach_user_id, client_id, plan_id, kind, amount_cents, currency, note, occurred_at, method, label, has_amount
@@ -116,8 +123,8 @@ export async function recordPaymentEvent(pool, coachId, input = {}) {
   );
   if (input.kind === "paid" && input.clientId) {
     await pool.query(
-      "UPDATE coach_clients SET paid = TRUE, next_due_at = COALESCE($2, next_due_at) WHERE id = $1 AND coach_user_id = $3",
-      [input.clientId, input.nextDueAt || null, coachId]
+      "UPDATE coach_clients SET paid = TRUE, pay_tracking = (pay_tracking OR $2::timestamptz IS NOT NULL), next_due_at = COALESCE($2::timestamptz, next_due_at) WHERE id = $1 AND coach_user_id = $3",
+      [input.clientId, nextDue, coachId]
     );
   }
   return eventRow(result.rows[0]);

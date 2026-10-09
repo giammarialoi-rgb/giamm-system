@@ -1,6 +1,6 @@
 # Play Console › Contenuti dell'app › Sicurezza dei dati
 
-Basato sul codice al 04/10/2026. Rispondi come sotto. Fornitori che trattano dati per conto di Nurvan (per Play non è «condivisione»): Render, Google Gemini (solo con consenso AI), Resend, Cloudflare, **RevenueCat** (acquisti).
+Basato sul codice al 09/10/2026 (build 1.5.34, informativa 2026-10-06). Rispondi come sotto. Fornitori che trattano dati per conto di Nurvan (per Play non è «condivisione»): Render, Google Gemini (solo con consenso AI), Resend, Cloudflare, **RevenueCat** (acquisti).
 Il dettaglio per ogni tipo di dato è in `../../docs/store/PRIVACY_STORE.md`.
 
 ## Domande generali
@@ -25,9 +25,10 @@ Il dettaglio per ogni tipo di dato è in `../../docs/store/PRIVACY_STORE.md`.
 | File e documenti | File e documenti | Facoltativo | Funzionalità dell'app |
 | Messaggi | Altri messaggi in-app | Facoltativo | Funzionalità dell'app |
 | **Informazioni finanziarie** | **Cronologia degli acquisti** | Obbligatorio per chi compra | Funzionalità dell'app, Gestione dell'account |
+| **Informazioni finanziarie** | **Altre informazioni finanziarie** | Facoltativo | Funzionalità dell'app (registro del coach: importi e scadenze che i clienti pagano al coach FUORI dall'app; il cliente vede solo il proprio stato pagato/scaduto. I pagamenti non passano da Nurvan) |
 | Informazioni e prestazioni dell'app | Log di arresto anomalo / Diagnostica | Obbligatorio | Analisi (solo errori, per stabilità) |
 
-Novità rispetto alla versione precedente di questo modulo: **Cronologia degli acquisti** (gli abbonamenti passano da Google Play Billing e RevenueCat; Nurvan riceve solo prodotto, store e data di scadenza, mai dati di carta).
+Novità rispetto alla versione precedente di questo modulo: **Altre informazioni finanziarie** (registro e promemoria di pagamento del coach, inseriti a mano) e **Cronologia degli acquisti** (gli abbonamenti passano da Google Play Billing e RevenueCat; Nurvan riceve solo prodotto, store e data di scadenza, mai dati di carta).
 
 Per «Informazioni sulla salute», «Foto» e i file inviati all'AI: dichiara che una parte del trattamento avviene tramite fornitore di servizi e che l'invio è facoltativo (consenso AI separato).
 

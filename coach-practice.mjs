@@ -281,6 +281,32 @@ function isWorkoutLive(r) {
 // How a coach follows a client: at a distance (the web app), in person, or both.
 const COACHING_MODES = ["remote", "presence", "both"];
 
+// The coach's own reminder of when a client's payment is due. The money never passes through Nurvan: these are only a
+// date, a cycle and a flag the coach sets by hand. A due date repeats with the cycle once the coach marks it paid.
+const BILLING_CYCLES = ["weekly", "biweekly", "monthly", "quarterly", "yearly"];
+function addBillingCycle(from, cycle) {
+  const d = new Date(from);
+  if (cycle === "weekly") d.setUTCDate(d.getUTCDate() + 7);
+  else if (cycle === "biweekly") d.setUTCDate(d.getUTCDate() + 14);
+  else if (cycle === "quarterly") d.setUTCMonth(d.getUTCMonth() + 3);
+  else if (cycle === "yearly") d.setUTCFullYear(d.getUTCFullYear() + 1);
+  else d.setUTCMonth(d.getUTCMonth() + 1);
+  return d;
+}
+// The next due date after "now", moving on from the one the coach had (so the day of the month is kept).
+function nextBillingDue(due, cycle, now = new Date()) {
+  let d = due ? new Date(due) : new Date(now);
+  if (Number.isNaN(d.getTime())) d = new Date(now);
+  for (let i = 0; i < 400 && d.getTime() <= now.getTime(); i++) d = addBillingCycle(d, cycle);
+  if (d.getTime() <= now.getTime()) d = addBillingCycle(now, cycle);
+  return d;
+}
+function parseDueDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(String(value || ""))) return null;
+  const d = new Date(String(value).slice(0, 10) + "T12:00:00Z");
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
   if (!r) return null;
   const row = {
@@ -290,7 +316,9 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     photo: r.photo_thumb || r.photo_url || null,
     status: r.status,
     paid: !!r.paid,
-    billingCycle: r.billing_cycle || "monthly",
+    billingCycle: BILLING_CYCLES.includes(r.billing_cycle) ? r.billing_cycle : "monthly",
+    // true once the coach tracks this client's payments (or has marked them unpaid, as the old toggle did)
+    payTracking: !!r.pay_tracking || r.paid === false,
     nextDueAt: r.next_due_at,
     allowProgramDb: !!r.allow_program_db,
     lastWorkoutAt: r.last_workout_at,
@@ -551,6 +579,7 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS workout_started_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS program_expires_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS next_check_at TIMESTAMPTZ;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pay_tracking BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS hide_presence BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
     ALTER TABLE coach_licenses ADD COLUMN IF NOT EXISTS allow_videocall BOOLEAN NOT NULL DEFAULT TRUE;
@@ -590,7 +619,42 @@ export async function ensureCoachPracticeTables(client) {
     );
     CREATE INDEX IF NOT EXISTS idx_coach_call_signals_client
       ON coach_call_signals (client_id, id DESC);
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS has_program BOOLEAN;
+    CREATE INDEX IF NOT EXISTS idx_coach_clients_athlete ON coach_clients (athlete_user_id);
   `);
+  // "Has a workout assigned" is kept on the client row by a trigger on the athlete's data, so the coach's list (filters,
+  // counts) stays fast with thousands of clients: it never has to open the athletes' big JSON documents. A failure here
+  // never stops the app: the list falls back to reading the JSON.
+  try {
+    await client.query(`
+      CREATE OR REPLACE FUNCTION coach_sync_has_program() RETURNS trigger AS $fn$
+      BEGIN
+        UPDATE coach_clients
+           SET has_program = (CASE WHEN jsonb_typeof(NEW.data->'activeProgram'->'weeks') = 'array'
+                                   THEN jsonb_array_length(NEW.data->'activeProgram'->'weeks') > 0 ELSE FALSE END)
+         WHERE athlete_user_id = NEW.user_id
+           AND has_program IS DISTINCT FROM (CASE WHEN jsonb_typeof(NEW.data->'activeProgram'->'weeks') = 'array'
+                                                  THEN jsonb_array_length(NEW.data->'activeProgram'->'weeks') > 0 ELSE FALSE END);
+        RETURN NEW;
+      EXCEPTION WHEN OTHERS THEN
+        RETURN NEW;
+      END
+      $fn$ LANGUAGE plpgsql;
+    `);
+    await client.query("DROP TRIGGER IF EXISTS trg_coach_has_program ON app_account_data");
+    await client.query("CREATE TRIGGER trg_coach_has_program AFTER INSERT OR UPDATE OF data ON app_account_data FOR EACH ROW EXECUTE PROCEDURE coach_sync_has_program()");
+    // Clients that do not have the value yet (the first run, or a client just created): fill it once.
+    await client.query(`
+      UPDATE coach_clients c
+         SET has_program = (CASE WHEN jsonb_typeof(d.data->'activeProgram'->'weeks') = 'array'
+                                 THEN jsonb_array_length(d.data->'activeProgram'->'weeks') > 0 ELSE FALSE END)
+        FROM app_account_data d
+       WHERE d.user_id = c.athlete_user_id AND c.has_program IS NULL
+    `);
+    await client.query("UPDATE coach_clients SET has_program = FALSE WHERE has_program IS NULL AND athlete_user_id IS NULL");
+  } catch (err) {
+    console.warn("COACH_HAS_PROGRAM", err && err.message ? err.message : err);
+  }
 }
 
 function parseCookieHeader(header) {
@@ -1368,7 +1432,7 @@ export function mountCoachPractice(app, deps) {
       const hide = !!(lic.rows[0] && lic.rows[0].hide_presence);
       const coachLastSeen = hide ? null : (lic.rows[0]?.last_seen_at || null);
       const events = await pool.query(
-        "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 ORDER BY created_at DESC LIMIT 20",
+        "SELECT id, kind, payload, created_at, read_at FROM coach_events WHERE client_id = $1 AND kind <> 'agreement_confirmed' ORDER BY created_at DESC LIMIT 20",
         [ctx.client.id]
       );
       let entitlement = null;
@@ -1685,6 +1749,7 @@ export function mountCoachPractice(app, deps) {
       `SELECT id, kind, payload, created_at, read_at, dismissed_for
        FROM coach_events
        WHERE client_id = $1
+         AND kind <> 'agreement_confirmed'
          AND NOT ('athlete' = ANY(COALESCE(dismissed_for, '{}')))
        ORDER BY id DESC LIMIT 30`,
       [ctx.client.id]
@@ -1814,6 +1879,11 @@ export function mountCoachPractice(app, deps) {
         gear: Array.isArray(hx.gear) ? hx.gear.slice(0, 10).map((g) => text(g, 20)) : []
       };
     }
+    const lastAsk = await pool.query(
+      "SELECT 1 FROM coach_events WHERE client_id = $1 AND kind = 'request_program' AND created_at > NOW() - INTERVAL '10 minutes' LIMIT 1",
+      [ctx.client.id]
+    );
+    if (lastAsk.rows.length) return res.json({ ok: true, duplicate: true });
     await pool.query(
       "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'request_program',$2)",
       [ctx.client.id, JSON.stringify(payload)]
@@ -2266,9 +2336,25 @@ export function mountCoachPractice(app, deps) {
       new: "c.created_at >= NOW() - INTERVAL '30 days'"
     };
     if (filters[filter]) conditions.push(filters[filter]);
+    // Hub controls, combinable with each other and with `filter` (fixed whitelist, never interpolated input):
+    // pay = paid | unpaid, assign = assigned | unassigned, mode = remote | presence | both (live / distance).
+    const hasProgramSql = "COALESCE(c.has_program, jsonb_array_length(COALESCE(d.data->'activeProgram'->'weeks', '[]'::jsonb)) > 0)";
+    const trackedSql = "(c.pay_tracking = TRUE OR c.paid = FALSE)";
+    const unpaidSql = "(c.paid = FALSE OR (c.next_due_at IS NOT NULL AND c.next_due_at <= NOW()))";
+    const payFilter = String(req.query.pay || "").toLowerCase();
+    if (payFilter === "unpaid") conditions.push(trackedSql + " AND " + unpaidSql);
+    else if (payFilter === "paid") conditions.push(trackedSql + " AND NOT " + unpaidSql);
+    else if (payFilter === "none") conditions.push("NOT " + trackedSql);
+    const assignFilter = String(req.query.assign || "").toLowerCase();
+    if (assignFilter === "assigned") conditions.push(hasProgramSql);
+    else if (assignFilter === "unassigned") conditions.push("NOT (" + hasProgramSql + ")");
+    const modeFilter = String(req.query.mode || "").toLowerCase();
+    if (COACHING_MODES.includes(modeFilter)) conditions.push(`c.coaching_mode = ${addParam(modeFilter)}`);
 
     const orderBy = {
       name: "LOWER(c.display_name) ASC, c.id ASC",
+      program: "c.program_expires_at ASC NULLS LAST, LOWER(c.display_name) ASC, c.id ASC",
+      check: "c.next_check_at ASC NULLS LAST, LOWER(c.display_name) ASC, c.id ASC",
       recent: "c.last_workout_at DESC NULLS LAST, c.id DESC",
       due: "COALESCE(c.next_due_at, c.next_check_at, c.program_expires_at) ASC NULLS LAST, c.id ASC",
       attention: `${attentionCondition} DESC, c.unread_count DESC, c.display_name ASC`
@@ -2282,7 +2368,14 @@ export function mountCoachPractice(app, deps) {
               c.last_workout_at, c.last_seen_at, c.workout_started_at, c.program_expires_at, c.next_check_at,
               c.unread_count, c.invite_token, c.created_at, c.intake_mode, c.intake, c.intake_completed_at,
               c.leave_requested_at, c.chat_thread, c.allow_max_freedom, c.allow_nurvan_ai, c.pending_change, c.pending_unlock,
-              c.checkin_template,
+              c.checkin_template, c.coaching_mode, c.pay_tracking,
+              COALESCE(c.has_program, FALSE) AS has_program,
+              (SELECT CASE WHEN x.rq IS NULL OR COALESCE(x.pa, 0) > x.rq THEN NULL
+                           WHEN COALESCE(x.ag, 0) > x.rq THEN 'agreed' ELSE 'waiting' END
+               FROM (SELECT MAX(id) FILTER (WHERE kind = 'request_program') AS rq,
+                            MAX(id) FILTER (WHERE kind = 'agreement_confirmed') AS ag,
+                            MAX(id) FILTER (WHERE kind = 'program_assigned') AS pa
+                     FROM coach_events WHERE client_id = c.id) x) AS request_state,
               d.data->'profile'->>'photoThumb' AS photo_thumb,
               d.data->'profile'->>'photoUrl' AS photo_url
        FROM coach_clients c
@@ -2303,11 +2396,28 @@ export function mountCoachPractice(app, deps) {
     // Seats: the most recent links beyond the plan wait, nothing is blocked.
     let seatState = null;
     try { seatState = await coachSeatState(pool, coach.id); } catch (err) { console.warn("COACH_SEATS", err && err.message); }
+    // How many of the coach's clients have a payment due within a week or overdue (all of them, not just this page).
+    let payAlert = null;
+    try {
+      const pa = await pool.query(
+        `SELECT COUNT(*)::int AS n,
+                COUNT(*) FILTER (WHERE c.paid = FALSE OR c.next_due_at <= NOW())::int AS overdue,
+                MIN(c.next_due_at) FILTER (WHERE c.paid = TRUE AND c.next_due_at > NOW()) AS soon_at
+         FROM coach_clients c
+         WHERE c.coach_user_id = $1 AND c.status = 'active' AND (c.pay_tracking = TRUE OR c.paid = FALSE)
+           AND (c.paid = FALSE OR (c.next_due_at IS NOT NULL AND c.next_due_at <= NOW() + INTERVAL '7 days'))`,
+        [coach.id]
+      );
+      payAlert = { n: pa.rows[0].n || 0, overdue: pa.rows[0].overdue || 0, soonAt: pa.rows[0].soon_at || null };
+    } catch (err) { console.warn("COACH_PAY_ALERT", err && err.message); }
     return res.json({
       ok: true,
+      payAlert,
       clients: rows.rows.map((r) => {
         const row = clientRow(r);
         row.seatInactive = !!(seatState && seatState.inactive.includes(String(r.id)));
+        row.hasProgram = !!r.has_program;
+        row.programRequest = r.request_state || null;
         return row;
       }),
       seats: seatState ? { limit: seatState.seats, active: seatState.active.length, waiting: seatState.inactive.length } : null,
@@ -2369,15 +2479,21 @@ export function mountCoachPractice(app, deps) {
       );
       const athlete = userIns.rows[0];
       await db.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [athlete.id]);
-      const due = new Date(Date.now() + 30 * 86400000).toISOString();
+      // Payments are tracked only if the coach asks for it when adding the client: { track, billingCycle, nextDueAt }.
+      const payReq = req.body?.payment && typeof req.body.payment === "object" ? req.body.payment : {};
+      const payTrack = !!payReq.track;
+      const billingCycle = BILLING_CYCLES.includes(String(payReq.billingCycle)) ? String(payReq.billingCycle) : "monthly";
+      const dueDate = payTrack ? (parseDueDate(payReq.nextDueAt) || addBillingCycle(new Date(), billingCycle)) : null;
+      const due = dueDate ? dueDate.toISOString() : null;
       const completedAt = intakeMode === "transition" ? new Date().toISOString() : null;
       const cli = await db.query(
         `INSERT INTO coach_clients(
            coach_user_id, athlete_user_id, display_name, username, status, paid, next_due_at, invite_token,
-           intake_mode, intake, intake_completed_at, invite_password, credentials_issued_at, coaching_mode
-         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9,NULL,NOW(),$10)
+           intake_mode, intake, intake_completed_at, invite_password, credentials_issued_at, coaching_mode,
+           pay_tracking, billing_cycle
+         ) VALUES($1,$2,$3,$4,'active',TRUE,$5,$6,$7,$8,$9,NULL,NOW(),$10,$11,$12)
          RETURNING *`,
-        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt, coachingMode]
+        [coach.id, athlete.id, displayName, username, due, inviteToken, intakeMode, JSON.stringify(intake), completedAt, coachingMode, payTrack, billingCycle]
       );
       if (intakeMode === "transition") {
         const profile = profileFromIntake(intake);
@@ -2726,8 +2842,9 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const paid = !!req.body?.paid;
-    const next = paid ? new Date(Date.now() + 30 * 86400000).toISOString() : row.next_due_at;
-    await pool.query("UPDATE coach_clients SET paid = $2, next_due_at = $3 WHERE id = $1", [row.id, paid, next]);
+    const cycle = BILLING_CYCLES.includes(row.billing_cycle) ? row.billing_cycle : "monthly";
+    const next = paid ? nextBillingDue(row.next_due_at, cycle).toISOString() : row.next_due_at;
+    await pool.query("UPDATE coach_clients SET paid = $2, next_due_at = $3, pay_tracking = TRUE WHERE id = $1", [row.id, paid, next]);
     if (!paid) {
       await pool.query(
         "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'payment_due',$2)",
@@ -2735,6 +2852,41 @@ export function mountCoachPractice(app, deps) {
       );
     }
     return res.json({ ok: true, paid });
+  });
+
+  // The coach's payment reminder for one client: track on/off, the cycle and the next due date (all set by hand; the
+  // payment itself happens outside the app).
+  app.post("/api/coach/clients/:id/billing", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    const track = !!req.body?.track;
+    if (!track) {
+      await pool.query("UPDATE coach_clients SET pay_tracking = FALSE, paid = TRUE, next_due_at = NULL WHERE id = $1", [row.id]);
+      return res.json({ ok: true, track: false });
+    }
+    const cycle = BILLING_CYCLES.includes(String(req.body?.billingCycle)) ? String(req.body.billingCycle) : (BILLING_CYCLES.includes(row.billing_cycle) ? row.billing_cycle : "monthly");
+    const due = parseDueDate(req.body?.nextDueAt) || (row.next_due_at ? new Date(row.next_due_at) : addBillingCycle(new Date(), cycle));
+    await pool.query(
+      "UPDATE coach_clients SET pay_tracking = TRUE, billing_cycle = $2, next_due_at = $3 WHERE id = $1",
+      [row.id, cycle, due.toISOString()]
+    );
+    return res.json({ ok: true, track: true, billingCycle: cycle, nextDueAt: due.toISOString() });
+  });
+
+  // A client asked for a new program and the coach has talked it over and settled it with them OUTSIDE the app (price and
+  // payment, if any, are theirs). This only records the coach's own status; the app locks nothing and sells nothing.
+  app.post("/api/coach/clients/:id/agreement", async (req, res) => {
+    const coach = await requireCoach(req, res);
+    if (!coach) return;
+    const row = await loadOwnedClient(coach, req.params.id, res);
+    if (!row) return;
+    await pool.query(
+      "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'agreement_confirmed',$2)",
+      [row.id, JSON.stringify({ name: row.display_name })]
+    );
+    return res.json({ ok: true });
   });
 
   app.post("/api/coach/clients/:id/allow-db", async (req, res) => {
@@ -3625,7 +3777,7 @@ export function mountCoachPractice(app, deps) {
            'coach_modified','program_assigned','nutrition_assigned','supplements_assigned',
            'therapy_assigned','exams_assigned','unlock_approved','unlock_rejected',
            'max_freedom','change_approved','change_rejected','password_reset',
-           'exams_request','check_request','leave_confirmed','payment_due',
+           'exams_request','check_request','leave_confirmed','payment_due','agreement_confirmed',
            'intake_completed','intake_update_pending','intake_filled_by_coach'
          )
        ORDER BY e.id DESC LIMIT 20`,
@@ -3710,13 +3862,33 @@ export function mountCoachPractice(app, deps) {
            'coach_modified','program_assigned','nutrition_assigned','supplements_assigned',
            'therapy_assigned','exams_assigned','unlock_approved','unlock_rejected',
            'max_freedom','change_approved','change_rejected','password_reset',
-           'exams_request','check_request','leave_confirmed','payment_due',
+           'exams_request','check_request','leave_confirmed','payment_due','agreement_confirmed',
            'intake_completed','intake_update_pending','intake_filled_by_coach'
          )
        ORDER BY created_at DESC LIMIT 40`,
       [row.id]
     );
-    return res.json({ ok: true, events: ev.rows });
+    // The coach's own view of a program request: waiting (asked, not settled yet), agreed (settled outside the app,
+    // program not delivered yet) or none (no request, or a program was assigned after it).
+    const rq = await pool.query(
+      `SELECT MAX(id) FILTER (WHERE kind = 'request_program') AS rq,
+              MAX(id) FILTER (WHERE kind = 'agreement_confirmed') AS ag,
+              MAX(id) FILTER (WHERE kind = 'program_assigned') AS pa
+       FROM coach_events WHERE client_id = $1`,
+      [row.id]
+    );
+    const m = rq.rows[0] || {};
+    let programRequest = null;
+    if (m.rq && !(m.pa && Number(m.pa) > Number(m.rq))) {
+      const req0 = await pool.query("SELECT payload, created_at FROM coach_events WHERE id = $1", [m.rq]);
+      programRequest = {
+        state: m.ag && Number(m.ag) > Number(m.rq) ? "agreed" : "waiting",
+        at: req0.rows[0] ? req0.rows[0].created_at : null,
+        note: req0.rows[0] && req0.rows[0].payload ? String(req0.rows[0].payload.note || "").slice(0, 500) : "",
+        hyrox: !!(req0.rows[0] && req0.rows[0].payload && req0.rows[0].payload.hyrox)
+      };
+    }
+    return res.json({ ok: true, events: ev.rows, programRequest });
   });
 
   function agentHooks() {

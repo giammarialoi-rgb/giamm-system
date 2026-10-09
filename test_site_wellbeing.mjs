@@ -64,7 +64,7 @@ try {
   ok(SITE_LANGS.every((l) => keys.every((k) => flat.includes(wellbeingPath(k, l)))), '3d. la sitemap ha le quattro pagine in ogni lingua');
   const shellHtml = fs.readFileSync('site/shell.html', 'utf8');
   const home = fs.readFileSync('site/home.html', 'utf8');
-  ok(/href="\{\{HEALTH\}\}">Salute e recupero</.test(shellHtml) && /href="\{\{HEALTH\}\}">Scopri come funziona/.test(home), '3e. dal piè di pagina e dalla home si arriva alla sezione');
+  ok(/href="\{\{HEALTH\}\}">Salute e recupero</.test(shellHtml) && /<h3>Salute e recupero<\/h3>/.test(home) && /href="\{\{HOME\}\}#funzioni">Scopri come funziona/.test(home), '3e. dal piè di pagina si arriva alla sezione; la home la presenta e rimanda alle funzioni');
   ok(/mountWellbeing\(app, \{ root: __dirname/.test(fs.readFileSync('coach-api.mjs', 'utf8')) && /HEALTH: wellbeingPath\("hub", lang\)/.test(fs.readFileSync('coach-api.mjs', 'utf8')), '3f. le pagine sono montate e il segnaposto del piè di pagina è riempito');
 } finally { server.close(); }
 

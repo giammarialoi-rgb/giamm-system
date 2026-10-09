@@ -36,7 +36,18 @@ const flagValue = (name) => { const i = process.argv.indexOf(name); return i < 0
 const onlyTesters = flagValue('--only-testers');
 const extraTesters = onlyTesters || flagValue('--testers');
 const TESTERS = Array.from({ length: extraTesters }, (_, i) => ({ email: 'tester-' + String(i + 1).padStart(2, '0') + '@nurvan.app', name: 'Tester ' + String(i + 1).padStart(2, '0'), plan: 'free' }));
-const ACCOUNTS = (onlyTesters ? [] : REVIEW_ACCOUNTS).concat(TESTERS);
+// --only-client adds just the linked athlete (review-client) to review-coach and does NOT touch the passwords of the
+// accounts already given to the stores. A run that resets the three reviewers' passwords needs --reset-reviewers.
+const onlyClient = process.argv.includes('--only-client');
+const resetReviewers = process.argv.includes('--reset-reviewers');
+if (!onlyClient && !onlyTesters && !resetReviewers) {
+  console.log('This run would set NEW passwords on review-coach, review-free and review-athlete (the ones already given to the stores).');
+  console.log('  --only-client        add only review-client, the athlete linked to review-coach (passwords of the others stay)');
+  console.log('  --only-testers N     add only the tester accounts');
+  console.log('  --reset-reviewers    really reset the three reviewers\' passwords');
+  process.exit(1);
+}
+const ACCOUNTS = ((onlyTesters || onlyClient) ? [] : REVIEW_ACCOUNTS).concat(TESTERS);
 const withData = !process.argv.includes('--no-data');
 const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 
@@ -90,6 +101,34 @@ for (const a of ACCOUNTS) {
     await pool.query("INSERT INTO app_account_data(user_id, data) VALUES($1, $2::jsonb) ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, revision = app_account_data.revision + 1, updated_at = NOW()", [id, JSON.stringify(merged)]);
   }
   out.push({ email: a.email, password, plan: a.plan });
+}
+// review-client: the athlete linked to review-coach, so a reviewer can try the coach-athlete chat, report and block.
+// An athlete is always its own account (provider 'coach_client', synthetic email) plus a coach_clients row; he logs in with
+// the username below + password, or with the link /c/<token>. It never touches review-coach's own row or password.
+if (onlyClient || resetReviewers) {
+  const CLIENT = { email: 'c.review-client@client.nurvan.internal', name: 'Revisore Cliente', username: 'revisorecliente', token: 'review-client-demo' };
+  const coach = await pool.query('SELECT id FROM app_users WHERE lower(email) = lower($1)', ['review-coach@nurvan.app']);
+  if (!coach.rows[0]) { console.log('review-coach@nurvan.app does not exist: run with --reset-reviewers first.'); await pool.end(); process.exit(1); }
+  const coachId = coach.rows[0].id;
+  const password = newPassword();
+  const hash = await bcrypt.hash(password, 10);
+  const u = await pool.query("INSERT INTO app_users(email, name, password_hash, provider, email_verified_at, email_verify_required) VALUES($1,$2,$3,'coach_client',NOW(),FALSE) ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, name = EXCLUDED.name, provider = 'coach_client', updated_at = NOW() RETURNING id", [CLIENT.email, CLIENT.name, hash]);
+  const athleteId = u.rows[0].id;
+  await pool.query("INSERT INTO app_account_data(user_id, data) VALUES($1, '{}'::jsonb) ON CONFLICT (user_id) DO NOTHING", [athleteId]);
+  await pool.query("UPDATE app_users SET plan = 'free', plan_source = 'manual', plan_until = NULL, updated_at = NOW() WHERE id = $1", [athleteId]);
+  const c = await pool.query("INSERT INTO coach_clients(coach_user_id, athlete_user_id, display_name, username, status, paid, next_due_at, invite_token, intake_mode, intake, intake_completed_at, credentials_issued_at, coaching_mode) VALUES($1,$2,$3,$4,'active',TRUE,NOW() + INTERVAL '30 days',$5,'transition','{}'::jsonb,NOW(),NOW(),'remote') ON CONFLICT (invite_token) DO UPDATE SET athlete_user_id = EXCLUDED.athlete_user_id, status = 'active', paid = TRUE, next_due_at = EXCLUDED.next_due_at, chat_blocked_by = NULL, chat_blocked_at = NULL RETURNING id", [coachId, athleteId, CLIENT.name, CLIENT.username, CLIENT.token]);
+  const clientId = c.rows[0].id;
+  // A clean chat for every run: no old messages or reports, no blocking, keys republished when the two sides open the chat.
+  await pool.query('DELETE FROM coach_messages WHERE client_id = $1', [clientId]);
+  await pool.query('DELETE FROM chat_reports WHERE client_id = $1', [clientId]);
+  await pool.query('UPDATE coach_clients SET unread_count = 0, chat_thread = 1, e2e_pubkey_coach = NULL, e2e_pubkey_athlete = NULL WHERE id = $1', [clientId]);
+  await pool.query("INSERT INTO coach_messages(client_id, from_role, body, thread_id) VALUES($1,'coach',$2,1)", [clientId, 'Benvenuto! Scrivimi pure da qui.']);
+  if (demo) {
+    const row = await pool.query('SELECT data FROM app_account_data WHERE user_id = $1', [athleteId]);
+    const merged = Object.assign({}, (row.rows[0] && row.rows[0].data) || {}, demo, { lastSyncedAt: new Date().toISOString() });
+    await pool.query("UPDATE app_account_data SET data = $2::jsonb, revision = revision + 1, updated_at = NOW() WHERE user_id = $1", [athleteId, JSON.stringify(merged)]);
+  }
+  out.push({ email: 'username: ' + CLIENT.username + '  (link /c/' + CLIENT.token + ')', password, plan: 'athlete linked to review-coach' });
 }
 await pool.end();
 console.log('\nAccount per i revisori (le password si vedono solo ora, copiale subito):\n');

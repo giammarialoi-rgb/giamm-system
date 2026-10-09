@@ -17,6 +17,7 @@ import { extractExcelStructuredForApi, detectFormat, DI_MAX_BYTES } from "./docu
 import { ensureCoachPracticeTables, mountCoachPractice } from "./coach-practice.mjs";
 import { mountProgramGenerateRoutes } from "./server/program/generator.mjs";
 import { mountFoodRoutes } from "./server/food/index.mjs";
+import { mountEvidenceRoutes } from "./server/evidence/pubmed.mjs";
 import { mountMediaRoutes } from "./server/media/media-routes.mjs";
 import { mergeAccountDataBlobs, updateAccountData } from "./server/account/index.mjs";
 import { accountEntitlement, mountPlanRoutes } from "./server/account/plans.mjs";
@@ -2555,6 +2556,7 @@ ${listing}`;
   }
 }
 
+mountEvidenceRoutes(app);
 mountFoodRoutes(app, {
   generateVision: generateMealPhotoVision,
   pool,

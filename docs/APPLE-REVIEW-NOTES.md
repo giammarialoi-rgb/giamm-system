@@ -16,7 +16,7 @@ Nurvan is a training, nutrition and coaching app for people who work out (gym or
   ledger of what clients pay them, and put their own name and logo on the web app their clients use.
 - Audience: adults. Minimum age **16** (confirmed at first launch, also in the terms).
 - Languages: Italian (source) and English, Spanish, French, German, Portuguese, Russian, Chinese, Arabic, Hindi.
-  There is no feature difference by language or country.
+  Features are the same in every country; the only difference is that food-database results are localized for Italian, English, Spanish, French and German (other languages fall back to the Italian names, translated automatically).
 
 ## 2. How to access (copy into the "Notes" field)
 
@@ -29,15 +29,16 @@ On first launch the Account screen appears. Enter the email and password of the 
 DEMO ACCOUNTS (credentials are in the fields above)
 - <review-free account>: Free plan. Use it to see the plans screen (Menu › Piani & Pro), the purchase buttons, RESTORE PURCHASES and MANAGE SUBSCRIPTION.
 - <review-coach account>: Coach Pro assigned by hand. Use it for the whole app and for Coach mode (Menu › Modalità coach).
-- <review-athlete account>: athlete side.
-All three contain made-up sample data (an active program, workouts, a day of meals, a supplement, a therapy reminder, two exams, three body checks). Nothing in them is a real person.
+- <review-athlete account>: a normal personal account with the same sample data.
+- <review-client account>: the athlete side, linked to the coach account. It signs in with the USERNAME (not an email) and its password: username "revisorecliente". It has no Coach AI and no plans screen (a coach's athletes do not have them): use the free account for those.
+All of them contain made-up sample data (an active program, workouts, a day of meals, a supplement, a therapy reminder, two exams, three body checks). Nothing in them is a real person.
 
 WHERE TO LOOK
 1. Registration / login: Account screen; email + code verification for new accounts; Sign in with Apple; Google.
 2. Account deletion: Settings › Privacy and data › ELIMINA ACCOUNT (type ELIMINA). It works for every account, including a coach's client. If a subscription is active the screen says that deleting the account does not cancel it and links to Settings › your name › Subscriptions. Deletion removes the account and its data on our server, the history of purchase events kept for it, and the person on RevenueCat.
-3. User-generated content: the only communication between users is the chat between a coach and the clients they invited (no search for strangers, no public feed). In the chat, "Segnala · Blocca" reports a message (reason, free text, optional attached messages) and blocks the other person in both directions. Reports go to a moderation panel; target response time 24 hours. Admins can suspend the reported account from the same panel. Abuse contact: info@nurvan.app. The terms (section 7) forbid objectionable content.
+3. User-generated content: the only communication between users is the chat between a coach and the clients they invited (no search for strangers, no public feed). To try it: sign in as the athlete (username "revisorecliente") › COACH tab › chat with the coach, or as the coach › Menu › Modalità coach › HUB › the client › CHAT. In the chat, "Segnala · Blocca" reports a message (reason, free text, optional attached messages) and blocks the other person in both directions. Reports go to a moderation panel; target response time 24 hours. Admins can suspend the reported account from the same panel. Abuse contact: info@nurvan.app. The terms (section 7) forbid objectionable content.
 4. Paid content: Menu › Piani & Pro. Subscriptions Standard / Coach / Coach Pro are bought ONLY with Apple in-app purchase (RevenueCat). Prices, period and renewal are shown by the store. The app does not mention or link to any other way to pay.
-5. Coach AI: tab "Coach AI" (needs the AI consent).
+5. Coach AI: the chat is part of the paid plans. With the free account, open Menu › Piani & Pro and tap "ATTIVA 14 GIORNI DI COACH" (free, once per account, no charge, no renewal), then open the "Coach AI" tab and accept the separate AI consent when asked. Athletes linked to a coach do not have the Coach AI.
 
 SANDBOX PURCHASE
 Use <review-free account> and a sandbox tester: plans screen › choose a plan › confirm. The account's plan becomes the purchased one (the state comes from RevenueCat). RESTORE PURCHASES is on the same screen.
@@ -56,6 +57,7 @@ Technical contact: info@nurvan.app
 | **Apple** | Sign in with Apple; in-app purchase | identity returned by Apple | the Apple link is revoked on account deletion |
 | **Google Sign-In** | optional login | Google identity | optional |
 | **Resend** | account emails (code, password reset) | email address, one-time code/link | |
+| **PubMed (NCBI E-utilities)** | "Evidenze" box: look up scientific studies | only the words typed in the search box, sent by our server (the reader's address never reaches NCBI); no account or training data | optional; nothing is stored, a question is kept in memory for 10 minutes |
 | **Open Food Facts, FatSecret, USDA FoodData Central** | food search and barcode lookup | only the searched text or barcode, never account data | |
 | **PeerJS PeerServer and Google STUN servers** | set up coach↔client video calls (WebRTC) | IP address and a temporary call id; audio and video go device-to-device | only when a call is started or received |
 | **Usage count** (own server) | counts opens per platform | once a day: platform and "first open" flag; a daily hash forgotten after 2 days; no identifier, no account | not tracking; declared as "Product Interaction, not linked" |
@@ -77,7 +79,7 @@ The app does not use HealthKit and does not read data from other apps.
 
 ## 5. Regional differences
 
-None in features or content. Prices are the store's, in each storefront's currency. The legal pages exist in 10 languages
+None in features or content, except that food-database search results are localized for Italian, English, Spanish, French and German (other languages use the Italian default, names translated automatically). Prices are the store's, in each storefront's currency. The legal pages exist in 10 languages
 (the Italian text prevails). Italy is the controller's country (GDPR).
 
 ## 6. Regulated industries
@@ -86,10 +88,3 @@ Nurvan is a fitness and nutrition app. It is **not a medical device** and does n
 terms (section 3), in the privacy notice, in Settings, and in fixed notices at the top of the Exams, Supplements, Therapy and
 Coach AI screens. Therapy is only a reminder list written by the user. There is no gambling, crypto, loans, or other
 regulated financial service in the app.
-
-## 7. What changed after the first review (for the reviewer's information)
-
-Account deletion also for clients of coaches and with a warning about active subscriptions; objectionable-content rules in the
-terms; the website's payment details removed from what the app shows; fixed medical notices; clearer and server-enforced AI consent;
-privacy manifest (`PrivacyInfo.xcprivacy`) and fuller permission texts; admin can suspend a reported account; plain-language
-errors when the store does not answer.

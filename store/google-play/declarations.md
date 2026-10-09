@@ -11,9 +11,11 @@ Si compilano nel menu **Criteri e programmi › Contenuti dell'app** (o «Config
   Alla prima apertura, nella schermata Account inserisci email e password e tocca ACCEDI. Spunta "Ho almeno 16 anni" e accetta informativa e termini.
   Questo account ha il piano Coach Pro assegnato manualmente: tutte le funzioni sono sbloccate, compresa la modalità Coach (scheda MENU › "Modalità coach").
   Per vedere la schermata degli abbonamenti e dell'acquisto usa il secondo account: review-free@nurvan.app (piano gratuito), scheda MENU › "Piani & Pro".
-  L'invio di dati all'AI (Coach AI) richiede un consenso esplicito che si dà la prima volta che si usa.
+  L'invio di dati all'AI (Coach AI) richiede un consenso esplicito che si dà la prima volta che si usa. Con l'account gratuito la chat del Coach AI si sblocca da MENU › Piani & Pro › "ATTIVA 14 GIORNI DI COACH" (gratis, una volta per account, nessun addebito né rinnovo).
+  Per provare chat tra coach e atleta, segnala e blocca: entra come atleta con il nome utente "revisorecliente" (scheda COACH › chat con il coach), oppure come review-coach (MENU › Modalità coach › HUB › il cliente › CHAT). "SEGNALA · BLOCCA" è nella barra della chat.
+  I pagamenti tra coach e clienti avvengono fuori dall'app e non passano da Nurvan; l'app mostra solo un promemoria.
   ```
-- Seconda e terza credenziale: `review-free@nurvan.app` (gratuito) e `review-athlete@nurvan.app` (lato atleta).
+- Altre credenziali: `review-free@nurvan.app` (gratuito), `review-athlete@nurvan.app` (account personale con dati) e `review-client` (atleta collegato al coach: accede con il NOME UTENTE `revisorecliente`, non con l'email; password stampata da `tools/seed_review_accounts.mjs --only-client`).
 - «Nessuna altra azione richiesta» (niente 2FA, niente codici).
 
 ## Annunci

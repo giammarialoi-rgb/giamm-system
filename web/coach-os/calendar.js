@@ -126,10 +126,30 @@
     state.appointments = payload.appointments || [];
     state.failed = false;
   }
+  function calClientRow(c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id), mode: c.coachingMode || 'remote' }; }
+  // The list is a search, not everybody: the coach types a name and the 50 best matches replace the options.
+  let calQTimer = 0;
+  CoachOS.calClientSearch = function (q) {
+    clearTimeout(calQTimer);
+    calQTimer = setTimeout(async function () {
+      const sel = document.getElementById('cal-client');
+      if (!sel) return;
+      try {
+        const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=' + encodeURIComponent(String(q || '').trim()), { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+        const keep = state.clients.filter(function (c) { return c.id === sel.value; })[0];
+        let list = (payload.clients || []).map(calClientRow);
+        if (keep && !list.some(function (c) { return c.id === keep.id; })) list = [keep].concat(list);
+        state.clients = list;
+        sel.innerHTML = '<option value="">' + escText(T('Nessun cliente (impegno mio)')) + '</option>' +
+          list.map(function (c) { return '<option value="' + escText(c.id) + '"' + (keep && c.id === keep.id ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('');
+        if (typeof CoachOS.suggestAppointmentTitle === 'function') CoachOS.suggestAppointmentTitle();
+      } catch (_) { /* the old list stays */ }
+    }, 250);
+  };
   async function loadClients() {
     try {
-      const payload = await window.practiceFetch('/api/coach/clients?limit=200&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
-      state.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id), mode: c.coachingMode || 'remote' }; });
+      const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+      state.clients = (payload.clients || []).map(calClientRow);
     } catch (_) { /* the form still works, without a client */ }
   }
   function redraw() {
@@ -181,7 +201,8 @@
       '<div style="font-size:14px;font-weight:900;color:var(--gold);">' + escText(T(existing ? 'Sposta la sessione' : 'Nuova sessione')) + '</div>' +
       (existing
         ? '<div style="font-size:12px;color:#bbb;margin-top:6px;">' + escText(existing.title) + (existing.clientName ? ' · ' + escText(existing.clientName) : '') + '</div>'
-        : label('Con chi') + '<select id="cal-client" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +
+        : label('Con chi') + '<input id="cal-client-q" type="search" placeholder="' + escText(T('Cerca cliente…')) + '" oninput="CoachOS.calClientSearch(this.value)" style="' + field + '">' +
+          '<select id="cal-client" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +
           '<option value="">' + escText(T('Nessun cliente (impegno mio)')) + '</option>' +
           state.clients.map(function (c) { return '<option value="' + escText(c.id) + '"' + (c.id === preset ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('') + '</select></label>' +
           label('Che cosa') + '<select id="cal-type" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +

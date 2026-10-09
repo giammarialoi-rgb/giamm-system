@@ -27,7 +27,7 @@ Le date sono spostate al giorno in cui lanci lo script, così lo storico è semp
 Serve l'URL del database di produzione (Render → il database → *External Database URL*). Non incollarlo in nessuna chat.
 
 ```powershell
-$env:DATABASE_URL = "postgres://..."
+$env:DATABASE_URL = "postgresql://coach_79my_user:rbycxoXYQlQ2fgXmlavCSJAti5Y3qN0X@dpg-da785ohsrm7s73fnp0tg-a.oregon-postgres.render.com/coach_79my"
 node tools/seed_review_accounts.mjs
 ```
 
@@ -86,12 +86,3 @@ Dopo averla provata, rilancia lo script per rifare gli account.
 - Il primo avvio chiede i consensi (età, termini, dati sulla salute): il revisore li accetta. I consensi alle funzioni AI sono separati e si chiedono al primo uso.
 - Registrazione libera (per chi vuole provarla): l'email riceve un codice a 6 cifre da digitare nell'app.
 - Il server su Render può impiegare qualche secondo a svegliarsi dopo un periodo di inattività.
-
-## Account in più per i tester (test chiuso)
-
-```powershell
-$env:DATABASE_URL = "postgres://..."
-node tools/seed_review_accounts.mjs --only-testers 10
-```
-
-Crea `tester-01@nurvan.app` … `tester-10@nurvan.app` (piano Free, con i dati di esempio; massimo 50). **`--only-testers` non tocca i tre account dei revisori**, quindi le loro password già date ad Apple e Google restano valide. Senza questa opzione lo script rigenera anche le password dei revisori. Le password si vedono una volta sola. Rilanciando per lo stesso numero le password cambiano: usalo anche per rifare un account che un tester ha eliminato.

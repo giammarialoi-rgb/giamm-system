@@ -20977,6 +20977,21 @@ function scheduleAllItemAlerts() {
       repeatEveryMs: 86400000
     });
   }
+  // A coach with payments due or overdue gets one daily reminder (set by updateCoachPaymentReminder in the coach hub).
+  try {
+    const cp = store.prefs && store.prefs.coachPaymentDue;
+    if (cp && cp.n > 0) {
+      jobs.push({
+        id: 'coach_pay_due',
+        title: 'Pagamenti dei clienti',
+        body: 'Ci sono clienti con un pagamento in scadenza o da regolare.',
+        at: Math.max(nextAlertEpoch('09:00'), cp.atMs || 0),
+        repeatEveryMs: 86400000
+      });
+    } else if (typeof NativeConfig !== 'undefined' && NativeConfig.cancelReminder) {
+      NativeConfig.cancelReminder('coach_pay_due');
+    }
+  } catch (_) {}
   // The scheduled check-in, when a coach set one; otherwise its reminder goes.
   let checkInJob = null;
   try { checkInJob = scheduledCheckInReminderJob(); } catch (_) {}
@@ -26853,6 +26868,7 @@ function renderHome(c) {
     ${planNoticesHtml()}
     ${scheduledCheckInHomeHtml()}
     ${lastSessionHomeCardHtml()}
+    ${(typeof athletePaymentCardHtml === 'function') ? athletePaymentCardHtml() : ''}
     ${computeHomeReadinessHtml()}
 
     <div class="card" style="border:1px solid rgba(212,175,55,0.35);margin-bottom:12px;">
@@ -28111,8 +28127,7 @@ function renderTraining(c){
       <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="openMaxTestPlannerModal()">MASSIMALE</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-      <button class="btn ${window.__ssSelect ? 'btn-primary' : 'btn-outline'}" type="button" style="font-size:10px;padding:8px 10px;" onclick="toggleSupersetMode()">${window.__ssSelect ? 'ANNULLA SELEZIONE' : 'SUPERSET'}</button>
-      ${window.__ssSelect ? '<button class="btn btn-primary" type="button" style="font-size:10px;padding:8px 10px;" onclick="applySelectedSuperset()">COLLEGA IN SUPERSET</button>' : ''}
+      <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="openSupersetModal()">SUPERSET</button>
     </div>`;
 
     const sessionName = sessionDisplayName(d, currentDay);
@@ -28162,7 +28177,7 @@ function renderTraining(c){
       const ssLetter = row.superset_id ? sessionSupersetLetter(row.superset_id, exerciseList) : '';
       const ssOrd = row.superset_id ? sessionSupersetOrder(row.superset_id, exerciseList, ri) : 0;
       const supersetTag = row.superset_id ? `<span class="tag-pill" style="border:1px solid var(--gold);color:var(--gold);font-size:8px;padding:2px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.5px;">SUPERSET ${esc(ssLetter)}${ssOrd}</span>` : '';
-      const ssPick = window.__ssSelect ? `<label style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--gold);font-weight:800;"><input type="checkbox" ${window.__ssPicked && window.__ssPicked[fIdx] ? 'checked' : ''} onchange="toggleSupersetPick(${fIdx})"> SS</label>` : '';
+      const ssPick = '';
       if (ri < 3) {
       }
 
@@ -28171,7 +28186,7 @@ function renderTraining(c){
           <div style="font-size:10px;color:var(--gold);font-weight:800;opacity:0.8;text-transform:uppercase;">${esc(row.movement || 'ESERCIZIO')} ${row.is_bonus || row.isBonus ? '<span style="color:var(--gold-glow)">[BONUS]</span>' : ''} ${supersetTag}</div>
           <div style="display:flex; gap:8px; align-items:center;">
             ${ssPick}
-            ${row.superset_id && !window.__ssSelect ? `<button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="unlinkSuperset('${String(row.superset_id).replace(/'/g, '')}')">SCOLLEGA</button>` : ''}
+            ${row.superset_id ? `<button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="unlinkSuperset('${String(row.superset_id).replace(/'/g, '')}')">SCOLLEGA</button>` : ''}
             ${exLogUnit === 'reps' ? `<span class="load-toggle ${exIntens==='RIR'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RIR')">RIR</span>
             <span class="load-toggle ${exIntens==='RPE'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RPE')">RPE</span>` : ''}
             ${!skipReason ? `<span class="skip-btn" onclick="openSkipModal(${fIdx})">SALTA</span>` : `<span style="color:var(--gold); font-size:9px; font-weight:800;">SALTATO</span>`}
@@ -30940,18 +30955,64 @@ function sessionSupersetOrder(ssId, list, idx) {
   });
   return n || 1;
 }
-function toggleSupersetMode() {
-  window.__ssSelect = !window.__ssSelect;
-  window.__ssPicked = {};
-  render();
+// A superset is added from the top of the workout: a list of the session's exercises opens, you tick them, and you choose whether
+// it holds only this time (this session, this week) or for the whole program (the same session in every week).
+function programSessionRows(weekIdx, dayIdx) {
+  const w = DATA && DATA.weeks && DATA.weeks[weekIdx];
+  const sess = w && (w.sessions || w.days || [])[dayIdx];
+  return (sess && (sess.exercises || sess.rows)) || [];
 }
-function toggleSupersetPick(idx) {
-  if (!window.__ssPicked) window.__ssPicked = {};
-  window.__ssPicked[idx] = !window.__ssPicked[idx];
+function supersetBaseName(row) {
+  return String((row && (row.name || row.exercise || row.name_original)) || '').trim().toLowerCase();
 }
-function applySelectedSuperset() {
-  const idxs = Object.keys(window.__ssPicked || {}).filter(function (k) { return window.__ssPicked[k]; }).map(Number);
-  if (idxs.length < 2) {
+function closeSupersetModal() {
+  const modal = $('superset-modal');
+  if (modal) modal.style.display = 'none';
+}
+function ensureSupersetModal() {
+  let modal = $('superset-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'superset-modal';
+    modal.className = 'modal';
+    document.body.appendChild(modal);
+  }
+  return modal;
+}
+function openSupersetModal() {
+  const list = currentSessionExercises();
+  if (!list || list.length < 2) {
+    if (typeof showToast === 'function') showToast('Servono almeno 2 esercizi nella seduta', 'error');
+    return;
+  }
+  const modal = ensureSupersetModal();
+  const weeks = (DATA && DATA.weeks && DATA.weeks.length) || 1;
+  const rows = list.map(function (row, i) {
+    const name = exerciseNameAt(currentWeek, currentDay, i) || ('Esercizio ' + (i + 1));
+    const tag = row && row.superset_id ? ' <small style="color:var(--gold);">· già in superset ' + esc(sessionSupersetLetter(row.superset_id, list)) + '</small>' : '';
+    return '<label style="display:flex;gap:10px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;color:#fff;">' +
+      '<input type="checkbox" class="ss-pick" value="' + i + '" style="width:20px;height:20px;flex-shrink:0;"> <span style="flex:1;min-width:0;overflow-wrap:anywhere;">' + esc(name) + tag + '</span></label>';
+  }).join('');
+  modal.innerHTML = '<div class="modal-card" style="max-width:440px;">' +
+    '<div class="card-header"><h2>SUPERSET</h2><button class="btn btn-outline" onclick="closeSupersetModal()">CHIUDI</button></div>' +
+    '<div class="modal-body-scroll" style="padding:12px;">' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin:0 0 8px;">Scegli almeno 2 esercizi da alternare, poi dimmi se vale solo per questa volta o per tutta la programmazione.</p>' +
+    rows + '</div>' +
+    '<div class="modal-sticky-footer" style="flex-direction:column;gap:8px;">' +
+    '<button class="btn btn-primary" style="width:100%;" onclick="applySelectedSuperset(\'once\')">SOLO QUESTA VOLTA</button>' +
+    '<div style="font-size:10px;color:#888;margin:-2px 0 2px;text-align:center;">Solo questa seduta, settimana ' + esc(String(currentWeek)) + '</div>' +
+    (weeks > 1
+      ? '<button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="applySelectedSuperset(\'program\')">TUTTA LA PROGRAMMAZIONE</button>' +
+        '<div style="font-size:10px;color:#888;margin:-2px 0 2px;text-align:center;">La stessa seduta in tutte le ' + esc(String(weeks)) + ' settimane</div>'
+      : '') +
+    '<button class="btn btn-outline" style="width:100%;" onclick="closeSupersetModal()">ANNULLA</button></div></div>';
+  modal.style.display = 'flex';
+}
+function toggleSupersetMode() { openSupersetModal(); }
+// scope: 'once' = this session only; 'program' = the same session in every week (exercises matched by name).
+function applySelectedSuperset(scope) {
+  const picks = Array.prototype.slice.call(document.querySelectorAll('#superset-modal .ss-pick:checked')).map(function (el) { return Number(el.value); });
+  if (picks.length < 2) {
     if (typeof showToast === 'function') showToast('Seleziona almeno 2 esercizi', 'error');
     return;
   }
@@ -30959,22 +31020,71 @@ function applySelectedSuperset() {
   if (!list.length) return;
   pushWorkoutUndoSnapshot('superset');
   const ssId = 'ss_' + Date.now().toString(36);
-  idxs.forEach(function (i) {
+  picks.forEach(function (i) {
     if (list[i]) list[i].superset_id = ssId;
   });
+  let linkedWeeks = 1;
+  const totalWeeks = (DATA && DATA.weeks && DATA.weeks.length) || 1;
+  if (scope === 'program') {
+    const names = picks.map(function (i) { return supersetBaseName(list[i]); }).filter(Boolean);
+    for (let wi = 0; wi < totalWeeks; wi++) {
+      if (wi === currentWeek - 1) continue;
+      const other = programSessionRows(wi, currentDay);
+      const used = {};
+      const found = [];
+      names.forEach(function (nm) {
+        for (let k = 0; k < other.length; k++) {
+          if (!used[k] && supersetBaseName(other[k]) === nm) { used[k] = true; found.push(k); break; }
+        }
+      });
+      if (found.length >= 2) {
+        found.forEach(function (k) { other[k].superset_id = ssId; });
+        linkedWeeks += 1;
+      }
+    }
+  }
   persistActiveProgramStructure();
-  window.__ssSelect = false;
-  window.__ssPicked = {};
-  if (typeof showToast === 'function') showToast('Superset collegato: lavora in alternanza, poco o niente riposo tra i due', 'ok');
+  closeSupersetModal();
+  if (typeof showToast === 'function') {
+    if (scope === 'program') showToast('Superset collegato in ' + linkedWeeks + ' settimane su ' + totalWeeks + '. Lavora in alternanza, poco o niente riposo tra i due', 'ok');
+    else showToast('Superset collegato solo per questa volta: lavora in alternanza, poco o niente riposo tra i due', 'ok');
+  }
   render();
 }
+// Taking a superset apart: if it is linked in other weeks too, ask the same question.
+function supersetWeeksWith(ssId) {
+  const out = [];
+  const totalWeeks = (DATA && DATA.weeks && DATA.weeks.length) || 0;
+  for (let wi = 0; wi < totalWeeks; wi++) {
+    if (programSessionRows(wi, currentDay).some(function (ex) { return ex && ex.superset_id === ssId; })) out.push(wi);
+  }
+  return out;
+}
 function unlinkSuperset(ssId) {
-  const list = currentSessionExercises();
+  if (supersetWeeksWith(ssId).length > 1) {
+    const modal = ensureSupersetModal();
+    modal.innerHTML = '<div class="modal-card" style="max-width:440px;">' +
+      '<div class="card-header"><h2>SCOLLEGA SUPERSET</h2><button class="btn btn-outline" onclick="closeSupersetModal()">CHIUDI</button></div>' +
+      '<div class="modal-body-scroll" style="padding:12px;"><p style="font-size:13px;color:#ccc;line-height:1.5;margin:0;">Questo superset è collegato anche nelle altre settimane. Lo scolleghi solo questa volta o in tutta la programmazione?</p></div>' +
+      '<div class="modal-sticky-footer" style="flex-direction:column;gap:8px;">' +
+      '<button class="btn btn-primary" style="width:100%;" onclick="unlinkSupersetScope(\'' + esc(ssId) + '\',\'once\')">SOLO QUESTA VOLTA</button>' +
+      '<button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="unlinkSupersetScope(\'' + esc(ssId) + '\',\'program\')">TUTTA LA PROGRAMMAZIONE</button>' +
+      '<button class="btn btn-outline" style="width:100%;" onclick="closeSupersetModal()">ANNULLA</button></div></div>';
+    modal.style.display = 'flex';
+    return;
+  }
+  unlinkSupersetScope(ssId, 'once');
+}
+function unlinkSupersetScope(ssId, scope) {
   pushWorkoutUndoSnapshot('scollega superset');
-  list.forEach(function (ex) {
-    if (ex && ex.superset_id === ssId) ex.superset_id = null;
-  });
+  const clear = function (rows) { rows.forEach(function (ex) { if (ex && ex.superset_id === ssId) ex.superset_id = null; }); };
+  if (scope === 'program') {
+    supersetWeeksWith(ssId).forEach(function (wi) { clear(programSessionRows(wi, currentDay)); });
+  } else {
+    clear(currentSessionExercises());
+  }
   persistActiveProgramStructure();
+  closeSupersetModal();
   render();
 }
 
@@ -45034,9 +45144,11 @@ if (typeof window !== 'undefined') {
   window.ONBOARDING_EQUIPMENT = ONBOARDING_EQUIPMENT;
   window.ONBOARDING_MAX_DAYS_LIST = ONBOARDING_MAX_DAYS_LIST;
   window.toggleSupersetMode = toggleSupersetMode;
+  window.openSupersetModal = openSupersetModal;
+  window.closeSupersetModal = closeSupersetModal;
   window.applySelectedSuperset = applySelectedSuperset;
   window.unlinkSuperset = unlinkSuperset;
-  window.toggleSupersetPick = toggleSupersetPick;
+  window.unlinkSupersetScope = unlinkSupersetScope;
   window.maybePushFieldUndo = maybePushFieldUndo;
   window.refreshWorkoutUndoButton = refreshWorkoutUndoButton;
   window.logoutAccount = logoutAccount;

@@ -3214,7 +3214,7 @@ body.coach-os-v2 .nav-item svg {
         appVersion: "1.5.34",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0033",
+        schemaTarget: "0034",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -56559,6 +56559,21 @@ function scheduleAllItemAlerts() {
       repeatEveryMs: 86400000
     });
   }
+  // A coach with payments due or overdue gets one daily reminder (set by updateCoachPaymentReminder in the coach hub).
+  try {
+    const cp = store.prefs && store.prefs.coachPaymentDue;
+    if (cp && cp.n > 0) {
+      jobs.push({
+        id: 'coach_pay_due',
+        title: 'Pagamenti dei clienti',
+        body: 'Ci sono clienti con un pagamento in scadenza o da regolare.',
+        at: Math.max(nextAlertEpoch('09:00'), cp.atMs || 0),
+        repeatEveryMs: 86400000
+      });
+    } else if (typeof NativeConfig !== 'undefined' && NativeConfig.cancelReminder) {
+      NativeConfig.cancelReminder('coach_pay_due');
+    }
+  } catch (_) {}
   // The scheduled check-in, when a coach set one; otherwise its reminder goes.
   let checkInJob = null;
   try { checkInJob = scheduledCheckInReminderJob(); } catch (_) {}
@@ -62435,6 +62450,7 @@ function renderHome(c) {
     ${planNoticesHtml()}
     ${scheduledCheckInHomeHtml()}
     ${lastSessionHomeCardHtml()}
+    ${(typeof athletePaymentCardHtml === 'function') ? athletePaymentCardHtml() : ''}
     ${computeHomeReadinessHtml()}
 
     <div class="card" style="border:1px solid rgba(212,175,55,0.35);margin-bottom:12px;">
@@ -63693,8 +63709,7 @@ function renderTraining(c){
       <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="openMaxTestPlannerModal()">MASSIMALE</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-      <button class="btn ${window.__ssSelect ? 'btn-primary' : 'btn-outline'}" type="button" style="font-size:10px;padding:8px 10px;" onclick="toggleSupersetMode()">${window.__ssSelect ? 'ANNULLA SELEZIONE' : 'SUPERSET'}</button>
-      ${window.__ssSelect ? '<button class="btn btn-primary" type="button" style="font-size:10px;padding:8px 10px;" onclick="applySelectedSuperset()">COLLEGA IN SUPERSET</button>' : ''}
+      <button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="openSupersetModal()">SUPERSET</button>
     </div>`;
 
     const sessionName = sessionDisplayName(d, currentDay);
@@ -63744,7 +63759,7 @@ function renderTraining(c){
       const ssLetter = row.superset_id ? sessionSupersetLetter(row.superset_id, exerciseList) : '';
       const ssOrd = row.superset_id ? sessionSupersetOrder(row.superset_id, exerciseList, ri) : 0;
       const supersetTag = row.superset_id ? `<span class="tag-pill" style="border:1px solid var(--gold);color:var(--gold);font-size:8px;padding:2px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.5px;">SUPERSET ${esc(ssLetter)}${ssOrd}</span>` : '';
-      const ssPick = window.__ssSelect ? `<label style="display:flex;align-items:center;gap:4px;font-size:9px;color:var(--gold);font-weight:800;"><input type="checkbox" ${window.__ssPicked && window.__ssPicked[fIdx] ? 'checked' : ''} onchange="toggleSupersetPick(${fIdx})"> SS</label>` : '';
+      const ssPick = '';
       if (ri < 3) {
       }
 
@@ -63753,7 +63768,7 @@ function renderTraining(c){
           <div style="font-size:10px;color:var(--gold);font-weight:800;opacity:0.8;text-transform:uppercase;">${esc(row.movement || 'ESERCIZIO')} ${row.is_bonus || row.isBonus ? '<span style="color:var(--gold-glow)">[BONUS]</span>' : ''} ${supersetTag}</div>
           <div style="display:flex; gap:8px; align-items:center;">
             ${ssPick}
-            ${row.superset_id && !window.__ssSelect ? `<button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="unlinkSuperset('${String(row.superset_id).replace(/'/g, '')}')">SCOLLEGA</button>` : ''}
+            ${row.superset_id ? `<button type="button" class="btn btn-outline" style="font-size:8px;padding:2px 6px;" onclick="unlinkSuperset('${String(row.superset_id).replace(/'/g, '')}')">SCOLLEGA</button>` : ''}
             ${exLogUnit === 'reps' ? `<span class="load-toggle ${exIntens==='RIR'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RIR')">RIR</span>
             <span class="load-toggle ${exIntens==='RPE'?'active':''}" style="font-size:8px; padding:2px 4px;" onclick="setExIntensity(${fIdx}, 'RPE')">RPE</span>` : ''}
             ${!skipReason ? `<span class="skip-btn" onclick="openSkipModal(${fIdx})">SALTA</span>` : `<span style="color:var(--gold); font-size:9px; font-weight:800;">SALTATO</span>`}
@@ -66522,18 +66537,64 @@ function sessionSupersetOrder(ssId, list, idx) {
   });
   return n || 1;
 }
-function toggleSupersetMode() {
-  window.__ssSelect = !window.__ssSelect;
-  window.__ssPicked = {};
-  render();
+// A superset is added from the top of the workout: a list of the session's exercises opens, you tick them, and you choose whether
+// it holds only this time (this session, this week) or for the whole program (the same session in every week).
+function programSessionRows(weekIdx, dayIdx) {
+  const w = DATA && DATA.weeks && DATA.weeks[weekIdx];
+  const sess = w && (w.sessions || w.days || [])[dayIdx];
+  return (sess && (sess.exercises || sess.rows)) || [];
 }
-function toggleSupersetPick(idx) {
-  if (!window.__ssPicked) window.__ssPicked = {};
-  window.__ssPicked[idx] = !window.__ssPicked[idx];
+function supersetBaseName(row) {
+  return String((row && (row.name || row.exercise || row.name_original)) || '').trim().toLowerCase();
 }
-function applySelectedSuperset() {
-  const idxs = Object.keys(window.__ssPicked || {}).filter(function (k) { return window.__ssPicked[k]; }).map(Number);
-  if (idxs.length < 2) {
+function closeSupersetModal() {
+  const modal = $('superset-modal');
+  if (modal) modal.style.display = 'none';
+}
+function ensureSupersetModal() {
+  let modal = $('superset-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'superset-modal';
+    modal.className = 'modal';
+    document.body.appendChild(modal);
+  }
+  return modal;
+}
+function openSupersetModal() {
+  const list = currentSessionExercises();
+  if (!list || list.length < 2) {
+    if (typeof showToast === 'function') showToast('Servono almeno 2 esercizi nella seduta', 'error');
+    return;
+  }
+  const modal = ensureSupersetModal();
+  const weeks = (DATA && DATA.weeks && DATA.weeks.length) || 1;
+  const rows = list.map(function (row, i) {
+    const name = exerciseNameAt(currentWeek, currentDay, i) || ('Esercizio ' + (i + 1));
+    const tag = row && row.superset_id ? ' <small style="color:var(--gold);">· già in superset ' + esc(sessionSupersetLetter(row.superset_id, list)) + '</small>' : '';
+    return '<label style="display:flex;gap:10px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border);font-size:14px;color:#fff;">' +
+      '<input type="checkbox" class="ss-pick" value="' + i + '" style="width:20px;height:20px;flex-shrink:0;"> <span style="flex:1;min-width:0;overflow-wrap:anywhere;">' + esc(name) + tag + '</span></label>';
+  }).join('');
+  modal.innerHTML = '<div class="modal-card" style="max-width:440px;">' +
+    '<div class="card-header"><h2>SUPERSET</h2><button class="btn btn-outline" onclick="closeSupersetModal()">CHIUDI</button></div>' +
+    '<div class="modal-body-scroll" style="padding:12px;">' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin:0 0 8px;">Scegli almeno 2 esercizi da alternare, poi dimmi se vale solo per questa volta o per tutta la programmazione.</p>' +
+    rows + '</div>' +
+    '<div class="modal-sticky-footer" style="flex-direction:column;gap:8px;">' +
+    '<button class="btn btn-primary" style="width:100%;" onclick="applySelectedSuperset(\'once\')">SOLO QUESTA VOLTA</button>' +
+    '<div style="font-size:10px;color:#888;margin:-2px 0 2px;text-align:center;">Solo questa seduta, settimana ' + esc(String(currentWeek)) + '</div>' +
+    (weeks > 1
+      ? '<button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="applySelectedSuperset(\'program\')">TUTTA LA PROGRAMMAZIONE</button>' +
+        '<div style="font-size:10px;color:#888;margin:-2px 0 2px;text-align:center;">La stessa seduta in tutte le ' + esc(String(weeks)) + ' settimane</div>'
+      : '') +
+    '<button class="btn btn-outline" style="width:100%;" onclick="closeSupersetModal()">ANNULLA</button></div></div>';
+  modal.style.display = 'flex';
+}
+function toggleSupersetMode() { openSupersetModal(); }
+// scope: 'once' = this session only; 'program' = the same session in every week (exercises matched by name).
+function applySelectedSuperset(scope) {
+  const picks = Array.prototype.slice.call(document.querySelectorAll('#superset-modal .ss-pick:checked')).map(function (el) { return Number(el.value); });
+  if (picks.length < 2) {
     if (typeof showToast === 'function') showToast('Seleziona almeno 2 esercizi', 'error');
     return;
   }
@@ -66541,22 +66602,71 @@ function applySelectedSuperset() {
   if (!list.length) return;
   pushWorkoutUndoSnapshot('superset');
   const ssId = 'ss_' + Date.now().toString(36);
-  idxs.forEach(function (i) {
+  picks.forEach(function (i) {
     if (list[i]) list[i].superset_id = ssId;
   });
+  let linkedWeeks = 1;
+  const totalWeeks = (DATA && DATA.weeks && DATA.weeks.length) || 1;
+  if (scope === 'program') {
+    const names = picks.map(function (i) { return supersetBaseName(list[i]); }).filter(Boolean);
+    for (let wi = 0; wi < totalWeeks; wi++) {
+      if (wi === currentWeek - 1) continue;
+      const other = programSessionRows(wi, currentDay);
+      const used = {};
+      const found = [];
+      names.forEach(function (nm) {
+        for (let k = 0; k < other.length; k++) {
+          if (!used[k] && supersetBaseName(other[k]) === nm) { used[k] = true; found.push(k); break; }
+        }
+      });
+      if (found.length >= 2) {
+        found.forEach(function (k) { other[k].superset_id = ssId; });
+        linkedWeeks += 1;
+      }
+    }
+  }
   persistActiveProgramStructure();
-  window.__ssSelect = false;
-  window.__ssPicked = {};
-  if (typeof showToast === 'function') showToast('Superset collegato: lavora in alternanza, poco o niente riposo tra i due', 'ok');
+  closeSupersetModal();
+  if (typeof showToast === 'function') {
+    if (scope === 'program') showToast('Superset collegato in ' + linkedWeeks + ' settimane su ' + totalWeeks + '. Lavora in alternanza, poco o niente riposo tra i due', 'ok');
+    else showToast('Superset collegato solo per questa volta: lavora in alternanza, poco o niente riposo tra i due', 'ok');
+  }
   render();
 }
+// Taking a superset apart: if it is linked in other weeks too, ask the same question.
+function supersetWeeksWith(ssId) {
+  const out = [];
+  const totalWeeks = (DATA && DATA.weeks && DATA.weeks.length) || 0;
+  for (let wi = 0; wi < totalWeeks; wi++) {
+    if (programSessionRows(wi, currentDay).some(function (ex) { return ex && ex.superset_id === ssId; })) out.push(wi);
+  }
+  return out;
+}
 function unlinkSuperset(ssId) {
-  const list = currentSessionExercises();
+  if (supersetWeeksWith(ssId).length > 1) {
+    const modal = ensureSupersetModal();
+    modal.innerHTML = '<div class="modal-card" style="max-width:440px;">' +
+      '<div class="card-header"><h2>SCOLLEGA SUPERSET</h2><button class="btn btn-outline" onclick="closeSupersetModal()">CHIUDI</button></div>' +
+      '<div class="modal-body-scroll" style="padding:12px;"><p style="font-size:13px;color:#ccc;line-height:1.5;margin:0;">Questo superset è collegato anche nelle altre settimane. Lo scolleghi solo questa volta o in tutta la programmazione?</p></div>' +
+      '<div class="modal-sticky-footer" style="flex-direction:column;gap:8px;">' +
+      '<button class="btn btn-primary" style="width:100%;" onclick="unlinkSupersetScope(\'' + esc(ssId) + '\',\'once\')">SOLO QUESTA VOLTA</button>' +
+      '<button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="unlinkSupersetScope(\'' + esc(ssId) + '\',\'program\')">TUTTA LA PROGRAMMAZIONE</button>' +
+      '<button class="btn btn-outline" style="width:100%;" onclick="closeSupersetModal()">ANNULLA</button></div></div>';
+    modal.style.display = 'flex';
+    return;
+  }
+  unlinkSupersetScope(ssId, 'once');
+}
+function unlinkSupersetScope(ssId, scope) {
   pushWorkoutUndoSnapshot('scollega superset');
-  list.forEach(function (ex) {
-    if (ex && ex.superset_id === ssId) ex.superset_id = null;
-  });
+  const clear = function (rows) { rows.forEach(function (ex) { if (ex && ex.superset_id === ssId) ex.superset_id = null; }); };
+  if (scope === 'program') {
+    supersetWeeksWith(ssId).forEach(function (wi) { clear(programSessionRows(wi, currentDay)); });
+  } else {
+    clear(currentSessionExercises());
+  }
   persistActiveProgramStructure();
+  closeSupersetModal();
   render();
 }
 
@@ -80616,9 +80726,11 @@ if (typeof window !== 'undefined') {
   window.ONBOARDING_EQUIPMENT = ONBOARDING_EQUIPMENT;
   window.ONBOARDING_MAX_DAYS_LIST = ONBOARDING_MAX_DAYS_LIST;
   window.toggleSupersetMode = toggleSupersetMode;
+  window.openSupersetModal = openSupersetModal;
+  window.closeSupersetModal = closeSupersetModal;
   window.applySelectedSuperset = applySelectedSuperset;
   window.unlinkSuperset = unlinkSuperset;
-  window.toggleSupersetPick = toggleSupersetPick;
+  window.unlinkSupersetScope = unlinkSupersetScope;
   window.maybePushFieldUndo = maybePushFieldUndo;
   window.refreshWorkoutUndoButton = refreshWorkoutUndoButton;
   window.logoutAccount = logoutAccount;
@@ -84201,6 +84313,22 @@ function injectCoachUnlockInto(container) {
   else container.insertBefore(hold, container.firstChild);
 }
 
+function athletePaymentCardHtml() {
+  if (typeof isAthleteRole === 'function' && !isAthleteRole()) return '';
+  if (store && (store.coachViewingClient || store.coachAssigning)) return '';
+  const p = store && store.clientProfile;
+  if (!p || !p.payTracking) return '';
+  const st = paymentStatusFor(p);
+  const color = st.state === 'overdue' ? '#c66' : (st.state === 'soon' ? '#e8a13a' : '#6c6');
+  const label = st.state === 'overdue' ? 'Da regolare' : (st.state === 'soon' ? 'In scadenza' : 'Regolare');
+  return '<div class="card" style="margin-top:12px;padding:14px;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">PAGAMENTO AL COACH</div>' +
+    '<div style="font-size:15px;font-weight:900;color:' + color + ';">' + esc(label) + '</div>' +
+    '<div style="font-size:12px;color:#ccc;margin-top:4px;">' + esc(st.text) + '</div>' +
+    (p.nextDueAt ? '<div style="font-size:11px;color:#888;margin-top:4px;">Prossima scadenza: ' + esc(fmtDay(p.nextDueAt)) + '</div>' : '') +
+    '<div style="font-size:11px;color:#888;margin-top:8px;line-height:1.4;">Il pagamento al tuo coach si concorda con lui e avviene fuori dall’app: non passa da Nurvan.</div></div>';
+}
+
 function athleteWaitingHomeHtml() {
   const due = (store.clientEvents || []).some(function (e) { return e && e.kind === 'payment_due' && !e.read_at; });
   const check = (store.clientEvents || []).some(function (e) { return e && e.kind === 'check_request' && !e.read_at; });
@@ -84248,6 +84376,7 @@ function athleteHomeHtml() {
     planNoticesHtml() +
     scheduledCheckInHomeHtml() +
     athleteWaitingHomeHtml() +
+    athletePaymentCardHtml() +
     athleteHomeModulesHtml();
 }
 
@@ -84270,7 +84399,7 @@ function requestProgramFromCoach(extra) {
   if (!hasHyrox) return sendProgramRequest({});
   openCpModal(
     '<h2>Che scheda ti serve?</h2>' +
-    '<p class="cp-help">Il coach riceve la richiesta e ti assegna la scheda.</p>' +
+    '<p class="cp-help">Il coach riceve la richiesta e ti risponde.</p>' +
     '<textarea id="cp-reqprog-note" rows="2" maxlength="400" placeholder="Messaggio per il coach (facoltativo)" style="width:100%;margin-bottom:10px;padding:10px;background:#141414;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;"></textarea>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="confirmProgramRequest()">SCHEDA DI ALLENAMENTO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="closeCpModal();navigate(\'hyrox\')">PREPARAZIONE HYROX</button>' +
@@ -84325,6 +84454,7 @@ function renderCoachHub(c) {
     '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
     '<span style="flex:1;min-width:0;color:#eee !important;-webkit-text-fill-color:#eee !important;line-height:1.35;">Consenti videocall interne con i clienti</span></label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    coachClientControlsHtml() +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="openInviteTemplateEditor()">TESTO DELL’INVITO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="navigate(\'coachSettings\')">' + coachSettingsLabel() + '</button></div>' +
@@ -84333,6 +84463,84 @@ function renderCoachHub(c) {
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
   loadCoachClientList();
   applyClientChrome();
+}
+
+// The hub's order and filters. Kept in the coach's preferences; the server applies them (fixed whitelist).
+var CP_CLIENT_SORTS = [['name', 'Nome'], ['program', 'Scadenza scheda'], ['check', 'Scadenza check']];
+var CP_CLIENT_FILTERS = {
+  pay: [['', 'Tutti i pagamenti'], ['paid', 'Pagato'], ['unpaid', 'Non pagato'], ['none', 'Senza promemoria']],
+  assign: [['', 'Tutti gli allenamenti'], ['assigned', 'Allenamento assegnato'], ['unassigned', 'Allenamento non assegnato']],
+  mode: [['', 'Tutti (live e distanza)'], ['presence', 'Live (in presenza)'], ['remote', 'A distanza'], ['both', 'Presenza e distanza']]
+};
+function coachClientView() {
+  const saved = (store && store.prefs && store.prefs.coachClientView && typeof store.prefs.coachClientView === 'object') ? store.prefs.coachClientView : {};
+  const ok = function (list, v) { return list.some(function (x) { return x[0] === v; }) ? v : list[0][0]; };
+  return {
+    sort: ok(CP_CLIENT_SORTS, saved.sort),
+    pay: ok(CP_CLIENT_FILTERS.pay, saved.pay),
+    assign: ok(CP_CLIENT_FILTERS.assign, saved.assign),
+    mode: ok(CP_CLIENT_FILTERS.mode, saved.mode)
+  };
+}
+function coachClientControlsHtml() {
+  const v = coachClientView();
+  const sel = function (key, list) {
+    return '<select aria-label="' + esc(key) + '" onchange="setCoachClientView(\'' + key + '\', this.value)" style="flex:1 1 46%;min-width:0;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:12px;">' +
+      list.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === v[key] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+  };
+  return '<div style="margin-top:10px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:4px;">ORDINA PER</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + sel('sort', CP_CLIENT_SORTS) + '</div>' +
+    '<div style="font-size:10px;color:#888;font-weight:800;margin:8px 0 4px;">FILTRA</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + sel('pay', CP_CLIENT_FILTERS.pay) + sel('assign', CP_CLIENT_FILTERS.assign) + sel('mode', CP_CLIENT_FILTERS.mode) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="resetCoachClientView()">TUTTI I CLIENTI</button></div>';
+}
+function setCoachClientView(key, value) {
+  if (!store.prefs || typeof store.prefs !== 'object') store.prefs = {};
+  store.prefs.coachClientView = Object.assign({}, coachClientView(), (function (o) { o[key] = value; return o; })({}));
+  if (typeof persist === 'function') persist();
+  loadCoachClientList();
+}
+function resetCoachClientView() {
+  if (!store.prefs || typeof store.prefs !== 'object') store.prefs = {};
+  store.prefs.coachClientView = null;
+  window.__cpClientQ = '';
+  if (typeof persist === 'function') persist();
+  if (currentView === 'coachHub') renderPracticeView();
+}
+
+// A daily reminder on the coach's own phone while some client's payment is due soon or overdue. It is worked out from the
+// list the coach just opened and kept in the preferences; scheduleAllItemAlerts() turns it into a local notification, and it
+// goes away as soon as the list shows nothing to settle. Nothing leaves the device.
+function updateCoachPaymentReminder(alert) {
+  if (!alert || typeof alert !== 'object') return;
+  if (!store.prefs || typeof store.prefs !== 'object') store.prefs = {};
+  const n = Math.max(0, Number(alert.n) || 0);
+  let atMs = 0;
+  if (n && !(Number(alert.overdue) > 0) && alert.soonAt) {
+    const d = new Date(alert.soonAt);
+    if (!Number.isNaN(d.getTime())) { d.setHours(9, 0, 0, 0); atMs = d.getTime(); }
+  }
+  const next = n ? { n: n, atMs: atMs } : null;
+  const before = store.prefs.coachPaymentDue ? JSON.stringify(store.prefs.coachPaymentDue) : '';
+  if ((next ? JSON.stringify(next) : '') === before) return;
+  store.prefs.coachPaymentDue = next;
+  if (typeof persist === 'function') persist();
+  if (typeof scheduleAllItemAlerts === 'function') scheduleAllItemAlerts();
+}
+
+// The coach's own payment reminder for a client, as the client row says it. Money never passes through Nurvan.
+function paymentStatusFor(row, now) {
+  if (!row || !row.payTracking) return { state: 'none', text: '' };
+  const t = (now && typeof now.getTime === 'function' ? now : new Date()).getTime();
+  const due = row.nextDueAt ? new Date(row.nextDueAt) : null;
+  const dueOk = due && !Number.isNaN(due.getTime());
+  const days = dueOk ? Math.ceil((due.getTime() - t) / 86400000) : null;
+  if (row.paid === false) return { state: 'overdue', days: days, text: 'Pagamento da regolare' };
+  if (!dueOk) return { state: 'ok', days: null, text: 'Pagato' };
+  if (days < 0) return { state: 'overdue', days: days, text: 'Scaduto da ' + Math.abs(days) + ' gg' };
+  if (days === 0) return { state: 'soon', days: 0, text: 'Scade oggi' };
+  if (days <= 7) return { state: 'soon', days: days, text: 'Scade tra ' + days + ' gg' };
+  return { state: 'ok', days: days, text: 'Pagato · scade il ' + fmtDay(row.nextDueAt) };
 }
 
 var __cpListTimer = 0;
@@ -84352,16 +84560,24 @@ function friendlyApiError(err) {
   return raw;
 }
 
-async function loadCoachClientList() {
+var CP_CLIENT_PAGE = 50;
+function loadMoreCoachClients() { return loadCoachClientList(true); }
+async function loadCoachClientList(append) {
   const box = document.getElementById('cp-client-list');
   if (!box) return;
-  loadCoachCheckInCounter();
+  if (append !== true) loadCoachCheckInCounter();
   try {
     const q = window.__cpClientQ || '';
-    const payload = await practiceFetch('/api/coach/clients?limit=30&offset=0&q=' + encodeURIComponent(q), { method: 'GET', headers: practiceHeaders(false) }, 20000);
+    const view = coachClientView();
+    const query = '&sort=' + encodeURIComponent(view.sort) + (view.pay ? '&pay=' + encodeURIComponent(view.pay) : '') +
+      (view.assign ? '&assign=' + encodeURIComponent(view.assign) : '') + (view.mode ? '&mode=' + encodeURIComponent(view.mode) : '');
+    const offset = append === true ? Number(store.__cpClientNext || 0) : 0;
+    const payload = await practiceFetch('/api/coach/clients?limit=' + CP_CLIENT_PAGE + '&offset=' + offset + '&q=' + encodeURIComponent(q) + query, { method: 'GET', headers: practiceHeaders(false) }, 20000);
     store.__cpOrigin = payload.origin || '';
-    const rows = payload.clients || [];
+    const pageRows = payload.clients || [];
+    const rows = append === true ? (store.__cpClientList || []).concat(pageRows) : pageRows;
     store.__cpClientList = rows;
+    store.__cpClientNext = payload.nextCursor || '';
     const seatsBox = document.getElementById('cp-seats-summary');
     if (seatsBox) {
       const s = payload.seats;
@@ -84371,13 +84587,20 @@ async function loadCoachClientList() {
         : '';
     }
     ensureCoachHeaderControls(!!(store && store.coachSessionActive));
+    try { updateCoachPaymentReminder(payload.payAlert); } catch (_) {}
+    const filtered = !!(q || view.pay || view.assign || view.mode);
     if (!rows.length) {
-      box.innerHTML = '<div style="text-align:center;padding:12px 0;">' + (window.emptyArtHtml ? window.emptyArtHtml('empty-clients') : '') + '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div></div>';
+      box.innerHTML = filtered
+        ? '<div class="cp-help" style="margin-bottom:10px;">Nessun cliente con questi filtri.</div>'
+        : '<div style="text-align:center;padding:12px 0;">' + (window.emptyArtHtml ? window.emptyArtHtml('empty-clients') : '') + '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div></div>';
       return;
     }
-    box.innerHTML = rows.map(function (cl) {
+    const total = Number(payload.total || rows.length);
+    const countHtml = '<div class="cp-help" style="margin:0 0 8px;">' + (total > rows.length ? ('Mostrati ' + rows.length + ' di ' + total + ' clienti: restringi con la ricerca o i filtri.') : (total + (total === 1 ? ' cliente' : ' clienti'))) + '</div>';
+    box.innerHTML = countHtml + rows.map(function (cl) {
       const badge = cl.intakeMode === 'transition' ? 'Transizione' : (cl.intakeDone ? 'Questionario ok' : 'Nuovo · questionario');
-      const paid = cl.paid ? 'Pagato' : 'Non pagato';
+      const pay = paymentStatusFor(cl);
+      const payColor = pay.state === 'overdue' ? '#c66' : (pay.state === 'soon' ? '#e8a13a' : '#888');
       const presence = presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive);
       const presenceColor = cl.workoutLive ? '#6c6' : (cl.online ? '#6c6' : '#888');
       const code = inviteShortCode(cl.inviteToken);
@@ -84387,8 +84610,11 @@ async function loadCoachClientList() {
         '<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:900;color:#fff;overflow-wrap:anywhere;">' + esc(cl.displayName) +
         (cl.leaveRequested ? ' <span class="cp-badge" style="color:#c66;border-color:#c66;">FINE RICHIESTA</span>' : '') +
         (cl.workoutLive ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">IN WORKOUT</span>' : '') +
-        (cl.seatInactive ? ' <span class="cp-badge cp-seat-inactive" style="color:#aaa;border-color:#666;">OLTRE I POSTI</span>' : '') + '</div>' +
-        '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(paid) +
+        (cl.seatInactive ? ' <span class="cp-badge cp-seat-inactive" style="color:#aaa;border-color:#666;">OLTRE I POSTI</span>' : '') +
+        (cl.programRequest === 'waiting' ? ' <span class="cp-badge" style="color:var(--gold);border-color:var(--gold);">RICHIESTA SCHEDA</span>' : '') +
+        (cl.programRequest === 'agreed' ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">ACCORDO OK · ASSEGNA</span>' : '') + '</div>' +
+        '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(coachingModeLabel(cl.coachingMode)) +
+        (pay.text ? ' · <span style="color:' + payColor + ';">' + esc(pay.text) + '</span>' : '') +
         (cl.unreadCount ? ' · ' + cl.unreadCount + (cl.unreadCount === 1 ? ' nuovo' : ' nuovi') : '') +
         (cl.hasPendingChange ? ' · modifica da approvare' : '') + '</div>' +
         '<div style="font-size:11px;color:' + presenceColor + ';margin-top:4px;">● ' + esc(presence) + '</div>' +
@@ -84403,11 +84629,14 @@ async function loadCoachClientList() {
         '<details class="cp-client-more" style="margin-top:8px;"><summary style="cursor:pointer;color:var(--gold);font-size:12px;font-weight:800;padding:6px 0;">Altre azioni</summary>' +
         '<div class="cp-client-actions" style="margin-top:6px;">' +
         '<button class="btn btn-outline" onclick="copyClientInvite(\'' + esc(cl.id) + '\',\'' + esc(cl.inviteToken || '') + '\')">LINK DI INVITO</button>' +
-        '<button class="btn btn-outline" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' +
+        '<button class="btn btn-outline" onclick="openClientBilling(\'' + esc(cl.id) + '\')">PROMEMORIA PAGAMENTO</button>' +
+        (cl.payTracking ? '<button class="btn btn-outline" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' : '') +
         '<button class="btn btn-outline" onclick="revokeCoachClient(\'' + esc(cl.id) + '\')">REVOCA</button>' +
         '<button class="btn btn-outline" style="color:#c66;border-color:#c66;" onclick="removeCoachClient(\'' + esc(cl.id) + '\')">RIMUOVI</button>' +
         '</div></details></div>';
-    }).join('');
+    }).join('') + (store.__cpClientNext
+      ? '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="loadMoreCoachClients()">CARICA ALTRI</button>'
+      : '');
   } catch (err) {
     box.innerHTML = '<div class="cp-help" style="margin-bottom:10px;">' + esc(friendlyApiError(err)) + '</div>' +
       '<button type="button" class="btn btn-outline" style="width:100%;" onclick="loadCoachClientList()">RIPROVA</button>';
@@ -84579,7 +84808,8 @@ function drawAddClientWizard() {
     '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
     '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
     '<div class="cp-field"><label>Come lo segui</label><select id="cp-add-coaching-mode" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
-    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div></div>' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div>' +
+    billingFieldsHtml('cp-add', null) + '</div>' +
     (isNew ? '' : '<div id="cp-add-intake">' + intakeFormHtml('cpa', {}, { skipName: true }) + '</div>') +
     // The form of a transition client is 27 fields long: the buttons stay in view at the bottom of the sheet.
     '<div style="position:sticky;bottom:-1px;background:#121212;padding:10px 0 4px;margin-top:8px;border-top:1px solid #2a2a2a;">' +
@@ -84654,7 +84884,7 @@ async function submitAddClient() {
     const payload = await practiceFetch('/api/coach/clients', {
       method: 'POST',
       headers: practiceHeaders(true),
-      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake, coachingMode: coachingMode })
+      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake, coachingMode: coachingMode, payment: readBillingFields('cp-add') })
       // 25s was below the 20-30s this host can take to wake from idle, so the
       // first client created after a quiet spell timed out almost by rule.
     }, 45000);
@@ -84784,6 +85014,59 @@ async function rotateClientInvite(id) {
     else loadCoachClientList();
   } catch (err) {
     practiceToast((err && err.message) || 'Rigenerazione fallita', 'danger');
+  }
+}
+
+// The coach's payment reminder for a client. It is only a date, a cycle and a flag the coach sets by hand: the payment itself
+// happens outside the app and never passes through Nurvan. The client sees only the state and the date.
+var BILLING_CYCLE_LABELS = [['weekly', 'Ogni settimana'], ['biweekly', 'Ogni 2 settimane'], ['monthly', 'Ogni mese'], ['quarterly', 'Ogni 3 mesi'], ['yearly', 'Ogni anno']];
+function billingFieldsHtml(prefix, row) {
+  const on = !!(row && row.payTracking);
+  const cycle = (row && row.billingCycle) || 'monthly';
+  const due = row && row.nextDueAt ? String(row.nextDueAt).slice(0, 10) : '';
+  const box = 'width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;';
+  return '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#eee;">' +
+    '<input type="checkbox" id="' + prefix + '-bill-track"' + (on ? ' checked' : '') + ' style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
+    '<span>Promemoria di scadenza pagamento (ripetuto)</span></label>' +
+    '<div class="cp-field"><label>Si ripete</label><select id="' + prefix + '-bill-cycle" style="' + box + '">' +
+    BILLING_CYCLE_LABELS.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cycle ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="cp-field"><label>Prossima scadenza</label><input id="' + prefix + '-bill-due" type="date" value="' + esc(due) + '" style="' + box + '"></div>' +
+    '<div style="font-size:11px;color:#bbb;line-height:1.4;margin-top:6px;">È solo un promemoria tuo: il pagamento avviene fuori dall’app e non passa da Nurvan. Il cliente vede soltanto lo stato e la data di scadenza.</div></div>';
+}
+function readBillingFields(prefix) {
+  const track = document.getElementById(prefix + '-bill-track');
+  if (!track || !track.checked) return { track: false };
+  const cycle = document.getElementById(prefix + '-bill-cycle');
+  const due = document.getElementById(prefix + '-bill-due');
+  return { track: true, billingCycle: cycle ? cycle.value : 'monthly', nextDueAt: due && due.value ? due.value : '' };
+}
+function findCoachClientRow(id) {
+  const list = store.__cpClientList || [];
+  for (let i = 0; i < list.length; i++) if (String(list[i].id) === String(id)) return list[i];
+  const ws = store.coachWorkspace;
+  return ws && ws.client && String(ws.client.id) === String(id) ? ws.client : null;
+}
+function openClientBilling(id) {
+  const row = findCoachClientRow(id);
+  openCpModal('<h2>Promemoria pagamento</h2>' + billingFieldsHtml('cp-bill', row) +
+    '<div id="cp-bill-status" class="cp-help"></div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveClientBilling(\'' + esc(id) + '\')">SALVA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeCpModal()">ANNULLA</button>');
+}
+async function saveClientBilling(id) {
+  const f = readBillingFields('cp-bill');
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/billing', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify(f)
+    }, 15000);
+    closeCpModal();
+    practiceToast(f.track ? 'Promemoria salvato' : 'Promemoria disattivato', 'success');
+    if (currentView === 'coachHub') loadCoachClientList();
+    else if (typeof renderPracticeView === 'function') renderPracticeView();
+  } catch (err) {
+    const el = document.getElementById('cp-bill-status');
+    if (el) el.textContent = (err && err.message) || 'Salvataggio non riuscito.';
   }
 }
 
@@ -85394,8 +85677,9 @@ async function renderCoachWorkspace(c) {
       }).join('');
       window.__cpClientSheetNotifies = clientNotifyItems;
       window.__cpHyroxRequest = latestHyroxRequest(ev.events || [], id);
-    } catch (_) {}
-    const hyroxReqHtml = clientHyroxCardHtml(id, cl.displayName || '', intake);
+      window.__cpProgramRequest = ev.programRequest || null;
+    } catch (_) { window.__cpProgramRequest = null; }
+    const hyroxReqHtml = clientHyroxCardHtml(id, cl.displayName || '', intake) + programRequestCardHtml(id);
     if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
       store.__cpWsCollapse = { intake: false, events: false };
     }
@@ -86039,6 +86323,29 @@ function hyroxRequestSummary(hx) {
   if (hx.days) bits.push(hx.days + ' giorni');
   return bits;
 }
+// A client asked for a new program. Whatever they agree on (price, payment) is settled between the two of them OUTSIDE the
+// app: the coach only marks here that it is settled, then assigns the program as usual. The app locks and sells nothing.
+function programRequestCardHtml(clientId) {
+  const r = window.__cpProgramRequest;
+  if (!r) return '';
+  const agreed = r.state === 'agreed';
+  return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:rgba(212,175,55,.5);">' +
+    '<div style="font-weight:900;color:var(--gold);margin-bottom:4px;">Richiesta nuova programmazione</div>' +
+    '<div style="font-size:12px;color:' + (agreed ? '#6c6' : '#e8a13a') + ';font-weight:800;margin-bottom:6px;">' + (agreed ? 'Accordo confermato · ora assegna il programma' : 'In attesa di accordo') + '</div>' +
+    (r.note ? '<div style="font-size:12px;color:#ddd;margin-bottom:6px;overflow-wrap:anywhere;">«' + esc(r.note) + '»</div>' : '') +
+    (r.at ? '<div style="font-size:11px;color:#888;margin-bottom:8px;">Chiesta il ' + esc(fmtDay(r.at)) + '</div>' : '') +
+    (agreed ? '' : '<div style="font-size:11px;color:#bbb;line-height:1.4;margin-bottom:8px;">Concorda con il cliente tempi e condizioni fuori dall’app: l’app non gestisce prezzi né pagamenti. Quando vi siete accordati, segnalo qui e assegna il programma.</div>' +
+      '<button class="btn btn-primary" style="width:100%;" onclick="confirmClientAgreement(\'' + esc(clientId) + '\')">ACCORDO CONFERMATO</button>') +
+    '</div>';
+}
+async function confirmClientAgreement(id) {
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/agreement', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 15000);
+    practiceToast('Accordo segnato', 'success');
+    if (typeof renderPracticeView === 'function') renderPracticeView();
+  } catch (err) { practiceToast((err && err.message) || 'Non salvato', 'danger'); }
+}
+
 function clientHyroxCardHtml(clientId, name, intake) {
   if (typeof window === 'undefined' || !window.NurvanHyrox) return '';
   const hx = hyroxRequestFor(clientId);
@@ -89025,6 +89332,14 @@ window.openCoachDrawer = openCoachDrawer;
 window.closeCoachDrawer = closeCoachDrawer;
 window.switchCoachClientFromHeader = switchCoachClientFromHeader;
 window.toggleClientPaid = toggleClientPaid;
+window.setCoachClientView = setCoachClientView;
+window.loadMoreCoachClients = loadMoreCoachClients;
+window.resetCoachClientView = resetCoachClientView;
+window.openClientBilling = openClientBilling;
+window.saveClientBilling = saveClientBilling;
+window.confirmClientAgreement = confirmClientAgreement;
+window.athletePaymentCardHtml = athletePaymentCardHtml;
+window.paymentStatusFor = paymentStatusFor;
 window.revokeCoachClient = revokeCoachClient;
 window.removeCoachClient = removeCoachClient;
 window.openCoachClient = openCoachClient;
@@ -92850,10 +93165,30 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     state.appointments = payload.appointments || [];
     state.failed = false;
   }
+  function calClientRow(c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id), mode: c.coachingMode || 'remote' }; }
+  // The list is a search, not everybody: the coach types a name and the 50 best matches replace the options.
+  let calQTimer = 0;
+  CoachOS.calClientSearch = function (q) {
+    clearTimeout(calQTimer);
+    calQTimer = setTimeout(async function () {
+      const sel = document.getElementById('cal-client');
+      if (!sel) return;
+      try {
+        const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=' + encodeURIComponent(String(q || '').trim()), { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+        const keep = state.clients.filter(function (c) { return c.id === sel.value; })[0];
+        let list = (payload.clients || []).map(calClientRow);
+        if (keep && !list.some(function (c) { return c.id === keep.id; })) list = [keep].concat(list);
+        state.clients = list;
+        sel.innerHTML = '<option value="">' + escText(T('Nessun cliente (impegno mio)')) + '</option>' +
+          list.map(function (c) { return '<option value="' + escText(c.id) + '"' + (keep && c.id === keep.id ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('');
+        if (typeof CoachOS.suggestAppointmentTitle === 'function') CoachOS.suggestAppointmentTitle();
+      } catch (_) { /* the old list stays */ }
+    }, 250);
+  };
   async function loadClients() {
     try {
-      const payload = await window.practiceFetch('/api/coach/clients?limit=200&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
-      state.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.display_name || c.username || ('Cliente ' + c.id), mode: c.coachingMode || 'remote' }; });
+      const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+      state.clients = (payload.clients || []).map(calClientRow);
     } catch (_) { /* the form still works, without a client */ }
   }
   function redraw() {
@@ -92905,7 +93240,8 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       '<div style="font-size:14px;font-weight:900;color:var(--gold);">' + escText(T(existing ? 'Sposta la sessione' : 'Nuova sessione')) + '</div>' +
       (existing
         ? '<div style="font-size:12px;color:#bbb;margin-top:6px;">' + escText(existing.title) + (existing.clientName ? ' · ' + escText(existing.clientName) : '') + '</div>'
-        : label('Con chi') + '<select id="cal-client" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +
+        : label('Con chi') + '<input id="cal-client-q" type="search" placeholder="' + escText(T('Cerca cliente…')) + '" oninput="CoachOS.calClientSearch(this.value)" style="' + field + '">' +
+          '<select id="cal-client" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +
           '<option value="">' + escText(T('Nessun cliente (impegno mio)')) + '</option>' +
           state.clients.map(function (c) { return '<option value="' + escText(c.id) + '"' + (c.id === preset ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('') + '</select></label>' +
           label('Che cosa') + '<select id="cal-type" style="' + field + '" onchange="CoachOS.suggestAppointmentTitle()">' +
@@ -93309,12 +93645,31 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
 
   function closePaymentForm() { const el = document.getElementById('coach-payment-form'); if (el) el.remove(); }
   CoachOS.closePaymentForm = closePaymentForm;
+  function payClientRow(c) { return { id: String(c.id), name: c.displayName || c.username || ('Cliente ' + c.id), track: !!c.payTracking, cycle: c.billingCycle || 'monthly', due: c.nextDueAt || null }; }
+  // The list is a search, not everybody: the coach types a name and the 50 best matches replace the options.
+  let payQTimer = 0;
+  CoachOS.payClientSearch = function (q) {
+    clearTimeout(payQTimer);
+    payQTimer = setTimeout(async function () {
+      const sel = document.getElementById('pay-client');
+      if (!sel) return;
+      try {
+        const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=' + encodeURIComponent(String(q || '').trim()), { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+        const keep = ledger.clients.filter(function (c) { return c.id === sel.value; })[0];
+        let list = (payload.clients || []).map(payClientRow);
+        if (keep && !list.some(function (c) { return c.id === keep.id; })) list = [keep].concat(list);
+        ledger.clients = list;
+        sel.innerHTML = list.map(function (c) { return '<option value="' + escText(c.id) + '"' + (keep && c.id === keep.id ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('');
+        CoachOS.payClientChanged();
+      } catch (_) { /* the old list stays */ }
+    }, 250);
+  };
   CoachOS.openPaymentForm = async function () {
     closePaymentForm();
     if (!ledger.clients.length) {
       try {
-        const payload = await window.practiceFetch('/api/coach/clients?limit=200&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
-        ledger.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.username || ('Cliente ' + c.id) }; });
+        const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+        ledger.clients = (payload.clients || []).map(payClientRow);
       } catch (_) {}
     }
     const today = new Date();
@@ -93328,7 +93683,8 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
     el.onclick = function (ev) { if (ev.target === el) closePaymentForm(); };
     el.innerHTML = '<div class="card" style="max-width:440px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
       '<div style="font-size:14px;font-weight:900;color:var(--gold);">' + escText(T('Registra un incasso')) + '</div>' +
-      label('Cliente') + '<select id="pay-client" style="' + field + '">' +
+      label('Cliente') + '<input id="pay-client-q" type="search" placeholder="' + escText(T('Cerca cliente…')) + '" oninput="CoachOS.payClientSearch(this.value)" style="' + field + '">' +
+      '<select id="pay-client" onchange="CoachOS.payClientChanged()" style="' + field + '">' +
       (ledger.clients.length ? '' : '<option value="">' + escText(T('Nessun cliente')) + '</option>') +
       ledger.clients.map(function (c) { return '<option value="' + escText(c.id) + '"' + (c.id === preset ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('') + '</select></label>' +
       label('Importo in euro (facoltativo)') + '<input id="pay-amount" type="text" inputmode="decimal" placeholder="0,00" style="' + field + '"></label>' +
@@ -93336,12 +93692,28 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
       label('Per cosa') + '<select id="pay-label" style="' + field + '">' + LABELS.map(function (l) { return '<option value="' + escText(l) + '">' + escText(T(l)) + '</option>'; }).join('') + '</select></label>' +
       label('Come') + '<select id="pay-method" style="' + field + '">' + METHODS.map(function (m) { return '<option value="' + m[0] + '">' + escText(T(m[1])) + '</option>'; }).join('') + '</select></label>' +
       label('Nota (facoltativa)') + '<input id="pay-note" type="text" maxlength="200" style="' + field + '"></label>' +
+      label('Prossima scadenza (facoltativa)') + '<input id="pay-next-due" type="date" style="' + field + '"></label>' +
+      '<div style="font-size:11px;color:#bbb;line-height:1.4;margin-top:6px;">' + escText(T('Se la indichi, il promemoria di pagamento di questo cliente si sposta a quella data. Il pagamento avviene fuori dall’app.')) + '</div>' +
       '<div id="pay-error" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
       '<div style="display:grid;gap:8px;margin-top:6px;">' +
       '<button type="button" class="btn btn-primary" id="pay-save" onclick="CoachOS.savePaymentForm()">' + escText(T('SALVA')) + '</button>' +
       '<button type="button" class="btn btn-outline" onclick="CoachOS.closePaymentForm()">' + escText(T('CHIUDI')) + '</button>' +
       '</div></div>';
     document.body.appendChild(el);
+    CoachOS.payClientChanged();
+  };
+  // For a client with the payment reminder on, the next due date is proposed one cycle on from the current one.
+  CoachOS.payClientChanged = function () {
+    const sel = document.getElementById('pay-client');
+    const out = document.getElementById('pay-next-due');
+    if (!sel || !out) return;
+    const c = ledger.clients.filter(function (x) { return x.id === sel.value; })[0];
+    if (!c || !c.track) { out.value = ''; return; }
+    const step = { weekly: [0, 0, 7], biweekly: [0, 0, 14], monthly: [0, 1, 0], quarterly: [0, 3, 0], yearly: [1, 0, 0] }[c.cycle] || [0, 1, 0];
+    const now = Date.now();
+    let d = c.due ? new Date(c.due) : new Date();
+    for (let i = 0; i < 400 && d.getTime() <= now; i++) d = new Date(d.getFullYear() + step[0], d.getMonth() + step[1], d.getDate() + step[2], 12, 0, 0);
+    out.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   };
   CoachOS.savePaymentForm = async function () {
     const val = function (x) { const el = document.getElementById(x); return el ? String(el.value || '').trim() : ''; };
@@ -93361,7 +93733,8 @@ window.startCoachTrialFromApp = startCoachTrialFromApp;
           clientId: clientId, kind: 'paid', amountCents: cents,
           // Noon, so the day does not slip with the time zone.
           occurredAt: date ? new Date(date + 'T12:00:00').toISOString() : null,
-          method: val('pay-method'), label: val('pay-label'), note: val('pay-note')
+          method: val('pay-method'), label: val('pay-label'), note: val('pay-note'),
+          nextDueAt: val('pay-next-due') ? new Date(val('pay-next-due') + 'T12:00:00').toISOString() : null
         })
       });
       closePaymentForm();

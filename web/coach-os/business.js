@@ -186,12 +186,31 @@
 
   function closePaymentForm() { const el = document.getElementById('coach-payment-form'); if (el) el.remove(); }
   CoachOS.closePaymentForm = closePaymentForm;
+  function payClientRow(c) { return { id: String(c.id), name: c.displayName || c.username || ('Cliente ' + c.id), track: !!c.payTracking, cycle: c.billingCycle || 'monthly', due: c.nextDueAt || null }; }
+  // The list is a search, not everybody: the coach types a name and the 50 best matches replace the options.
+  let payQTimer = 0;
+  CoachOS.payClientSearch = function (q) {
+    clearTimeout(payQTimer);
+    payQTimer = setTimeout(async function () {
+      const sel = document.getElementById('pay-client');
+      if (!sel) return;
+      try {
+        const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=' + encodeURIComponent(String(q || '').trim()), { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+        const keep = ledger.clients.filter(function (c) { return c.id === sel.value; })[0];
+        let list = (payload.clients || []).map(payClientRow);
+        if (keep && !list.some(function (c) { return c.id === keep.id; })) list = [keep].concat(list);
+        ledger.clients = list;
+        sel.innerHTML = list.map(function (c) { return '<option value="' + escText(c.id) + '"' + (keep && c.id === keep.id ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('');
+        CoachOS.payClientChanged();
+      } catch (_) { /* the old list stays */ }
+    }, 250);
+  };
   CoachOS.openPaymentForm = async function () {
     closePaymentForm();
     if (!ledger.clients.length) {
       try {
-        const payload = await window.practiceFetch('/api/coach/clients?limit=200&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
-        ledger.clients = (payload.clients || []).map(function (c) { return { id: String(c.id), name: c.displayName || c.username || ('Cliente ' + c.id) }; });
+        const payload = await window.practiceFetch('/api/coach/clients?limit=50&offset=0&q=', { method: 'GET', headers: window.practiceHeaders(false) }, 20000);
+        ledger.clients = (payload.clients || []).map(payClientRow);
       } catch (_) {}
     }
     const today = new Date();
@@ -205,7 +224,8 @@
     el.onclick = function (ev) { if (ev.target === el) closePaymentForm(); };
     el.innerHTML = '<div class="card" style="max-width:440px;width:100%;max-height:100%;overflow-y:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
       '<div style="font-size:14px;font-weight:900;color:var(--gold);">' + escText(T('Registra un incasso')) + '</div>' +
-      label('Cliente') + '<select id="pay-client" style="' + field + '">' +
+      label('Cliente') + '<input id="pay-client-q" type="search" placeholder="' + escText(T('Cerca cliente…')) + '" oninput="CoachOS.payClientSearch(this.value)" style="' + field + '">' +
+      '<select id="pay-client" onchange="CoachOS.payClientChanged()" style="' + field + '">' +
       (ledger.clients.length ? '' : '<option value="">' + escText(T('Nessun cliente')) + '</option>') +
       ledger.clients.map(function (c) { return '<option value="' + escText(c.id) + '"' + (c.id === preset ? ' selected' : '') + '>' + escText(c.name) + '</option>'; }).join('') + '</select></label>' +
       label('Importo in euro (facoltativo)') + '<input id="pay-amount" type="text" inputmode="decimal" placeholder="0,00" style="' + field + '"></label>' +
@@ -213,12 +233,28 @@
       label('Per cosa') + '<select id="pay-label" style="' + field + '">' + LABELS.map(function (l) { return '<option value="' + escText(l) + '">' + escText(T(l)) + '</option>'; }).join('') + '</select></label>' +
       label('Come') + '<select id="pay-method" style="' + field + '">' + METHODS.map(function (m) { return '<option value="' + m[0] + '">' + escText(T(m[1])) + '</option>'; }).join('') + '</select></label>' +
       label('Nota (facoltativa)') + '<input id="pay-note" type="text" maxlength="200" style="' + field + '"></label>' +
+      label('Prossima scadenza (facoltativa)') + '<input id="pay-next-due" type="date" style="' + field + '"></label>' +
+      '<div style="font-size:11px;color:#bbb;line-height:1.4;margin-top:6px;">' + escText(T('Se la indichi, il promemoria di pagamento di questo cliente si sposta a quella data. Il pagamento avviene fuori dall’app.')) + '</div>' +
       '<div id="pay-error" style="font-size:12px;color:#ff8a80;min-height:16px;margin-top:10px;"></div>' +
       '<div style="display:grid;gap:8px;margin-top:6px;">' +
       '<button type="button" class="btn btn-primary" id="pay-save" onclick="CoachOS.savePaymentForm()">' + escText(T('SALVA')) + '</button>' +
       '<button type="button" class="btn btn-outline" onclick="CoachOS.closePaymentForm()">' + escText(T('CHIUDI')) + '</button>' +
       '</div></div>';
     document.body.appendChild(el);
+    CoachOS.payClientChanged();
+  };
+  // For a client with the payment reminder on, the next due date is proposed one cycle on from the current one.
+  CoachOS.payClientChanged = function () {
+    const sel = document.getElementById('pay-client');
+    const out = document.getElementById('pay-next-due');
+    if (!sel || !out) return;
+    const c = ledger.clients.filter(function (x) { return x.id === sel.value; })[0];
+    if (!c || !c.track) { out.value = ''; return; }
+    const step = { weekly: [0, 0, 7], biweekly: [0, 0, 14], monthly: [0, 1, 0], quarterly: [0, 3, 0], yearly: [1, 0, 0] }[c.cycle] || [0, 1, 0];
+    const now = Date.now();
+    let d = c.due ? new Date(c.due) : new Date();
+    for (let i = 0; i < 400 && d.getTime() <= now; i++) d = new Date(d.getFullYear() + step[0], d.getMonth() + step[1], d.getDate() + step[2], 12, 0, 0);
+    out.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   };
   CoachOS.savePaymentForm = async function () {
     const val = function (x) { const el = document.getElementById(x); return el ? String(el.value || '').trim() : ''; };
@@ -238,7 +274,8 @@
           clientId: clientId, kind: 'paid', amountCents: cents,
           // Noon, so the day does not slip with the time zone.
           occurredAt: date ? new Date(date + 'T12:00:00').toISOString() : null,
-          method: val('pay-method'), label: val('pay-label'), note: val('pay-note')
+          method: val('pay-method'), label: val('pay-label'), note: val('pay-note'),
+          nextDueAt: val('pay-next-due') ? new Date(val('pay-next-due') + 'T12:00:00').toISOString() : null
         })
       });
       closePaymentForm();

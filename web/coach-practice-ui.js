@@ -3247,6 +3247,22 @@ function injectCoachUnlockInto(container) {
   else container.insertBefore(hold, container.firstChild);
 }
 
+function athletePaymentCardHtml() {
+  if (typeof isAthleteRole === 'function' && !isAthleteRole()) return '';
+  if (store && (store.coachViewingClient || store.coachAssigning)) return '';
+  const p = store && store.clientProfile;
+  if (!p || !p.payTracking) return '';
+  const st = paymentStatusFor(p);
+  const color = st.state === 'overdue' ? '#c66' : (st.state === 'soon' ? '#e8a13a' : '#6c6');
+  const label = st.state === 'overdue' ? 'Da regolare' : (st.state === 'soon' ? 'In scadenza' : 'Regolare');
+  return '<div class="card" style="margin-top:12px;padding:14px;">' +
+    '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">PAGAMENTO AL COACH</div>' +
+    '<div style="font-size:15px;font-weight:900;color:' + color + ';">' + esc(label) + '</div>' +
+    '<div style="font-size:12px;color:#ccc;margin-top:4px;">' + esc(st.text) + '</div>' +
+    (p.nextDueAt ? '<div style="font-size:11px;color:#888;margin-top:4px;">Prossima scadenza: ' + esc(fmtDay(p.nextDueAt)) + '</div>' : '') +
+    '<div style="font-size:11px;color:#888;margin-top:8px;line-height:1.4;">Il pagamento al tuo coach si concorda con lui e avviene fuori dall’app: non passa da Nurvan.</div></div>';
+}
+
 function athleteWaitingHomeHtml() {
   const due = (store.clientEvents || []).some(function (e) { return e && e.kind === 'payment_due' && !e.read_at; });
   const check = (store.clientEvents || []).some(function (e) { return e && e.kind === 'check_request' && !e.read_at; });
@@ -3294,6 +3310,7 @@ function athleteHomeHtml() {
     planNoticesHtml() +
     scheduledCheckInHomeHtml() +
     athleteWaitingHomeHtml() +
+    athletePaymentCardHtml() +
     athleteHomeModulesHtml();
 }
 
@@ -3316,7 +3333,7 @@ function requestProgramFromCoach(extra) {
   if (!hasHyrox) return sendProgramRequest({});
   openCpModal(
     '<h2>Che scheda ti serve?</h2>' +
-    '<p class="cp-help">Il coach riceve la richiesta e ti assegna la scheda.</p>' +
+    '<p class="cp-help">Il coach riceve la richiesta e ti risponde.</p>' +
     '<textarea id="cp-reqprog-note" rows="2" maxlength="400" placeholder="Messaggio per il coach (facoltativo)" style="width:100%;margin-bottom:10px;padding:10px;background:#141414;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;"></textarea>' +
     '<button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="confirmProgramRequest()">SCHEDA DI ALLENAMENTO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-bottom:8px;" onclick="closeCpModal();navigate(\'hyrox\')">PREPARAZIONE HYROX</button>' +
@@ -3371,6 +3388,7 @@ function renderCoachHub(c) {
     '<input type="checkbox" ' + ((store.coachAllowVideocall !== false) ? 'checked' : '') + ' onchange="toggleCoachVideocall(this.checked)" style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
     '<span style="flex:1;min-width:0;color:#eee !important;-webkit-text-fill-color:#eee !important;line-height:1.35;">Consenti videocall interne con i clienti</span></label>' +
     '<input id="cp-client-q" type="search" placeholder="Cerca nome…" value="' + q + '" oninput="window.__cpClientQ=this.value;debounceCoachClientList()" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
+    coachClientControlsHtml() +
     '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="openAddClientWizard()">AGGIUNGI CLIENTE</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="openInviteTemplateEditor()">TESTO DELL’INVITO</button>' +
     '<button class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="navigate(\'coachSettings\')">' + coachSettingsLabel() + '</button></div>' +
@@ -3379,6 +3397,84 @@ function renderCoachHub(c) {
     '<div id="cp-client-list"><div class="cp-help">Caricamento…</div></div>';
   loadCoachClientList();
   applyClientChrome();
+}
+
+// The hub's order and filters. Kept in the coach's preferences; the server applies them (fixed whitelist).
+var CP_CLIENT_SORTS = [['name', 'Nome'], ['program', 'Scadenza scheda'], ['check', 'Scadenza check']];
+var CP_CLIENT_FILTERS = {
+  pay: [['', 'Tutti i pagamenti'], ['paid', 'Pagato'], ['unpaid', 'Non pagato'], ['none', 'Senza promemoria']],
+  assign: [['', 'Tutti gli allenamenti'], ['assigned', 'Allenamento assegnato'], ['unassigned', 'Allenamento non assegnato']],
+  mode: [['', 'Tutti (live e distanza)'], ['presence', 'Live (in presenza)'], ['remote', 'A distanza'], ['both', 'Presenza e distanza']]
+};
+function coachClientView() {
+  const saved = (store && store.prefs && store.prefs.coachClientView && typeof store.prefs.coachClientView === 'object') ? store.prefs.coachClientView : {};
+  const ok = function (list, v) { return list.some(function (x) { return x[0] === v; }) ? v : list[0][0]; };
+  return {
+    sort: ok(CP_CLIENT_SORTS, saved.sort),
+    pay: ok(CP_CLIENT_FILTERS.pay, saved.pay),
+    assign: ok(CP_CLIENT_FILTERS.assign, saved.assign),
+    mode: ok(CP_CLIENT_FILTERS.mode, saved.mode)
+  };
+}
+function coachClientControlsHtml() {
+  const v = coachClientView();
+  const sel = function (key, list) {
+    return '<select aria-label="' + esc(key) + '" onchange="setCoachClientView(\'' + key + '\', this.value)" style="flex:1 1 46%;min-width:0;padding:8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:12px;">' +
+      list.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === v[key] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+  };
+  return '<div style="margin-top:10px;"><div style="font-size:10px;color:#888;font-weight:800;margin-bottom:4px;">ORDINA PER</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + sel('sort', CP_CLIENT_SORTS) + '</div>' +
+    '<div style="font-size:10px;color:#888;font-weight:800;margin:8px 0 4px;">FILTRA</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + sel('pay', CP_CLIENT_FILTERS.pay) + sel('assign', CP_CLIENT_FILTERS.assign) + sel('mode', CP_CLIENT_FILTERS.mode) + '</div>' +
+    '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;font-size:11px;" onclick="resetCoachClientView()">TUTTI I CLIENTI</button></div>';
+}
+function setCoachClientView(key, value) {
+  if (!store.prefs || typeof store.prefs !== 'object') store.prefs = {};
+  store.prefs.coachClientView = Object.assign({}, coachClientView(), (function (o) { o[key] = value; return o; })({}));
+  if (typeof persist === 'function') persist();
+  loadCoachClientList();
+}
+function resetCoachClientView() {
+  if (!store.prefs || typeof store.prefs !== 'object') store.prefs = {};
+  store.prefs.coachClientView = null;
+  window.__cpClientQ = '';
+  if (typeof persist === 'function') persist();
+  if (currentView === 'coachHub') renderPracticeView();
+}
+
+// A daily reminder on the coach's own phone while some client's payment is due soon or overdue. It is worked out from the
+// list the coach just opened and kept in the preferences; scheduleAllItemAlerts() turns it into a local notification, and it
+// goes away as soon as the list shows nothing to settle. Nothing leaves the device.
+function updateCoachPaymentReminder(alert) {
+  if (!alert || typeof alert !== 'object') return;
+  if (!store.prefs || typeof store.prefs !== 'object') store.prefs = {};
+  const n = Math.max(0, Number(alert.n) || 0);
+  let atMs = 0;
+  if (n && !(Number(alert.overdue) > 0) && alert.soonAt) {
+    const d = new Date(alert.soonAt);
+    if (!Number.isNaN(d.getTime())) { d.setHours(9, 0, 0, 0); atMs = d.getTime(); }
+  }
+  const next = n ? { n: n, atMs: atMs } : null;
+  const before = store.prefs.coachPaymentDue ? JSON.stringify(store.prefs.coachPaymentDue) : '';
+  if ((next ? JSON.stringify(next) : '') === before) return;
+  store.prefs.coachPaymentDue = next;
+  if (typeof persist === 'function') persist();
+  if (typeof scheduleAllItemAlerts === 'function') scheduleAllItemAlerts();
+}
+
+// The coach's own payment reminder for a client, as the client row says it. Money never passes through Nurvan.
+function paymentStatusFor(row, now) {
+  if (!row || !row.payTracking) return { state: 'none', text: '' };
+  const t = (now && typeof now.getTime === 'function' ? now : new Date()).getTime();
+  const due = row.nextDueAt ? new Date(row.nextDueAt) : null;
+  const dueOk = due && !Number.isNaN(due.getTime());
+  const days = dueOk ? Math.ceil((due.getTime() - t) / 86400000) : null;
+  if (row.paid === false) return { state: 'overdue', days: days, text: 'Pagamento da regolare' };
+  if (!dueOk) return { state: 'ok', days: null, text: 'Pagato' };
+  if (days < 0) return { state: 'overdue', days: days, text: 'Scaduto da ' + Math.abs(days) + ' gg' };
+  if (days === 0) return { state: 'soon', days: 0, text: 'Scade oggi' };
+  if (days <= 7) return { state: 'soon', days: days, text: 'Scade tra ' + days + ' gg' };
+  return { state: 'ok', days: days, text: 'Pagato · scade il ' + fmtDay(row.nextDueAt) };
 }
 
 var __cpListTimer = 0;
@@ -3398,16 +3494,24 @@ function friendlyApiError(err) {
   return raw;
 }
 
-async function loadCoachClientList() {
+var CP_CLIENT_PAGE = 50;
+function loadMoreCoachClients() { return loadCoachClientList(true); }
+async function loadCoachClientList(append) {
   const box = document.getElementById('cp-client-list');
   if (!box) return;
-  loadCoachCheckInCounter();
+  if (append !== true) loadCoachCheckInCounter();
   try {
     const q = window.__cpClientQ || '';
-    const payload = await practiceFetch('/api/coach/clients?limit=30&offset=0&q=' + encodeURIComponent(q), { method: 'GET', headers: practiceHeaders(false) }, 20000);
+    const view = coachClientView();
+    const query = '&sort=' + encodeURIComponent(view.sort) + (view.pay ? '&pay=' + encodeURIComponent(view.pay) : '') +
+      (view.assign ? '&assign=' + encodeURIComponent(view.assign) : '') + (view.mode ? '&mode=' + encodeURIComponent(view.mode) : '');
+    const offset = append === true ? Number(store.__cpClientNext || 0) : 0;
+    const payload = await practiceFetch('/api/coach/clients?limit=' + CP_CLIENT_PAGE + '&offset=' + offset + '&q=' + encodeURIComponent(q) + query, { method: 'GET', headers: practiceHeaders(false) }, 20000);
     store.__cpOrigin = payload.origin || '';
-    const rows = payload.clients || [];
+    const pageRows = payload.clients || [];
+    const rows = append === true ? (store.__cpClientList || []).concat(pageRows) : pageRows;
     store.__cpClientList = rows;
+    store.__cpClientNext = payload.nextCursor || '';
     const seatsBox = document.getElementById('cp-seats-summary');
     if (seatsBox) {
       const s = payload.seats;
@@ -3417,13 +3521,20 @@ async function loadCoachClientList() {
         : '';
     }
     ensureCoachHeaderControls(!!(store && store.coachSessionActive));
+    try { updateCoachPaymentReminder(payload.payAlert); } catch (_) {}
+    const filtered = !!(q || view.pay || view.assign || view.mode);
     if (!rows.length) {
-      box.innerHTML = '<div style="text-align:center;padding:12px 0;">' + (window.emptyArtHtml ? window.emptyArtHtml('empty-clients') : '') + '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div></div>';
+      box.innerHTML = filtered
+        ? '<div class="cp-help" style="margin-bottom:10px;">Nessun cliente con questi filtri.</div>'
+        : '<div style="text-align:center;padding:12px 0;">' + (window.emptyArtHtml ? window.emptyArtHtml('empty-clients') : '') + '<div class="cp-help">Nessun cliente. Aggiungine uno: nuovo (compilerà il questionario) o transizione (compili tu le info).</div></div>';
       return;
     }
-    box.innerHTML = rows.map(function (cl) {
+    const total = Number(payload.total || rows.length);
+    const countHtml = '<div class="cp-help" style="margin:0 0 8px;">' + (total > rows.length ? ('Mostrati ' + rows.length + ' di ' + total + ' clienti: restringi con la ricerca o i filtri.') : (total + (total === 1 ? ' cliente' : ' clienti'))) + '</div>';
+    box.innerHTML = countHtml + rows.map(function (cl) {
       const badge = cl.intakeMode === 'transition' ? 'Transizione' : (cl.intakeDone ? 'Questionario ok' : 'Nuovo · questionario');
-      const paid = cl.paid ? 'Pagato' : 'Non pagato';
+      const pay = paymentStatusFor(cl);
+      const payColor = pay.state === 'overdue' ? '#c66' : (pay.state === 'soon' ? '#e8a13a' : '#888');
       const presence = presenceLabel(cl.online, cl.lastSeenAt, cl.workoutLive);
       const presenceColor = cl.workoutLive ? '#6c6' : (cl.online ? '#6c6' : '#888');
       const code = inviteShortCode(cl.inviteToken);
@@ -3433,8 +3544,11 @@ async function loadCoachClientList() {
         '<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:900;color:#fff;overflow-wrap:anywhere;">' + esc(cl.displayName) +
         (cl.leaveRequested ? ' <span class="cp-badge" style="color:#c66;border-color:#c66;">FINE RICHIESTA</span>' : '') +
         (cl.workoutLive ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">IN WORKOUT</span>' : '') +
-        (cl.seatInactive ? ' <span class="cp-badge cp-seat-inactive" style="color:#aaa;border-color:#666;">OLTRE I POSTI</span>' : '') + '</div>' +
-        '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(paid) +
+        (cl.seatInactive ? ' <span class="cp-badge cp-seat-inactive" style="color:#aaa;border-color:#666;">OLTRE I POSTI</span>' : '') +
+        (cl.programRequest === 'waiting' ? ' <span class="cp-badge" style="color:var(--gold);border-color:var(--gold);">RICHIESTA SCHEDA</span>' : '') +
+        (cl.programRequest === 'agreed' ? ' <span class="cp-badge" style="color:#6c6;border-color:#6c6;">ACCORDO OK · ASSEGNA</span>' : '') + '</div>' +
+        '<div style="font-size:11px;color:#888;">@' + esc(cl.username) + ' · ' + esc(badge) + ' · ' + esc(coachingModeLabel(cl.coachingMode)) +
+        (pay.text ? ' · <span style="color:' + payColor + ';">' + esc(pay.text) + '</span>' : '') +
         (cl.unreadCount ? ' · ' + cl.unreadCount + (cl.unreadCount === 1 ? ' nuovo' : ' nuovi') : '') +
         (cl.hasPendingChange ? ' · modifica da approvare' : '') + '</div>' +
         '<div style="font-size:11px;color:' + presenceColor + ';margin-top:4px;">● ' + esc(presence) + '</div>' +
@@ -3449,11 +3563,14 @@ async function loadCoachClientList() {
         '<details class="cp-client-more" style="margin-top:8px;"><summary style="cursor:pointer;color:var(--gold);font-size:12px;font-weight:800;padding:6px 0;">Altre azioni</summary>' +
         '<div class="cp-client-actions" style="margin-top:6px;">' +
         '<button class="btn btn-outline" onclick="copyClientInvite(\'' + esc(cl.id) + '\',\'' + esc(cl.inviteToken || '') + '\')">LINK DI INVITO</button>' +
-        '<button class="btn btn-outline" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' +
+        '<button class="btn btn-outline" onclick="openClientBilling(\'' + esc(cl.id) + '\')">PROMEMORIA PAGAMENTO</button>' +
+        (cl.payTracking ? '<button class="btn btn-outline" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' : '') +
         '<button class="btn btn-outline" onclick="revokeCoachClient(\'' + esc(cl.id) + '\')">REVOCA</button>' +
         '<button class="btn btn-outline" style="color:#c66;border-color:#c66;" onclick="removeCoachClient(\'' + esc(cl.id) + '\')">RIMUOVI</button>' +
         '</div></details></div>';
-    }).join('');
+    }).join('') + (store.__cpClientNext
+      ? '<button type="button" class="btn btn-outline" style="width:100%;margin-bottom:10px;" onclick="loadMoreCoachClients()">CARICA ALTRI</button>'
+      : '');
   } catch (err) {
     box.innerHTML = '<div class="cp-help" style="margin-bottom:10px;">' + esc(friendlyApiError(err)) + '</div>' +
       '<button type="button" class="btn btn-outline" style="width:100%;" onclick="loadCoachClientList()">RIPROVA</button>';
@@ -3625,7 +3742,8 @@ function drawAddClientWizard() {
     '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
     '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
     '<div class="cp-field"><label>Come lo segui</label><select id="cp-add-coaching-mode" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
-    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div></div>' +
+    COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div>' +
+    billingFieldsHtml('cp-add', null) + '</div>' +
     (isNew ? '' : '<div id="cp-add-intake">' + intakeFormHtml('cpa', {}, { skipName: true }) + '</div>') +
     // The form of a transition client is 27 fields long: the buttons stay in view at the bottom of the sheet.
     '<div style="position:sticky;bottom:-1px;background:#121212;padding:10px 0 4px;margin-top:8px;border-top:1px solid #2a2a2a;">' +
@@ -3700,7 +3818,7 @@ async function submitAddClient() {
     const payload = await practiceFetch('/api/coach/clients', {
       method: 'POST',
       headers: practiceHeaders(true),
-      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake, coachingMode: coachingMode })
+      body: JSON.stringify({ firstName: firstName, lastName: lastName, password: password, intakeMode: intakeMode, intake: intake, coachingMode: coachingMode, payment: readBillingFields('cp-add') })
       // 25s was below the 20-30s this host can take to wake from idle, so the
       // first client created after a quiet spell timed out almost by rule.
     }, 45000);
@@ -3830,6 +3948,59 @@ async function rotateClientInvite(id) {
     else loadCoachClientList();
   } catch (err) {
     practiceToast((err && err.message) || 'Rigenerazione fallita', 'danger');
+  }
+}
+
+// The coach's payment reminder for a client. It is only a date, a cycle and a flag the coach sets by hand: the payment itself
+// happens outside the app and never passes through Nurvan. The client sees only the state and the date.
+var BILLING_CYCLE_LABELS = [['weekly', 'Ogni settimana'], ['biweekly', 'Ogni 2 settimane'], ['monthly', 'Ogni mese'], ['quarterly', 'Ogni 3 mesi'], ['yearly', 'Ogni anno']];
+function billingFieldsHtml(prefix, row) {
+  const on = !!(row && row.payTracking);
+  const cycle = (row && row.billingCycle) || 'monthly';
+  const due = row && row.nextDueAt ? String(row.nextDueAt).slice(0, 10) : '';
+  const box = 'width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;box-sizing:border-box;';
+  return '<div style="margin-top:10px;padding:10px;background:#141414;border:1px solid #333;border-radius:10px;">' +
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#eee;">' +
+    '<input type="checkbox" id="' + prefix + '-bill-track"' + (on ? ' checked' : '') + ' style="margin-top:2px;flex-shrink:0;width:18px;height:18px;">' +
+    '<span>Promemoria di scadenza pagamento (ripetuto)</span></label>' +
+    '<div class="cp-field"><label>Si ripete</label><select id="' + prefix + '-bill-cycle" style="' + box + '">' +
+    BILLING_CYCLE_LABELS.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cycle ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></div>' +
+    '<div class="cp-field"><label>Prossima scadenza</label><input id="' + prefix + '-bill-due" type="date" value="' + esc(due) + '" style="' + box + '"></div>' +
+    '<div style="font-size:11px;color:#bbb;line-height:1.4;margin-top:6px;">È solo un promemoria tuo: il pagamento avviene fuori dall’app e non passa da Nurvan. Il cliente vede soltanto lo stato e la data di scadenza.</div></div>';
+}
+function readBillingFields(prefix) {
+  const track = document.getElementById(prefix + '-bill-track');
+  if (!track || !track.checked) return { track: false };
+  const cycle = document.getElementById(prefix + '-bill-cycle');
+  const due = document.getElementById(prefix + '-bill-due');
+  return { track: true, billingCycle: cycle ? cycle.value : 'monthly', nextDueAt: due && due.value ? due.value : '' };
+}
+function findCoachClientRow(id) {
+  const list = store.__cpClientList || [];
+  for (let i = 0; i < list.length; i++) if (String(list[i].id) === String(id)) return list[i];
+  const ws = store.coachWorkspace;
+  return ws && ws.client && String(ws.client.id) === String(id) ? ws.client : null;
+}
+function openClientBilling(id) {
+  const row = findCoachClientRow(id);
+  openCpModal('<h2>Promemoria pagamento</h2>' + billingFieldsHtml('cp-bill', row) +
+    '<div id="cp-bill-status" class="cp-help"></div>' +
+    '<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="saveClientBilling(\'' + esc(id) + '\')">SALVA</button>' +
+    '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="closeCpModal()">ANNULLA</button>');
+}
+async function saveClientBilling(id) {
+  const f = readBillingFields('cp-bill');
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/billing', {
+      method: 'POST', headers: practiceHeaders(true), body: JSON.stringify(f)
+    }, 15000);
+    closeCpModal();
+    practiceToast(f.track ? 'Promemoria salvato' : 'Promemoria disattivato', 'success');
+    if (currentView === 'coachHub') loadCoachClientList();
+    else if (typeof renderPracticeView === 'function') renderPracticeView();
+  } catch (err) {
+    const el = document.getElementById('cp-bill-status');
+    if (el) el.textContent = (err && err.message) || 'Salvataggio non riuscito.';
   }
 }
 
@@ -4440,8 +4611,9 @@ async function renderCoachWorkspace(c) {
       }).join('');
       window.__cpClientSheetNotifies = clientNotifyItems;
       window.__cpHyroxRequest = latestHyroxRequest(ev.events || [], id);
-    } catch (_) {}
-    const hyroxReqHtml = clientHyroxCardHtml(id, cl.displayName || '', intake);
+      window.__cpProgramRequest = ev.programRequest || null;
+    } catch (_) { window.__cpProgramRequest = null; }
+    const hyroxReqHtml = clientHyroxCardHtml(id, cl.displayName || '', intake) + programRequestCardHtml(id);
     if (!store.__cpWsCollapse || typeof store.__cpWsCollapse !== 'object') {
       store.__cpWsCollapse = { intake: false, events: false };
     }
@@ -5085,6 +5257,29 @@ function hyroxRequestSummary(hx) {
   if (hx.days) bits.push(hx.days + ' giorni');
   return bits;
 }
+// A client asked for a new program. Whatever they agree on (price, payment) is settled between the two of them OUTSIDE the
+// app: the coach only marks here that it is settled, then assigns the program as usual. The app locks and sells nothing.
+function programRequestCardHtml(clientId) {
+  const r = window.__cpProgramRequest;
+  if (!r) return '';
+  const agreed = r.state === 'agreed';
+  return '<div class="card" style="padding:12px;margin-bottom:12px;border-color:rgba(212,175,55,.5);">' +
+    '<div style="font-weight:900;color:var(--gold);margin-bottom:4px;">Richiesta nuova programmazione</div>' +
+    '<div style="font-size:12px;color:' + (agreed ? '#6c6' : '#e8a13a') + ';font-weight:800;margin-bottom:6px;">' + (agreed ? 'Accordo confermato · ora assegna il programma' : 'In attesa di accordo') + '</div>' +
+    (r.note ? '<div style="font-size:12px;color:#ddd;margin-bottom:6px;overflow-wrap:anywhere;">«' + esc(r.note) + '»</div>' : '') +
+    (r.at ? '<div style="font-size:11px;color:#888;margin-bottom:8px;">Chiesta il ' + esc(fmtDay(r.at)) + '</div>' : '') +
+    (agreed ? '' : '<div style="font-size:11px;color:#bbb;line-height:1.4;margin-bottom:8px;">Concorda con il cliente tempi e condizioni fuori dall’app: l’app non gestisce prezzi né pagamenti. Quando vi siete accordati, segnalo qui e assegna il programma.</div>' +
+      '<button class="btn btn-primary" style="width:100%;" onclick="confirmClientAgreement(\'' + esc(clientId) + '\')">ACCORDO CONFERMATO</button>') +
+    '</div>';
+}
+async function confirmClientAgreement(id) {
+  try {
+    await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/agreement', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 15000);
+    practiceToast('Accordo segnato', 'success');
+    if (typeof renderPracticeView === 'function') renderPracticeView();
+  } catch (err) { practiceToast((err && err.message) || 'Non salvato', 'danger'); }
+}
+
 function clientHyroxCardHtml(clientId, name, intake) {
   if (typeof window === 'undefined' || !window.NurvanHyrox) return '';
   const hx = hyroxRequestFor(clientId);
@@ -8071,6 +8266,14 @@ window.openCoachDrawer = openCoachDrawer;
 window.closeCoachDrawer = closeCoachDrawer;
 window.switchCoachClientFromHeader = switchCoachClientFromHeader;
 window.toggleClientPaid = toggleClientPaid;
+window.setCoachClientView = setCoachClientView;
+window.loadMoreCoachClients = loadMoreCoachClients;
+window.resetCoachClientView = resetCoachClientView;
+window.openClientBilling = openClientBilling;
+window.saveClientBilling = saveClientBilling;
+window.confirmClientAgreement = confirmClientAgreement;
+window.athletePaymentCardHtml = athletePaymentCardHtml;
+window.paymentStatusFor = paymentStatusFor;
 window.revokeCoachClient = revokeCoachClient;
 window.removeCoachClient = removeCoachClient;
 window.openCoachClient = openCoachClient;
