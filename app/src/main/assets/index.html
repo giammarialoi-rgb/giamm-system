@@ -86523,6 +86523,9 @@ function seedAssignSandboxFromClient(clientId) {
   if (typeof currentWeek !== 'undefined') currentWeek = 1;
   if (typeof currentDay !== 'undefined') currentDay = 0;
   try { if (typeof DATA !== 'undefined' && DATA) stripProgramSessionPerformance(DATA); } catch (_) {}
+  // The client's own program as it came in: sending it back unchanged would assign it again and start the client's
+  // weeks and loads over, so a draft that only adds a diet (or supplements...) leaves the training out.
+  window.__cpAssignSeed = { clientId: String(clientId || ''), sig: sandboxTrainingSig() };
   resetSandboxSessionState();
   // Async refresh: if workspace stale/empty, pull snapshot then re-seed without wiping imports already done
   if (clientId) {
@@ -86679,7 +86682,20 @@ function applyCatalogFromIntake(useIt) {
     window.__catalogFilters = { q: '', days: '', split: '', goal: '', equipment: '', experience: '', duration: '', progression: '', focus: '' };
     practiceToast('Database aperto senza filtri anagrafica', 'info');
   }
+  // The results live in the "DATABASE SCHEDE" section, closed by default at the bottom of the page:
+  // open it and bring the list into view, or the coach sees the filter and no programs.
+  window.__catalogOpen = true;
   navigate('programs');
+  // The page scrolls itself to the top after a change of view: try again until the list stays on screen.
+  [250, 700, 1400].forEach(function (ms) {
+    setTimeout(function () {
+      const el = document.getElementById('catalog-list');
+      if (!el || !el.scrollIntoView) return;
+      const r = el.getBoundingClientRect();
+      if (r.top >= 0 && r.top < window.innerHeight * 0.6) return;
+      el.scrollIntoView({ block: 'center' });
+    }, ms);
+  });
 }
 window.applyCatalogFromIntake = applyCatalogFromIntake;
 window.mapIntakeToCatalogFilters = mapIntakeToCatalogFilters;
@@ -86693,9 +86709,23 @@ function nutritionHasSandboxContent(n) {
     n.daily_carbs_target != null || n.daily_fats_target != null;
 }
 
+function sandboxTrainingSig() {
+  try {
+    return (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) ? JSON.stringify(DATA.weeks) : '';
+  } catch (_) { return ''; }
+}
+
+// True when the draft's training is still the client's current program, untouched since the draft was opened.
+function sandboxTrainingIsClientsOwn() {
+  const seed = window.__cpAssignSeed;
+  const job = store.coachAssigning;
+  if (!seed || !seed.sig || !job || String(job.clientId) !== seed.clientId) return false;
+  return sandboxTrainingSig() === seed.sig;
+}
+
 function detectSandboxKinds() {
   const kinds = [];
-  if (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length) kinds.push('training');
+  if (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks) && DATA.weeks.length && !sandboxTrainingIsClientsOwn()) kinds.push('training');
   if (nutritionHasSandboxContent(DATA && DATA.nutrition) || nutritionHasSandboxContent(store.nutrition)) kinds.push('nutrition');
   if ((DATA && DATA.supplementation && DATA.supplementation.items && DATA.supplementation.items.length) || (store.supplementation && store.supplementation.items && store.supplementation.items.length)) kinds.push('supplements');
   if ((DATA && DATA.therapy && DATA.therapy.medications && DATA.therapy.medications.length) || (store.therapy && store.therapy.medications && store.therapy.medications.length)) kinds.push('therapy');
@@ -86708,10 +86738,12 @@ async function confirmAssignSandbox() {
   if (!job || !job.clientId) return;
   const kinds = detectSandboxKinds();
   if (!kinds.length) {
-    practiceToast('Nessun contenuto da assegnare: importa o scegli una scheda prima.', 'warning');
+    practiceToast(sandboxTrainingIsClientsOwn()
+      ? 'Niente di nuovo da inviare: la scheda è quella che il cliente ha già. Cambiala o aggiungi alimentazione, integrazione…'
+      : 'Nessun contenuto da assegnare: importa o scegli una scheda prima.', 'warning');
     return;
   }
-  const weeks = (typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
+  const weeks = (kinds.indexOf('training') >= 0 && typeof DATA !== 'undefined' && DATA && Array.isArray(DATA.weeks)) ? DATA.weeks.length : 0;
   const expDays = weeks > 0 ? weeks * 7 : 56;
   const dExp = new Date(); dExp.setHours(12, 0, 0, 0); dExp.setDate(dExp.getDate() + expDays);
   const dChk = new Date(); dChk.setHours(12, 0, 0, 0); dChk.setDate(dChk.getDate() + Math.min(14, Math.max(7, Math.round(expDays / 2))));
@@ -86722,7 +86754,7 @@ async function confirmAssignSandbox() {
     '<p class="cp-help">Contenuti: ' + esc(kinds.join(', ')) + '.</p>' +
     (weeks
       ? '<div style="padding:10px;background:#141414;border:1px solid #333;border-radius:10px;margin-bottom:12px;font-size:12px;color:#eee !important;-webkit-text-fill-color:#eee;">Scadenza automatica: <b style="color:#fff;">' + weeks + ' settimane</b> (~ <b style="color:var(--gold);">' + esc(fmtDay(defExp)) + '</b>). Si ricalcola al primo allenamento finalizzato.</div>'
-      : '<div style="padding:10px;background:#141414;border:1px solid #333;border-radius:10px;margin-bottom:12px;font-size:12px;color:#eee !important;">Nessun allenamento: scadenza default 8 settimane.</div>') +
+      : '<div style="padding:10px;background:#141414;border:1px solid #333;border-radius:10px;margin-bottom:12px;font-size:12px;color:#eee !important;">Nessuna scheda nuova: l\'allenamento del cliente e la sua scadenza restano come sono.</div>') +
     '<input type="hidden" id="cp-asg-exp-auto" value="' + esc(defExp) + '">' +
     '<div class="cp-field"><label>PROSSIMO CHECK (modificabile)</label>' + buildEuDateSelects('cp-asg-chk', defChk) + '</div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="confirmAssignSandboxSend()">CONFERMA INVIO</button>' +
@@ -86795,7 +86827,8 @@ async function confirmAssignSandboxSend() {
       body: JSON.stringify({
         data: payload,
         kinds: kinds,
-        programExpiresAt: programExpiresAt,
+        // Only a program being assigned moves its expiry; a diet sent on its own leaves the client's dates alone.
+        programExpiresAt: kinds.indexOf('training') >= 0 ? programExpiresAt : undefined,
         nextCheckAt: nextCheckAt
       })
     }, 45000);
