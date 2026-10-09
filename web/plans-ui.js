@@ -350,12 +350,18 @@ async function billingLoad(force) {
 }
 
 // The plan on the server is the one that counts: after a purchase or a restore, ask it to look again.
+// Returns { ok } : false when the server could not read the store (so the page never says "nothing to restore" by mistake).
 async function billingSyncPlan() {
-  try { await practiceFetch('/api/billing/refresh', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 25000); } catch (_) {}
+  let ok = true;
+  try {
+    const r = await practiceFetch('/api/billing/refresh', { method: 'POST', headers: practiceHeaders(true), body: '{}' }, 25000);
+    if (r && r.ok === false) ok = false;
+  } catch (_) { ok = false; }
   try {
     const payload = await practiceFetch('/api/account/plan', { method: 'GET', headers: practiceHeaders(false) }, 15000);
     if (payload && payload.entitlement) onEntitlementReceived(payload.entitlement);
-  } catch (_) {}
+  } catch (_) { ok = false; }
+  return { ok: ok };
 }
 
 function billingCancelled(err) {
@@ -392,11 +398,12 @@ async function billingRestore() {
   try {
     await adapter.restore();
     const before = currentPlanEffective().plan;
-    await billingSyncPlan();
+    const sync = await billingSyncPlan();
     const after = currentPlanEffective().plan;
     if (typeof showToast === 'function') {
       if (after !== 'free' || before !== after) showToast('Acquisti ripristinati', 'ok');
-      else showToast('Nessun acquisto da ripristinare', 'info');
+      else if (!sync.ok) showToast('Non riesco ad aggiornare il piano ora. Riprova tra poco.', 'error');
+      else showToast('Nessun abbonamento attivo da ripristinare su questo ID Apple/Google', 'info');
     }
   } catch (err) {
     if (typeof showToast === 'function') showToast(billingFriendlyError(err, 'Ripristino non riuscito. Riprova tra poco.'), 'error');
@@ -408,9 +415,16 @@ async function billingRestore() {
 window.billingRestore = billingRestore;
 
 // Opens the store's own page where a subscription is cancelled or changed.
+// window.open does nothing inside the iOS web view: the page goes through the Browser plugin (the store's page opens over
+// the app), and falls back to a plain navigation.
 function billingManage() {
   const url = billingPlatform() === 'ios' ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions?package=com.nurvan.app';
-  try { window.open(url, '_blank'); } catch (_) { try { window.location.href = url; } catch (__) {} }
+  let browser = null;
+  try { browser = (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) || null; } catch (_) {}
+  if (browser && typeof browser.open === 'function') {
+    try { Promise.resolve(browser.open({ url: url })).catch(function () { try { window.location.href = url; } catch (__) {} }); return; } catch (_) {}
+  }
+  try { window.location.href = url; } catch (_) { try { window.open(url, '_blank'); } catch (__) {} }
 }
 window.billingManage = billingManage;
 window.billingLoad = billingLoad;

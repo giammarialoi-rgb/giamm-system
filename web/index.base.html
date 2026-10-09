@@ -6409,7 +6409,7 @@ function showAiConsentSheet(done) {
   overlay.id = 'ai-consent-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
-  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10250;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+  overlay.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:100000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
   overlay.innerHTML =
     '<div class="card" style="max-width:440px;width:100%;max-height:92vh;overflow:auto;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
     '<div style="font-size:12px;font-weight:900;color:var(--gold);letter-spacing:1px;margin-bottom:8px;">FUNZIONI AI</div>' +
@@ -15828,6 +15828,12 @@ function navigate(v, e){
     }
   }
   currentView = v;
+  // Coach AI: the consent is asked as soon as the page opens, before anything is typed.
+  if (v === 'ai') {
+    try {
+      if (!isAthleteRole() && store && store.accountToken && !aiConsentGranted() && (typeof planCan !== 'function' || planCan('ai_coach'))) ensureAiConsent();
+    } catch (_) {}
+  }
   try { if (window.__pageTut && window.__pageTut.view !== pageTutorialKey(v) && !window.__pageTut.replay) { closePageTutorialElement(); window.__pageTut = null; } } catch (_) {}
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   const a = $(`nav-${v}`); if(a) a.classList.add('active');
@@ -38931,6 +38937,7 @@ async function askAI(){
     return;
   }
   const q0 = $('ai-input').value.trim(); if(!q0) return;
+  if (!(await ensureAiConsent())) { if (typeof showToast === 'function') showToast('Funzioni AI non attive. Puoi attivarle da Impostazioni › Privacy e dati.', 'info'); return; }
   return withBusy(function () { return askAIInner(q0); }, 'Nurvan AI sta pensando…', { immediate: true });
 }
 async function askAIInner(q0, opts){
