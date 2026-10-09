@@ -51221,6 +51221,68 @@ try {
   }
 } catch (_) {}
 
+// Pull down from the top of the page to refresh: downloads the latest data (what the coach sent, another device's
+// changes) and redraws, without closing the app. An app opened from the home screen has no browser bar to reload.
+function pullToRefreshRun() {
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  if (athlete && typeof window.athletePullFromCoach === 'function') return window.athletePullFromCoach([], { say: true });
+  return Promise.resolve(syncAccountData(true)).then(function () {
+    try { render(); } catch (_) {}
+    if (typeof showToast === 'function') showToast('Aggiornato', 'ok');
+  }).catch(function () {
+    if (typeof showToast === 'function') showToast('Aggiornamento non riuscito: controlla la connessione e riprova.', 'error');
+  });
+}
+function pullToRefreshAllowed(target) {
+  if (!store || !store.accountToken || store.coachViewingClient || store.coachAssigning) return false;
+  if ((window.scrollY || document.documentElement.scrollTop || 0) > 0) return false;
+  // Not from inside a window on top of the page, nor from a list that scrolls on its own and is not at its top.
+  for (let el = target; el && el !== document.body; el = el.parentElement) {
+    const cs = el.nodeType === 1 ? getComputedStyle(el) : null;
+    if (!cs) continue;
+    if (cs.position === 'fixed' && el.id !== 'app') return false;
+    if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight && el.scrollTop > 0) return false;
+  }
+  return true;
+}
+(function installPullToRefresh() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  let startY = null, pulled = 0, busy = false, tip = null;
+  const NEED = 80;
+  function showTip(text, ready) {
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'nurvan-pull-tip';
+      tip.style.cssText = 'position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:10700;background:#181818;border:1px solid #444;border-radius:16px;padding:6px 14px;font-size:11px;font-weight:800;color:#ccc;pointer-events:none;';
+      document.body.appendChild(tip);
+    }
+    tip.textContent = text;
+    tip.style.borderColor = ready ? 'var(--gold)' : '#444';
+    tip.style.color = ready ? 'var(--gold)' : '#ccc';
+  }
+  function hideTip() { if (tip) { tip.remove(); tip = null; } }
+  document.addEventListener('touchstart', function (ev) {
+    startY = null; pulled = 0;
+    if (busy || !ev.touches || ev.touches.length !== 1) return;
+    if (!pullToRefreshAllowed(ev.target)) return;
+    startY = ev.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchmove', function (ev) {
+    if (startY == null || !ev.touches || !ev.touches.length) return;
+    pulled = ev.touches[0].clientY - startY;
+    if ((window.scrollY || 0) > 0 || pulled < 25) { if (pulled < 25) hideTip(); return; }
+    showTip(pulled >= NEED ? '↻ Rilascia per aggiornare' : '↓ Tira giù per aggiornare', pulled >= NEED);
+  }, { passive: true });
+  document.addEventListener('touchend', function () {
+    const go = startY != null && pulled >= NEED && (window.scrollY || 0) <= 0;
+    startY = null; pulled = 0;
+    if (!go) { hideTip(); return; }
+    busy = true;
+    showTip('Aggiornamento…', true);
+    Promise.resolve(pullToRefreshRun()).catch(function () {}).then(function () { busy = false; hideTip(); });
+  }, { passive: true });
+})();
+
 // The history the Coach AI reads, like the Statistics page does: every
 // finalized session with the load and repetitions of each set, the muscles it
 // worked and the body weight. Compact (a session is a few hundred bytes) and
@@ -67503,6 +67565,18 @@ function showUpdateAvailableBanner() {
   b.querySelector('#nurvan-update-dismiss-btn').onclick = () => b.remove();
 }
 
+// Nothing would be lost by reloading the page: not typing, no workout running, no client draft or unsaved diet in memory.
+function nurvanSafeToReload() {
+  try {
+    const el = document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return false;
+    if (store && store.sessionStartedAt && Date.now() - new Date(store.sessionStartedAt).getTime() < 4 * 3600 * 1000) return false;
+    if (store && (store.coachAssigning || store.coachViewingClient || store.__cpNutritionDirty || store.__cpSupplementsDirty)) return false;
+    if (window.__restTimer) return false;
+    return true;
+  } catch (_) { return false; }
+}
+
 function registerNurvanServiceWorker() {
   if (typeof window !== 'undefined' && window.NativeConfig) return;
   if (!('serviceWorker' in navigator)) return;
@@ -67514,6 +67588,7 @@ function registerNurvanServiceWorker() {
       worker.addEventListener('statechange', function () {
         // A new SW installed while one was already controlling this page = a real update, not the first install.
         if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          window.__nurvanUpdateReady = true;
           showUpdateAvailableBanner();
         }
       });
@@ -67524,6 +67599,13 @@ function registerNurvanServiceWorker() {
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
+        // An app installed on the home screen is almost never closed: the new version found on an earlier return is
+        // put in place now, while nothing is in progress, instead of waiting for the user to close and reopen it.
+        if (window.__nurvanUpdateReady && nurvanSafeToReload()) {
+          try { if (typeof flushPendingPersistSyncs === 'function') flushPendingPersistSyncs(); } catch (_) {}
+          setTimeout(function () { location.reload(); }, 400);
+          return;
+        }
         registration.update().catch(function () {});
       }
     });
@@ -84390,7 +84472,7 @@ function athleteHomeHtml() {
 async function reloadClientHome() {
   practiceToast('Aggiornamento…', 'success');
   try {
-    if (typeof syncAccountData === 'function') await syncAccountData(true);
+    if (!(await athletePullFromCoach([]))) throw new Error('pull');
     await refreshAthleteMe();
     if (typeof render === 'function') render();
   } catch (_) {
@@ -87855,6 +87937,42 @@ function eventNotifyCopy(kind) {
   return map[kind] || null;
 }
 
+// Downloads what the coach sent and redraws the page the athlete is on. One download at a time; true when it arrived.
+const PULL_TOAST = {
+  nutrition_assigned: 'Alimentazione aggiornata dal coach',
+  supplements_assigned: 'Integrazione aggiornata dal coach',
+  therapy_assigned: 'Terapia aggiornata dal coach',
+  exams_assigned: 'Esami aggiornati dal coach',
+  coach_modified: 'Il coach ha aggiornato il tuo piano'
+};
+async function athletePullFromCoach(kinds, opts) {
+  if (typeof syncAccountData !== 'function') return false;
+  if (window.__cpAthletePulling) return window.__cpAthletePulling;
+  kinds = kinds || [];
+  window.__cpAthletePulling = (async function () {
+    window.__cpForceRemoteProgram = true;
+    try {
+      await syncAccountData(true);
+      if (kinds.indexOf('change_approved') >= 0) rememberApprovedProgram();
+      if (typeof render === 'function') render();
+      if (kinds.length) {
+        const training = kinds.indexOf('program_assigned') >= 0 || kinds.indexOf('change_approved') >= 0;
+        practiceToast(training ? 'Nuova scheda ricevuta dal coach' : (PULL_TOAST[kinds[kinds.length - 1]] || 'Aggiornamento ricevuto dal coach'), 'success');
+      } else if (opts && opts.say) {
+        practiceToast('Aggiornato', 'success');
+      }
+      return true;
+    } catch (_) {
+      if (opts && opts.say) practiceToast('Aggiornamento non riuscito: controlla la connessione e riprova.', 'warning');
+      return false;
+    } finally {
+      window.__cpForceRemoteProgram = false;
+    }
+  })();
+  try { return await window.__cpAthletePulling; } finally { window.__cpAthletePulling = null; }
+}
+window.athletePullFromCoach = athletePullFromCoach;
+
 async function pollPracticeInbox() {
   if (!store || !store.accountToken) return;
   try {
@@ -87872,11 +87990,14 @@ async function pollPracticeInbox() {
         return;
       }
       const seen = store.clientSeenEventId || 0;
+      const syncKinds = [];
       (box.events || []).forEach(function (e) {
         const id = Number(e.id || 0);
         if (id > seen && e.kind !== 'message') {
           const copy = eventNotifyCopy(e.kind);
-          if (copy) {
+          const told = window.__cpToldEvents || (window.__cpToldEvents = {});
+          if (copy && !told[id]) {
+            told[id] = true;
             let body = copy[1];
             let payload = e.payload;
             if (typeof payload === 'string') {
@@ -87887,21 +88008,20 @@ async function pollPracticeInbox() {
             else if (e.kind === 'unlock_approved' && payload.note) body = String(payload.note);
             notifyUser(copy[0], body, copy[2] || { view: 'home' });
           }
-          if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved' || e.kind === 'coach_modified') && typeof syncAccountData === 'function') {
-            window.__cpForceRemoteProgram = true;
-            syncAccountData(true).then(function () {
-              window.__cpForceRemoteProgram = false;
-              if (e.kind === 'change_approved') rememberApprovedProgram();
-              if (typeof render === 'function') render();
-              practiceToast('Nuova scheda ricevuta dal coach', 'success');
-            }).catch(function () { window.__cpForceRemoteProgram = false; });
-          }
+          if (e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved' || e.kind === 'coach_modified') syncKinds.push(e.kind);
           if (e.kind === 'max_freedom' || e.kind === 'unlock_approved' || e.kind === 'unlock_rejected') refreshAthleteMe();
         }
       });
       if (box.unreadMessages && box.lastMessageId && box.lastMessageId !== store.clientSeenMsgId) {
         if (store.clientSeenMsgId) notifyUser('Nuovo messaggio', 'Il coach ti ha scritto', { view: 'clientChat' });
         store.clientSeenMsgId = box.lastMessageId;
+      }
+      // What the coach sent is downloaded once, however many events came in. The events count as seen only when it
+      // arrived: a download that fails (the phone just woke up, no signal) is tried again at the next check instead of
+      // leaving the client with the old page until they reopen the app.
+      if (syncKinds.length) {
+        const ok = await athletePullFromCoach(syncKinds);
+        if (!ok) return;
       }
       store.clientSeenEventId = maxId;
       if (typeof persist === 'function') persist();
@@ -88319,7 +88439,17 @@ async function bootCoachPractice() {
     if (navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener('message', function (ev) {
         if (ev && ev.data && ev.data.type === 'NURVAN_NOTIFY_ROUTE') {
-          try { handleNotifyRoute(ev.data.route && (ev.data.route.route || ev.data.route)); } catch (_) {}
+          const route = ev.data.route && (ev.data.route.route || ev.data.route);
+          // A tapped notification brings the app forward on the page it was left on: download first, then open
+          // the page the notification is about, so the athlete sees what the coach just sent.
+          if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+            athletePullFromCoach([]).then(function () {
+              try { handleNotifyRoute(route); } catch (_) {}
+              pollPracticeInbox();
+            });
+            return;
+          }
+          try { handleNotifyRoute(route); } catch (_) {}
         }
       });
     }
@@ -88440,6 +88570,10 @@ async function bootCoachPractice() {
   if (!window.__cpInboxTimer) {
     window.__cpInboxTimer = setInterval(pollPracticeInbox, 8000);
     setTimeout(pollPracticeInbox, 1500);
+    // Back in the app (from the home screen, another app, a notification): check right away, not at the next tick.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') setTimeout(pollPracticeInbox, 300);
+    });
   }
 }
 

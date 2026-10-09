@@ -15639,6 +15639,68 @@ try {
   }
 } catch (_) {}
 
+// Pull down from the top of the page to refresh: downloads the latest data (what the coach sent, another device's
+// changes) and redraws, without closing the app. An app opened from the home screen has no browser bar to reload.
+function pullToRefreshRun() {
+  const athlete = typeof isAthleteRole === 'function' && isAthleteRole();
+  if (athlete && typeof window.athletePullFromCoach === 'function') return window.athletePullFromCoach([], { say: true });
+  return Promise.resolve(syncAccountData(true)).then(function () {
+    try { render(); } catch (_) {}
+    if (typeof showToast === 'function') showToast('Aggiornato', 'ok');
+  }).catch(function () {
+    if (typeof showToast === 'function') showToast('Aggiornamento non riuscito: controlla la connessione e riprova.', 'error');
+  });
+}
+function pullToRefreshAllowed(target) {
+  if (!store || !store.accountToken || store.coachViewingClient || store.coachAssigning) return false;
+  if ((window.scrollY || document.documentElement.scrollTop || 0) > 0) return false;
+  // Not from inside a window on top of the page, nor from a list that scrolls on its own and is not at its top.
+  for (let el = target; el && el !== document.body; el = el.parentElement) {
+    const cs = el.nodeType === 1 ? getComputedStyle(el) : null;
+    if (!cs) continue;
+    if (cs.position === 'fixed' && el.id !== 'app') return false;
+    if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight && el.scrollTop > 0) return false;
+  }
+  return true;
+}
+(function installPullToRefresh() {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  let startY = null, pulled = 0, busy = false, tip = null;
+  const NEED = 80;
+  function showTip(text, ready) {
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.id = 'nurvan-pull-tip';
+      tip.style.cssText = 'position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top, 0px));transform:translateX(-50%);z-index:10700;background:#181818;border:1px solid #444;border-radius:16px;padding:6px 14px;font-size:11px;font-weight:800;color:#ccc;pointer-events:none;';
+      document.body.appendChild(tip);
+    }
+    tip.textContent = text;
+    tip.style.borderColor = ready ? 'var(--gold)' : '#444';
+    tip.style.color = ready ? 'var(--gold)' : '#ccc';
+  }
+  function hideTip() { if (tip) { tip.remove(); tip = null; } }
+  document.addEventListener('touchstart', function (ev) {
+    startY = null; pulled = 0;
+    if (busy || !ev.touches || ev.touches.length !== 1) return;
+    if (!pullToRefreshAllowed(ev.target)) return;
+    startY = ev.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchmove', function (ev) {
+    if (startY == null || !ev.touches || !ev.touches.length) return;
+    pulled = ev.touches[0].clientY - startY;
+    if ((window.scrollY || 0) > 0 || pulled < 25) { if (pulled < 25) hideTip(); return; }
+    showTip(pulled >= NEED ? '↻ Rilascia per aggiornare' : '↓ Tira giù per aggiornare', pulled >= NEED);
+  }, { passive: true });
+  document.addEventListener('touchend', function () {
+    const go = startY != null && pulled >= NEED && (window.scrollY || 0) <= 0;
+    startY = null; pulled = 0;
+    if (!go) { hideTip(); return; }
+    busy = true;
+    showTip('Aggiornamento…', true);
+    Promise.resolve(pullToRefreshRun()).catch(function () {}).then(function () { busy = false; hideTip(); });
+  }, { passive: true });
+})();
+
 // The history the Coach AI reads, like the Statistics page does: every
 // finalized session with the load and repetitions of each set, the muscles it
 // worked and the body weight. Compact (a session is a few hundred bytes) and
@@ -31921,6 +31983,18 @@ function showUpdateAvailableBanner() {
   b.querySelector('#nurvan-update-dismiss-btn').onclick = () => b.remove();
 }
 
+// Nothing would be lost by reloading the page: not typing, no workout running, no client draft or unsaved diet in memory.
+function nurvanSafeToReload() {
+  try {
+    const el = document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return false;
+    if (store && store.sessionStartedAt && Date.now() - new Date(store.sessionStartedAt).getTime() < 4 * 3600 * 1000) return false;
+    if (store && (store.coachAssigning || store.coachViewingClient || store.__cpNutritionDirty || store.__cpSupplementsDirty)) return false;
+    if (window.__restTimer) return false;
+    return true;
+  } catch (_) { return false; }
+}
+
 function registerNurvanServiceWorker() {
   if (typeof window !== 'undefined' && window.NativeConfig) return;
   if (!('serviceWorker' in navigator)) return;
@@ -31932,6 +32006,7 @@ function registerNurvanServiceWorker() {
       worker.addEventListener('statechange', function () {
         // A new SW installed while one was already controlling this page = a real update, not the first install.
         if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          window.__nurvanUpdateReady = true;
           showUpdateAvailableBanner();
         }
       });
@@ -31942,6 +32017,13 @@ function registerNurvanServiceWorker() {
     });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
+        // An app installed on the home screen is almost never closed: the new version found on an earlier return is
+        // put in place now, while nothing is in progress, instead of waiting for the user to close and reopen it.
+        if (window.__nurvanUpdateReady && nurvanSafeToReload()) {
+          try { if (typeof flushPendingPersistSyncs === 'function') flushPendingPersistSyncs(); } catch (_) {}
+          setTimeout(function () { location.reload(); }, 400);
+          return;
+        }
         registration.update().catch(function () {});
       }
     });

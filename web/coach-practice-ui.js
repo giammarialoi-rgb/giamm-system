@@ -3317,7 +3317,7 @@ function athleteHomeHtml() {
 async function reloadClientHome() {
   practiceToast('Aggiornamento…', 'success');
   try {
-    if (typeof syncAccountData === 'function') await syncAccountData(true);
+    if (!(await athletePullFromCoach([]))) throw new Error('pull');
     await refreshAthleteMe();
     if (typeof render === 'function') render();
   } catch (_) {
@@ -6782,6 +6782,42 @@ function eventNotifyCopy(kind) {
   return map[kind] || null;
 }
 
+// Downloads what the coach sent and redraws the page the athlete is on. One download at a time; true when it arrived.
+const PULL_TOAST = {
+  nutrition_assigned: 'Alimentazione aggiornata dal coach',
+  supplements_assigned: 'Integrazione aggiornata dal coach',
+  therapy_assigned: 'Terapia aggiornata dal coach',
+  exams_assigned: 'Esami aggiornati dal coach',
+  coach_modified: 'Il coach ha aggiornato il tuo piano'
+};
+async function athletePullFromCoach(kinds, opts) {
+  if (typeof syncAccountData !== 'function') return false;
+  if (window.__cpAthletePulling) return window.__cpAthletePulling;
+  kinds = kinds || [];
+  window.__cpAthletePulling = (async function () {
+    window.__cpForceRemoteProgram = true;
+    try {
+      await syncAccountData(true);
+      if (kinds.indexOf('change_approved') >= 0) rememberApprovedProgram();
+      if (typeof render === 'function') render();
+      if (kinds.length) {
+        const training = kinds.indexOf('program_assigned') >= 0 || kinds.indexOf('change_approved') >= 0;
+        practiceToast(training ? 'Nuova scheda ricevuta dal coach' : (PULL_TOAST[kinds[kinds.length - 1]] || 'Aggiornamento ricevuto dal coach'), 'success');
+      } else if (opts && opts.say) {
+        practiceToast('Aggiornato', 'success');
+      }
+      return true;
+    } catch (_) {
+      if (opts && opts.say) practiceToast('Aggiornamento non riuscito: controlla la connessione e riprova.', 'warning');
+      return false;
+    } finally {
+      window.__cpForceRemoteProgram = false;
+    }
+  })();
+  try { return await window.__cpAthletePulling; } finally { window.__cpAthletePulling = null; }
+}
+window.athletePullFromCoach = athletePullFromCoach;
+
 async function pollPracticeInbox() {
   if (!store || !store.accountToken) return;
   try {
@@ -6799,11 +6835,14 @@ async function pollPracticeInbox() {
         return;
       }
       const seen = store.clientSeenEventId || 0;
+      const syncKinds = [];
       (box.events || []).forEach(function (e) {
         const id = Number(e.id || 0);
         if (id > seen && e.kind !== 'message') {
           const copy = eventNotifyCopy(e.kind);
-          if (copy) {
+          const told = window.__cpToldEvents || (window.__cpToldEvents = {});
+          if (copy && !told[id]) {
+            told[id] = true;
             let body = copy[1];
             let payload = e.payload;
             if (typeof payload === 'string') {
@@ -6814,21 +6853,20 @@ async function pollPracticeInbox() {
             else if (e.kind === 'unlock_approved' && payload.note) body = String(payload.note);
             notifyUser(copy[0], body, copy[2] || { view: 'home' });
           }
-          if ((e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved' || e.kind === 'coach_modified') && typeof syncAccountData === 'function') {
-            window.__cpForceRemoteProgram = true;
-            syncAccountData(true).then(function () {
-              window.__cpForceRemoteProgram = false;
-              if (e.kind === 'change_approved') rememberApprovedProgram();
-              if (typeof render === 'function') render();
-              practiceToast('Nuova scheda ricevuta dal coach', 'success');
-            }).catch(function () { window.__cpForceRemoteProgram = false; });
-          }
+          if (e.kind === 'program_assigned' || e.kind === 'nutrition_assigned' || e.kind === 'supplements_assigned' || e.kind === 'therapy_assigned' || e.kind === 'exams_assigned' || e.kind === 'change_approved' || e.kind === 'coach_modified') syncKinds.push(e.kind);
           if (e.kind === 'max_freedom' || e.kind === 'unlock_approved' || e.kind === 'unlock_rejected') refreshAthleteMe();
         }
       });
       if (box.unreadMessages && box.lastMessageId && box.lastMessageId !== store.clientSeenMsgId) {
         if (store.clientSeenMsgId) notifyUser('Nuovo messaggio', 'Il coach ti ha scritto', { view: 'clientChat' });
         store.clientSeenMsgId = box.lastMessageId;
+      }
+      // What the coach sent is downloaded once, however many events came in. The events count as seen only when it
+      // arrived: a download that fails (the phone just woke up, no signal) is tried again at the next check instead of
+      // leaving the client with the old page until they reopen the app.
+      if (syncKinds.length) {
+        const ok = await athletePullFromCoach(syncKinds);
+        if (!ok) return;
       }
       store.clientSeenEventId = maxId;
       if (typeof persist === 'function') persist();
@@ -7246,7 +7284,17 @@ async function bootCoachPractice() {
     if (navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener('message', function (ev) {
         if (ev && ev.data && ev.data.type === 'NURVAN_NOTIFY_ROUTE') {
-          try { handleNotifyRoute(ev.data.route && (ev.data.route.route || ev.data.route)); } catch (_) {}
+          const route = ev.data.route && (ev.data.route.route || ev.data.route);
+          // A tapped notification brings the app forward on the page it was left on: download first, then open
+          // the page the notification is about, so the athlete sees what the coach just sent.
+          if (typeof isAthleteRole === 'function' && isAthleteRole()) {
+            athletePullFromCoach([]).then(function () {
+              try { handleNotifyRoute(route); } catch (_) {}
+              pollPracticeInbox();
+            });
+            return;
+          }
+          try { handleNotifyRoute(route); } catch (_) {}
         }
       });
     }
@@ -7367,6 +7415,10 @@ async function bootCoachPractice() {
   if (!window.__cpInboxTimer) {
     window.__cpInboxTimer = setInterval(pollPracticeInbox, 8000);
     setTimeout(pollPracticeInbox, 1500);
+    // Back in the app (from the home screen, another app, a notification): check right away, not at the next tick.
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') setTimeout(pollPracticeInbox, 300);
+    });
   }
 }
 
