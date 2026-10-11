@@ -85,6 +85,7 @@
 <script src="wellbeing.js"></script>
 <script src="wellbeing-care.js"></script>
 <script src="wellbeing-refs.js"></script>
+<script src="health-sources-refs.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1783,6 +1784,10 @@ body.focus-mode [data-rewards-only] {
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('wellbeing')">
         <span style="font-size:20px;">🌙</span>
         <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Salute e recupero</span>
+      </button>
+      <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();openHealthSources('')">
+        <span style="font-size:20px;">📚</span>
+        <span style="font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Fonti scientifiche</span>
       </button>
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('knowledge')">
         <span style="font-size:20px;">📖</span>
@@ -41813,12 +41818,94 @@ const DOMAIN_NOTICES = {
   therapy: ['Promemoria, non prescrizione.', 'Nurvan non decide né modifica le terapie: segui sempre le indicazioni del tuo medico.'],
   ai: ['Assistente automatico, non un medico.', 'Il Coach AI può sbagliare e non è un professionista sanitario: per salute, esami, farmaci e dolori chiedi al tuo medico.']
 };
+// Which sources each notice points to (see HEALTH_SOURCE_TOPICS).
+const DOMAIN_NOTICE_SOURCES = { exams: 'exams', supplements: 'supplements', therapy: '', ai: '' };
 function domainNoticeHtml(kind) {
   const n = DOMAIN_NOTICES[kind];
   if (!n) return '';
-  return '<div class="domain-notice" data-notice="' + kind + '" role="note" style="font-size:11px;line-height:1.45;color:#ddd;background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.35);border-radius:10px;padding:9px 11px;margin:0 0 12px;"><b style="color:var(--gold);">' + n[0] + '</b> <span>' + n[1] + '</span></div>';
+  return '<div class="domain-notice" data-notice="' + kind + '" role="note" style="font-size:11px;line-height:1.45;color:#ddd;background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.35);border-radius:10px;padding:9px 11px;margin:0 0 12px;"><b style="color:var(--gold);">' + n[0] + '</b> <span>' + n[1] + '</span> ' + healthSourcesLinkHtml(DOMAIN_NOTICE_SOURCES[kind] || '') + '</div>';
 }
 window.domainNoticeHtml = domainNoticeHtml;
+
+/*
+ * Scientific sources. Every number or piece of health advice the app computes says where it comes from: a "Fonti"
+ * link next to it opens the page below at the right topic, and the page is also in the menu and in Settings.
+ * The citations are not typed here: the identifiers are resolved on PubMed by tools/build_health_sources.mjs into
+ * web/health-sources-refs.js (run it after changing a list). Official documents not on PubMed are listed there.
+ */
+const HEALTH_SOURCE_TOPICS = [
+  { id: 'energy', title: 'Calorie giornaliere', what: 'Il fabbisogno è stimato con l’equazione di Mifflin-St Jeor (metabolismo a riposo) moltiplicata per 1,55, un’attività moderata. Per dimagrire si toglie il 15%, per aumentare la massa si aggiunge il 10%: un ritmo graduale, che protegge la massa muscolare.', refs: ['2305711', '15883556', '21558571', '24864135'] },
+  { id: 'protein', title: 'Proteine, grassi e carboidrati', what: 'Le proteine sono 1,8–2,0 g per kg di peso (le prove indicano 1,6–2,2 g/kg per chi si allena con i pesi), i grassi circa 0,8 g/kg e il resto delle calorie va ai carboidrati. Distribuire le proteine su più pasti aiuta a usarle meglio.', refs: ['28642676', '28698222', '29497353', '26891166'] },
+  { id: 'diet', title: 'Qualità della dieta e diete vegetariane', what: 'I piani generati privilegiano cereali integrali, legumi, frutta e verdura per la fibra; le versioni vegetariana e vegana seguono le indicazioni per un’alimentazione completa senza carne o senza alimenti animali.', refs: ['30638909', '27886704'] },
+  { id: 'water', title: 'Acqua', what: 'L’obiettivo di acqua lo scrivi tu o il tuo coach. Come riferimento: circa 2 L al giorno per le donne e 2,5 L per gli uomini, contando alimenti e bevande, di più quando ti alleni e sudi.', refs: ['efsa-water-2010', '17277604'] },
+  { id: 'volume', title: 'Volume e frequenza di allenamento', what: 'Le schede contano le serie per gruppo muscolare a settimana e le distribuiscono sui giorni di allenamento: più serie settimanali portano più crescita muscolare, entro ciò da cui ci si recupera, e allenare un muscolo due volte a settimana aiuta.', refs: ['27433992', '30153194', '27102172', '19204579'] },
+  { id: 'intensity', title: 'Intensità, ripetizioni in riserva e recuperi', what: 'L’intensità si regola con le ripetizioni in riserva (RIR, quante ripetizioni restano prima del cedimento); i recuperi tra le serie dei multiarticolari sono lunghi, perché recuperi più lunghi favoriscono forza e massa.', refs: ['26049792', '26605807', '19204579'] },
+  { id: 'strength', title: 'Massimale stimato e progressione', what: 'Il massimale (1RM) è stimato dai chili e dalle ripetizioni fatte con la formula di Epley, una stima affidabile sotto le 10 ripetizioni; la progressione dei carichi segue i modelli dell’American College of Sports Medicine.', refs: ['16937972', '19204579'] },
+  { id: 'activity', title: 'Attività fisica e passi', what: 'Passi e attività si leggono rispetto alle linee guida dell’OMS (150–300 minuti di attività moderata a settimana e forza almeno due volte) e agli studi che legano più passi al giorno a una minore mortalità.', refs: ['33239350', '35247352'] },
+  { id: 'recovery', title: 'Sonno e stima del recupero', what: 'La stima del recupero usa le ore di sonno (almeno 7 per un adulto), la frequenza a riposo e l’HRV rispetto ai tuoi valori abituali: è un’indicazione per regolare l’allenamento, non una misura clinica.', refs: ['25979105', '23852425'] },
+  { id: 'supplements', title: 'Integratori', what: 'Dosi e indicazioni degli integratori più usati (creatina, caffeina, beta-alanina…) vengono dalle posizioni ufficiali della International Society of Sports Nutrition e dalle schede del National Institutes of Health. Un integratore non cura malattie.', refs: ['28615996', '33388079', '26175657', 'nih-ods'] },
+  { id: 'exams', title: 'Esami del sangue', what: 'I valori di riferimento degli esami sono quelli del laboratorio che li ha fatti; Nurvan li mostra e li confronta nel tempo, ma per interpretarli serve il medico.', refs: ['medlineplus-labs'] },
+  { id: 'pregnancy', title: 'Gravidanza e dopo il parto', what: 'Le indicazioni sull’esercizio in gravidanza e dopo il parto seguono l’American College of Obstetricians and Gynecologists; le fonti di ogni esercizio sono in Salute e recupero.', refs: ['32217980'] }
+];
+function healthSourceRef(id) {
+  const all = (typeof window !== 'undefined' && window.NURVAN_HEALTH_REFS) || {};
+  return all[id] || null;
+}
+function openHealthSourceUrl(url) {
+  // In the iPhone app a plain link to another site does nothing: the system browser opens it.
+  try {
+    const B = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+    if (B && typeof B.open === 'function') { B.open({ url: url }); return; }
+  } catch (_) {}
+  window.open(url, '_blank', 'noopener');
+}
+window.openHealthSourceUrl = openHealthSourceUrl;
+// The small "Fonti" link put next to a number or a piece of advice.
+function healthSourcesLinkHtml(topic) {
+  return '<button type="button" class="health-sources-link" onclick="event.stopPropagation();openHealthSources(\'' + esc(topic || '') + '\')" style="background:none;border:0;padding:0;margin:0;font:inherit;font-size:11px;font-weight:800;color:var(--gold);text-decoration:underline;cursor:pointer;white-space:nowrap;">📚 Fonti</button>';
+}
+window.healthSourcesLinkHtml = healthSourcesLinkHtml;
+// A one-line card at the top of a screen with numbers: where they come from.
+function healthSourcesStripHtml(topic, text) {
+  return '<div class="health-sources-strip" role="note" style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;line-height:1.4;color:#aaa;background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:8px 11px;margin:0 0 12px;"><span>' + esc(text || 'Stime basate su studi scientifici, non un parere medico.') + '</span>' + healthSourcesLinkHtml(topic) + '</div>';
+}
+window.healthSourcesStripHtml = healthSourcesStripHtml;
+function addHealthSourcesStrip(c, where, html) {
+  if (c && typeof c.insertAdjacentHTML === 'function') c.insertAdjacentHTML(where, html);
+}
+function openHealthSources(topic) {
+  window.__healthSourcesTopic = topic || '';
+  try { const m = document.getElementById('gen-nutrition-plan-modal'); if (m) m.remove(); } catch (_) {}
+  try { const m = document.getElementById('edit-nutr-targets-modal'); if (m) m.remove(); } catch (_) {}
+  navigate('sources');
+}
+window.openHealthSources = openHealthSources;
+function renderHealthSources(c) {
+  const focus = window.__healthSourcesTopic || '';
+  window.__healthSourcesTopic = '';
+  const topics = HEALTH_SOURCE_TOPICS.map(function (t) {
+    const refs = t.refs.map(healthSourceRef).filter(Boolean).map(function (r) {
+      return '<li style="margin:0 0 8px;"><span data-notr="1" style="color:#ddd;">' + esc(r.cite) + '</span>' + (r.pmid ? ' <span data-notr="1" style="color:#777;">PMID ' + esc(r.pmid) + '</span>' : '') +
+        '<br><button type="button" onclick="openHealthSourceUrl(\'' + esc(r.url) + '\')" style="background:none;border:0;padding:0;font:inherit;font-size:11px;font-weight:800;color:var(--gold);text-decoration:underline;cursor:pointer;">Apri la fonte ↗</button></li>';
+    }).join('');
+    return '<div class="card" id="sources-' + t.id + '" style="padding:14px;margin-bottom:12px;' + (focus === t.id ? 'border:1px solid var(--gold);' : '') + '">' +
+      '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">' + esc(t.title) + '</div>' +
+      '<p style="font-size:12px;color:#ccc;line-height:1.5;margin:0 0 10px;">' + esc(t.what) + '</p>' +
+      '<ul style="font-size:11px;line-height:1.45;margin:0;padding-left:18px;">' + refs + '</ul></div>';
+  }).join('');
+  c.innerHTML =
+    '<h1 class="text-gold" style="font-size:22px;font-weight:900;margin-bottom:6px;">Fonti scientifiche</h1>' +
+    '<p style="font-size:12px;color:#aaa;line-height:1.5;margin:0 0 12px;">Da dove vengono i calcoli e le indicazioni di Nurvan: calorie, macronutrienti, schede, integratori, recupero. ' + esc(NOT_MEDICAL_TEXT) + '</p>' +
+    topics +
+    '<p style="font-size:11px;color:#777;line-height:1.5;margin:4px 0 0;">Il Coach AI risponde con indicazioni generali basate sugli stessi principi; non sostituisce un medico o un nutrizionista.</p>';
+  if (focus) {
+    setTimeout(function () {
+      const el = document.getElementById('sources-' + focus);
+      if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+    }, 60);
+  }
+}
+window.renderHealthSources = renderHealthSources;
 const NOT_MEDICAL_TEXT = 'Nurvan non è un dispositivo medico: stime, statistiche e suggerimenti non sostituiscono il parere di un medico.';
 
 function privacyConsentCurrent() {
@@ -42058,6 +42145,7 @@ function renderPrivacySettingsCard() {
       '<button type="button" class="btn btn-outline" style="font-size:10px;padding:6px 10px;flex:0 0 auto;" onclick="setAiConsent(' + (ai ? 'false' : 'true') + ')">' + (ai ? 'REVOCA' : 'ATTIVA') + '</button>' +
       '</div>') : '') +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+    '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="openHealthSources(\'\')">📚 FONTI SCIENTIFICHE</button>' +
     '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="exportFullDatabaseBackup()">ESPORTA I MIEI DATI</button>' +
     ((logged && !athlete && typeof trainingSafetyCopies === 'function' && trainingSafetyCopies().length) ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;" onclick="restoreTrainingFromSafetyUi()">RIPRISTINA I CARICHI SALVATI</button>' : '') +
     (logged ? '<button type="button" class="btn btn-outline" style="flex:1;min-width:140px;font-size:10px;padding:8px;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()">ELIMINA ACCOUNT</button>' : '') +
@@ -47345,7 +47433,7 @@ function applyOperationsToProgram(program, operations) {
     }
     if (type === 'navigate' || type === 'set_view') {
       const view = changes.view || changes.tab || op.view;
-      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox','disciplines','wellbeing']);
+      const allowedViews = new Set(['home','training','stats','ai','programs','nutrition','supplements','therapy','exams','menu','athlete','settings','hyrox','disciplines','wellbeing','sources']);
       if (view && allowedViews.has(String(view))) {
         currentView = String(view);
         appliedCount++;
@@ -51610,6 +51698,10 @@ var PAGE_TUTORIALS = {
     { t: 'Tre aree', d: 'Postura e dolori, travaglio e parto, dopo il parto. Ognuna parte dai segni per cui prima serve un professionista, e dice anche cosa gli studi non hanno dimostrato.' },
     { t: 'Il programma', d: 'Dove è adatto, scrivi un programma: lo vedi per intero prima di iniziarlo, e porta l’avvertenza con sé.' }
   ] },
+  sources: { label: 'Fonti scientifiche', icon: '📚', steps: [
+    { t: 'Da dove vengono i numeri', d: 'Per ogni calcolo dell’app (calorie, proteine, schede, recupero, integratori) trovi cosa fa Nurvan e gli studi o le linee guida su cui si basa.' },
+    { t: 'Apri la fonte', d: 'Tocca «Apri la fonte» per leggere lo studio su PubMed o il documento ufficiale. Il link «Fonti» nelle altre pagine porta qui, al punto giusto.' }
+  ] },
   disciplines: { label: 'A casa', icon: '🧘', steps: [
     { t: 'Cinque discipline', d: 'Pilates sul tappetino, mobilità e stretching, calisthenics, HIIT e GAG (gambe, addome, glutei): scegli giorni, livello e durata della seduta.' },
     { t: 'Lezione a tempo', d: 'Ogni seduta si può seguire come una lezione: un esercizio alla volta, come farlo, il conto alla rovescia e il recupero.' }
@@ -52339,13 +52431,13 @@ function renderCurrentView() {
   }
 
   c.innerHTML = '';
-  if (currentView === 'home') renderHome(c);
-  else if (currentView === 'training') { renderTraining(c); try { const sw = activeProgramsSwitcherHtml(); if (sw) c.insertAdjacentHTML('afterbegin', sw); } catch (_) {} }
-  else if (currentView === 'stats') renderStats(c);
+  if (currentView === 'home') { renderHome(c); addHealthSourcesStrip(c, 'beforeend', healthSourcesStripHtml('', 'Le stime di Nurvan si basano su studi scientifici e non sostituiscono un medico.')); }
+  else if (currentView === 'training') { renderTraining(c); try { const sw = activeProgramsSwitcherHtml(); if (sw) c.insertAdjacentHTML('afterbegin', sw); } catch (_) {} addHealthSourcesStrip(c, 'beforeend', healthSourcesStripHtml('intensity', 'Ripetizioni in riserva, recuperi e carichi seguono studi scientifici.')); }
+  else if (currentView === 'stats') { renderStats(c); addHealthSourcesStrip(c, 'afterbegin', healthSourcesStripHtml('strength', 'Massimali stimati e volumi seguono formule e studi pubblicati.')); }
   else if (currentView === 'ai') renderAI(c);
   else if (currentView === 'db') renderDb(c);
   else if (currentView === 'import') renderImport(c);
-  else if (currentView === 'programs') renderPrograms(c);
+  else if (currentView === 'programs') { renderPrograms(c); addHealthSourcesStrip(c, 'afterbegin', healthSourcesStripHtml('volume', 'Serie, frequenza e progressioni delle schede seguono studi scientifici.')); }
   else if (currentView === 'nutrition') renderNutrition(c);
   else if (currentView === 'supplements') renderSupplements(c);
   else if (currentView === 'therapy') renderTherapy(c);
@@ -52359,7 +52451,8 @@ function renderCurrentView() {
   else if (currentView === 'hyrox') renderHyrox(c);
   else if (currentView === 'disciplines') renderDisciplines(c);
   else if (currentView === 'wellbeing') renderWellbeing(c);
-  else if (currentView === 'health') renderHealth(c);
+  else if (currentView === 'sources') renderHealthSources(c);
+  else if (currentView === 'health') { renderHealth(c); addHealthSourcesStrip(c, 'afterbegin', healthSourcesStripHtml('recovery', 'La stima del recupero segue studi su sonno e frequenza cardiaca, non è una misura clinica.')); }
   else renderHome(c);
   if (currentView !== 'nutrition') window.__nutritionLastView = currentView;
   applyChromeI18n();
@@ -53107,6 +53200,7 @@ function renderNutrition(c) {
   } else {
     renderNutritionPlanView(c);
   }
+  addHealthSourcesStrip(c, 'afterbegin', healthSourcesStripHtml('energy', 'Calorie e macronutrienti sono stime da studi scientifici, non una prescrizione.'));
   c.insertAdjacentHTML('afterbegin', nutritionSubTabsHtml());
 }
 
@@ -55205,6 +55299,7 @@ async function openGenerateNutritionPlanWizard() {
     '<div style="font-size:10px;color:var(--gold);font-weight:800;">GENERA ALIMENTAZIONE</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'gen-nutrition-plan-modal\').remove()">CHIUDI</button></div>' +
     '<div style="font-size:12px;color:#bbb;margin-bottom:10px;line-height:1.4;">Automatico dal profilo, preciso con macros e pasti liberi, oppure solo un budget di kcal/macro che il cliente riempie con le proprie scelte.</div>' +
+    healthSourcesStripHtml('energy', 'Calorie (Mifflin-St Jeor) e proteine (1,6–2,2 g/kg) da studi pubblicati.') +
     '<div style="display:flex;gap:6px;margin-bottom:12px;">' +
     '<button type="button" id="gen-nutr-mode-auto" class="btn btn-primary" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'auto\')">AUTOMATICO</button>' +
     '<button type="button" id="gen-nutr-mode-precise" class="btn btn-outline" style="flex:1;font-size:11px;" onclick="setGenNutritionMode(\'precise\')">PRECISO</button>' +

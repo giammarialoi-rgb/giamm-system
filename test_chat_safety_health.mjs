@@ -58,7 +58,7 @@ ok('the stored record is not touched', rec.vitals.sleepHours === 7);
 // ---- Salute: the screen
 const app = read('web/index.base.html');
 ok('the Salute tile opens the screen, and has its own rule', /data-hub="health"[^>]*onclick="closeMenuHub\(\);navigate\('health'\)"/.test(app) && /\[data-hub="health"\]/.test(ui));
-ok('the view is wired', /else if \(currentView === 'health'\) renderHealth\(c\);/.test(app));
+ok('the view is wired', /else if \(currentView === 'health'\) (\{ )?renderHealth\(c\);/.test(app));
 const src = app.slice(app.indexOf('function isNativeApp()'), app.indexOf('function renderHealth('));
 const store = { nutritionDaily: {}, prefs: {}, health: {} };
 const keyOf = (back) => { const d = new Date(); d.setDate(d.getDate() - back); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
