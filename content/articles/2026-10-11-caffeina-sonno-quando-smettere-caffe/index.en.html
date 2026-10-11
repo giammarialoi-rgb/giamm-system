@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caffeine and sleep: when to stop drinking coffee | Nurvan</title>
+<meta name="description" content="A viral chart says you still have 87 mg of caffeine at 11 PM. The maths checks out; the two inputs don&#x27;t. Cup strength and half-life both vary several-fold.">
+<link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html"><link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="hi" href="index.hi.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:0;z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:560px;height:auto}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;white-space:nowrap;display:inline-block;vertical-align:middle}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:500px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Nutrition</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Get the app</a></div></header>
+<main class="wrap" lang="en">
+<div class="crumb">Blog · Supplements · Caffeine</div>
+<h1>Caffeine and sleep: when you actually need to stop</h1>
+<p class="lede">A widely shared chart plots three coffees — 8 AM, noon, 2 PM — and lands on 87 mg of caffeine still in your body at 11 PM, more than a can of Red Bull. The arithmetic is right. The trouble is the two numbers feeding it: how much caffeine is in a cup, and how fast you clear it. Measure both and the answer stops being a number and becomes a very wide range. Here is the calculation redone, plus the cut-off time the meta-analyses actually support.</p>
+<div class="meta"><span>2026-10-11</span><span><b>12</b> min read</span><span><b>9</b> studies cited</span><span>By <a href="/autore/giammaria-loi">Giammaria Loi</a> · updated 11 October 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Caffeine and sleep: when you actually need to stop"><figcaption class="cap">Jubair1985, Wikimedia Commons, CC0 1.0</figcaption></figure>
+<div class="box"><h2>Key points</h2><ul><li><strong>The post&#x27;s maths holds up.</strong> On its own assumptions (100 mg a cup, a 6-hour half-life) about 81 mg is left at 11 PM, close enough to the 87 mg shown. And yes, that beats the roughly 80 mg in a 250 ml energy drink (EFSA, 2015).</li><li><strong>But &quot;a cup = 100 mg&quot; is not a thing.</strong> Across 104 espressos bought in coffee shops in Italy, Scotland and Spain, caffeine ranged from <strong>48 to 317 mg per serving</strong> (Ludwig et al., 2014). A 6.5-fold spread, cup to cup.</li><li><strong>Neither is &quot;a 6-hour half-life&quot;.</strong> EFSA puts the average near 4 hours with a range of <strong>2 to 8 hours</strong>, and the activity of the enzyme that clears caffeine varies <strong>5- to 6-fold</strong> between people (Grzegorzewski et al., 2022).</li><li><strong>Rerun the model with measured values</strong> and the caffeine left at 11 PM runs from <strong>3 mg to 354 mg</strong> — a hundredfold range, not a single figure. The chart below shows it.</li><li><strong>The post&#x27;s conclusion is right, and stricter than it lets on.</strong> To avoid losing sleep time, a 107 mg coffee should be drunk at least <strong>8.8 hours</strong> before bed, and a 217 mg serving of pre-workout at least <strong>13.2 hours</strong> before (Gardiner et al., 2023).</li></ul></div>
+<h2>The model is fine. Its inputs are not</h2>
+<p>The post uses the standard approach: caffeine halves at a fixed interval, and each new dose stacks on what&#x27;s left of the last. Three 100 mg cups at 8 AM, noon and 2 PM, with a 6-hour half-life, leave about 81 mg at 11 PM. So the 87 mg on the graphic is the right order of magnitude.</p>
+<p>That isn&#x27;t the problem. A model like this returns exactly what you feed it, and here it is fed two population averages dressed up as constants. Neither one is.</p>
+<h2>What the research actually says</h2>
+<h3>&quot;A cup of coffee has 100 mg of caffeine&quot; <span class="pill no">Busted</span></h3>
+<p>This is the weakest link in the whole argument. A University of Glasgow team bought and analysed <strong>104 espressos</strong> from coffee shops in Scotland, Italy and Spain. Caffeine ran from <strong>48 to 317 mg per serving</strong>. Their conclusion: &quot;one cup of coffee&quot; is not a reproducible unit — and yet it is the unit epidemiology uses to measure intake (Ludwig et al., 2014).</p>
+<p>An earlier survey of espressos from 20 British high-street outlets found <strong>sixfold</strong> differences, with one single espresso carrying <strong>322 mg</strong> (Crozier et al., 2012). The dominant variable isn&#x27;t the blend or the roast: it&#x27;s how much ground coffee the barista packs into the basket.</p>
+<p>So your coffee may hold less than half, or more than three times, the cup the post assumes — and you have no way of knowing which.</p>
+<h3>&quot;Caffeine&#x27;s half-life is 5 to 6 hours&quot; <span class="pill part">Needs qualifying</span></h3>
+<p>In its opinion on caffeine safety, EFSA gives an average half-life of about <strong>4 hours in healthy adults, ranging from 2 to 8 hours</strong> (EFSA, 2015). The 6 hours used in the post sits at the upper end of that range, not in the middle.</p>
+<p>The reason for the spread is the liver enzyme CYP1A2, which handles 80–90% of caffeine breakdown. Its activity varies <strong>5- to 6-fold</strong> between people for genetic, epigenetic and environmental reasons. In a systematic analysis of 141 pharmacokinetic publications, <strong>smoking</strong> consistently speeds caffeine clearance while <strong>oral contraceptives</strong> slow it, an effect reproducible across more than fifty years of research (Grzegorzewski et al., 2022). The ISSN position stand makes the same point: individual responses to caffeine, sleep included, are partly down to genetic variation in how you metabolise it (Guest et al., 2021).</p>
+<figure><div class="chart" role="img" aria-label="Caffeine left at 11 PM after three coffees at 8 AM, noon and 2 PM, for three doses per cup and three half-lives."><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 580" width="920" height="580" role="img" aria-label="How much caffeine is really left at 11 PM">
+<style>
+text{font-family:'Helvetica Neue',Helvetica,Arial,'Noto Sans','Noto Sans Arabic','Noto Sans Devanagari','Noto Sans SC',sans-serif;fill:#f0f0f0}
+.ttl{font-size:23px;font-weight:700}
+.sub{font-size:14px;fill:#a0a0a0}
+.ax{font-size:13px;fill:#a0a0a0}
+.axl{font-size:13px;fill:#a0a0a0;font-weight:600}
+.cat{font-size:15px;font-weight:600;fill:#f0f0f0}
+.val{font-size:14px;font-weight:700}
+.leg{font-size:13px;fill:#f0f0f0}
+.src{font-size:11.5px;fill:#a0a0a0}
+.ref{font-size:12px;fill:#a0a0a0}
+</style>
+<rect width="920" height="580" fill="#0c0c0c"/>
+<text class="ttl" x="38" y="40">How much caffeine is really left at 11 PM</text>
+<text class="sub" x="38" y="64">Three coffees at 8 AM, 12 PM and 2 PM — the same schedule as the post</text>
+<line x1="38" y1="76" x2="892" y2="76" stroke="#aa8a2e" stroke-width="1" opacity="0.5"/>
+<line x1="86" y1="438" x2="892" y2="438" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="442" text-anchor="end">0</text>
+<line x1="86" y1="381" x2="892" y2="381" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="385" text-anchor="end">60</text>
+<line x1="86" y1="324" x2="892" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="328" text-anchor="end">120</text>
+<line x1="86" y1="267" x2="892" y2="267" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="271" text-anchor="end">180</text>
+<line x1="86" y1="210" x2="892" y2="210" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="214" text-anchor="end">240</text>
+<line x1="86" y1="153" x2="892" y2="153" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="157" text-anchor="end">300</text>
+<line x1="86" y1="96" x2="892" y2="96" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="100" text-anchor="end">360</text>
+<text class="axl" transform="translate(22,267) rotate(-90)" text-anchor="middle">Caffeine left at 11 PM (mg)</text>
+<rect x="119.3" y="435.1" width="58" height="2.9" fill="#aa8a2e" rx="3"/>
+<text class="val" x="148.3" y="427.1" text-anchor="middle" fill="#aa8a2e">3</text>
+<rect x="191.3" y="431.4" width="58" height="6.6" fill="#d4af37" rx="3"/>
+<text class="val" x="220.3" y="423.4" text-anchor="middle" fill="#d4af37">7</text>
+<rect x="263.3" y="416.1" width="58" height="21.9" fill="#f3e5ab" rx="3"/>
+<text class="val" x="292.3" y="408.1" text-anchor="middle" fill="#f3e5ab">23</text>
+<text class="cat" x="220.3" y="464" text-anchor="middle">2 hours</text>
+<rect x="388.0" y="418.1" width="58" height="19.9" fill="#aa8a2e" rx="3"/>
+<text class="val" x="417.0" y="410.1" text-anchor="middle" fill="#aa8a2e">21</text>
+<rect x="460.0" y="397.1" width="58" height="40.9" fill="#d4af37" rx="3"/>
+<text class="val" x="489.0" y="389.1" text-anchor="middle" fill="#d4af37">43</text>
+<rect x="532.0" y="307.9" width="58" height="130.1" fill="#f3e5ab" rx="3"/>
+<text class="val" x="561.0" y="299.9" text-anchor="middle" fill="#f3e5ab">137</text>
+<text class="cat" x="489.0" y="464" text-anchor="middle">4 hours (EFSA average)</text>
+<rect x="656.7" y="386.7" width="58" height="51.3" fill="#aa8a2e" rx="3"/>
+<text class="val" x="685.7" y="378.7" text-anchor="middle" fill="#aa8a2e">54</text>
+<rect x="728.7" y="331.6" width="58" height="106.4" fill="#d4af37" rx="3"/>
+<text class="val" x="757.7" y="323.6" text-anchor="middle" fill="#d4af37">112</text>
+<rect x="800.7" y="101.7" width="58" height="336.3" fill="#f3e5ab" rx="3"/>
+<text class="val" x="829.7" y="93.7" text-anchor="middle" fill="#f3e5ab">354</text>
+<text class="cat" x="757.7" y="464" text-anchor="middle">8 hours</text>
+<line x1="86" y1="362.0" x2="892" y2="362.0" stroke="#f0f0f0" stroke-width="1.4" stroke-dasharray="7 5" opacity="0.75"/>
+<text class="ref" x="94" y="353.0" text-anchor="start">80 mg = one can of Red Bull</text>
+<line x1="86" y1="438" x2="892" y2="438" stroke="#a0a0a0" stroke-width="1.2"/>
+<text class="axl" x="489" y="488" text-anchor="middle">Caffeine half-life</text>
+<rect x="38" y="514" width="13" height="13" fill="#aa8a2e" rx="2"/>
+<text class="leg" x="58" y="525">48 mg per cup</text>
+<rect x="177" y="514" width="13" height="13" fill="#d4af37" rx="2"/>
+<text class="leg" x="197" y="525">100 mg (the post’s assumption)</text>
+<rect x="435" y="514" width="13" height="13" fill="#f3e5ab" rx="2"/>
+<text class="leg" x="455" y="525">317 mg per cup</text>
+<text class="src" x="38" y="560">Doses 48–317 mg: Ludwig et al., 2014 (104 espressos). Half-life 2–8 h: EFSA, 2015. Nurvan chart.</text>
+</svg>
+</div><figcaption class="cap">Same model as the post, same coffee times, but using measured values instead of two averages. The answer isn&#x27;t 87 mg: it&#x27;s anywhere from 3 to 354 mg. Doses from Ludwig et al., 2014; half-lives from the EFSA 2015 range. Nurvan calculation and chart.</figcaption></figure>
+<p>That chart explains why two colleagues on the same number of coffees sleep differently, and why &quot;coffee after dinner does nothing to me&quot; can be literally true for anyone sitting in the left-hand column.</p>
+<h3>&quot;At 11 PM you&#x27;ve got more caffeine than a Red Bull&quot; <span class="pill ok">Confirmed</span></h3>
+<p>The comparison stands. EFSA puts energy drinks at 320 mg per litre, so roughly <strong>80 mg in a 250 ml can</strong> (EFSA, 2015). On the post&#x27;s assumptions you end up just above that line. With a stronger cup or a slow metabolism, far above it.</p>
+<h3>&quot;Afternoon coffee disrupts sleep&quot; <span class="pill ok">Confirmed</span> <span class="pill nv">and the threshold is tighter</span></h3>
+<p>The post is right here, but stops short of the most useful number. The reference meta-analysis pooled 24 studies and found caffeine <strong>cuts total sleep time by 45 minutes</strong> and sleep efficiency by 7%, adds 9 minutes to the time it takes to fall asleep and 12 minutes of wakefulness afterwards. Crucially, the authors worked out the lead time required: a <strong>107 mg coffee at least 8.8 hours before bed</strong>, and a <strong>standard 217.5 mg serving of pre-workout at least 13.2 hours before</strong> (Gardiner et al., 2023).</p>
+<table><thead><tr><th>Bedtime</th><th>Last coffee (107 mg)</th><th>Last pre-workout (217 mg)</th></tr></thead><tbody><tr><td>10:00 PM</td><td>1:12 PM</td><td>8:48 AM</td></tr><tr><td>11:00 PM</td><td>2:12 PM</td><td>9:48 AM</td></tr><tr><td>12:00 AM</td><td>3:12 PM</td><td>10:48 AM</td></tr></tbody></table>
+<p class="cap">Nurvan calculation applying the 8.8-hour and 13.2-hour thresholds published in Gardiner et al., 2023. These are literature averages, not individual prescriptions.</p>
+<p>A field trial had already shown the same thing more bluntly: 400 mg of caffeine taken <strong>6 hours before</strong> bed significantly reduced sleep versus placebo, measured with a validated monitor in participants&#x27; own homes (Drake et al., 2013).</p>
+<p>In the post&#x27;s schedule the last coffee is at 2 PM for an 11 PM bedtime — nine hours, just inside the threshold for <strong>one</strong> coffee. The day&#x27;s total, though, was three cups.</p>
+<h3>&quot;If I fall asleep anyway, it&#x27;s fine&quot; <span class="pill no">Busted</span></h3>
+<p>The post doesn&#x27;t say this, but it&#x27;s the most common reply under content like it, and the research takes it apart. In the same meta-analysis, caffeine increases light sleep (+6.1 minutes of N1) and <strong>cuts deep sleep by 11.4 minutes</strong> (Gardiner et al., 2023). A later meta-analysis of 22 controlled polysomnography trials in 956 participants agrees: −34.7 minutes of total sleep, −4.7% efficiency, +8.4 minutes to fall asleep, and a drop in the share of deep sleep that is sharper at higher doses (Chang et al., 2025).</p>
+<p>Falling asleep is not the whole job. If you train, the deep part of the night is the part worth protecting.</p>
+<p>In athletes there&#x27;s a twist. Ten studies of caffeine before late-afternoon or evening sessions show a small drop in sleep efficiency (−4.87%) and a non-significant trend on total sleep time — but the athletes <strong>consistently report markedly worse sleep</strong> (Kocak et al., 2025). Perception runs ahead of the measurement. With few nights and few participants, that&#x27;s a reason to be careful, not relaxed.</p>
+<h3>&quot;Caffeine is a performance tool&quot; <span class="pill ok">Confirmed</span></h3>
+<p>Here the post matches the literature. The ISSN position stand reports consistent benefits for endurance, strength, movement velocity and sport-specific actions at <strong>3–6 mg per kg of body mass</strong>, usually taken 60 minutes beforehand; very high doses such as 9 mg/kg add side effects without adding benefit (Guest et al., 2021). For a 75 kg lifter that&#x27;s 225–450 mg — at the top end, one very strong espresso plus a pre-workout. If you like weighing supplements by the evidence rather than the marketing, we did the same job in our <a href="/en/blog/strength-supplements-tier-list-evidence">strength supplement tier list</a>.</p>
+<h2>How to apply it</h2>
+<ol class="steps"><li><strong>Set a time, not a quantity.</strong> Take your bedtime and subtract 9 hours: that&#x27;s your last ordinary coffee. For pre-workout, subtract 13.</li><li><strong>If you train in the evening, change the tool.</strong> A full pre-workout scoop at 7 PM does not coexist with an 11 PM bedtime. Halve it, switch to a caffeine-free option, or move the caffeine to your morning session.</li><li><strong>Count servings, not cups.</strong> Your espresso can be anything from 48 to 317 mg. If you don&#x27;t know how strong it is, assume two out can already be half the daily ceiling.</li><li><strong>Stay under the safety limits.</strong> EFSA considers up to 400 mg a day and 200 mg in a single dose to be of no concern for healthy adults (EFSA, 2015). In pregnancy, or with a medical condition or medication, the limits change — that&#x27;s a question for your doctor, not a calculator.</li><li><strong>Run a two-week test on yourself.</strong> Log the time and dose of every caffeine source and how you slept. After ten days your own range shows up: it&#x27;s the only way to find out which column of the chart you&#x27;re in.</li><li><strong>Don&#x27;t patch it with more caffeine.</strong> Sleeping badly and raising the dose the next day is the loop the literature describes as the start of the problem, not the fix.</li></ol>
+<div class="app"><div><h3>💡 With Nurvan</h3><p><strong>Supplements have a clock, not just a dose.</strong> Nurvan logs every supplement with its amount and the time you took it — caffeine and pre-workout included — alongside that day&#x27;s training session. So if you sleep badly after evening workouts, you don&#x27;t have to reconstruct it from memory: the data is already there, hour by hour.</p></div><a class="cta" href="https://nurvan.app">Try Nurvan</a></div>
+<h2>FAQ</h2>
+<details open><summary>How many hours before bed should I stop drinking coffee?</summary><p>At least 8.8 hours for a coffee of around 107 mg, and 13.2 hours for a 217 mg pre-workout serving, if the goal is not to lose total sleep time (Gardiner et al., 2023). For an 11 PM bedtime that puts your last coffee around 2 PM. These are averages: if you clear caffeine slowly, give yourself more room.</p></details>
+<details open><summary>How much caffeine is really in an espresso?</summary><p>Between 48 and 317 mg per serving, across the 104 espressos measured in coffee shops in Italy, Scotland and Spain (Ludwig et al., 2014). The biggest factor is how much ground coffee the barista uses, not the blend.</p></details>
+<details open><summary>If I fall asleep fine after coffee, can I drink it at night?</summary><p>Falling asleep quickly isn&#x27;t the same as sleeping well. Caffeine shifts sleep towards the lighter stages and cuts deep sleep by about 11 minutes a night (Gardiner et al., 2023; Chang et al., 2025). The effect is there whether or not you notice it.</p></details>
+<details open><summary>Is caffeine worth it before an evening workout?</summary><p>It depends what that evening is for. The performance benefit at 3–6 mg/kg is well documented (Guest et al., 2021), but athletes who take caffeine before evening sessions report worse sleep (Kocak et al., 2025). For an ordinary training day the trade rarely pays; for a competition it can.</p></details>
+<h2>Read next</h2>
+<ul><li><a href="/en/blog/strength-supplements-tier-list-evidence">Strength supplement tier list: what research says</a></li><li><a href="/en/blog/creatine-without-training-over-45">Creatine without the gym after 45: what the study shows</a></li><li><a href="/en/blog/how-many-reps-build-muscle">How many reps build muscle? The 8-12 myth</a></li></ul>
+<h2>Sources</h2>
+<ol class="refs"><li>Gardiner C, Weakley J, Burke LM, Roach GD, Sargent C, Maniar N, Townshend A, Halson SL, 2023. <em>The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.</em> Sleep Med Rev 69:101764. PMID 36870101 — <a href="https://doi.org/10.1016/j.smrv.2023.101764">doi:10.1016/j.smrv.2023.101764</a></li><li>Chang YH, Cheng YC, Cheng WJ, 2025. <em>Age- and dose-specific effects of caffeine on sleep: A meta-analysis of controlled crossover trials.</em> Sleep Med 136:106874. PMID 41124973 — <a href="https://doi.org/10.1016/j.sleep.2025.106874">doi:10.1016/j.sleep.2025.106874</a></li><li>Drake C, Roehrs T, Shambroom J, Roth T, 2013. <em>Caffeine effects on sleep taken 0, 3, or 6 hours before going to bed.</em> J Clin Sleep Med 9(11):1195–1200. PMID 24235903 — <a href="https://doi.org/10.5664/jcsm.3170">doi:10.5664/jcsm.3170</a></li><li>Ludwig IA, Mena P, Calani L, Cid C, Del Rio D, Lean MEJ, Crozier A, 2014. <em>Variations in caffeine and chlorogenic acid contents of coffees: what are we drinking?</em> Food Funct 5(8):1718–1726. PMID 25014672 — <a href="https://doi.org/10.1039/c4fo00290c">doi:10.1039/c4fo00290c</a></li><li>Crozier TWM, Stalmach A, Lean MEJ, Crozier A, 2012. <em>Espresso coffees, caffeine and chlorogenic acid intake: potential health implications.</em> Food Funct 3(1):30–33. PMID 22130653 — <a href="https://doi.org/10.1039/c1fo10240k">doi:10.1039/c1fo10240k</a></li><li>Grzegorzewski J, Bartsch F, Köller A, König M, 2022. <em>Pharmacokinetics of Caffeine: A Systematic Analysis of Reported Data for Application in Metabolic Phenotyping and Liver Function Testing.</em> Front Pharmacol 12:752826. PMID 35280254 — <a href="https://doi.org/10.3389/fphar.2021.752826">doi:10.3389/fphar.2021.752826</a></li><li>Kocak A, Georgousopoulou E, Knight-Agarwal CR, Matthews R, Minehan M, 2025. <em>The Effect of Consuming Caffeine Before Late Afternoon/Evening Training or Competition on Sleep: A Systematic Review with Meta-Analysis.</em> Sports (Basel) 13(9):317. PMID 41003623 — <a href="https://doi.org/10.3390/sports13090317">doi:10.3390/sports13090317</a></li><li>Guest NS, VanDusseldorp TA, Nelson MT, et al., 2021. <em>International society of sports nutrition position stand: caffeine and exercise performance.</em> J Int Soc Sports Nutr 18(1):1. PMID 33388079 — <a href="https://doi.org/10.1186/s12970-020-00383-4">doi:10.1186/s12970-020-00383-4</a></li><li>EFSA Panel on Dietetic Products, Nutrition and Allergies, 2015. <em>Scientific Opinion on the safety of caffeine.</em> EFSA Journal 13(5):4102. — <a href="https://doi.org/10.2903/j.efsa.2015.4102">doi:10.2903/j.efsa.2015.4102</a></li></ol>
+<p>Metadata and abstracts retrieved from PubMed. Starting point: a post by <a href="https://www.instagram.com/p/DdNDHgthiYV/">Todd Anderson (@toddanderson42_)</a> from 13 September 2026. No text, image or structure from the post was reproduced: the claims were extracted, rewritten and verified independently.</p>
+<hr style="border:0;border-top:1px solid var(--line);margin:40px 0">
+<p><strong>Giammaria Loi</strong> is the founder of Nurvan. He has been lifting since 2012, has worked as a FIPE-certified personal trainer and coach since 2013, and has competed in powerlifting at national level since 2018. Every article he writes starts from the research and ends with what actually works in the gym.</p>
+<p class="note">Note: this is educational content and does not replace advice from a doctor or qualified professional. If you are pregnant or breastfeeding, take medication, or have a sleep, heart or anxiety disorder, talk to your doctor before changing your caffeine intake.</p>
+</main>
+<footer>NURVAN · nurvan.app</footer>
+</body>
+</html>

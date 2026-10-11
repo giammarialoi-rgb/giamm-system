@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кофеин и сон: когда пить последний кофе | Nurvan</title>
+<meta name="description" content="Вирусный график насчитал 87 мг кофеина в 23:00. Арифметика верна, но два исходных числа — нет: доза в чашке и период полувыведения сильно разнятся.">
+<link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html"><link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="hi" href="index.hi.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:0;z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:560px;height:auto}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;white-space:nowrap;display:inline-block;vertical-align:middle}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:500px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Добавки · Кофеин</div>
+<h1>Кофеин и сон: когда на самом деле пора остановиться</h1>
+<p class="lede">Популярный график рисует три чашки кофе — в 8:00, в полдень и в 14:00 — и приходит к выводу, что в 23:00 в организме ещё 87 мг кофеина: больше, чем в банке Red Bull. Арифметика верна. Проблема в двух числах, которые в неё заложены: сколько кофеина в чашке и как быстро вы его выводите. Измерьте оба — и ответ перестанет быть числом и превратится в очень широкий диапазон. Ниже пересчёт и то время, которое реально подтверждается мета-анализами.</p>
+<div class="meta"><span>2026-10-11</span><span><b>11</b> мин чтения</span><span><b>9</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 11 октября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Кофеин и сон: когда на самом деле пора остановиться"><figcaption class="cap">Jubair1985, Wikimedia Commons, CC0 1.0</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Арифметика поста выдерживает проверку.</strong> При его допущениях (100 мг на чашку, период полувыведения 6 часов) к 23:00 остаётся около 81 мг — близко к показанным 87 мг. И да, это больше примерно 80 мг в банке энергетика на 250 мл (EFSA, 2015).</li><li><strong>Но «чашка = 100 мг» не существует.</strong> В 104 порциях эспрессо, купленных в кофейнях Италии, Шотландии и Испании, кофеин колебался от <strong>48 до 317 мг на порцию</strong> (Ludwig et al., 2014). Разница в 6,5 раза между чашками.</li><li><strong>«Период полувыведения 6 часов» тоже не существует.</strong> EFSA указывает среднее около 4 часов с диапазоном <strong>от 2 до 8 часов</strong>, а активность фермента, выводящего кофеин, различается между людьми в <strong>5–6 раз</strong> (Grzegorzewski et al., 2022).</li><li><strong>Если пересчитать с измеренными значениями</strong>, остаток кофеина в 23:00 составит от <strong>3 мг до 354 мг</strong>: не одно число, а стократный диапазон. График ниже это показывает.</li><li><strong>Вывод поста верен и строже, чем кажется.</strong> Чтобы не терять минуты сна, кофе на 107 мг стоит выпить минимум за <strong>8,8 часа</strong> до сна, а порцию предтренировочного комплекса на 217 мг — минимум за <strong>13,2 часа</strong> (Gardiner et al., 2023).</li></ul></div>
+<h2>Модель правильная. Исходные данные — нет</h2>
+<p>Пост использует стандартный подход: кофеин уменьшается вдвое через равные промежутки, и каждая новая доза складывается с остатком предыдущей. Три чашки по 100 мг в 8:00, 12:00 и 14:00 при периоде полувыведения 6 часов оставляют к 23:00 около 81 мг. Так что 87 мг на графике — верный порядок величины.</p>
+<p>Проблема не в этом. Такая модель возвращает ровно то, что в неё заложили, а сюда заложены два популяционных средних, выданных за константы. Ни одно из них константой не является.</p>
+<h2>Что на самом деле говорит наука</h2>
+<h3>«В чашке кофе 100 мг кофеина» <span class="pill no">Опровергнуто</span></h3>
+<p>Это самое слабое звено всего рассуждения. Команда Университета Глазго купила и проанализировала <strong>104 порции эспрессо</strong> в кофейнях Шотландии, Италии и Испании: кофеин варьировал от <strong>48 до 317 мг на порцию</strong>. Вывод авторов: «чашка кофе» — не воспроизводимая единица измерения, и при этом именно ею эпидемиология измеряет потребление (Ludwig et al., 2014).</p>
+<p>Более раннее исследование эспрессо из 20 британских заведений нашло различия в <strong>шесть раз</strong>, причём один эспрессо содержал <strong>322 мг</strong> (Crozier et al., 2012). Решающая переменная — не сорт и не обжарка, а сколько молотого кофе бариста кладёт в холдер.</p>
+<p>То есть ваш эспрессо может содержать меньше половины или больше трёх объёмов той чашки, что заложена в посте, и узнать это вы никак не можете.</p>
+<h3>«Период полувыведения кофеина — 5–6 часов» <span class="pill part">Требует уточнения</span></h3>
+<p>В заключении о безопасности кофеина EFSA указывает средний период полувыведения около <strong>4 часов у здоровых взрослых, с диапазоном от 2 до 8 часов</strong> (EFSA, 2015). Шесть часов из поста находятся в верхней части диапазона, а не в середине.</p>
+<p>Причина разброса — печёночный фермент CYP1A2, на который приходится 80–90% превращения кофеина. Его активность различается между людьми в <strong>5–6 раз</strong> по генетическим, эпигенетическим и средовым причинам. В систематическом анализе 141 публикации по фармакокинетике <strong>курение</strong> стабильно ускоряет выведение кофеина, а <strong>оральные контрацептивы</strong> его замедляют, и этот эффект воспроизводится на материале более чем пятидесяти лет исследований (Grzegorzewski et al., 2022). Позиционный документ ISSN говорит о том же: индивидуальная реакция на кофеин, включая сон, отчасти определяется генетическими различиями в его метаболизме (Guest et al., 2021).</p>
+<figure><div class="chart" role="img" aria-label="Остаток кофеина в 23:00 после трёх чашек кофе в 8:00, 12:00 и 14:00 при трёх дозах на чашку и трёх периодах полувыведения."><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 580" width="920" height="580" role="img" aria-label="Сколько кофеина реально остаётся в 23:00">
+<style>
+text{font-family:'Helvetica Neue',Helvetica,Arial,'Noto Sans','Noto Sans Arabic','Noto Sans Devanagari','Noto Sans SC',sans-serif;fill:#f0f0f0}
+.ttl{font-size:23px;font-weight:700}
+.sub{font-size:14px;fill:#a0a0a0}
+.ax{font-size:13px;fill:#a0a0a0}
+.axl{font-size:13px;fill:#a0a0a0;font-weight:600}
+.cat{font-size:15px;font-weight:600;fill:#f0f0f0}
+.val{font-size:14px;font-weight:700}
+.leg{font-size:13px;fill:#f0f0f0}
+.src{font-size:11.5px;fill:#a0a0a0}
+.ref{font-size:12px;fill:#a0a0a0}
+</style>
+<rect width="920" height="580" fill="#0c0c0c"/>
+<text class="ttl" x="38" y="40">Сколько кофеина реально остаётся в 23:00</text>
+<text class="sub" x="38" y="64">Три чашки кофе в 8:00, 12:00 и 14:00 — та же схема, что в посте</text>
+<line x1="38" y1="76" x2="892" y2="76" stroke="#aa8a2e" stroke-width="1" opacity="0.5"/>
+<line x1="86" y1="438" x2="892" y2="438" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="442" text-anchor="end">0</text>
+<line x1="86" y1="381" x2="892" y2="381" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="385" text-anchor="end">60</text>
+<line x1="86" y1="324" x2="892" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="328" text-anchor="end">120</text>
+<line x1="86" y1="267" x2="892" y2="267" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="271" text-anchor="end">180</text>
+<line x1="86" y1="210" x2="892" y2="210" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="214" text-anchor="end">240</text>
+<line x1="86" y1="153" x2="892" y2="153" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="157" text-anchor="end">300</text>
+<line x1="86" y1="96" x2="892" y2="96" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="100" text-anchor="end">360</text>
+<text class="axl" transform="translate(22,267) rotate(-90)" text-anchor="middle">Остаток кофеина в 23:00 (мг)</text>
+<rect x="119.3" y="435.1" width="58" height="2.9" fill="#aa8a2e" rx="3"/>
+<text class="val" x="148.3" y="427.1" text-anchor="middle" fill="#aa8a2e">3</text>
+<rect x="191.3" y="431.4" width="58" height="6.6" fill="#d4af37" rx="3"/>
+<text class="val" x="220.3" y="423.4" text-anchor="middle" fill="#d4af37">7</text>
+<rect x="263.3" y="416.1" width="58" height="21.9" fill="#f3e5ab" rx="3"/>
+<text class="val" x="292.3" y="408.1" text-anchor="middle" fill="#f3e5ab">23</text>
+<text class="cat" x="220.3" y="464" text-anchor="middle">2 часа</text>
+<rect x="388.0" y="418.1" width="58" height="19.9" fill="#aa8a2e" rx="3"/>
+<text class="val" x="417.0" y="410.1" text-anchor="middle" fill="#aa8a2e">21</text>
+<rect x="460.0" y="397.1" width="58" height="40.9" fill="#d4af37" rx="3"/>
+<text class="val" x="489.0" y="389.1" text-anchor="middle" fill="#d4af37">43</text>
+<rect x="532.0" y="307.9" width="58" height="130.1" fill="#f3e5ab" rx="3"/>
+<text class="val" x="561.0" y="299.9" text-anchor="middle" fill="#f3e5ab">137</text>
+<text class="cat" x="489.0" y="464" text-anchor="middle">4 часа (среднее EFSA)</text>
+<rect x="656.7" y="386.7" width="58" height="51.3" fill="#aa8a2e" rx="3"/>
+<text class="val" x="685.7" y="378.7" text-anchor="middle" fill="#aa8a2e">54</text>
+<rect x="728.7" y="331.6" width="58" height="106.4" fill="#d4af37" rx="3"/>
+<text class="val" x="757.7" y="323.6" text-anchor="middle" fill="#d4af37">112</text>
+<rect x="800.7" y="101.7" width="58" height="336.3" fill="#f3e5ab" rx="3"/>
+<text class="val" x="829.7" y="93.7" text-anchor="middle" fill="#f3e5ab">354</text>
+<text class="cat" x="757.7" y="464" text-anchor="middle">8 часов</text>
+<line x1="86" y1="362.0" x2="892" y2="362.0" stroke="#f0f0f0" stroke-width="1.4" stroke-dasharray="7 5" opacity="0.75"/>
+<text class="ref" x="94" y="353.0" text-anchor="start">80 мг = одна банка Red Bull</text>
+<line x1="86" y1="438" x2="892" y2="438" stroke="#a0a0a0" stroke-width="1.2"/>
+<text class="axl" x="489" y="488" text-anchor="middle">Период полувыведения кофеина</text>
+<rect x="38" y="514" width="13" height="13" fill="#aa8a2e" rx="2"/>
+<text class="leg" x="58" y="525">48 мг на чашку</text>
+<rect x="184" y="514" width="13" height="13" fill="#d4af37" rx="2"/>
+<text class="leg" x="204" y="525">100 мг (допущение поста)</text>
+<rect x="400" y="514" width="13" height="13" fill="#f3e5ab" rx="2"/>
+<text class="leg" x="420" y="525">317 мг на чашку</text>
+<text class="src" x="38" y="560">Дозы 48–317 мг: Ludwig et al., 2014 (104 эспрессо). Полувыведение 2–8 ч: EFSA, 2015. График Nurvan.</text>
+</svg>
+</div><figcaption class="cap">Та же модель и то же расписание, что в посте, но с измеренными в литературе значениями вместо двух средних. Ответ не 87 мг, а диапазон от 3 до 354 мг. Дозы по Ludwig et al., 2014; периоды полувыведения из диапазона EFSA 2015. Расчёт и график Nurvan.</figcaption></figure>
+<p>График объясняет, почему два коллеги при одинаковом числе чашек спят по-разному и почему «мне кофе после ужина вообще не мешает» может быть буквальной правдой для того, кто находится в левом столбце.</p>
+<h3>«В 23:00 у вас кофеина больше, чем в Red Bull» <span class="pill ok">Подтверждено</span></h3>
+<p>Сравнение корректно. EFSA оценивает энергетики в 320 мг на литр, то есть около <strong>80 мг в банке 250 мл</strong> (EFSA, 2015). При допущениях поста вы оказываетесь чуть выше этого порога. При более крепкой чашке или медленном метаболизме — намного выше.</p>
+<h3>«Дневной кофе мешает спать» <span class="pill ok">Подтверждено</span> <span class="pill nv">и порог жёстче</span></h3>
+<p>Здесь пост прав, но останавливается, не дойдя до самого полезного числа. Ключевой мета-анализ объединил 24 исследования: кофеин <strong>сокращает общее время сна на 45 минут</strong> и эффективность сна на 7%, удлиняет засыпание на 9 минут и время бодрствования после засыпания на 12 минут. Главное — авторы рассчитали необходимый запас времени: кофе на <strong>107 мг минимум за 8,8 часа</strong> до сна, стандартная порция предтренировочного комплекса на <strong>217,5 мг минимум за 13,2 часа</strong> (Gardiner et al., 2023).</p>
+<table><thead><tr><th>Ложитесь в</th><th>Последний кофе (107 мг)</th><th>Последний предтрен (217 мг)</th></tr></thead><tbody><tr><td>22:00</td><td>13:12</td><td>08:48</td></tr><tr><td>23:00</td><td>14:12</td><td>09:48</td></tr><tr><td>00:00</td><td>15:12</td><td>10:48</td></tr></tbody></table>
+<p class="cap">Расчёт Nurvan с применением порогов 8,8 и 13,2 часа, опубликованных в Gardiner et al., 2023. Это средние по литературе, а не индивидуальные предписания.</p>
+<p>Контролируемое полевое исследование показало то же самое прямее: 400 мг кофеина <strong>за 6 часов</strong> до сна значимо сокращают сон по сравнению с плацебо, по данным валидированного прибора у участников дома (Drake et al., 2013).</p>
+<p>В схеме поста последний кофе — в 14:00 при отбое в 23:00: девять часов, чуть выше порога для <strong>одной</strong> чашки. Но за день их было три.</p>
+<h3>«Если я всё равно засыпаю, значит нормально» <span class="pill no">Опровергнуто</span></h3>
+<p>Этого в посте нет, но это самый частый комментарий под таким контентом, и наука его разбирает. В том же мета-анализе кофеин увеличивает поверхностный сон (+6,1 минуты стадии N1) и <strong>сокращает глубокий сон на 11,4 минуты</strong> (Gardiner et al., 2023). Более поздний мета-анализ 22 контролируемых исследований с полисомнографией и 956 участниками это подтверждает: −34,7 минуты общего сна, −4,7% эффективности, +8,4 минуты на засыпание и снижение доли глубокого сна, более выраженное при высоких дозах (Chang et al., 2025).</p>
+<p>Заснуть — ещё не вся работа. Если вы тренируетесь, защищать нужно именно глубокую часть ночи.</p>
+<p>У спортсменов картина с любопытным поворотом. Десять исследований приёма кофеина перед вечерней тренировкой или стартом показывают небольшое снижение эффективности сна (−4,87%) и незначимую тенденцию по общему времени сна, но сами спортсмены <strong>стабильно сообщают о заметно худшем сне</strong> (Kocak et al., 2025). Субъективная оценка опережает измерение: при малом числе ночей и участников это повод для осторожности, а не для спокойствия.</p>
+<h3>«Кофеин — инструмент работоспособности» <span class="pill ok">Подтверждено</span></h3>
+<p>Здесь пост совпадает с литературой. Позиционный документ ISSN сообщает о стабильной пользе для выносливости, силы, скорости движения и специфических для вида спорта действий при дозах <strong>3–6 мг на кг массы тела</strong>, обычно за 60 минут; очень высокие дозы вроде 9 мг/кг ничего не добавляют, но добавляют побочных эффектов (Guest et al., 2021). Для 75 кг это 225–450 мг: в худшем случае — кофеин одного очень крепкого эспрессо плюс предтрен. Если вам ближе оценивать добавки по доказательствам, а не по маркетингу, ту же работу мы проделали в <a href="/ru/blog/reyting-sportivnykh-dobavok-dlya-sily">тир-листе добавок для силы</a>.</p>
+<h2>Как это применить</h2>
+<ol class="steps"><li><strong>Назначьте время, а не количество.</strong> Возьмите время отбоя и отнимите 9 часов — это ваш последний обычный кофе. Для предтренировочного комплекса отнимите 13.</li><li><strong>Тренируетесь вечером — смените инструмент.</strong> Полная порция предтрена в 19:00 несовместима с отбоем в 23:00. Уменьшите вдвое, перейдите на вариант без кофеина или перенесите кофеин на утреннюю тренировку.</li><li><strong>Считайте порции, а не чашки.</strong> Ваш эспрессо может быть от 48 до 317 мг. Если крепость неизвестна, исходите из того, что две чашки вне дома уже могут составить половину дневного потолка.</li><li><strong>Не выходите за пределы безопасности.</strong> EFSA считает безопасными для здорового взрослого до 400 мг в сутки и 200 мг за один приём (EFSA, 2015). При беременности, заболеваниях или приёме лекарств пределы другие: это вопрос к врачу, а не к калькулятору.</li><li><strong>Проведите двухнедельный тест на себе.</strong> Записывайте время и дозу каждого источника кофеина и то, как вы спали. Через десять дней проявится ваш личный диапазон: это единственный способ понять, в каком столбце графика вы находитесь.</li><li><strong>Не компенсируйте новой дозой.</strong> Плохо поспать и на следующий день увеличить дозу — это тот самый круг, который литература описывает как начало проблемы, а не как решение.</li></ol>
+<div class="app"><div><h3>💡 С Nurvan</h3><p><strong>У добавок есть время приёма, а не только доза.</strong> В Nurvan вы записываете каждую добавку с количеством и временем приёма — включая кофеин и предтренировочный комплекс — рядом с тренировкой того же дня. Если после вечерних занятий вы плохо спите, восстанавливать это по памяти не придётся: данные уже есть, час за часом.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details open><summary>За сколько часов до сна надо перестать пить кофе?</summary><p>Минимум за 8,8 часа для кофе примерно на 107 мг и за 13,2 часа для порции предтрена на 217 мг, если цель — не терять общее время сна (Gardiner et al., 2023). При отбое в 23:00 последний кофе приходится примерно на 14:00. Это средние значения: если вы выводите кофеин медленно, запас нужен больше.</p></details>
+<details open><summary>Сколько кофеина на самом деле в эспрессо?</summary><p>От 48 до 317 мг на порцию — по 104 порциям эспрессо, измеренным в кофейнях Италии, Шотландии и Испании (Ludwig et al., 2014). Больше всего влияет количество молотого кофе, которое использует бариста, а не сорт.</p></details>
+<details open><summary>Если я хорошо засыпаю после кофе, можно пить его вечером?</summary><p>Быстро заснуть не значит хорошо выспаться. Кофеин смещает сон в сторону поверхностных стадий и сокращает глубокий сон примерно на 11 минут за ночь (Gardiner et al., 2023; Chang et al., 2025). Эффект есть независимо от того, замечаете вы его или нет.</p></details>
+<details open><summary>Стоит ли принимать кофеин перед вечерней тренировкой?</summary><p>Зависит от того, ради чего этот вечер. Польза для работоспособности при 3–6 мг/кг хорошо задокументирована (Guest et al., 2021), но спортсмены, принимающие кофеин перед вечерними занятиями, сообщают о худшем сне (Kocak et al., 2025). Для обычной тренировки размен редко оправдан, для соревнования — может быть.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/reyting-sportivnykh-dobavok-dlya-sily">Тир-лист добавок для силы: что говорит наука</a></li><li><a href="/ru/blog/kreatin-bez-trenirovok-posle-45">Креатин без тренировок после 45: что показало исследование</a></li><li><a href="/ru/blog/skolko-povtoreniy-dlya-massy">Сколько повторений нужно для роста мышц: миф 8-12</a></li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>Gardiner C, Weakley J, Burke LM, Roach GD, Sargent C, Maniar N, Townshend A, Halson SL, 2023. <em>The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.</em> Sleep Med Rev 69:101764. PMID 36870101 — <a href="https://doi.org/10.1016/j.smrv.2023.101764">doi:10.1016/j.smrv.2023.101764</a></li><li>Chang YH, Cheng YC, Cheng WJ, 2025. <em>Age- and dose-specific effects of caffeine on sleep: A meta-analysis of controlled crossover trials.</em> Sleep Med 136:106874. PMID 41124973 — <a href="https://doi.org/10.1016/j.sleep.2025.106874">doi:10.1016/j.sleep.2025.106874</a></li><li>Drake C, Roehrs T, Shambroom J, Roth T, 2013. <em>Caffeine effects on sleep taken 0, 3, or 6 hours before going to bed.</em> J Clin Sleep Med 9(11):1195–1200. PMID 24235903 — <a href="https://doi.org/10.5664/jcsm.3170">doi:10.5664/jcsm.3170</a></li><li>Ludwig IA, Mena P, Calani L, Cid C, Del Rio D, Lean MEJ, Crozier A, 2014. <em>Variations in caffeine and chlorogenic acid contents of coffees: what are we drinking?</em> Food Funct 5(8):1718–1726. PMID 25014672 — <a href="https://doi.org/10.1039/c4fo00290c">doi:10.1039/c4fo00290c</a></li><li>Crozier TWM, Stalmach A, Lean MEJ, Crozier A, 2012. <em>Espresso coffees, caffeine and chlorogenic acid intake: potential health implications.</em> Food Funct 3(1):30–33. PMID 22130653 — <a href="https://doi.org/10.1039/c1fo10240k">doi:10.1039/c1fo10240k</a></li><li>Grzegorzewski J, Bartsch F, Köller A, König M, 2022. <em>Pharmacokinetics of Caffeine: A Systematic Analysis of Reported Data for Application in Metabolic Phenotyping and Liver Function Testing.</em> Front Pharmacol 12:752826. PMID 35280254 — <a href="https://doi.org/10.3389/fphar.2021.752826">doi:10.3389/fphar.2021.752826</a></li><li>Kocak A, Georgousopoulou E, Knight-Agarwal CR, Matthews R, Minehan M, 2025. <em>The Effect of Consuming Caffeine Before Late Afternoon/Evening Training or Competition on Sleep: A Systematic Review with Meta-Analysis.</em> Sports (Basel) 13(9):317. PMID 41003623 — <a href="https://doi.org/10.3390/sports13090317">doi:10.3390/sports13090317</a></li><li>Guest NS, VanDusseldorp TA, Nelson MT, et al., 2021. <em>International society of sports nutrition position stand: caffeine and exercise performance.</em> J Int Soc Sports Nutr 18(1):1. PMID 33388079 — <a href="https://doi.org/10.1186/s12970-020-00383-4">doi:10.1186/s12970-020-00383-4</a></li><li>EFSA Panel on Dietetic Products, Nutrition and Allergies, 2015. <em>Scientific Opinion on the safety of caffeine.</em> EFSA Journal 13(5):4102. — <a href="https://doi.org/10.2903/j.efsa.2015.4102">doi:10.2903/j.efsa.2015.4102</a></li></ol>
+<p>Метаданные и аннотации получены из PubMed. Отправная точка: пост <a href="https://www.instagram.com/p/DdNDHgthiYV/">Todd Anderson (@toddanderson42_)</a> от 13 сентября 2026 года. Ни текст, ни изображения, ни структура поста не воспроизводились: утверждения были извлечены, переписаны и проверены независимо.</p>
+<hr style="border:0;border-top:1px solid var(--line);margin:40px 0">
+<p><strong>Giammaria Loi</strong> — основатель Nurvan. Тренируется с отягощениями с 2012 года, с 2013 года работает персональным тренером и коучем с сертификацией FIPE, с 2018 года выступает в пауэрлифтинге на национальном уровне. Каждая его статья начинается с исследований и заканчивается тем, что действительно работает в зале.</p>
+<p class="note">Примечание: материал носит информационный характер и не заменяет консультацию врача или квалифицированного специалиста. При беременности и грудном вскармливании, приёме лекарств, нарушениях сна, заболеваниях сердца или тревожных расстройствах обсудите изменение потребления кофеина с врачом.</p>
+</main>
+<footer>NURVAN · nurvan.app</footer>
+</body>
+</html>

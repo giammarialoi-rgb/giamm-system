@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cafeína e sono: a que horas parar de tomar café | Nurvan</title>
+<meta name="description" content="Um gráfico viral calcula 87 mg de cafeína às 23h. A conta está certa, os dois dados de partida não: dose por chávena e meia-vida variam muitas vezes.">
+<link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html"><link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="hi" href="index.hi.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:0;z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:560px;height:auto}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;white-space:nowrap;display:inline-block;vertical-align:middle}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:500px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Treino</a><a href="#">Nutrição</a><a href="#">Suplementação</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descarregar a app</a></div></header>
+<main class="wrap" lang="pt">
+<div class="crumb">Blog · Suplementação · Cafeína</div>
+<h1>Cafeína e sono: a que horas tens mesmo de parar</h1>
+<p class="lede">Um gráfico muito partilhado desenha três cafés — às 8h, ao meio-dia e às 14h — e conclui que às 23h ainda tens 87 mg de cafeína no corpo: mais do que uma lata de Red Bull. A conta está certa. O problema são os dois números que a alimentam: quanta cafeína tem uma chávena e quanto tempo demoras a eliminá-la. Medindo os dois, a resposta deixa de ser um número e passa a ser um intervalo enorme. Aqui está o cálculo refeito e a hora limite que as meta-análises de facto sustentam.</p>
+<div class="meta"><span>2026-10-11</span><span><b>13</b> min de leitura</span><span><b>9</b> estudos citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · atualizado a 11 de outubro de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Cafeína e sono: a que horas tens mesmo de parar"><figcaption class="cap">Jubair1985, Wikimedia Commons, CC0 1.0</figcaption></figure>
+<div class="box"><h2>Em resumo</h2><ul><li><strong>A aritmética do post resiste.</strong> Com os seus pressupostos (100 mg por chávena, meia-vida de 6 horas) sobram cerca de 81 mg às 23h, perto dos 87 mg mostrados. E sim, são mais do que os cerca de 80 mg de uma lata de 250 ml de bebida energética (EFSA, 2015).</li><li><strong>Mas &quot;uma chávena = 100 mg&quot; não existe.</strong> Em 104 cafés expresso comprados em cafés de Itália, Escócia e Espanha, a cafeína ia de <strong>48 a 317 mg por dose</strong> (Ludwig et al., 2014). Seis vezes e meia de diferença entre uma chávena e outra.</li><li><strong>&quot;Meia-vida de 6 horas&quot; também não existe.</strong> A EFSA aponta uma média próxima de 4 horas, com um intervalo de <strong>2 a 8 horas</strong>, e a atividade da enzima que elimina a cafeína varia <strong>5 a 6 vezes</strong> entre pessoas (Grzegorzewski et al., 2022).</li><li><strong>Refazendo a conta com valores medidos</strong>, a cafeína que resta às 23h vai de <strong>3 mg a 354 mg</strong>: um intervalo de cem vezes, não um número. O gráfico abaixo mostra-o.</li><li><strong>A conclusão do post está certa e é mais exigente do que parece.</strong> Para não perder minutos de sono, um café de 107 mg deveria ser bebido pelo menos <strong>8,8 horas</strong> antes de deitar, e uma dose de pré-treino de 217 mg pelo menos <strong>13,2 horas</strong> antes (Gardiner et al., 2023).</li></ul></div>
+<h2>O modelo está bem. O que lhe pões dentro, não</h2>
+<p>O post usa a abordagem clássica: a cafeína reduz-se a metade em intervalos fixos e cada nova dose soma-se ao que resta da anterior. Três chávenas de 100 mg às 8h, 12h e 14h, com meia-vida de 6 horas, deixam cerca de 81 mg às 23h. Os 87 mg do gráfico estão, portanto, na ordem de grandeza correta.</p>
+<p>O problema é outro. Um modelo destes devolve exatamente aquilo que lhe damos, e aqui recebe duas médias populacionais disfarçadas de constantes. Nenhuma das duas o é.</p>
+<h2>O que diz mesmo a investigação</h2>
+<h3>&quot;Uma chávena de café tem 100 mg de cafeína&quot; <span class="pill no">Desmentido</span></h3>
+<p>É o elo mais frágil de todo o raciocínio. Uma equipa da Universidade de Glasgow comprou e analisou <strong>104 cafés expresso</strong> em estabelecimentos da Escócia, Itália e Espanha: a cafeína ia de <strong>48 a 317 mg por dose</strong>. A conclusão dos autores é que &quot;uma chávena de café&quot; não é uma unidade de medida reproduzível — e, ainda assim, é com ela que a epidemiologia mede o consumo (Ludwig et al., 2014).</p>
+<p>Um levantamento anterior sobre expressos de 20 estabelecimentos britânicos encontrou diferenças de <strong>seis vezes</strong>, com um único expresso a conter <strong>322 mg</strong> (Crozier et al., 2012). A variável que mais pesa não é a mistura nem a torra: é quanto café moído acaba no porta-filtros.</p>
+<p>O teu expresso pode valer menos de metade ou mais do triplo da chávena assumida no post — e não tens como saber.</p>
+<h3>&quot;A meia-vida da cafeína é de 5 a 6 horas&quot; <span class="pill part">A precisar</span></h3>
+<p>No seu parecer sobre a segurança da cafeína, a EFSA indica uma meia-vida média de cerca de <strong>4 horas em adultos saudáveis, com um intervalo de 2 a 8 horas</strong> (EFSA, 2015). As 6 horas usadas no post estão na parte alta desse intervalo, não no centro.</p>
+<p>A razão da dispersão é a enzima hepática CYP1A2, responsável por 80-90% da transformação da cafeína. A sua atividade varia entre pessoas num fator de <strong>5 a 6 vezes</strong>, por causas genéticas, epigenéticas e ambientais. Na análise sistemática de 141 publicações de farmacocinética, o <strong>tabaco</strong> acelera de forma consistente a eliminação da cafeína enquanto os <strong>contracetivos orais</strong> a travam, um efeito reproduzível ao longo de mais de cinquenta anos de estudos (Grzegorzewski et al., 2022). O documento de posição da ISSN diz o mesmo: a resposta individual à cafeína, sono incluído, depende em parte da variação genética no seu metabolismo (Guest et al., 2021).</p>
+<figure><div class="chart" role="img" aria-label="Cafeína restante às 23h depois de três cafés às 8h, 12h e 14h, para três doses por chávena e três meias-vidas."><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 580" width="920" height="580" role="img" aria-label="Quanta cafeína sobra mesmo às 23h">
+<style>
+text{font-family:'Helvetica Neue',Helvetica,Arial,'Noto Sans','Noto Sans Arabic','Noto Sans Devanagari','Noto Sans SC',sans-serif;fill:#f0f0f0}
+.ttl{font-size:23px;font-weight:700}
+.sub{font-size:14px;fill:#a0a0a0}
+.ax{font-size:13px;fill:#a0a0a0}
+.axl{font-size:13px;fill:#a0a0a0;font-weight:600}
+.cat{font-size:15px;font-weight:600;fill:#f0f0f0}
+.val{font-size:14px;font-weight:700}
+.leg{font-size:13px;fill:#f0f0f0}
+.src{font-size:11.5px;fill:#a0a0a0}
+.ref{font-size:12px;fill:#a0a0a0}
+</style>
+<rect width="920" height="580" fill="#0c0c0c"/>
+<text class="ttl" x="38" y="40">Quanta cafeína sobra mesmo às 23h</text>
+<text class="sub" x="38" y="64">Três cafés às 8h, 12h e 14h, o mesmo esquema do post</text>
+<line x1="38" y1="76" x2="892" y2="76" stroke="#aa8a2e" stroke-width="1" opacity="0.5"/>
+<line x1="86" y1="438" x2="892" y2="438" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="442" text-anchor="end">0</text>
+<line x1="86" y1="381" x2="892" y2="381" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="385" text-anchor="end">60</text>
+<line x1="86" y1="324" x2="892" y2="324" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="328" text-anchor="end">120</text>
+<line x1="86" y1="267" x2="892" y2="267" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="271" text-anchor="end">180</text>
+<line x1="86" y1="210" x2="892" y2="210" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="214" text-anchor="end">240</text>
+<line x1="86" y1="153" x2="892" y2="153" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="157" text-anchor="end">300</text>
+<line x1="86" y1="96" x2="892" y2="96" stroke="#2a2a2a" stroke-width="1"/>
+<text class="ax" x="76" y="100" text-anchor="end">360</text>
+<text class="axl" transform="translate(22,267) rotate(-90)" text-anchor="middle">Cafeína restante às 23h (mg)</text>
+<rect x="119.3" y="435.1" width="58" height="2.9" fill="#aa8a2e" rx="3"/>
+<text class="val" x="148.3" y="427.1" text-anchor="middle" fill="#aa8a2e">3</text>
+<rect x="191.3" y="431.4" width="58" height="6.6" fill="#d4af37" rx="3"/>
+<text class="val" x="220.3" y="423.4" text-anchor="middle" fill="#d4af37">7</text>
+<rect x="263.3" y="416.1" width="58" height="21.9" fill="#f3e5ab" rx="3"/>
+<text class="val" x="292.3" y="408.1" text-anchor="middle" fill="#f3e5ab">23</text>
+<text class="cat" x="220.3" y="464" text-anchor="middle">2 horas</text>
+<rect x="388.0" y="418.1" width="58" height="19.9" fill="#aa8a2e" rx="3"/>
+<text class="val" x="417.0" y="410.1" text-anchor="middle" fill="#aa8a2e">21</text>
+<rect x="460.0" y="397.1" width="58" height="40.9" fill="#d4af37" rx="3"/>
+<text class="val" x="489.0" y="389.1" text-anchor="middle" fill="#d4af37">43</text>
+<rect x="532.0" y="307.9" width="58" height="130.1" fill="#f3e5ab" rx="3"/>
+<text class="val" x="561.0" y="299.9" text-anchor="middle" fill="#f3e5ab">137</text>
+<text class="cat" x="489.0" y="464" text-anchor="middle">4 horas (média EFSA)</text>
+<rect x="656.7" y="386.7" width="58" height="51.3" fill="#aa8a2e" rx="3"/>
+<text class="val" x="685.7" y="378.7" text-anchor="middle" fill="#aa8a2e">54</text>
+<rect x="728.7" y="331.6" width="58" height="106.4" fill="#d4af37" rx="3"/>
+<text class="val" x="757.7" y="323.6" text-anchor="middle" fill="#d4af37">112</text>
+<rect x="800.7" y="101.7" width="58" height="336.3" fill="#f3e5ab" rx="3"/>
+<text class="val" x="829.7" y="93.7" text-anchor="middle" fill="#f3e5ab">354</text>
+<text class="cat" x="757.7" y="464" text-anchor="middle">8 horas</text>
+<line x1="86" y1="362.0" x2="892" y2="362.0" stroke="#f0f0f0" stroke-width="1.4" stroke-dasharray="7 5" opacity="0.75"/>
+<text class="ref" x="94" y="353.0" text-anchor="start">80 mg = uma lata de Red Bull</text>
+<line x1="86" y1="438" x2="892" y2="438" stroke="#a0a0a0" stroke-width="1.2"/>
+<text class="axl" x="489" y="488" text-anchor="middle">Meia-vida da cafeína</text>
+<rect x="38" y="514" width="13" height="13" fill="#aa8a2e" rx="2"/>
+<text class="leg" x="58" y="525">48 mg por chávena</text>
+<rect x="205" y="514" width="13" height="13" fill="#d4af37" rx="2"/>
+<text class="leg" x="225" y="525">100 mg (hipótese do post)</text>
+<rect x="428" y="514" width="13" height="13" fill="#f3e5ab" rx="2"/>
+<text class="leg" x="448" y="525">317 mg por chávena</text>
+<text class="src" x="38" y="560">Doses 48–317 mg: Ludwig et al., 2014 (104 expressos). Meia-vida 2–8 h: EFSA, 2015. Gráfico Nurvan.</text>
+</svg>
+</div><figcaption class="cap">O mesmo modelo do post e os mesmos horários, mas com os valores medidos na literatura em vez de duas médias. O resultado não é 87 mg: é um intervalo de 3 a 354 mg. Doses de Ludwig et al., 2014; meias-vidas do intervalo EFSA 2015. Cálculo e gráfico Nurvan.</figcaption></figure>
+<p>O gráfico explica porque é que dois colegas com o mesmo número de cafés dormem de forma diferente, e porque &quot;a mim o café depois de jantar não me faz nada&quot; pode ser literalmente verdade para quem está na coluna da esquerda.</p>
+<h3>&quot;Às 23h tens mais cafeína do que um Red Bull&quot; <span class="pill ok">Confirmado</span></h3>
+<p>A comparação aguenta. A EFSA situa as bebidas energéticas em 320 mg por litro, ou seja cerca de <strong>80 mg numa lata de 250 ml</strong> (EFSA, 2015). Com os pressupostos do post fica-se mesmo acima desse limiar. Com uma chávena mais carregada ou um metabolismo lento, muito acima.</p>
+<h3>&quot;O café da tarde estraga o sono&quot; <span class="pill ok">Confirmado</span> <span class="pill nv">e o limiar é mais apertado</span></h3>
+<p>Aqui o post tem razão, mas para antes do dado mais útil. A meta-análise de referência juntou 24 estudos e mediu que a cafeína <strong>reduz o tempo total de sono em 45 minutos</strong> e a eficiência do sono em 7%, aumenta em 9 minutos o tempo para adormecer e em 12 minutos o tempo acordado depois. Sobretudo, os autores calcularam a antecedência necessária: um <strong>café de 107 mg pelo menos 8,8 horas antes</strong> de deitar, e uma <strong>dose padrão de pré-treino de 217,5 mg pelo menos 13,2 horas antes</strong> (Gardiner et al., 2023).</p>
+<table><thead><tr><th>Deitas-te às</th><th>Último café (107 mg)</th><th>Último pré-treino (217 mg)</th></tr></thead><tbody><tr><td>22:00</td><td>13:12</td><td>08:48</td></tr><tr><td>23:00</td><td>14:12</td><td>09:48</td></tr><tr><td>00:00</td><td>15:12</td><td>10:48</td></tr></tbody></table>
+<p class="cap">Cálculo Nurvan aplicando os limiares de 8,8 e 13,2 horas publicados em Gardiner et al., 2023. São médias de literatura, não prescrições individuais.</p>
+<p>Um ensaio controlado no terreno já tinha mostrado o mesmo de forma mais direta: 400 mg de cafeína tomados <strong>6 horas antes</strong> de deitar reduzem o sono de forma significativa face ao placebo, medido com um dispositivo validado em casa dos participantes (Drake et al., 2013).</p>
+<p>No esquema do post o último café é às 14h para uma cama às 23h: nove horas, mesmo acima do limiar para <strong>um</strong> café. O total do dia, porém, eram três chávenas.</p>
+<h3>&quot;Se adormeço na mesma, não faz mal&quot; <span class="pill no">Desmentido</span></h3>
+<p>Não é uma afirmação do post, mas é a resposta mais comum debaixo deste tipo de conteúdos, e a investigação desmonta-a. Na mesma meta-análise, a cafeína aumenta o sono leve (+6,1 minutos de fase N1) e <strong>reduz o sono profundo em 11,4 minutos</strong> (Gardiner et al., 2023). Uma meta-análise posterior sobre 22 estudos controlados com polissonografia e 956 participantes confirma: −34,7 minutos de sono total, −4,7% de eficiência, +8,4 minutos para adormecer e uma queda na percentagem de sono profundo, mais marcada em doses altas (Chang et al., 2025).</p>
+<p>Adormecer não é o trabalho todo. Se treinas, é a parte profunda da noite que queres proteger.</p>
+<p>Nos atletas o quadro tem uma reviravolta curiosa. Dez estudos sobre quem toma cafeína antes de um treino ou prova ao fim do dia mostram uma redução pequena da eficiência do sono (−4,87%) e uma tendência não significativa no tempo total, mas os atletas <strong>relatam de forma consistente um sono claramente pior</strong> (Kocak et al., 2025). A perceção vai à frente da medição: com poucas noites e poucos participantes, isso é motivo para prudência, não para descontração.</p>
+<h3>&quot;A cafeína é uma ferramenta de desempenho&quot; <span class="pill ok">Confirmado</span></h3>
+<p>Aqui o post está alinhado com a literatura. O documento de posição da ISSN descreve benefícios consistentes em resistência, força, velocidade de movimento e ações específicas de cada modalidade, com doses de <strong>3-6 mg por kg de peso corporal</strong>, normalmente 60 minutos antes; doses muito altas como 9 mg/kg não acrescentam nada e trazem mais efeitos adversos (Guest et al., 2021). Para 75 kg são 225-450 mg: no pior cenário, a cafeína de um expresso muito carregado somada a um pré-treino. Se gostas de avaliar suplementos pela evidência e não pelo marketing, fizemos esse mesmo trabalho na <a href="/pt/blog/ranking-suplementos-forca-tier-list">tier list de suplementos para força</a>.</p>
+<h2>Como aplicar</h2>
+<ol class="steps"><li><strong>Define uma hora, não uma quantidade.</strong> Pega na hora a que te deitas e tira 9 horas: é esse o teu último café normal do dia. Para o pré-treino, tira 13.</li><li><strong>Se treinas ao fim do dia, muda de ferramenta.</strong> Uma dose completa de pré-treino às 19h não é compatível com dormir às 23h. Corta-a a meio, passa a uma opção sem cafeína ou muda a cafeína para o treino da manhã.</li><li><strong>Conta doses, não chávenas.</strong> O teu expresso pode valer de 48 a 317 mg. Se não sabes quão carregado está, assume que dois na rua já podem ser metade do limite diário.</li><li><strong>Fica abaixo dos limites de segurança.</strong> A EFSA considera sem risco para o adulto saudável até 400 mg por dia e 200 mg numa dose única (EFSA, 2015). Na gravidez e com patologias ou medicação em curso os limites mudam: isso pergunta-se ao médico, não a uma calculadora.</li><li><strong>Faz um teste de duas semanas contigo.</strong> Regista a hora e a dose de cada fonte de cafeína e como dormiste. Ao fim de dez dias o teu intervalo pessoal aparece: é a única forma de saber em que coluna do gráfico estás.</li><li><strong>Não compenses com mais cafeína.</strong> Dormir mal e subir a dose no dia seguinte é o ciclo que a literatura descreve como o início do problema, não como a solução.</li></ol>
+<div class="app"><div><h3>💡 Com a Nurvan</h3><p><strong>Os suplementos têm hora, não só dose.</strong> Na Nurvan registas cada suplemento com a quantidade e a hora da toma — cafeína e pré-treino incluídos — ao lado do treino desse mesmo dia. Assim, se dormes mal depois dos treinos ao fim do dia, não tens de reconstruir de memória: o dado já lá está, hora a hora.</p></div><a class="cta" href="https://nurvan.app">Experimenta a Nurvan</a></div>
+<h2>Perguntas frequentes</h2>
+<details open><summary>Quantas horas antes de dormir devo parar de tomar café?</summary><p>Pelo menos 8,8 horas para um café de cerca de 107 mg e 13,2 horas para uma dose de pré-treino de 217 mg, se o objetivo for não perder minutos de sono total (Gardiner et al., 2023). Para deitar às 23h, isso põe o último café por volta das 14h. São médias: se eliminas a cafeína devagar, precisas de mais margem.</p></details>
+<details open><summary>Quanta cafeína tem mesmo um expresso?</summary><p>De 48 a 317 mg por dose, nos 104 expressos medidos em cafés de Itália, Escócia e Espanha (Ludwig et al., 2014). O fator que mais conta é a quantidade de café moído usada pelo barista, não a mistura.</p></details>
+<details open><summary>Se adormeço bem depois de um café, posso bebê-lo à noite?</summary><p>Adormecer depressa não é o mesmo que dormir bem. A cafeína empurra o sono para as fases leves e reduz o sono profundo em cerca de 11 minutos por noite (Gardiner et al., 2023; Chang et al., 2025). O efeito existe mesmo quando não o notas.</p></details>
+<details open><summary>Vale a pena cafeína antes do treino da noite?</summary><p>Depende do que está em jogo nessa noite. O benefício no desempenho a 3-6 mg/kg está bem documentado (Guest et al., 2021), mas os atletas que a tomam antes de sessões ao fim do dia relatam pior sono (Kocak et al., 2025). Para um treino normal raramente compensa; para uma prova pode compensar.</p></details>
+<h2>Lê também</h2>
+<ul><li><a href="/pt/blog/ranking-suplementos-forca-tier-list">Tier list de suplementos para força: a evidência</a></li><li><a href="/pt/blog/creatina-sem-treino-depois-dos-45">Creatina sem treino depois dos 45: o que diz o estudo</a></li><li><a href="/pt/blog/quantas-repeticoes-massa-muscular">Quantas repetições para massa muscular? O mito do 8-12</a></li></ul>
+<h2>Fontes</h2>
+<ol class="refs"><li>Gardiner C, Weakley J, Burke LM, Roach GD, Sargent C, Maniar N, Townshend A, Halson SL, 2023. <em>The effect of caffeine on subsequent sleep: A systematic review and meta-analysis.</em> Sleep Med Rev 69:101764. PMID 36870101 — <a href="https://doi.org/10.1016/j.smrv.2023.101764">doi:10.1016/j.smrv.2023.101764</a></li><li>Chang YH, Cheng YC, Cheng WJ, 2025. <em>Age- and dose-specific effects of caffeine on sleep: A meta-analysis of controlled crossover trials.</em> Sleep Med 136:106874. PMID 41124973 — <a href="https://doi.org/10.1016/j.sleep.2025.106874">doi:10.1016/j.sleep.2025.106874</a></li><li>Drake C, Roehrs T, Shambroom J, Roth T, 2013. <em>Caffeine effects on sleep taken 0, 3, or 6 hours before going to bed.</em> J Clin Sleep Med 9(11):1195–1200. PMID 24235903 — <a href="https://doi.org/10.5664/jcsm.3170">doi:10.5664/jcsm.3170</a></li><li>Ludwig IA, Mena P, Calani L, Cid C, Del Rio D, Lean MEJ, Crozier A, 2014. <em>Variations in caffeine and chlorogenic acid contents of coffees: what are we drinking?</em> Food Funct 5(8):1718–1726. PMID 25014672 — <a href="https://doi.org/10.1039/c4fo00290c">doi:10.1039/c4fo00290c</a></li><li>Crozier TWM, Stalmach A, Lean MEJ, Crozier A, 2012. <em>Espresso coffees, caffeine and chlorogenic acid intake: potential health implications.</em> Food Funct 3(1):30–33. PMID 22130653 — <a href="https://doi.org/10.1039/c1fo10240k">doi:10.1039/c1fo10240k</a></li><li>Grzegorzewski J, Bartsch F, Köller A, König M, 2022. <em>Pharmacokinetics of Caffeine: A Systematic Analysis of Reported Data for Application in Metabolic Phenotyping and Liver Function Testing.</em> Front Pharmacol 12:752826. PMID 35280254 — <a href="https://doi.org/10.3389/fphar.2021.752826">doi:10.3389/fphar.2021.752826</a></li><li>Kocak A, Georgousopoulou E, Knight-Agarwal CR, Matthews R, Minehan M, 2025. <em>The Effect of Consuming Caffeine Before Late Afternoon/Evening Training or Competition on Sleep: A Systematic Review with Meta-Analysis.</em> Sports (Basel) 13(9):317. PMID 41003623 — <a href="https://doi.org/10.3390/sports13090317">doi:10.3390/sports13090317</a></li><li>Guest NS, VanDusseldorp TA, Nelson MT, et al., 2021. <em>International society of sports nutrition position stand: caffeine and exercise performance.</em> J Int Soc Sports Nutr 18(1):1. PMID 33388079 — <a href="https://doi.org/10.1186/s12970-020-00383-4">doi:10.1186/s12970-020-00383-4</a></li><li>EFSA Panel on Dietetic Products, Nutrition and Allergies, 2015. <em>Scientific Opinion on the safety of caffeine.</em> EFSA Journal 13(5):4102. — <a href="https://doi.org/10.2903/j.efsa.2015.4102">doi:10.2903/j.efsa.2015.4102</a></li></ol>
+<p>Metadados e resumos obtidos no PubMed. Ponto de partida: publicação de <a href="https://www.instagram.com/p/DdNDHgthiYV/">Todd Anderson (@toddanderson42_)</a> de 13 de setembro de 2026. Nenhum texto, imagem ou estrutura da publicação foi reproduzido: as afirmações foram extraídas, reescritas e verificadas de forma independente.</p>
+<hr style="border:0;border-top:1px solid var(--line);margin:40px 0">
+<p><strong>Giammaria Loi</strong> é o fundador da Nurvan. Treina com pesos desde 2012, trabalha como personal trainer e coach certificado FIPE desde 2013 e compete em powerlifting a nível nacional desde 2018. Cada artigo que assina parte dos estudos científicos e chega ao que funciona mesmo no ginásio.</p>
+<p class="note">Nota: conteúdo informativo, não substitui a opinião de um médico ou profissional. Se estás grávida ou a amamentar, tomas medicação ou tens perturbações do sono, cardíacas ou de ansiedade, fala com o teu médico antes de mudares o consumo de cafeína.</p>
+</main>
+<footer>NURVAN · nurvan.app</footer>
+</body>
+</html>
