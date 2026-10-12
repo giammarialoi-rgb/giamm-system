@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const SOURCE_DATE = '2026-10-01';
+const SOURCE_DATE = '2026-10-12';
 const SEASON = '2026/27';
 const BASE = 'https://hyrox.com/event/';
 
@@ -83,10 +83,10 @@ Las Vegas | US | 2027-03-12 | 2027-03-14 | hyrox-las-vegas-26-27
 Madrid | ES | 2027-03-17 | 2027-03-21 | hyrox-madrid
 Guadalajara | MX | 2027-03-19 | 2027-03-21 | hyrox-guadalajara
 Buenos Aires | AR | 2027-03-20 | 2027-03-21 | hyrox-buenos-aires
-Copenaghen | DK | | | hyrox-copenhagen
+Copenaghen | DK | 2027-03-25 | 2027-03-28 | hyrox-copenhagen
 Miami Beach | US | 2027-03-26 | 2027-03-28 | sweat-pals-hyrox-miami-beach-26-27
 Città del Capo | ZA | 2027-03-26 | 2027-03-28 | virgin-active-hyrox-cape-town
-Brisbane | AU | 2027-03-31 | 2027-04-04 | hyrox-brisbane
+Brisbane | AU | 2027-03-31 | 2027-04-05 | hyrox-brisbane
 Rotterdam | NL | 2027-04-01 | 2027-04-04 | hyrox-rotterdam
 Houston | US | 2027-04-01 | 2027-04-04 | hyrox-houston-26-27
 Bari | IT | 2027-04-02 | 2027-04-04 | hyrox-bari
