@@ -1,0 +1,15 @@
+# Crediti immagini
+
+| File | Descrizione / alt | Autore | Fonte | Licenza |
+|---|---|---|---|---|
+| cover.jpg | IT: Un uomo seduto alla macchina per la leg extension, con i cuscinetti appoggiati alle tibie · EN: A man seated on a leg extension machine with the pads against his shins | Nenad Stojkovic, 14/10/2019 | https://commons.wikimedia.org/wiki/File:Young_man_doing_leg_with_machine_in_gym.jpg (originale su Flickr: https://www.flickr.com/photos/nenadstojkovic/48937559813/) | CC BY 2.0 (licenza verificata sulla pagina del file su Wikimedia Commons il 12/10/2026; revisione Flickr confermata da FlickreviewR 2 il 25/03/2022) |
+| chart-volume-muscolare.&lt;lang&gt;.svg (10 lingue) | Variazione percentuale del volume muscolare dopo 12 settimane di leg extension o leg press. Retto femorale +13,2% / +1,1%; vasto laterale +6,4% / +6,2%; quadricipite intero +7,1% / +4,9%; grande gluteo +0,2% / +15,4%; grande adduttore -0,9% / +6,2%; tutto l'arto inferiore +2,8% / +6,3% | Nurvan | Kinoshita et al., 2026, Med Sci Sports Exerc (PMID 41630124, DOI 10.1249/MSS.0000000000003957) | Grafico originale Nurvan |
+| chart-angolo-anca.&lt;lang&gt;.svg (10 lingue) | Variazione percentuale dello spessore muscolare dopo 10 settimane di leg extension con l'anca a 40 o a 90 gradi. Retto femorale prossimale +12,4% / +4,6%; retto femorale distale +15,8% / +10,9%; vasto laterale prossimale +10,8% / +9,7%; vasto laterale distale +9,9% / +11,8% | Nurvan | Larsen et al., 2025, J Sports Sci (PMID 39699974, DOI 10.1080/02640414.2024.2444713); valori percentuali dal preprint dello stesso studio su SportRxiv (DOI 10.51224/SRXIV.407) | Grafico originale Nurvan |
+| _cover-originale-non-pubblicato.jpg | File di lavoro: originale a 1920 px scaricato da Wikimedia prima del ritaglio. Il prefisso `_` lo esclude dalla pubblicazione e non viene versionato | Nenad Stojkovic | come sopra | CC BY 2.0 |
+
+## Note sulle licenze
+
+- La copertina e **CC BY 2.0**: uso libero anche commerciale, con obbligo di attribuzione e di indicare le modifiche. L'attribuzione e riportata nel campo `cover_credit` del frontmatter in tutte e dieci le lingue. **Modifica apportata da Nurvan**: ritaglio in formato 16:9 dalla versione a 1920 px e ridimensionamento a 1280x720. Nel ritaglio pubblicato non e riconoscibile il volto di nessuno.
+- La licenza e stata letta direttamente sulla pagina di descrizione del file su Wikimedia Commons, che riporta il tag CC BY 2.0 e la revisione automatica della licenza Flickr (FlickreviewR 2, 25/03/2022).
+- **Nessuno screenshot delle slide o delle immagini dei due post Instagram e stato scaricato, usato o ripubblicato.** I post sono citati solo come link e come spunto iniziale.
+- I due grafici sono interamente originali. Tutti i valori sono quelli **pubblicati nel testo degli studi** (tabelle e abstract), non letti approssimativamente da figure altrui. Per il secondo grafico le percentuali provengono dal preprint SportRxiv dello stesso lavoro, che ha disegno, campione e risultati identici alla versione pubblicata: la cosa e dichiarata nella didascalia del grafico e nell'articolo.

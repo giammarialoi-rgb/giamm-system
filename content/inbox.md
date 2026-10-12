@@ -8,9 +8,8 @@ Le righe con "poco contenuto" sono promo o meme: probabilmente non vale la pena 
 
 **Nota tecnica per i link interni (verificata il 2026-10-08):** sul sito l'italiano sta su `/blog/<slug>`, tutte le altre lingue su `/<lang>/blog/<slug>` (es. `/en/blog/<slug>`, `/zh/blog/<slug>`). Nelle traduzioni i link interni scritti come `/blog/<slug>` danno 404. La pagina autore è `/autore/giammaria-loi` in tutte le lingue.
 
-## PRIORITÀ — ordine di uscita, alternando gli argomenti (5)
+## PRIORITÀ — ordine di uscita, alternando gli argomenti (4)
 
-* \[ ] https://www.instagram.com/p/Dcyi6zGkUig/ + https://www.instagram.com/p/Dd9XGVUCCy9/ — UNITI: quadricipiti e retto femorale — leg extension vs leg press, leg extension da inclinati indietro (+73%) (Wallace, Azegra)
 * \[ ] https://www.instagram.com/p/DdL-SJoEZYg/ + https://www.instagram.com/p/Dd6tyK2F2HD/ — UNITI: ricomposizione corporea — perdere grasso e guadagnare muscolo insieme, cosa dice lo studio (Rusin, Examine.com)
 * \[ ] https://www.instagram.com/p/Ddv-zwDkZ0F/ — Specializzarsi in una sola qualità rende meno: cosa include un programma completo (John Rusin)
 * \[ ] https://www.instagram.com/p/Dc_e9fmkc1z/ — Orario di assunzione degli integratori: conta davvero? Il caso della melatonina (William Wallace)
@@ -69,6 +68,8 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 * Mondiali IPF Classic & Equipped Masters 2027 — St. John's (Canada), 7-16 ottobre 2027 (aggiunto dalla task il 2026-10-10, fonte: calendario ufficiale IPF)
 * Controllo eventi del 2026-10-10: i Mondiali master di Reno entrano nella finestra dei 5 giorni (partenza 14 ottobre) e l'ultimo articolo `category: eventi` risale al 2026-10-03, cioè 7 giorni pieni: scritta l'anteprima. Date e sede verificate sull'invito ufficiale IPF/Powerlifting America (PDF) e sul calendario ufficiale IPF. Scartata la pagina results.kraft.is dell'evento: riporta 0 partecipanti e date diverse (11-18 ottobre) da quelle ufficiali.
 * Controllo eventi del 2026-10-11: i Mondiali IPF Classic & Equipped Masters di Reno iniziano il 14 ottobre, cioe dentro la finestra dei 5 giorni, ma in content/articles/ c'e gia un articolo `category: eventi` del 2026-10-10 (anteprima di Reno), quindi dentro i 7 giorni: niente articolo di evento oggi. Nessun evento nuovo verificabile da aggiungere. Prossimo articolo di evento non prima del 2026-10-17; a gara conclusa (dopo il 24 ottobre) si valuta il resoconto con i risultati ufficiali.
+* FIBO — Colonia (Germania), 8-11 aprile 2027 (aggiunto dalla task il 2026-10-12, fonte: calendari fieristici di settore; da confermare sul sito ufficiale fibo.com, non raggiungibile oggi)
+* Controllo eventi del 2026-10-12: i Mondiali IPF Classic & Equipped Masters di Reno iniziano il 14 ottobre, cioè dentro la finestra dei 5 giorni, ma in content/articles/ c'è già un articolo `category: eventi` del 2026-10-10 (anteprima di Reno), quindi dentro i 7 giorni: niente articolo di evento oggi. Confermata dalla stampa di settore la data dell'Arnold Classic UK 2027 (19-21 marzo, NEC Birmingham), resta da verificare sul sito ufficiale. Prossimo articolo di evento non prima del 2026-10-17; dopo il 24 ottobre si valuta il resoconto di Reno con i risultati ufficiali.
 * Da verificare dalla task di volta in volta: Mondiali IPF Equipped e Bench, Mr. Olympia 2027, CrossFit Games, FIBO, RiminiWellness, altri mondiali ed europei di powerlifting, bodybuilding, HYROX e calisthenics
 
 ## DA VERIFICARE (1)
@@ -77,8 +78,9 @@ Regola: se un evento mondiale o europeo importante è in corso o si è chiuso da
 
 ## SCARTATI
 
-## GIÀ PUBBLICATI (17)
+## GIÀ PUBBLICATI (18)
 
+* \[x] https://www.instagram.com/p/Dcyi6zGkUig/ + https://www.instagram.com/p/Dd9XGVUCCy9/ (2026-10-12, leg-extension-o-leg-press-retto-femorale — UNITI: 2 post. Caso raro: i 4 PMID citati da @dr.williamwallace (41630124, 26148051, 33009197, 39699974) esistono tutti e sono pertinenti. CONFERMATO alla lettera il +13,2% vs +1,1% sul retto femorale: Kinoshita 2026 PMID 41630124, 17 non allenati, within-subject, 12 settimane, risonanza magnetica su 17 muscoli; nella leg press p = 0,379, cioè nessuna crescita. CONFERMATO il dato sui ciclisti: Ema 2015 PMID 26148051. DA PRECISARE il meccanismo: il post dice 'cambia poco lunghezza', ma il dato misurato è l'ATTIVAZIONE (EMG 38,0% vs 21,7% del massimo). SMENTITE due cose del secondo post (@iwannaburnfat): lo studio sull'inclinazione non è del 2021 ma del 2024/2025 (PMID 39699974) e dura 10 settimane, non 12. NON VERIFICABILE il '+73%': il lavoro è bayesiano e riporta ATE in mm e Bayes factor, non percentuali; i valori reali (preprint SportRxiv DOI 10.51224/SRXIV.407, stesso disegno) sono +12,4% vs +4,6% sul retto femorale prossimale e nessuna differenza sul vasto laterale (BF = 0,07). DATI CHIAVE ASSENTI DA ENTRAMBI I POST: il quadricipite INTERO è cresciuto uguale (+7,1% vs +4,9%, p ≥ 0,319) perché i vasti sono ~85% del volume; e la leg press ha fatto crescere grande gluteo +15,4%, grande adduttore +6,2% e volume totale dell'arto +6,3% vs +2,8%. Aggiunto anche il contro-dato sulla lunghezza: Larsen 2025 PMID 40113586 non trova differenze di ROM nella leg press in allenati, e la meta-analisi Varović 2025 PMID 40570881 trova effetti trivial)
 * \[x] https://www.instagram.com/p/Ddf-0MRF7p0/ (2026-09-30, genetica-high-low-responder)
 * \[x] https://www.instagram.com/p/Dd6ncPLF7mI/ (2026-10-01, proteine-in-definizione)
 * \[x] https://www.instagram.com/p/Dd9Tz4siJ-J/ (2026-10-01, fumo-gravidanza-fertilita-figli — doppione del post sotto)
