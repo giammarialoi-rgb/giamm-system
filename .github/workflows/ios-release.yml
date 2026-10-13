@@ -1,0 +1,63 @@
+# Sends the latest TestFlight build (or a chosen one) to App Review, with the App Store Connect API key
+# the build already uses. Started by hand: Actions > "iOS App Review" > Run workflow, or
+#   gh workflow run ios-release.yml -f mode=submit -f whats_new="Correzioni e miglioramenti"
+# mode=check only verifies key, app, build and version and changes nothing.
+# Screenshots, description, review notes and demo accounts are copied by App Store Connect from the
+# version before. The script is tools/store/asc_submit.mjs.
+name: iOS App Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check = verifica senza inviare · submit = invia in revisione'
+        type: choice
+        options: [check, submit]
+        default: check
+      whats_new:
+        description: 'Novità di questa versione (italiano)'
+        type: string
+        required: false
+      whats_new_en:
+        description: 'Novità per le altre lingue (inglese; vuoto = come l’italiano)'
+        type: string
+        required: false
+      version:
+        description: 'Numero di versione sullo Store (vuoto = quello della build)'
+        type: string
+        required: false
+      build:
+        description: 'Numero di build (vuoto = l’ultima su TestFlight)'
+        type: string
+        required: false
+      release:
+        description: 'auto = esce da sola dopo l’approvazione · manual = la rilasci tu'
+        type: choice
+        options: [auto, manual]
+        default: auto
+
+concurrency:
+  group: ios-app-review
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Send to App Review
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          MODE: ${{ inputs.mode }}
+          WHATS_NEW: ${{ inputs.whats_new }}
+          WHATS_NEW_EN: ${{ inputs.whats_new_en }}
+          VERSION: ${{ inputs.version }}
+          BUILD: ${{ inputs.build }}
+          RELEASE: ${{ inputs.release }}
+        run: node tools/store/asc_submit.mjs
