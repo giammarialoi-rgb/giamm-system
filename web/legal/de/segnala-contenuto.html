@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rechtswidrige Inhalte melden - Nurvan</title>
+<meta name="description" content="Wie du Nurvan rechtswidrige Inhalte meldest, auch ohne Konto, und die nach dem Digital Services Act vorgesehene Kontaktstelle.">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>Rechtswidrige Inhalte melden</h1>
+  <p class="muted">Dies ist eine Übersetzung zur besseren Verständlichkeit. Bei Abweichungen gilt die <a href="?lang=it">italienische Fassung</a>.</p>
+  <p class="muted">Letzte Aktualisierung: <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    Entwurf: Die Angaben zum Verantwortlichen wurden noch nicht eingetragen. Diese Seite muss vor der Veröffentlichung vervollständigt werden.
+  </div>
+
+  <p>Jede Person kann uns Inhalte auf Nurvan melden, die sie für rechtswidrig hält, auch ohne Konto: zum Beispiel ein Foto von dir, das jemand anderes ohne deine Erlaubnis hochgeladen hat, personenbezogene Daten, die ohne Einwilligung verbreitet wurden, Drohungen oder einen Betrug. Auf Nurvan sind Fotos und Dokumente nicht öffentlich: Sie bleiben zwischen einem Coach und seinen Athleten. Programme werden mit einem Code geteilt, und Nachrichten befinden sich im Chat zwischen Coach und Athlet.</p>
+  <p>Wenn du Nurvan nutzt und das Problem in einem Chat liegt, kannst du auch direkt im Chat <strong>Melden</strong> und <strong>Blockieren</strong> verwenden.</p>
+
+  <h2>Meldung senden</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">Um welche Art von Inhalt handelt es sich</label>
+    <select id="report-kind" required>
+      <option value="">Bitte wählen…</option>
+      <option value="rights">Er verletzt meine Rechte (Fotos oder Bilder von mir ohne Erlaubnis verwendet, Urheberrecht)</option>
+      <option value="privacy">Personenbezogene Daten oder Fotos einer Person, die ohne Einwilligung verbreitet wurden</option>
+      <option value="hate">Hass, Drohungen, Belästigung oder Aufstachelung zur Gewalt</option>
+      <option value="csam">Sexueller Missbrauch von Kindern</option>
+      <option value="fraud">Betrug, Täuschung oder falsche Identität</option>
+      <option value="health">Illegale oder gesundheitsgefährdende Produkte oder Praktiken</option>
+      <option value="other">Sonstige rechtswidrige Inhalte</option>
+    </select>
+
+    <label for="report-location">Wo er sich befindet</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="Der Link, der Name des Coachs oder Nutzers, der Programmcode, der Chat und das Datum: alles, was uns hilft, ihn zu finden."></textarea>
+
+    <label for="report-explanation">Warum er rechtswidrig ist</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="Erkläre genau, warum du den Inhalt für rechtswidrig hältst."></textarea>
+
+    <label for="report-name">Vor- und Nachname</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">E-Mail</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">Name und E-Mail brauchen wir, um dir den Eingang zu bestätigen und dir die Entscheidung mitzuteilen. Nur bei Meldungen über sexuellen Missbrauch von Kindern kannst du sie leer lassen.</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>Ich erkläre in gutem Glauben, dass die in dieser Meldung enthaltenen Angaben und Behauptungen richtig und vollständig sind.</span></label>
+
+    <button id="report-send" type="submit">Meldung senden</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">Wähle, welche Art von Inhalt du meldest.</span>
+    <span data-msg="LOCATION">Gib an, wo sich der Inhalt befindet (Link, Nutzername, Chat, Datum).</span>
+    <span data-msg="EXPLANATION">Erkläre, warum der Inhalt rechtswidrig ist.</span>
+    <span data-msg="NAME">Gib deinen Vor- und Nachnamen ein.</span>
+    <span data-msg="EMAIL">Gib eine gültige E-Mail-Adresse ein.</span>
+    <span data-msg="GOOD_FAITH">Bestätige die Erklärung in gutem Glauben.</span>
+    <span data-msg="RATE">Du hast heute viele Meldungen gesendet. Für weitere schreibe an info@nurvan.app.</span>
+    <span data-msg="FAIL">Wir können die Meldung gerade nicht senden. Versuche es gleich noch einmal oder schreibe an info@nurvan.app.</span>
+    <span data-msg="SENDING">Wird gesendet…</span>
+    <span data-msg="OK">Meldung eingegangen, Nummer {id}. Wenn du deine E-Mail angegeben hast, haben wir dir eine Bestätigung geschickt: Wir teilen dir die Entscheidung schriftlich mit.</span>
+  </div>
+
+  <h2>Wie es weitergeht</h2>
+  <ul>
+    <li>Wir bestätigen dir den Eingang per E-Mail, mit der Nummer der Meldung.</li>
+    <li>Ein Mensch prüft sie sorgfältig und objektiv, in der Regel innerhalb von 24 Stunden. Für die Entscheidung setzen wir keine automatisierten Systeme ein.</li>
+    <li>Ist der Inhalt rechtswidrig oder verstößt er gegen unsere <a href="/termini">Nutzungsbedingungen</a>, entfernen wir ihn oder sperren den Zugang dazu und können das Konto sperren. Wer ihn hochgeladen hat, erhält eine Begründung.</li>
+    <li>Wir teilen dir die Entscheidung und ihre Begründung mit. Bist du nicht einverstanden, kannst du sie innerhalb von 6 Monaten durch Antwort auf die E-Mail anfechten oder dich an eine zertifizierte außergerichtliche Streitbeilegungsstelle oder an die Gerichte wenden.</li>
+    <li>Betrifft die Meldung eine Straftat, die das Leben oder die Sicherheit von Personen bedroht, informieren wir die zuständigen Behörden.</li>
+  </ul>
+
+  <h2>Kontaktstelle (Digital Services Act)</h2>
+  <p>Die zentrale Kontaktstelle für Nutzer sowie für die Behörden der Mitgliedstaaten, die Europäische Kommission und das Europäische Gremium für digitale Dienste (Artikel 11 und 12 der Verordnung (EU) 2022/2065) ist die Adresse <a data-legal="privacyEmail" href="#"></a>. Du kannst uns auf Italienisch oder Englisch schreiben.</p>
+  <p>Der Dienst wird erbracht von <span data-legal="controllerName"></span>, <span data-legal="controllerAddress"></span>.</p>
+
+  <h2>Missbrauch von Meldungen</h2>
+  <p>Nach vorheriger Warnung können wir die Bearbeitung von Meldungen für einen angemessenen Zeitraum aussetzen, wenn jemand häufig offensichtlich unbegründete Meldungen einreicht.</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">Datenschutzerklärung</a>
+    <a href="/termini">Nutzungsbedingungen</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>

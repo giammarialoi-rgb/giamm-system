@@ -11,7 +11,14 @@
 // STRIPE_TRIAL_DAYS (30) days without charge. It is given once per account, and it is announced only
 // outside the apps (the stores' rules).
 //
-// Pure functions are exported for the tests: formEncode, verifySignature, subscriptionEvent, checkoutParams.
+// Withdrawal (EU Directive 2023/2673, from 19 June 2026): a consumer who bought on the website can withdraw
+// within WITHDRAWAL_DAYS of the contract with the "Recedi dal contratto qui" button of the plans page
+// (GET /api/billing/stripe/withdrawal, then POST /api/billing/stripe/withdraw). The subscription ends at once,
+// the part of the paid period not used is refunded on the card, the request is kept (billing_withdrawals)
+// and confirmed by email. Store purchases are withdrawn from the store, which is the seller there.
+//
+// Pure functions are exported for the tests: formEncode, verifySignature, subscriptionEvent, checkoutParams,
+// withdrawalWindow, withdrawalRefund, withdrawalEmail.
 import crypto from "node:crypto";
 import { FEATURES, loadAccount } from "../account/plans.mjs";
 
@@ -94,6 +101,26 @@ export function bestSubscription(subs) {
   return best ? best.sub : null;
 }
 
+export const WITHDRAWAL_DAYS = 14;
+const DAY_MS = 86400000;
+
+// The 14 days run from the conclusion of the contract (the subscription's start), not from each renewal.
+export function withdrawalWindow(sub, now = Date.now()) {
+  const startedAt = sub && sub.start_date ? Number(sub.start_date) * 1000 : null;
+  if (!startedAt) return { startedAt: null, deadline: null, open: false };
+  const deadline = startedAt + WITHDRAWAL_DAYS * DAY_MS;
+  return { startedAt, deadline, open: now <= deadline };
+}
+
+// What goes back: the paid amount for the part of the period not provided yet (the part provided stays due,
+// because the person asked for the service to start at once). Cents, rounded down.
+export function withdrawalRefund({ amountPaid, periodStart, periodEnd, now = Date.now() }) {
+  const paid = Number(amountPaid) || 0;
+  if (paid <= 0 || !(periodEnd > periodStart)) return 0;
+  const used = Math.min(1, Math.max(0, (now - periodStart) / (periodEnd - periodStart)));
+  return Math.max(0, Math.floor(paid * (1 - used)));
+}
+
 export function checkoutParams({ priceId, customerId, userId, baseUrl, trialDays, automaticTax }) {
   const p = {
     mode: "subscription",
@@ -106,14 +133,14 @@ export function checkoutParams({ priceId, customerId, userId, baseUrl, trialDays
     billing_address_collection: "auto",
     locale: "auto",
     subscription_data: { metadata: { user_id: String(userId) } },
-    custom_text: { submit: { message: "Abbonandoti accetti i Termini di servizio (nurvan.app/termini) e che il servizio inizi subito. Si rinnova ogni periodo finché non lo annulli dal portale, quando vuoi." } }
+    custom_text: { submit: { message: "Abbonandoti accetti i Termini di servizio (nurvan.app/termini) e chiedi che il servizio inizi subito. L'abbonamento si rinnova automaticamente ogni periodo allo stesso prezzo finché non lo annulli. Entro 14 giorni puoi recedere con il pulsante «Recedi dal contratto qui» nella pagina dei piani: ti rimborsiamo la parte non usata." } }
   };
   if (trialDays > 0) p.subscription_data.trial_period_days = trialDays;
   if (automaticTax) { p.automatic_tax = { enabled: "true" }; p.customer_update = { address: "auto", name: "auto" }; }
   return p;
 }
 
-export function createStripe({ pool, initDb, billing, env = process.env, fetchImpl = globalThis.fetch }) {
+export function createStripe({ pool, initDb, billing, sendEmail = null, env = process.env, fetchImpl = globalThis.fetch }) {
   const secret = () => String(env.STRIPE_SECRET_KEY || "").trim();
   const whsec = () => String(env.STRIPE_WEBHOOK_SECRET || "").trim();
   const trialDays = () => { const n = Number(env.STRIPE_TRIAL_DAYS === undefined || env.STRIPE_TRIAL_DAYS === "" ? 30 : env.STRIPE_TRIAL_DAYS); return Number.isFinite(n) && n > 0 ? Math.min(90, Math.floor(n)) : 0; };
@@ -255,11 +282,129 @@ export function createStripe({ pool, initDb, billing, env = process.env, fetchIm
     return { ok: true, changed: false };
   }
 
-  return { enabled, status, checkout, portal, handleEvent, sync, whsec };
+  // ---- withdrawal
+
+  async function runningSubscription(u) {
+    if (!u || !u.stripe_customer_id) return null;
+    const list = await call("GET", "/subscriptions?" + formBody({ customer: u.stripe_customer_id, status: "all", limit: 10 }));
+    return bestSubscription(list.data || []);
+  }
+
+  // The last paid invoice of the subscription: how much, on which payment, for which period.
+  async function lastPayment(sub) {
+    if (!sub || sub.status === "trialing") return null;
+    const list = await call("GET", "/invoices?" + formBody({ subscription: sub.id, status: "paid", limit: 1, expand: ["data.payments"] }));
+    const inv = list.data && list.data[0];
+    if (!inv || !(Number(inv.amount_paid) > 0)) return null;
+    let pays = (inv.payments && inv.payments.data) || [];
+    if (!pays.length) { try { pays = (await call("GET", "/invoice_payments?" + formBody({ invoice: inv.id, limit: 3 }))).data || []; } catch (_) { pays = []; } }
+    const pay = pays.map((p) => p && p.payment).find((p) => p && (p.payment_intent || p.charge)) || {};
+    const idOf = (x) => (typeof x === "string" ? x : (x && x.id) || null);
+    const line = inv.lines && inv.lines.data && inv.lines.data.find((l) => l && l.period && l.period.end > l.period.start);
+    const period = (line && line.period) || { start: inv.period_start, end: inv.period_end };
+    return {
+      amountPaid: Number(inv.amount_paid), currency: String(inv.currency || "eur"),
+      paymentIntent: idOf(pay.payment_intent) || idOf(inv.payment_intent), charge: idOf(pay.charge) || idOf(inv.charge),
+      periodStart: Number(period.start) * 1000, periodEnd: Number(period.end) * 1000
+    };
+  }
+
+  async function earlierWithdrawal(subId) {
+    await initDb();
+    return (await pool.query("SELECT requested_at, refund_cents, currency, refund_status FROM billing_withdrawals WHERE subscription_id = $1 ORDER BY id DESC LIMIT 1", [subId])).rows[0] || null;
+  }
+
+  // What the confirmation step shows: the contract, the deadline and the refund, or why it is not possible.
+  async function withdrawalInfo(userId, now = Date.now()) {
+    if (!enabled()) throw Object.assign(new Error("I pagamenti dal sito non sono attivi."), { statusCode: 503, code: "NOT_CONFIGURED" });
+    const u = await row(userId);
+    const sub = await runningSubscription(u);
+    if (!sub) return { eligible: false, reason: "NO_SUBSCRIPTION" };
+    const productId = productOfSub(sub);
+    const win = withdrawalWindow(sub, now);
+    const base = { productId, plan: planOfProduct(productId), startedAt: win.startedAt, deadline: win.deadline, trialing: sub.status === "trialing", name: (u && u.name) || "", email: (u && u.email) || "" };
+    if (!win.open) return { ...base, eligible: false, reason: "WINDOW_CLOSED" };
+    const pay = await lastPayment(sub);
+    const refundCents = pay ? withdrawalRefund({ ...pay, now }) : 0;
+    return { ...base, eligible: true, refundCents, currency: pay ? pay.currency : "eur", paidCents: pay ? pay.amountPaid : 0 };
+  }
+
+  async function withdraw(userId, { name } = {}, now = Date.now()) {
+    if (!enabled()) throw Object.assign(new Error("I pagamenti dal sito non sono attivi."), { statusCode: 503, code: "NOT_CONFIGURED" });
+    const who = String(name || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    if (who.length < 2) throw Object.assign(new Error("Scrivi il tuo nome e cognome."), { statusCode: 400, code: "NAME_REQUIRED" });
+    const u = await row(userId);
+    const sub = await runningSubscription(u);
+    if (!sub) throw Object.assign(new Error("Non hai un abbonamento attivo acquistato dal sito."), { statusCode: 404, code: "NO_SUBSCRIPTION" });
+    const win = withdrawalWindow(sub, now);
+    if (!win.open) throw Object.assign(new Error("Il periodo di recesso di 14 giorni è terminato: puoi annullare il rinnovo da «Gestisci abbonamento»."), { statusCode: 409, code: "WINDOW_CLOSED" });
+    const before = await earlierWithdrawal(sub.id);
+    if (before) return { ok: true, already: true, requestedAt: before.requested_at, refundCents: before.refund_cents, currency: before.currency, refundStatus: before.refund_status };
+    const pay = await lastPayment(sub);
+    const refundCents = pay ? withdrawalRefund({ ...pay, now }) : 0;
+    // The withdrawal is what the person asked: the subscription ends first, whatever happens to the refund.
+    await call("DELETE", "/subscriptions/" + encodeURIComponent(sub.id) + "?" + formBody({ prorate: "false", invoice_now: "false" }));
+    let refundStatus = "none", refundId = null;
+    if (refundCents > 0 && (pay.paymentIntent || pay.charge)) {
+      try {
+        const r = await call("POST", "/refunds", { ...(pay.paymentIntent ? { payment_intent: pay.paymentIntent } : { charge: pay.charge }), amount: refundCents, reason: "requested_by_customer", metadata: { nurvan: "withdrawal", user_id: String(userId), subscription: sub.id } });
+        refundStatus = "refunded"; refundId = r.id || null;
+      } catch (err) { console.error("STRIPE_WITHDRAWAL_REFUND", err && err.message); refundStatus = "failed"; }
+    } else if (refundCents > 0) refundStatus = "failed";
+    const productId = productOfSub(sub);
+    const currency = pay ? pay.currency : "eur";
+    const ins = await pool.query(
+      `INSERT INTO billing_withdrawals(user_id, email, name, subscription_id, product_id, contract_started_at, requested_at, refund_cents, currency, refund_status, refund_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id, requested_at`,
+      [userId, (u && u.email) || "", who, sub.id, productId, win.startedAt ? new Date(win.startedAt) : null, new Date(now), refundCents, currency, refundStatus, refundId]
+    );
+    try { await sync(userId, now); } catch (err) { console.error("STRIPE_WITHDRAWAL_SYNC", err && err.message); }
+    let sent = false;
+    if (sendEmail && u && u.email) {
+      const mail = withdrawalEmail({ name: who, email: u.email, productId, startedAt: win.startedAt, requestedAt: now, refundCents, currency, refundStatus });
+      try { sent = !!(await sendEmail(u.email, mail.subject, mail.text) || {}).sent; } catch (_) { sent = false; }
+      if (sent) await pool.query("UPDATE billing_withdrawals SET email_sent = TRUE WHERE id = $1", [ins.rows[0].id]);
+    }
+    return { ok: true, requestedAt: ins.rows[0].requested_at, refundCents, currency, refundStatus, emailSent: sent };
+  }
+
+  return { enabled, status, checkout, portal, handleEvent, sync, whsec, withdrawalInfo, withdraw };
 }
 
-export function mountStripe(app, { pool, initDb, accountFromBearer, billing, env = process.env }) {
-  const stripe = createStripe({ pool, initDb, billing, env });
+const money = (cents, currency) => (Number(cents || 0) / 100).toFixed(2).replace(".", ",") + " " + (String(currency || "eur").toLowerCase() === "eur" ? "€" : String(currency).toUpperCase());
+const romeTime = (ms) => new Date(ms).toLocaleString("it-IT", { timeZone: "Europe/Rome", dateStyle: "long", timeStyle: "short" });
+
+// The acknowledgement on a durable medium the directive asks for: what was withdrawn, when, and the refund.
+export function withdrawalEmail({ name, email, productId, startedAt, requestedAt, refundCents, currency, refundStatus }) {
+  const plan = planOfProduct(productId);
+  const planName = ((FEATURES.plans || []).find((p) => p.id === plan) || {}).name || productId || "";
+  const refund = refundStatus === "refunded"
+    ? "Ti abbiamo rimborsato " + money(refundCents, currency) + " sulla carta usata per il pagamento, per la parte del periodo non ancora fornita. L'accredito arriva di solito in 5-10 giorni lavorativi."
+    : refundStatus === "failed"
+      ? "Il rimborso di " + money(refundCents, currency) + " per la parte del periodo non ancora fornita non è partito in automatico: lo facciamo noi a mano entro 14 giorni da oggi, sulla stessa carta."
+      : "Non c'è nulla da rimborsare: non era ancora stato addebitato nulla.";
+  const text = [
+    "Ciao " + name + ",",
+    "",
+    "abbiamo ricevuto il tuo recesso dal contratto. Ecco cosa abbiamo registrato:",
+    "",
+    "- Nome: " + name,
+    "- Email dell'account: " + email,
+    "- Contratto: abbonamento Nurvan " + planName + (productId ? " (" + productId + ")" : "") + (startedAt ? ", concluso il " + romeTime(startedAt) : ""),
+    "- Recesso ricevuto il: " + romeTime(requestedAt),
+    "",
+    "L'abbonamento è terminato e non verrà più rinnovato. Il tuo account resta attivo con il piano gratuito e i tuoi dati restano tuoi.",
+    refund,
+    "",
+    "Per qualsiasi domanda rispondi a questa email o scrivi a info@nurvan.app.",
+    "",
+    "Nurvan"
+  ].join("\n");
+  return { subject: "Conferma del recesso dal tuo abbonamento Nurvan", text };
+}
+
+export function mountStripe(app, { pool, initDb, accountFromBearer, billing, sendEmail = null, env = process.env }) {
+  const stripe = createStripe({ pool, initDb, billing, sendEmail, env });
   const authed = async (req, res) => {
     const auth = await accountFromBearer(req.headers.authorization);
     if (!auth) { res.status(401).json({ error: "Accedi al tuo account." }); return null; }
@@ -282,6 +427,15 @@ export function mountStripe(app, { pool, initDb, accountFromBearer, billing, env
   app.post("/api/billing/stripe/portal", async (req, res) => {
     const auth = await authed(req, res); if (!auth) return;
     try { return res.json({ ok: true, ...(await stripe.portal(auth.id)) }); } catch (err) { return fail(res, err); }
+  });
+  app.get("/api/billing/stripe/withdrawal", async (req, res) => {
+    const auth = await authed(req, res); if (!auth) return;
+    try { return res.json({ ok: true, ...(await stripe.withdrawalInfo(auth.id)) }); } catch (err) { return fail(res, err); }
+  });
+  app.post("/api/billing/stripe/withdraw", async (req, res) => {
+    const auth = await authed(req, res); if (!auth) return;
+    if (!(req.body && req.body.confirm === true)) return res.status(400).json({ ok: false, error: "Conferma il recesso." });
+    try { return res.json(await stripe.withdraw(auth.id, { name: req.body.name })); } catch (err) { return fail(res, err); }
   });
   app.post("/api/billing/stripe/sync", async (req, res) => {
     const auth = await authed(req, res); if (!auth) return;

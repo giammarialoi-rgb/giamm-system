@@ -10,8 +10,8 @@ export async function pageOperations(which) {
   else if (window.__adminSub) { tab = window.__adminSub; }
   window.__adminSub = null;
   loading();
-  const bar = tabs([['errors', 'Errori'], ['planlog', 'Log piani'], ['reports', 'Segnalazioni chat'], ['audit', 'Registro accessi'], ['sessions', 'Sessioni admin'], ['lists', 'Liste del sito'], ['storage', 'Spazio']], tab, (t) => pageOperations(t));
-  const body = await ({ errors: errorsBlock, planlog: planLogBlock, reports: reportsTab, audit: auditTab, sessions: sessionsTab, lists: listsTab, storage: storageTab }[tab] || errorsBlock)();
+  const bar = tabs([['errors', 'Errori'], ['planlog', 'Log piani'], ['reports', 'Segnalazioni chat'], ['content', 'Segnalazioni contenuti'], ['audit', 'Registro accessi'], ['sessions', 'Sessioni admin'], ['lists', 'Liste del sito'], ['storage', 'Spazio']], tab, (t) => pageOperations(t));
+  const body = await ({ errors: errorsBlock, planlog: planLogBlock, reports: reportsTab, content: contentTab, audit: auditTab, sessions: sessionsTab, lists: listsTab, storage: storageTab }[tab] || errorsBlock)();
   view([el('h2', null, 'Operazioni'), bar].concat(body));
 }
 
@@ -37,6 +37,28 @@ async function reportsTab() {
   ]));
   return [el('p', { class: 'muted' }, 'Segnalazioni fatte da coach e atleti nella chat. La chat è cifrata: qui vedi solo i messaggi che chi segnala ha scelto di allegare. Gli store chiedono di rispondere in tempi brevi (entro 24 ore è l\'obiettivo).'),
     out.reports.length ? table(['Quando', 'Motivo', 'Chi segnala', 'Segnalato', ''], rows) : el('p', { class: 'muted' }, 'Nessuna segnalazione.')];
+}
+
+// Notices of illegal content from /segnala-contenuto (Digital Services Act): the decision written here goes by
+// email to whoever sent the notice, with the way to contest it.
+async function contentTab() {
+  const out = await api('/api/admin/content-reports');
+  const rows = out.reports.map((r) => el('tr', null, [
+    el('td', null, [badge(r.status === 'open' ? 'da decidere' : 'decisa', r.status === 'open' ? 'bad' : 'ok'), ' n. ' + r.id + ' · ' + dateTime(r.at)]),
+    el('td', { class: 'wrap' }, [r.kindLabel, el('div', { class: 'muted', style: 'white-space:pre-wrap' }, 'Dove: ' + r.location), el('div', { class: 'muted', style: 'white-space:pre-wrap' }, 'Perché: ' + r.explanation),
+      r.decision ? el('div', { class: 'muted', style: 'white-space:pre-wrap' }, 'Decisione: ' + r.decision) : null]),
+    el('td', null, [(r.name || 'anonimo'), r.email ? el('div', { class: 'muted' }, r.email) : null, el('div', { class: 'muted' }, 'lingua: ' + r.lang)]),
+    el('td', null, r.status === 'open'
+      ? el('button', { class: 'btn small primary', type: 'button', onclick: async () => {
+        const decision = prompt('Decisione e motivo (arriva per email a chi ha segnalato). Es.: «Abbiamo rimosso la foto e sospeso l\'account: viola il diritto all\'immagine.» oppure «Non rimosso: il contenuto non risulta illegale perché…»', '');
+        if (decision === null) return;
+        const res = await api('/api/admin/content-reports/' + r.id, { method: 'POST', body: { decision } });
+        toast(res.emailed ? 'Decisione salvata e inviata' : 'Decisione salvata (email non inviata)', 'ok'); pageOperations('content');
+      } }, 'Decidi')
+      : el('span', { class: 'muted' }, r.decidedAt ? dateTime(r.decidedAt) : ''))
+  ]));
+  return [el('p', { class: 'muted' }, 'Segnalazioni di contenuti illegali inviate da chiunque dalla pagina /segnala-contenuto (Digital Services Act). Per rimuovere un contenuto o sospendere un account usa Profili. Chi segnala riceve la tua decisione per email.'),
+    out.reports.length ? table(['Quando', 'Contenuto', 'Chi segnala', ''], rows) : el('p', { class: 'muted' }, 'Nessuna segnalazione.')];
 }
 
 async function auditTab() {

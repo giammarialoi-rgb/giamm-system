@@ -235,7 +235,7 @@ function sameSecret(a, b) {
   return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
 }
 
-export function mountBilling(app, { pool, initDb, accountFromBearer, env = process.env }) {
+export function mountBilling(app, { pool, initDb, accountFromBearer, sendEmail = null, env = process.env }) {
   const billing = createBilling({ pool, initDb, env });
 
   // What the apps need to configure the store SDK: the public keys (they are made to ship in an app),
@@ -276,7 +276,7 @@ export function mountBilling(app, { pool, initDb, accountFromBearer, env = proce
   });
 
   // The website: Stripe (server/billing/stripe.mjs), the same plans and the same history.
-  mountStripe(app, { pool, initDb, accountFromBearer, billing, env });
+  mountStripe(app, { pool, initDb, accountFromBearer, billing, sendEmail, env });
 
   return billing;
 }

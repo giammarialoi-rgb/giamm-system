@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report illegal content - Nurvan</title>
+<meta name="description" content="How to report illegal content to Nurvan, even without an account, and the point of contact required by the Digital Services Act.">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>Report illegal content</h1>
+  <p class="muted">This is a translation provided for convenience. In case of any difference, the <a href="?lang=it">Italian version</a> prevails.</p>
+  <p class="muted">Last updated: <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    Draft: the details of the data controller have not been provided yet. This page must be completed before publication.
+  </div>
+
+  <p>Anyone can report to us content on Nurvan that they believe to be illegal, even without an account: for example a photo of you uploaded by someone else without your permission, personal data disclosed without consent, threats or a scam. On Nurvan, photos and documents are not public: they stay between a coach and their athletes. Programs are shared with a code and messages are in the chat between coach and athlete.</p>
+  <p>If you use Nurvan and the problem is in a chat, you can also use <strong>Report</strong> and <strong>Block</strong> directly from the chat.</p>
+
+  <h2>Send the report</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">What kind of content is it</label>
+    <select id="report-kind" required>
+      <option value="">Choose…</option>
+      <option value="rights">It infringes my rights (photos or images of me used without permission, copyright)</option>
+      <option value="privacy">Personal data or photos of a person disclosed without consent</option>
+      <option value="hate">Hate, threats, harassment or incitement to violence</option>
+      <option value="csam">Child sexual abuse</option>
+      <option value="fraud">Scam, fraud or false identity</option>
+      <option value="health">Illegal products or practices, or ones dangerous to health</option>
+      <option value="other">Other illegal content</option>
+    </select>
+
+    <label for="report-location">Where it is</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="The link, the name of the coach or user, the program code, the chat and the date: anything that helps us find it."></textarea>
+
+    <label for="report-explanation">Why it is illegal</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="Explain precisely why you believe the content is illegal."></textarea>
+
+    <label for="report-name">First and last name</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">Email</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">Your name and email are needed to confirm receipt and to tell you our decision. Only for reports of child sexual abuse may you leave them blank.</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>I declare in good faith that the information and allegations contained in this report are accurate and complete.</span></label>
+
+    <button id="report-send" type="submit">Send the report</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">Choose what kind of content you are reporting.</span>
+    <span data-msg="LOCATION">Say where the content is (link, user name, chat, date).</span>
+    <span data-msg="EXPLANATION">Explain why the content is illegal.</span>
+    <span data-msg="NAME">Enter your first and last name.</span>
+    <span data-msg="EMAIL">Enter a valid email address.</span>
+    <span data-msg="GOOD_FAITH">Confirm the good-faith statement.</span>
+    <span data-msg="RATE">You have sent many reports today. For more, write to info@nurvan.app.</span>
+    <span data-msg="FAIL">We cannot send the report right now. Try again shortly or write to info@nurvan.app.</span>
+    <span data-msg="SENDING">Sending…</span>
+    <span data-msg="OK">Report received, number {id}. If you left your email, we have sent you a confirmation: we will write to you with our decision.</span>
+  </div>
+
+  <h2>What happens next</h2>
+  <ul>
+    <li>We confirm receipt by email, with the report number.</li>
+    <li>A person reviews it carefully and objectively, normally within 24 hours. We do not use automated systems to decide.</li>
+    <li>If the content is illegal or breaches our <a href="/termini">terms of service</a>, we remove it or disable access to it and may suspend the account. Whoever uploaded it receives the reasons.</li>
+    <li>We write to you with our decision and the reasons for it. If you disagree, you can contest it by replying to the email within 6 months, or turn to a certified out-of-court dispute settlement body or to the courts.</li>
+    <li>If the report concerns a criminal offence that threatens people's life or safety, we inform the competent authorities.</li>
+  </ul>
+
+  <h2>Point of contact (Digital Services Act)</h2>
+  <p>The single point of contact for users and for the authorities of the Member States, the European Commission and the European Board for Digital Services (Articles 11 and 12 of Regulation (EU) 2022/2065) is the address <a data-legal="privacyEmail" href="#"></a>. You can write to us in Italian or in English.</p>
+  <p>The service is provided by <span data-legal="controllerName"></span>, <span data-legal="controllerAddress"></span>.</p>
+
+  <h2>Misuse of reports</h2>
+  <p>After a warning, we may suspend for a reasonable period the processing of reports from anyone who frequently submits manifestly unfounded ones.</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">Privacy notice</a>
+    <a href="/termini">Terms of service</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>

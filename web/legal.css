@@ -61,3 +61,20 @@ nav.legal-links { margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap; f
 .acct-form input { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
 .acct-form button { font: inherit; font-weight: 800; margin-top: 8px; padding: 12px 16px; border: 0; border-radius: 10px; background: var(--gold); color: #111; cursor: pointer; }
 .acct-form button[disabled] { opacity: 0.6; }
+
+/* The notice form of /segnala-contenuto. */
+.report-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.report-form label { font-weight: 700; margin-top: 10px; }
+.report-form input[type="text"], .report-form input[type="email"], .report-form select, .report-form textarea {
+  width: 100%; padding: 10px 12px; font: inherit; color: var(--text); background: var(--card);
+  border: 1px solid var(--line); border-radius: 8px;
+}
+.report-form textarea { resize: vertical; }
+.report-form label.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
+.report-form label.check input { width: 18px; height: 18px; flex: 0 0 auto; margin-top: 4px; }
+.report-form button { margin-top: 14px; padding: 12px 16px; font: inherit; font-weight: 800; color: #111; background: var(--gold); border: 0; border-radius: 8px; cursor: pointer; }
+.report-form button:disabled { opacity: .6; cursor: default; }
+.report-form .small { font-size: 0.85rem; margin: 2px 0 0; }
+.report-result { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); }
+.report-result.good { border-color: var(--gold); }
+.report-result.bad { background: var(--warn-bg); color: var(--warn-text); }

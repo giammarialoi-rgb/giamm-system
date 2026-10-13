@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segnalare un contenuto illegale - Nurvan</title>
+<meta name="description" content="Come segnalare a Nurvan un contenuto illegale, anche senza account, e il punto di contatto previsto dal Digital Services Act.">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>Segnalare un contenuto illegale</h1>
+  <p class="muted">Ultimo aggiornamento: <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    Bozza: i dati del titolare del trattamento non sono ancora stati indicati. Questa pagina va completata prima della pubblicazione.
+  </div>
+
+  <p>Chiunque può segnalarci un contenuto presente su Nurvan che ritiene illegale, anche senza avere un account: per esempio una tua foto caricata da altri senza il tuo permesso, dati personali diffusi senza consenso, minacce o una truffa. Su Nurvan foto e documenti non sono pubblici: restano tra un coach e i suoi atleti. I programmi si condividono con un codice e i messaggi sono nella chat tra coach e atleta.</p>
+  <p>Se usi Nurvan e il problema è in una chat, puoi anche usare <strong>Segnala</strong> e <strong>Blocca</strong> direttamente dalla chat.</p>
+
+  <h2>Invia la segnalazione</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">Che tipo di contenuto è</label>
+    <select id="report-kind" required>
+      <option value="">Scegli…</option>
+      <option value="rights">Viola i miei diritti (foto o immagini mie usate senza permesso, diritto d'autore)</option>
+      <option value="privacy">Dati personali o foto di una persona diffusi senza consenso</option>
+      <option value="hate">Odio, minacce, molestie o incitamento alla violenza</option>
+      <option value="csam">Abuso sessuale su minori</option>
+      <option value="fraud">Truffa, frode o falsa identità</option>
+      <option value="health">Prodotti o pratiche illegali o pericolose per la salute</option>
+      <option value="other">Altro contenuto illegale</option>
+    </select>
+
+    <label for="report-location">Dove si trova</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="Il link, il nome del coach o dell'utente, il codice del programma, la chat e la data: tutto quello che ci aiuta a trovarlo."></textarea>
+
+    <label for="report-explanation">Perché è illegale</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="Spiega in modo preciso perché ritieni che il contenuto sia illegale."></textarea>
+
+    <label for="report-name">Nome e cognome</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">Email</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">Nome ed email servono per confermarti la ricezione e comunicarti la decisione. Solo per le segnalazioni di abuso sessuale su minori puoi lasciarli vuoti.</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>Dichiaro in buona fede che le informazioni e le affermazioni contenute in questa segnalazione sono accurate e complete.</span></label>
+
+    <button id="report-send" type="submit">Invia la segnalazione</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">Scegli che tipo di contenuto stai segnalando.</span>
+    <span data-msg="LOCATION">Indica dove si trova il contenuto (link, nome utente, chat, data).</span>
+    <span data-msg="EXPLANATION">Spiega perché il contenuto è illegale.</span>
+    <span data-msg="NAME">Scrivi il tuo nome e cognome.</span>
+    <span data-msg="EMAIL">Scrivi un indirizzo email valido.</span>
+    <span data-msg="GOOD_FAITH">Conferma la dichiarazione di buona fede.</span>
+    <span data-msg="RATE">Hai inviato molte segnalazioni oggi. Per altre scrivi a info@nurvan.app.</span>
+    <span data-msg="FAIL">Non riusciamo a inviare la segnalazione ora. Riprova tra poco o scrivi a info@nurvan.app.</span>
+    <span data-msg="SENDING">Invio in corso…</span>
+    <span data-msg="OK">Segnalazione ricevuta, numero {id}. Se hai lasciato l'email ti abbiamo mandato la conferma: ti scriveremo la decisione.</span>
+  </div>
+
+  <h2>Cosa succede dopo</h2>
+  <ul>
+    <li>Ti confermiamo la ricezione per email, con il numero della segnalazione.</li>
+    <li>Una persona la esamina con attenzione e in modo obiettivo, di norma entro 24 ore. Non usiamo sistemi automatici per decidere.</li>
+    <li>Se il contenuto è illegale o viola i nostri <a href="/termini">termini di servizio</a> lo rimuoviamo o ne blocchiamo l'accesso e possiamo sospendere l'account. Chi lo aveva caricato riceve la motivazione.</li>
+    <li>Ti scriviamo la decisione e il motivo. Se non sei d'accordo puoi contestarla rispondendo all'email entro 6 mesi, oppure rivolgerti a un organismo di risoluzione extragiudiziale certificato o all'autorità giudiziaria.</li>
+    <li>Se la segnalazione riguarda un reato che minaccia la vita o la sicurezza delle persone, informiamo le autorità competenti.</li>
+  </ul>
+
+  <h2>Punto di contatto (Digital Services Act)</h2>
+  <p>Il punto di contatto unico per gli utenti e per le autorità degli Stati membri, la Commissione europea e il Comitato europeo per i servizi digitali (articoli 11 e 12 del Regolamento UE 2022/2065) è l'indirizzo <a data-legal="privacyEmail" href="#"></a>. Puoi scriverci in italiano o in inglese.</p>
+  <p>Il servizio è fornito da <span data-legal="controllerName"></span>, <span data-legal="controllerAddress"></span>.</p>
+
+  <h2>Uso scorretto delle segnalazioni</h2>
+  <p>Dopo un avviso, possiamo sospendere per un periodo ragionevole l'esame delle segnalazioni di chi ne invia spesso di manifestamente infondate.</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">Informativa privacy</a>
+    <a href="/termini">Termini di servizio</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>

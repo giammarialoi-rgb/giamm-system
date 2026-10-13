@@ -6,6 +6,7 @@ import { siteStats, appStats, metricSeries, metricTotal, latestMetric, dayOf } f
 import { status as integrationStatus } from "./integrations.mjs";
 import { metrics as accountMetrics } from "./queries.mjs";
 import { openReportCount } from "./reports.mjs";
+import { openContentReportCount } from "./content-reports.mjs";
 
 const DAY = 86400000;
 
@@ -46,6 +47,8 @@ export async function overview(pool, { siteHosts, env = process.env, days = 30, 
   if (errors24 > 0) alerts.push({ level: errors24 >= 10 ? "bad" : "warn", text: errors24 + " errori visti dal server nelle ultime 24 ore", tab: "operations" });
   const openReports = await openReportCount(pool);
   if (openReports > 0) alerts.push({ level: "bad", text: openReports + (openReports === 1 ? " segnalazione della chat da gestire" : " segnalazioni della chat da gestire"), tab: "operations", sub: "reports" });
+  const openContent = await openContentReportCount(pool);
+  if (openContent > 0) alerts.push({ level: "bad", text: openContent + (openContent === 1 ? " segnalazione di contenuto (DSA) da decidere" : " segnalazioni di contenuti (DSA) da decidere"), tab: "operations", sub: "content" });
   const soon = money.expiring.filter((e) => Date.parse(e.until) - now <= 7 * DAY);
   if (soon.length) alerts.push({ level: "warn", text: soon.length + (soon.length === 1 ? " piano in scadenza" : " piani in scadenza") + " entro 7 giorni", tab: "economy" });
   for (const i of integrations) {

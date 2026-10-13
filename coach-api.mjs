@@ -42,6 +42,7 @@ import { SITE_LANGS, SITE_LANG_NAMES, isSiteLang, langPrefix, langOfPath, siteDi
 import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, aiConsentActive, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
+import { mountContentReports } from "./server/admin/content-reports.mjs";
 import { createAnalytics } from "./server/admin/analytics.mjs";
 import { adminSlug } from "./server/admin/link.mjs";
 import { startIntegrationsJob } from "./server/admin/integrations.mjs";
@@ -2411,7 +2412,7 @@ mountCoachPractice(app, {
 });
 
 mountPlanRoutes(app, { pool, initDb, accountFromBearer });
-const billing = mountBilling(app, { pool, initDb, accountFromBearer });
+const billing = mountBilling(app, { pool, initDb, accountFromBearer, sendEmail });
 const appleAuth = mountAppleAuth(app, { pool, initDb, secret: JWT_SECRET, accountFromBearer, issueAccountToken });
 mountGoogleAppAuth(app, { pool, initDb, secret: JWT_SECRET, verifyGoogleCredential, resolveIdentityUser, clientId: publicGoogleClientId });
 appleCallbackTarget.handle = appleAuth.callbackHandler;
@@ -2593,6 +2594,8 @@ const analytics = createAnalytics({ pool, initDb, secret: JWT_SECRET, siteHosts:
 app.use(analytics.middleware);
 app.post("/api/app/ping", analytics.appPing);
 mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET, analytics, siteHosts: SITE_HOSTS });
+// Notices of illegal content (DSA art. 16), from /segnala-contenuto: open to anyone, with or without an account.
+mountContentReports(app, { pool, initDb, sendEmail, secret: JWT_SECRET, notifyTo: process.env.CONTENT_REPORT_EMAIL || "info@nurvan.app" });
 if (isProduction(process.env)) startIntegrationsJob({ pool, initDb, env: process.env, secret: JWT_SECRET });
 const siteEsc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 async function siteShell(req, page) {
@@ -2644,6 +2647,8 @@ async function siteShell(req, page) {
     CONTACT: contactPath(lang),
     PRIVACY: legalPath(lang, "privacy"),
     TERMS: legalPath(lang, "termini"),
+    // The notice form of the Digital Services Act: one page, in the language asked.
+    REPORT: "/segnala-contenuto" + (lang === "it" ? "" : "?lang=" + lang),
     META: metaTags({
       origin, lang, title: page.title || "Nurvan", description: page.description || "", alternates,
       url: origin + ((alternates && alternates[lang]) || req.path.replace(/^\/sito(?=\/|$)/, "") || "/"), og: ogIn
@@ -2750,6 +2755,7 @@ const LEGAL_PAGES = {
   "/privacy": "privacy.html",
   "/termini": "termini.html",
   "/elimina-account": "elimina-account.html",
+  "/segnala-contenuto": "segnala-contenuto.html",
   // The links in the verification and reset emails.
   "/verifica-email": "verifica-email.html",
   "/reimposta-password": "reimposta-password.html"

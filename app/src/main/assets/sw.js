@@ -6,6 +6,9 @@ const CACHE = 'nurvan-shell-v' + String((self.NURVAN_RELEASE && self.NURVAN_RELE
   '-' + String((self.NURVAN_RELEASE && self.NURVAN_RELEASE.webBuild) || 'web') + '-userLoadFirst2';
 const PRECACHE = [
   './release-meta.js',
+  './fonts/montserrat.css',
+  './fonts/montserrat-latin.woff2',
+  './fonts/montserrat-latin-ext.woff2',
   './apple-touch-icon.png',
   './icon-192.png',
   './icon-512.png',
@@ -88,7 +91,7 @@ self.addEventListener('fetch', (event) => {
   // The privacy notice, terms and deletion page are always read live: a
   // cached copy would show an outdated notice.
   // So are the pages the account emails link to, which carry a one-time token.
-  if (/^\/(privacy|termini|elimina-account|verifica-email|reimposta-password)(\.html)?$/.test(url.pathname) || /^\/(legal(-pages)?|account-pages)\.(css|js)$/.test(url.pathname)) return;
+  if (/^\/(privacy|termini|elimina-account|segnala-contenuto|verifica-email|reimposta-password)(\.html)?$/.test(url.pathname) || /^\/(legal(-pages)?|account-pages|segnala-contenuto)\.(css|js)$/.test(url.pathname)) return;
   const isClientDoc = /^\/c\/[^/]+\/?$/.test(url.pathname);
   // An invite page carries its token in the HTML and the server sends it
   // no-store: it is not kept here. Offline, the app shell opens it (the boot

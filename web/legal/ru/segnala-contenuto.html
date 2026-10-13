@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сообщить о незаконном контенте - Nurvan</title>
+<meta name="description" content="Как сообщить Nurvan о незаконном контенте, в том числе без аккаунта, и контактный центр, предусмотренный Digital Services Act.">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>Сообщить о незаконном контенте</h1>
+  <p class="muted">Это перевод, предоставленный для удобства. При любых расхождениях приоритет имеет <a href="?lang=it">итальянская версия</a>.</p>
+  <p class="muted">Последнее обновление: <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    Черновик: данные контролёра пока не указаны. Эту страницу необходимо дополнить до публикации.
+  </div>
+
+  <p>Любой человек может сообщить нам о контенте в Nurvan, который он считает незаконным, даже без аккаунта: например, о твоей фотографии, загруженной кем-то без твоего разрешения, о персональных данных, распространённых без согласия, об угрозах или о мошенничестве. В Nurvan фотографии и документы не являются публичными: они остаются между тренером и его атлетами. Программами делятся с помощью кода, а сообщения находятся в чате между тренером и атлетом.</p>
+  <p>Если ты пользуешься Nurvan и проблема в чате, ты также можешь использовать кнопки <strong>Пожаловаться</strong> и <strong>Заблокировать</strong> прямо в чате.</p>
+
+  <h2>Отправить сообщение</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">Какой это контент</label>
+    <select id="report-kind" required>
+      <option value="">Выбери…</option>
+      <option value="rights">Нарушает мои права (мои фотографии или изображения, использованные без разрешения, авторское право)</option>
+      <option value="privacy">Персональные данные или фотографии человека, распространённые без согласия</option>
+      <option value="hate">Ненависть, угрозы, преследование или призывы к насилию</option>
+      <option value="csam">Сексуальное насилие над детьми</option>
+      <option value="fraud">Мошенничество, обман или выдача себя за другого</option>
+      <option value="health">Незаконные или опасные для здоровья товары или практики</option>
+      <option value="other">Другой незаконный контент</option>
+    </select>
+
+    <label for="report-location">Где он находится</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="Ссылка, имя тренера или пользователя, код программы, чат и дата: всё, что поможет нам его найти."></textarea>
+
+    <label for="report-explanation">Почему он незаконен</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="Точно объясни, почему ты считаешь этот контент незаконным."></textarea>
+
+    <label for="report-name">Имя и фамилия</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">Email</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">Имя и email нужны, чтобы подтвердить получение и сообщить тебе решение. Оставить их пустыми можно только в сообщениях о сексуальном насилии над детьми.</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>Добросовестно заявляю, что сведения и утверждения, содержащиеся в этом сообщении, точны и полны.</span></label>
+
+    <button id="report-send" type="submit">Отправить сообщение</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">Выбери, о каком контенте ты сообщаешь.</span>
+    <span data-msg="LOCATION">Укажи, где находится контент (ссылка, имя пользователя, чат, дата).</span>
+    <span data-msg="EXPLANATION">Объясни, почему контент незаконен.</span>
+    <span data-msg="NAME">Напиши свои имя и фамилию.</span>
+    <span data-msg="EMAIL">Напиши действительный адрес email.</span>
+    <span data-msg="GOOD_FAITH">Подтверди заявление о добросовестности.</span>
+    <span data-msg="RATE">Сегодня ты отправил много сообщений. Для остальных пиши на info@nurvan.app.</span>
+    <span data-msg="FAIL">Сейчас не удаётся отправить сообщение. Попробуй чуть позже или напиши на info@nurvan.app.</span>
+    <span data-msg="SENDING">Отправка…</span>
+    <span data-msg="OK">Сообщение получено, номер {id}. Если ты указал email, мы отправили тебе подтверждение: мы сообщим тебе решение письмом.</span>
+  </div>
+
+  <h2>Что будет дальше</h2>
+  <ul>
+    <li>Мы подтверждаем получение по email и сообщаем номер обращения.</li>
+    <li>Человек внимательно и объективно рассматривает его, как правило, в течение 24 часов. Мы не используем автоматизированные системы для принятия решений.</li>
+    <li>Если контент незаконен или нарушает наши <a href="/termini">условия использования</a>, мы удаляем его или блокируем доступ к нему и можем приостановить аккаунт. Тот, кто его загрузил, получает обоснование.</li>
+    <li>Мы сообщаем тебе решение и его причину. Если ты не согласен, ты можешь оспорить его, ответив на письмо в течение 6 месяцев, или обратиться в сертифицированный орган внесудебного урегулирования споров либо в суд.</li>
+    <li>Если сообщение касается преступления, угрожающего жизни или безопасности людей, мы информируем компетентные органы.</li>
+  </ul>
+
+  <h2>Контактный центр (Digital Services Act)</h2>
+  <p>Единым контактным центром для пользователей и для органов государств-членов, Европейской комиссии и Европейского совета по цифровым услугам (статьи 11 и 12 Регламента (ЕС) 2022/2065) является адрес <a data-legal="privacyEmail" href="#"></a>. Ты можешь писать нам на итальянском или английском языке.</p>
+  <p>Сервис предоставляет <span data-legal="controllerName"></span>, <span data-legal="controllerAddress"></span>.</p>
+
+  <h2>Злоупотребление сообщениями</h2>
+  <p>После предупреждения мы можем на разумный срок приостановить рассмотрение сообщений от тех, кто часто отправляет явно необоснованные сообщения.</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">Политика конфиденциальности</a>
+    <a href="/termini">Условия использования</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>

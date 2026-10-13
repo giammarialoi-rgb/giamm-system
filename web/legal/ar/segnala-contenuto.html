@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الإبلاغ عن محتوى غير قانوني - Nurvan</title>
+<meta name="description" content="كيفية الإبلاغ إلى Nurvan عن محتوى غير قانوني، حتى من دون حساب، ونقطة الاتصال المنصوص عليها في Digital Services Act.">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>الإبلاغ عن محتوى غير قانوني</h1>
+  <p class="muted">هذه ترجمة مقدَّمة للتيسير. وفي حال وجود أي اختلاف، تسود <a href="?lang=it">النسخة الإيطالية</a>.</p>
+  <p class="muted">آخر تحديث: <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    مسودة: لم تُحدَّد بعدُ بيانات المتحكم في البيانات. يجب استكمال هذه الصفحة قبل النشر.
+  </div>
+
+  <p>يمكن لأي شخص أن يبلغنا عن محتوى موجود على Nurvan يرى أنه غير قانوني، حتى من دون أن يكون لديه حساب: مثل صورة لك رفعها شخص آخر من دون إذنك، أو بيانات شخصية نُشرت من دون موافقة، أو تهديدات، أو عملية احتيال. على Nurvan لا تكون الصور والمستندات عامة: فهي تبقى بين المدرب ورياضييه. تُشارَك البرامج برمز، وتوجد الرسائل في المحادثة بين المدرب والرياضي.</p>
+  <p>إذا كنت تستخدم Nurvan وكانت المشكلة في محادثة، يمكنك أيضًا استخدام <strong>إبلاغ</strong> و<strong>حظر</strong> مباشرةً من المحادثة.</p>
+
+  <h2>أرسل البلاغ</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">ما نوع المحتوى</label>
+    <select id="report-kind" required>
+      <option value="">اختر…</option>
+      <option value="rights">ينتهك حقوقي (صور أو مقاطع لي مستخدمة من دون إذن، حقوق المؤلف)</option>
+      <option value="privacy">بيانات شخصية أو صور لشخص نُشرت من دون موافقة</option>
+      <option value="hate">كراهية أو تهديدات أو مضايقة أو تحريض على العنف</option>
+      <option value="csam">الاعتداء الجنسي على الأطفال</option>
+      <option value="fraud">نصب أو احتيال أو انتحال هوية</option>
+      <option value="health">منتجات أو ممارسات غير قانونية أو خطرة على الصحة</option>
+      <option value="other">محتوى غير قانوني آخر</option>
+    </select>
+
+    <label for="report-location">أين يوجد</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="الرابط، واسم المدرب أو المستخدم، ورمز البرنامج، والمحادثة والتاريخ: كل ما يساعدنا على العثور عليه."></textarea>
+
+    <label for="report-explanation">لماذا هو غير قانوني</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="اشرح بدقة لماذا ترى أن المحتوى غير قانوني."></textarea>
+
+    <label for="report-name">الاسم واسم العائلة</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">البريد الإلكتروني</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">نحتاج إلى الاسم والبريد الإلكتروني لتأكيد الاستلام وإبلاغك بالقرار. لا يجوز تركهما فارغين إلا في بلاغات الاعتداء الجنسي على الأطفال.</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>أُقرّ بحسن نية بأن المعلومات والادعاءات الواردة في هذا البلاغ دقيقة وكاملة.</span></label>
+
+    <button id="report-send" type="submit">أرسل البلاغ</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">اختر نوع المحتوى الذي تبلغ عنه.</span>
+    <span data-msg="LOCATION">حدّد مكان المحتوى (الرابط، اسم المستخدم، المحادثة، التاريخ).</span>
+    <span data-msg="EXPLANATION">اشرح لماذا المحتوى غير قانوني.</span>
+    <span data-msg="NAME">اكتب اسمك واسم عائلتك.</span>
+    <span data-msg="EMAIL">اكتب عنوان بريد إلكتروني صالحًا.</span>
+    <span data-msg="GOOD_FAITH">أكّد إقرار حسن النية.</span>
+    <span data-msg="RATE">لقد أرسلت بلاغات كثيرة اليوم. لإرسال المزيد اكتب إلى info@nurvan.app.</span>
+    <span data-msg="FAIL">لا نستطيع إرسال البلاغ الآن. أعد المحاولة بعد قليل أو اكتب إلى info@nurvan.app.</span>
+    <span data-msg="SENDING">جارٍ الإرسال…</span>
+    <span data-msg="OK">تم استلام البلاغ، رقم {id}. إذا تركت بريدك الإلكتروني فقد أرسلنا إليك التأكيد: سنكتب إليك بالقرار.</span>
+  </div>
+
+  <h2>ماذا يحدث بعد ذلك</h2>
+  <ul>
+    <li>نؤكد لك الاستلام عبر البريد الإلكتروني مع رقم البلاغ.</li>
+    <li>يفحصه شخص بعناية وموضوعية، عادةً خلال 24 ساعة. لا نستخدم أنظمة آلية لاتخاذ القرار.</li>
+    <li>إذا كان المحتوى غير قانوني أو يخالف <a href="/termini">شروط الخدمة</a> لدينا، نزيله أو نعطّل الوصول إليه وقد نعلّق الحساب. ويتلقى من رفعه بيانًا بالأسباب.</li>
+    <li>نكتب إليك بالقرار وسببه. إذا لم توافق عليه يمكنك الاعتراض عليه بالرد على البريد الإلكتروني خلال 6 أشهر، أو اللجوء إلى هيئة معتمدة لتسوية المنازعات خارج المحاكم أو إلى السلطة القضائية.</li>
+    <li>إذا تعلق البلاغ بجريمة تهدد حياة الأشخاص أو سلامتهم، نُبلغ السلطات المختصة.</li>
+  </ul>
+
+  <h2>نقطة الاتصال (Digital Services Act)</h2>
+  <p>نقطة الاتصال الموحدة للمستخدمين ولسلطات الدول الأعضاء والمفوضية الأوروبية والمجلس الأوروبي للخدمات الرقمية (المادتان 11 و12 من اللائحة (الاتحاد الأوروبي) 2022/2065) هي العنوان <a data-legal="privacyEmail" href="#"></a>. يمكنك مراسلتنا بالإيطالية أو بالإنجليزية.</p>
+  <p>تُقدَّم الخدمة من قِبل <span data-legal="controllerName"></span>، <span data-legal="controllerAddress"></span>.</p>
+
+  <h2>إساءة استخدام البلاغات</h2>
+  <p>بعد توجيه تحذير، يجوز لنا أن نعلّق لفترة معقولة النظر في بلاغات من يرسل كثيرًا بلاغات لا أساس لها بشكل واضح.</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">سياسة الخصوصية</a>
+    <a href="/termini">شروط الخدمة</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>

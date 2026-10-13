@@ -12,7 +12,7 @@ function ok(message, value) {
   console.log('FAIL ' + message);
 }
 const LANGS = ['en', 'es', 'fr', 'de', 'pt', 'ru', 'zh', 'ar', 'hi'];
-const PAGES = ['privacy.html', 'termini.html', 'elimina-account.html', 'verifica-email.html', 'reimposta-password.html'];
+const PAGES = ['privacy.html', 'termini.html', 'elimina-account.html', 'segnala-contenuto.html', 'verifica-email.html', 'reimposta-password.html'];
 const count = (s, re) => (s.match(re) || []).length;
 const shape = (html) => ({
   h2: count(html, /<h2[\s>]/g),
@@ -34,7 +34,7 @@ for (const lang of LANGS) {
     if (!new RegExp('<html lang="' + lang + '"').test(html)) problems.push(page + ': lang');
     if (/^(privacy|termini|elimina-account)/.test(page) && !/href="\?lang=it"/.test(html)) problems.push(page + ': manca il rimando alla versione italiana');
   }
-  ok('1. ' + lang + ': le cinque pagine tradotte, stessa struttura dell’italiano' + (problems.length ? ' (' + problems.slice(0, 4).join('; ') + ')' : ''), problems.length === 0);
+  ok('1. ' + lang + ': le sei pagine tradotte, stessa struttura dell’italiano' + (problems.length ? ' (' + problems.slice(0, 4).join('; ') + ')' : ''), problems.length === 0);
 }
 
 const api = fs.readFileSync('coach-api.mjs', 'utf8');

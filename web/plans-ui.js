@@ -445,7 +445,12 @@ function billingButtonsHtml(planId) {
   return mine.map(function (x, i) {
     return '<button type="button" class="btn ' + (i === 0 ? 'btn-primary' : 'btn-outline') + '" style="width:100%;font-size:11px;margin-top:' + (i ? 6 : 0) + 'px;"' + off +
       ' onclick="billingBuy(\'' + esc(x.productId) + '\')"><span>ABBONATI</span> · ' + esc(x.priceString) + (x.period ? ' / <span>' + esc(BILLING_PERIOD_LABEL[x.period] || x.period) + '</span>' : '') + '</button>';
-  }).join('');
+  }).join('') + planRenewNoteHtml();
+}
+
+// Next to every price, readable (not in small print): the subscription renews by itself until cancelled.
+function planRenewNoteHtml() {
+  return '<div class="plan-renew-note" style="font-size:12.5px;color:#e6e6e6;line-height:1.45;margin-top:8px;">↻ <span>Rinnovo automatico allo stesso prezzo finché non lo annulli.</span></div>';
 }
 
 // The price line of a plan card: the store's, when it is known.
@@ -469,7 +474,7 @@ function billingFooterHtml() {
   const where = ios ? 'Il pagamento viene addebitato sull’account Apple al momento della conferma dell’acquisto.' : 'Il pagamento viene addebitato sull’account Google Play al momento della conferma dell’acquisto.';
   const manage = ios ? 'Puoi gestire o annullare l’abbonamento in qualsiasi momento da Impostazioni › il tuo nome › Abbonamenti.' : 'Puoi gestire o annullare l’abbonamento in qualsiasi momento da Google Play › Pagamenti e abbonamenti › Abbonamenti.';
   return '<div class="card plan-billing-footer" style="padding:12px;margin-top:4px;border:1px solid #333;">' +
-    '<div style="font-size:11px;color:#aaa;line-height:1.5;"><span>' + where + '</span> <span>L’abbonamento si rinnova automaticamente alle stesse condizioni, a meno che non venga annullato almeno 24 ore prima della fine del periodo in corso.</span> <span>' + manage + '</span></div>' +
+    '<div style="font-size:13px;color:#e6e6e6;line-height:1.5;"><span>' + where + '</span> <strong><span>L’abbonamento si rinnova automaticamente alle stesse condizioni, a meno che non venga annullato almeno 24 ore prima della fine del periodo in corso.</span></strong> <span>' + manage + '</span></div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">' +
     '<button type="button" class="btn btn-outline" style="flex:1;min-width:130px;font-size:10px;padding:8px;" onclick="billingRestore()">RIPRISTINA ACQUISTI</button>' +
     '<button type="button" class="btn btn-outline" style="flex:1;min-width:130px;font-size:10px;padding:8px;" onclick="billingManage()">GESTISCI ABBONAMENTO</button></div>' +
@@ -553,7 +558,7 @@ function webStripeButtonsHtml(plan) {
     return '<button type="button" class="btn ' + (i === 0 ? 'btn-primary' : 'btn-outline') + '" style="width:100%;font-size:11px;margin-top:' + (i ? 6 : 0) + 'px;"' + off +
       ' onclick="webStripeBuy(\'' + esc(productId) + '\')"><span>ABBONATI</span> · ' + esc(String(x.amount)) + ' € / <span>' + esc(BILLING_PERIOD_LABEL[x.period] || x.period) + '</span></button>';
   }).join('');
-  return lines + (trial && lines ? '<div style="font-size:10px;color:var(--gold);margin-top:6px;font-weight:800;"><span>Il primo mese è gratis</span></div>' : '');
+  return lines + (trial && lines ? '<div style="font-size:10px;color:var(--gold);margin-top:6px;font-weight:800;"><span>Il primo mese è gratis</span></div>' : '') + (lines ? planRenewNoteHtml() : '');
 }
 
 // Back from Stripe's page: say so, and read the plan again (the webhook can be a moment late).
@@ -590,9 +595,13 @@ function webStripeFooterHtml(on) {
   const mine = currentAccountEntitlement() || {};
   const manage = ((__stripe.status && __stripe.status.hasCustomer) || mine.planSource === 'stripe')
     ? '<button type="button" class="btn btn-outline" style="width:100%;font-size:11px;margin-top:10px;" onclick="webStripePortal()">GESTISCI ABBONAMENTO</button>' : '';
+  // The withdrawal button (EU Directive 2023/2673): always in sight for a subscription bought here.
+  const withdraw = mine.planSource === 'stripe' && mine.plan && mine.plan !== 'free'
+    ? '<button type="button" id="plan-withdraw-btn" class="btn btn-outline" style="width:100%;font-size:11px;margin-top:8px;border-color:#c0392b;color:#ff8a7a;" onclick="webStripeWithdrawOpen()">RECEDI DAL CONTRATTO QUI</button>' : '';
   return '<div class="card plan-billing-footer" style="padding:12px;margin-top:4px;border:1px solid #333;">' +
-    '<div style="font-size:11px;color:#aaa;line-height:1.5;"><span>L’abbonamento si rinnova automaticamente alla fine di ogni periodo, finché non lo annulli. Puoi annullarlo o cambiare piano in qualsiasi momento dal portale: resta attivo fino alla fine del periodo pagato.</span> <span>Il pagamento è gestito da Stripe: Nurvan non vede mai i dati della tua carta.</span></div>' +
-    manage +
+    '<div style="font-size:13px;color:#e6e6e6;line-height:1.5;"><strong><span>L’abbonamento si rinnova automaticamente alla fine di ogni periodo, allo stesso prezzo, finché non lo annulli.</span></strong> <span>Puoi annullarlo o cambiare piano in qualsiasi momento dal portale: resta attivo fino alla fine del periodo pagato.</span> <span>Entro 14 giorni dall’acquisto puoi recedere dal contratto: ti rimborsiamo la parte non usata.</span></div>' +
+    '<div style="font-size:11px;color:#aaa;line-height:1.5;margin-top:6px;"><span>Il pagamento è gestito da Stripe: Nurvan non vede mai i dati della tua carta.</span></div>' +
+    manage + withdraw +
     '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;margin-top:10px;">' + lg('privacy', 'Informativa privacy') + lg('termini', 'Termini di servizio') + '</div>' +
     (reg.contactEmail ? '<div style="font-size:10px;color:#777;margin-top:8px;"><span>Assistenza:</span> ' + esc(reg.contactEmail) + '</div>' : '') +
     '</div>';
@@ -697,3 +706,104 @@ async function startCoachTrialFromApp() {
   }
 }
 window.startCoachTrialFromApp = startCoachTrialFromApp;
+
+/* ------------------------------ withdrawal (website purchases) ------------------------------ */
+//
+// "Recedi dal contratto qui" opens a confirmation step: who withdraws (the name, editable), the account's email
+// where the acknowledgement goes, the contract, the deadline and the refund; then "Conferma il recesso".
+// The server (server/billing/stripe.mjs) ends the subscription, refunds the unused part and emails the receipt.
+function webStripeWithdrawClose() {
+  const el = document.getElementById('plan-withdraw-sheet');
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+function webStripeWithdrawSheet(inner) {
+  webStripeWithdrawClose();
+  const box = document.createElement('div');
+  box.id = 'plan-withdraw-sheet';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;padding:16px;';
+  box.onclick = function (ev) { if (ev.target === box) webStripeWithdrawClose(); };
+  box.innerHTML = '<div style="background:#0d0d0d;border:1px solid var(--gold);border-radius:14px;padding:16px;width:100%;max-width:400px;max-height:88vh;overflow:auto;text-align:left;">' + inner + '</div>';
+  document.body.appendChild(box);
+  return box;
+}
+function webStripeMoney(cents, currency) {
+  const v = (Number(cents || 0) / 100).toFixed(2).replace('.', ',');
+  return v + ' ' + (String(currency || 'eur').toLowerCase() === 'eur' ? '€' : String(currency).toUpperCase());
+}
+function webStripeDay(ms) {
+  try { return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }); } catch (_) { return ''; }
+}
+const WITHDRAW_HEAD = '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">RECESSO</div><h3 style="margin:6px 0 10px;color:#fff;font-size:17px;">Recedi dal contratto</h3>';
+const WITHDRAW_CLOSE = '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="webStripeWithdrawClose()">CHIUDI</button>';
+
+async function webStripeWithdrawOpen() {
+  if (!store || !store.accountToken) { if (typeof openAccount === 'function') openAccount(); return; }
+  webStripeWithdrawSheet(WITHDRAW_HEAD + '<div style="font-size:13px;color:#ccc;"><span>Carico il tuo contratto…</span></div>');
+  let info = null;
+  try { info = await practiceFetch('/api/billing/stripe/withdrawal', { method: 'GET', headers: practiceHeaders(false) }, 20000); } catch (err) { info = { error: (err && err.message) || 'error' }; }
+  if (!info || info.error || info.ok === false) {
+    webStripeWithdrawSheet(WITHDRAW_HEAD + '<div style="font-size:13px;color:#ddd;line-height:1.5;"><span>Non riusciamo a leggere il contratto ora. Riprova tra poco o scrivi a info@nurvan.app per recedere.</span></div>' + WITHDRAW_CLOSE);
+    return;
+  }
+  if (!info.eligible) {
+    const closed = info.reason === 'WINDOW_CLOSED';
+    const why = closed
+      ? '<span>Il periodo di recesso di 14 giorni è terminato.</span>' + (info.deadline ? ' (' + esc(webStripeDay(info.deadline)) + ')' : '') + ' <span>Puoi comunque annullare il rinnovo: l’abbonamento resta attivo fino alla fine del periodo pagato.</span>'
+      : '<span>Non hai un abbonamento attivo acquistato dal sito.</span>';
+    const portal = closed ? '<button type="button" class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="webStripeWithdrawClose();webStripePortal()">ANNULLA IL RINNOVO</button>' : '';
+    webStripeWithdrawSheet(WITHDRAW_HEAD + '<div style="font-size:13px;color:#ddd;line-height:1.5;">' + why + '</div>' + portal + WITHDRAW_CLOSE);
+    return;
+  }
+  const planName = ((planFeatures() || {}).plans || []).filter(function (p) { return p.id === info.plan; }).map(function (p) { return p.name; })[0] || info.productId || '';
+  const refund = (info.trialing || !info.paidCents)
+    ? '<span>Non ti è stato ancora addebitato nulla: non c’è nulla da rimborsare.</span>'
+    : '<span>Ti rimborsiamo sulla stessa carta la parte del periodo non ancora usata:</span> <strong>' + esc(webStripeMoney(info.refundCents, info.currency)) + '</strong> <span>(calcolata a oggi; l’importo esatto è quello del momento della conferma).</span>';
+  const row = function (label, value) { return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px solid #222;"><span style="color:#aaa;">' + label + '</span><span style="color:#fff;text-align:right;">' + value + '</span></div>'; };
+  webStripeWithdrawSheet(WITHDRAW_HEAD +
+    '<label for="plan-withdraw-name" style="font-size:11px;color:#aaa;"><span>Nome e cognome</span></label>' +
+    '<input id="plan-withdraw-name" type="text" maxlength="120" autocomplete="name" value="' + esc(info.name || '') + '" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;font:inherit;">' +
+    row('<span>Contratto</span>', '<span>Abbonamento</span> ' + esc(planName)) +
+    (info.startedAt ? row('<span>Concluso il</span>', esc(webStripeDay(info.startedAt))) : '') +
+    (info.deadline ? row('<span>Puoi recedere fino al</span>', esc(webStripeDay(info.deadline))) : '') +
+    row('<span>Conferma all’indirizzo</span>', esc(info.email || '')) +
+    '<div style="font-size:13px;color:#ddd;line-height:1.5;margin:12px 0;">' + refund + ' <span>L’abbonamento termina subito e il tuo account resta attivo con il piano gratuito.</span></div>' +
+    '<div id="plan-withdraw-error" style="display:none;font-size:12px;color:#ff8a7a;margin-bottom:8px;"></div>' +
+    '<button type="button" id="plan-withdraw-confirm" class="btn btn-primary" style="width:100%;background:#c0392b;border-color:#c0392b;color:#fff;" onclick="webStripeWithdrawConfirm()">CONFERMA IL RECESSO</button>' + WITHDRAW_CLOSE);
+}
+window.webStripeWithdrawOpen = webStripeWithdrawOpen;
+window.webStripeWithdrawClose = webStripeWithdrawClose;
+
+async function webStripeWithdrawConfirm() {
+  const input = document.getElementById('plan-withdraw-name');
+  const err = document.getElementById('plan-withdraw-error');
+  const btn = document.getElementById('plan-withdraw-confirm');
+  const name = input ? String(input.value || '').trim() : '';
+  const fail = function (text) { if (err) { err.textContent = text; err.style.display = 'block'; } if (btn) btn.disabled = false; };
+  if (name.length < 2) { fail('Scrivi il tuo nome e cognome.'); return; }
+  if (btn) btn.disabled = true;
+  let out = null;
+  try {
+    out = await practiceFetch('/api/billing/stripe/withdraw', { method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ name: name, confirm: true }) }, 30000);
+  } catch (e) { fail((e && e.message) || 'Recesso non inviato. Riprova o scrivi a info@nurvan.app.'); return; }
+  if (!out || !out.ok) { fail((out && out.error) || 'Recesso non inviato. Riprova o scrivi a info@nurvan.app.'); return; }
+  const when = out.requestedAt ? new Date(out.requestedAt) : new Date();
+  let whenText = '';
+  try { whenText = when.toLocaleString(undefined, { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (_) { whenText = when.toISOString(); }
+  const refund = out.refundStatus === 'refunded'
+    ? '<span>Rimborso avviato sulla tua carta:</span> <strong>' + esc(webStripeMoney(out.refundCents, out.currency)) + '</strong>. <span>L’accredito arriva di solito in 5-10 giorni lavorativi.</span>'
+    : out.refundStatus === 'failed'
+      ? '<span>Il rimborso non è partito in automatico: lo facciamo noi entro 14 giorni.</span> <strong>' + esc(webStripeMoney(out.refundCents, out.currency)) + '</strong>'
+      : '<span>Non c’è nulla da rimborsare.</span>';
+  webStripeWithdrawSheet('<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">RECESSO</div><h3 style="margin:6px 0 10px;color:#fff;font-size:17px;">Recesso ricevuto</h3>' +
+    '<div style="font-size:13px;color:#ddd;line-height:1.55;"><span>Abbiamo registrato il tuo recesso il</span> ' + esc(whenText) + '. <span>L’abbonamento è terminato.</span> ' + refund + '</div>' +
+    '<div style="font-size:12px;color:#aaa;line-height:1.5;margin-top:10px;">' + (out.emailSent === false ? '<span>Non siamo riusciti a mandarti la conferma per email: conserva questa schermata o scrivi a info@nurvan.app.</span>' : '<span>Ti abbiamo mandato la conferma per email.</span>') + '</div>' +
+    '<button type="button" class="btn btn-primary" style="width:100%;margin-top:12px;" onclick="webStripeWithdrawClose()">OK</button>');
+  try {
+    const payload = await practiceFetch('/api/account/plan', { method: 'GET', headers: practiceHeaders(false) }, 15000);
+    if (payload && payload.entitlement) onEntitlementReceived(payload.entitlement);
+  } catch (_) {}
+  billingRedraw();
+}
+window.webStripeWithdrawConfirm = webStripeWithdrawConfirm;

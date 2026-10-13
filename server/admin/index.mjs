@@ -17,6 +17,7 @@ import { siteStats, appStats, metricSeries, cleanMetric, putMetric, deleteMetric
 import { status as integrationStatus, runIntegration, INTEGRATIONS } from "./integrations.mjs";
 import { overview } from "./overview.mjs";
 import { listChatReports, handleChatReport, reopenChatReport } from "./reports.mjs";
+import { listContentReports, decideContentReport } from "./content-reports.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ADMIN_DIR = path.join(__dirname, "../../admin");
@@ -165,6 +166,12 @@ export function mountAdminDashboard(app, { pool, initDb, sendEmail, secret, env 
     const done = body.reopen ? await reopenChatReport(pool, req.params.id) : await handleChatReport(pool, req.params.id, body.note);
     if (!done) throw bad("Segnalazione non trovata o già nello stato richiesto.", 404);
     res.json({ ok: true });
+  });
+  route("get", "/api/admin/content-reports", async (req, res) => res.json({ ok: true, reports: await listContentReports(pool, { limit: req.query.limit }) }));
+  route("post", "/api/admin/content-reports/:id", async (req, res) => {
+    const out = await decideContentReport(pool, req.params.id, (req.body || {}).decision, sendEmail);
+    if (!out.ok) throw bad("Segnalazione non trovata o già decisa.", 404);
+    res.json({ ok: true, emailed: out.emailed });
   });
   route("get", "/api/admin/profiles", async (req, res) => res.json({ ok: true, ...(await listProfiles(pool, req.query)) }));
   route("get", "/api/admin/profiles.csv", async (req, res) => {

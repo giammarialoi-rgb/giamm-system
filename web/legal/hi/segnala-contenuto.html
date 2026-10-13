@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>अवैध सामग्री की रिपोर्ट करें - Nurvan</title>
+<meta name="description" content="Nurvan को अवैध सामग्री की रिपोर्ट कैसे करें, खाते के बिना भी, और Digital Services Act के तहत निर्धारित संपर्क केंद्र।">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>अवैध सामग्री की रिपोर्ट करें</h1>
+  <p class="muted">यह अनुवाद सुविधा के लिए उपलब्ध कराया गया है। किसी भी अंतर की स्थिति में <a href="?lang=it">इतालवी संस्करण</a> मान्य होगा।</p>
+  <p class="muted">अंतिम अद्यतन: <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    मसौदा: डेटा नियंत्रक का विवरण अभी नहीं दिया गया है। इस पृष्ठ को प्रकाशन से पहले पूरा किया जाना चाहिए।
+  </div>
+
+  <p>कोई भी व्यक्ति, खाते के बिना भी, Nurvan पर मौजूद ऐसी सामग्री की हमें रिपोर्ट कर सकता है जिसे वह अवैध मानता है: उदाहरण के लिए आपकी कोई फ़ोटो जिसे किसी और ने आपकी अनुमति के बिना अपलोड किया हो, सहमति के बिना फैलाया गया व्यक्तिगत डेटा, धमकियाँ या कोई धोखाधड़ी। Nurvan पर फ़ोटो और दस्तावेज़ सार्वजनिक नहीं होते: वे कोच और उसके एथलीटों के बीच ही रहते हैं। प्रोग्राम एक कोड से साझा किए जाते हैं और संदेश कोच और एथलीट के बीच की चैट में होते हैं।</p>
+  <p>यदि आप Nurvan का उपयोग करते हैं और समस्या किसी चैट में है, तो आप सीधे चैट से <strong>रिपोर्ट करें</strong> और <strong>ब्लॉक करें</strong> का भी उपयोग कर सकते हैं।</p>
+
+  <h2>रिपोर्ट भेजें</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">यह किस प्रकार की सामग्री है</label>
+    <select id="report-kind" required>
+      <option value="">चुनें…</option>
+      <option value="rights">यह मेरे अधिकारों का उल्लंघन करती है (मेरी फ़ोटो या छवियाँ बिना अनुमति के उपयोग की गईं, कॉपीराइट)</option>
+      <option value="privacy">किसी व्यक्ति का व्यक्तिगत डेटा या फ़ोटो सहमति के बिना फैलाए गए</option>
+      <option value="hate">नफ़रत, धमकियाँ, उत्पीड़न या हिंसा के लिए उकसाना</option>
+      <option value="csam">बाल यौन शोषण</option>
+      <option value="fraud">ठगी, धोखाधड़ी या झूठी पहचान</option>
+      <option value="health">अवैध या स्वास्थ्य के लिए खतरनाक उत्पाद या तरीके</option>
+      <option value="other">अन्य अवैध सामग्री</option>
+    </select>
+
+    <label for="report-location">यह कहाँ है</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="लिंक, कोच या उपयोगकर्ता का नाम, प्रोग्राम का कोड, चैट और तारीख: जो कुछ भी इसे खोजने में हमारी मदद करे।"></textarea>
+
+    <label for="report-explanation">यह अवैध क्यों है</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="सटीक रूप से बताएँ कि आप इस सामग्री को अवैध क्यों मानते हैं।"></textarea>
+
+    <label for="report-name">नाम और उपनाम</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">ईमेल</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">नाम और ईमेल की ज़रूरत आपको प्राप्ति की पुष्टि करने और निर्णय बताने के लिए है। केवल बाल यौन शोषण की रिपोर्ट में आप इन्हें खाली छोड़ सकते हैं।</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>मैं सद्भावना से घोषणा करता/करती हूँ कि इस रिपोर्ट में दी गई जानकारी और दावे सटीक और पूर्ण हैं।</span></label>
+
+    <button id="report-send" type="submit">रिपोर्ट भेजें</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">चुनें कि आप किस प्रकार की सामग्री की रिपोर्ट कर रहे हैं।</span>
+    <span data-msg="LOCATION">बताएँ कि सामग्री कहाँ है (लिंक, उपयोगकर्ता नाम, चैट, तारीख)।</span>
+    <span data-msg="EXPLANATION">बताएँ कि सामग्री अवैध क्यों है।</span>
+    <span data-msg="NAME">अपना नाम और उपनाम लिखें।</span>
+    <span data-msg="EMAIL">एक मान्य ईमेल पता लिखें।</span>
+    <span data-msg="GOOD_FAITH">सद्भावना की घोषणा की पुष्टि करें।</span>
+    <span data-msg="RATE">आपने आज बहुत सारी रिपोर्ट भेजी हैं। और रिपोर्ट के लिए info@nurvan.app पर लिखें।</span>
+    <span data-msg="FAIL">हम अभी रिपोर्ट नहीं भेज पा रहे हैं। थोड़ी देर बाद फिर कोशिश करें या info@nurvan.app पर लिखें।</span>
+    <span data-msg="SENDING">भेजा जा रहा है…</span>
+    <span data-msg="OK">रिपोर्ट प्राप्त हुई, संख्या {id}। यदि आपने अपना ईमेल दिया है, तो हमने आपको पुष्टि भेज दी है: हम आपको निर्णय लिखकर बताएँगे।</span>
+  </div>
+
+  <h2>इसके बाद क्या होता है</h2>
+  <ul>
+    <li>हम ईमेल द्वारा रिपोर्ट संख्या के साथ प्राप्ति की पुष्टि करते हैं।</li>
+    <li>एक व्यक्ति इसकी ध्यानपूर्वक और निष्पक्ष रूप से जाँच करता है, आमतौर पर 24 घंटे के भीतर। निर्णय लेने के लिए हम स्वचालित प्रणालियों का उपयोग नहीं करते।</li>
+    <li>यदि सामग्री अवैध है या हमारी <a href="/termini">सेवा की शर्तों</a> का उल्लंघन करती है, तो हम उसे हटा देते हैं या उस तक पहुँच रोक देते हैं और खाते को निलंबित कर सकते हैं। जिसने उसे अपलोड किया था, उसे कारण बताया जाता है।</li>
+    <li>हम आपको निर्णय और उसका कारण लिखकर बताते हैं। यदि आप सहमत नहीं हैं, तो आप 6 महीने के भीतर ईमेल का जवाब देकर इसे चुनौती दे सकते हैं, या किसी प्रमाणित न्यायालय-बाह्य विवाद समाधान निकाय या न्यायिक प्राधिकरण से संपर्क कर सकते हैं।</li>
+    <li>यदि रिपोर्ट किसी ऐसे अपराध से संबंधित है जो लोगों के जीवन या सुरक्षा को खतरे में डालता है, तो हम सक्षम प्राधिकरणों को सूचित करते हैं।</li>
+  </ul>
+
+  <h2>संपर्क केंद्र (Digital Services Act)</h2>
+  <p>उपयोगकर्ताओं के लिए तथा सदस्य राज्यों के प्राधिकरणों, यूरोपीय आयोग और डिजिटल सेवाओं के लिए यूरोपीय बोर्ड के लिए एकल संपर्क केंद्र (विनियमन (ईयू) 2022/2065 के अनुच्छेद 11 और 12) यह पता है: <a data-legal="privacyEmail" href="#"></a>। आप हमें इतालवी या अंग्रेज़ी में लिख सकते हैं।</p>
+  <p>यह सेवा <span data-legal="controllerName"></span>, <span data-legal="controllerAddress"></span> द्वारा प्रदान की जाती है।</p>
+
+  <h2>रिपोर्ट का दुरुपयोग</h2>
+  <p>चेतावनी देने के बाद, जो व्यक्ति बार-बार स्पष्ट रूप से निराधार रिपोर्ट भेजता है, उसकी रिपोर्टों की जाँच हम एक उचित अवधि के लिए निलंबित कर सकते हैं।</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">गोपनीयता नीति</a>
+    <a href="/termini">सेवा की शर्तें</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>

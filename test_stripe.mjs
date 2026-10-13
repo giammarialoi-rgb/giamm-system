@@ -4,7 +4,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { formEncode, formBody, verifySignature, subscriptionEvent, bestSubscription, checkoutParams, planOfProduct, allProductIds, createStripe } from './server/billing/stripe.mjs';
+import { formEncode, formBody, verifySignature, subscriptionEvent, bestSubscription, checkoutParams, planOfProduct, allProductIds, createStripe, withdrawalWindow, withdrawalRefund, withdrawalEmail } from './server/billing/stripe.mjs';
 import { decideEvent } from './server/billing/index.mjs';
 
 let failed = 0;
@@ -134,6 +134,57 @@ function fakeDb(account) {
   ok('a web subscription does not replace a running Google Play one of the same level', r.outcome === 'ignored' && r.reason === 'store-active' && applied.length === 1);
 }
 
+// ---- withdrawal (EU Directive 2023/2673): the button, the 14 days, the refund of the unused part, the receipt
+{
+  const start = Math.floor((NOW - 3 * DAY) / 1000);
+  ok('withdrawal: the 14 days run from the start of the contract', withdrawalWindow({ start_date: start }, NOW).open && withdrawalWindow({ start_date: start }, NOW).deadline === (start * 1000) + 14 * DAY);
+  ok('after 14 days it is closed, and renewals do not open it again', !withdrawalWindow({ start_date: Math.floor((NOW - 15 * DAY) / 1000), current_period_start: Math.floor((NOW - DAY) / 1000) }, NOW).open);
+  ok('the refund is the part of the period not provided (3 of 30 days used of 19 €)', withdrawalRefund({ amountPaid: 1900, periodStart: NOW - 3 * DAY, periodEnd: NOW + 27 * DAY, now: NOW }) === 1710);
+  ok('nothing paid, nothing back; never more than paid, never negative', withdrawalRefund({ amountPaid: 0, periodStart: 0, periodEnd: 1, now: 0 }) === 0 && withdrawalRefund({ amountPaid: 1000, periodStart: NOW + DAY, periodEnd: NOW + 2 * DAY, now: NOW }) === 1000 && withdrawalRefund({ amountPaid: 1000, periodStart: NOW - 2 * DAY, periodEnd: NOW - DAY, now: NOW }) === 0);
+  const mail = withdrawalEmail({ name: 'Mario Rossi', email: 'a@b.it', productId: 'nurvan.coach.month', startedAt: NOW - 3 * DAY, requestedAt: NOW, refundCents: 1710, currency: 'eur', refundStatus: 'refunded' });
+  ok('the receipt says who, which contract, when it was received and the refund', /Mario Rossi/.test(mail.text) && /a@b\.it/.test(mail.text) && /Coach/.test(mail.text) && /Recesso ricevuto il/.test(mail.text) && /17,10 €/.test(mail.text));
+
+  const calls = [];
+  const subs = { data: [subOf({ id: 'sub_w', start_date: start, current_period_start: start, items: { data: [{ price: { lookup_key: 'nurvan.coach.month' } }] } })] };
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, method: init.method, body: init.body });
+    const j = (o) => ({ ok: true, json: async () => o });
+    if (/\/subscriptions\?/.test(url)) return j(subs);
+    if (/\/invoices\?/.test(url)) return j({ data: [{ id: 'in_1', amount_paid: 1900, currency: 'eur', payments: { data: [{ payment: { type: 'payment_intent', payment_intent: 'pi_1' } }] }, lines: { data: [{ period: { start, end: start + 30 * 86400 } }] } }] });
+    if (/\/subscriptions\/sub_w/.test(url) && init.method === 'DELETE') { subs.data = [Object.assign({}, subs.data[0], { status: 'canceled' })]; return j({ id: 'sub_w', status: 'canceled' }); }
+    if (/\/refunds$/.test(url)) return j({ id: 're_1' });
+    return j({});
+  };
+  const rows = [];
+  const pool = { async query(sql, params) {
+    if (/SELECT plan, plan_source, plan_until/.test(sql)) return { rows: [{ plan: 'coach', plan_source: 'stripe', plan_until: new Date(NOW + 27 * DAY).toISOString(), seats: 0 }] };
+    if (/FROM app_users WHERE id/.test(sql)) return { rows: [{ id: 42, email: 'a@b.it', name: 'Mario Rossi', stripe_customer_id: 'cus_1' }] };
+    if (/FROM billing_withdrawals WHERE subscription_id/.test(sql)) return { rows: rows.filter((r) => r.sub === params[0]) };
+    if (/INSERT INTO billing_withdrawals/.test(sql)) { rows.push({ sub: params[3], requested_at: params[6], refund_cents: params[7], currency: params[8], refund_status: params[9] }); return { rows: [{ id: rows.length, requested_at: params[6] }] }; }
+    return { rows: [] };
+  } };
+  const mails = [], applied = [];
+  const env = { STRIPE_SECRET_KEY: 'sk_test_x' };
+  const s = createStripe({ pool, initDb: async () => {}, billing: { apply: async (e) => { applied.push(e); return { outcome: 'downgraded' }; } }, sendEmail: async (to, subject, text) => { mails.push({ to, subject, text }); return { sent: true }; }, env, fetchImpl });
+  const info = await s.withdrawalInfo(42, NOW);
+  ok('the confirmation step shows the contract, the deadline and the refund', info.eligible && info.plan === 'coach' && info.refundCents === 1710 && info.email === 'a@b.it' && info.name === 'Mario Rossi');
+  let err = null; try { await s.withdraw(42, { name: ' ' }, NOW); } catch (e) { err = e; }
+  ok('without a name the withdrawal is not sent', err && err.code === 'NAME_REQUIRED' && !calls.some((c) => c.method === 'DELETE'));
+  const out = await s.withdraw(42, { name: 'Mario Rossi' }, NOW);
+  ok('confirmed: the subscription ends at once (no proration invoice)', out.ok && calls.some((c) => c.method === 'DELETE' && /subscriptions\/sub_w\?prorate=false&invoice_now=false/.test(c.url)));
+  const refund = calls.find((c) => /\/refunds$/.test(c.url));
+  ok('the unused part goes back on the same payment', refund && /payment_intent=pi_1/.test(refund.body) && /amount=1710/.test(refund.body) && out.refundStatus === 'refunded');
+  ok('the request is kept and the plan goes back to free', rows.length === 1 && rows[0].refund_cents === 1710 && applied.some((e) => e.type === 'EXPIRATION'));
+  ok('and the receipt is emailed to the account', mails.length === 1 && mails[0].to === 'a@b.it' && /recesso/i.test(mails[0].subject) && out.emailSent === true);
+  subs.data = [subOf({ id: 'sub_w', start_date: start, items: { data: [{ price: { lookup_key: 'nurvan.coach.month' } }] } })];
+  const again = await s.withdraw(42, { name: 'Mario Rossi' }, NOW + 1000);
+  ok('a second click does not refund twice', again.already === true && calls.filter((c) => /\/refunds$/.test(c.url)).length === 1);
+  subs.data = [subOf({ id: 'sub_old', start_date: Math.floor((NOW - 40 * DAY) / 1000), items: { data: [{ price: { lookup_key: 'nurvan.coach.month' } }] } })];
+  const late = await s.withdrawalInfo(42, NOW);
+  err = null; try { await s.withdraw(42, { name: 'Mario Rossi' }, NOW); } catch (e) { err = e; }
+  ok('after 14 days: the page says so and points to cancelling the renewal', late.eligible === false && late.reason === 'WINDOW_CLOSED' && err && err.code === 'WINDOW_CLOSED');
+}
+
 // ---- the wiring
 const api = read('coach-api.mjs');
 ok('the webhook keeps the raw body for the signature, before the parsed one is used', /verify: \(req, _res, buf\)[^\n]*billing\/stripe\/webhook[^\n]*rawBody/.test(api));
@@ -182,6 +233,14 @@ const draw = (ctx) => { const c = { innerHTML: '' }; ctx.renderPlansPricing(c); 
   await used.webStripeLoad();
   const h2 = draw(used);
   ok('free month already used: not announced; a customer gets the portal', !/Il primo mese è gratis/.test(h2) && /webStripePortal\(\)/.test(h2));
+  ok('the automatic renewal is written next to the prices, readable, not in small print', /plan-renew-note[^>]*font-size:12\.5px/.test(h2) && /Rinnovo automatico allo stesso prezzo finché non lo annulli\./.test(h2) && /font-size:13px[^>]*><strong><span>L’abbonamento si rinnova automaticamente/.test(h2));
+  ok('without a web subscription there is no withdrawal button', !/RECEDI DAL CONTRATTO QUI/.test(h2));
+  const subscriber = page({}, true, { enabled: true, trialEligible: false, trialDays: 30, hasCustomer: true });
+  subscriber.onEntitlementReceived({ plan: 'coach', planSource: 'stripe', planUntil: new Date(Date.now() + 20 * DAY).toISOString() });
+  await subscriber.webStripeLoad();
+  const h3 = draw(subscriber);
+  ok('a subscription bought on the website shows «Recedi dal contratto qui», which opens the confirmation step', /onclick="webStripeWithdrawOpen\(\)">RECEDI DAL CONTRATTO QUI</.test(h3) && typeof subscriber.webStripeWithdrawConfirm === 'function');
+  ok('the confirmation asks the name, shows the contract and is sent with «Conferma il recesso»', /plan-withdraw-name/.test(read('web/plans-ui.js')) && /CONFERMA IL RECESSO/.test(read('web/plans-ui.js')) && /confirm: true/.test(read('web/plans-ui.js')));
   const anon = page({ store: { prefs: {}, logs: [] } }, true);
   await anon.webStripeLoad();
   ok('signed out: the way to sign in, no free month shown', /ACCEDI PER ABBONARTI/.test(draw(anon)) && !/Il primo mese è gratis/.test(draw(anon)));

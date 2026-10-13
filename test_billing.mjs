@@ -143,7 +143,7 @@ const srv = read('server/billing/index.mjs');
 ok('the webhook asks for a secret and compares it without leaking time', /REVENUECAT_WEBHOOK_AUTH/.test(srv) && /timingSafeEqual/.test(srv) && /status\(401\)/.test(srv));
 ok('the webhook answers 500 when an event could not be applied, so it is sent again', /status\(500\)\.json\(\{ error: "Evento non applicato\." \}\)/.test(srv));
 ok('the config route gives only public keys and product ids', /appleKey/.test(srv) && !/REVENUECAT_SECRET_KEY.*res\.json/.test(srv));
-ok('the billing is mounted by the server', /mountBilling\(app, \{ pool, initDb, accountFromBearer \}\)/.test(read('coach-api.mjs')));
+ok('the billing is mounted by the server', /mountBilling\(app, \{ pool, initDb, accountFromBearer, sendEmail \}\)/.test(read('coach-api.mjs')));
 ok('the migration lets the App Store be a source of the plan', /'manual', 'stripe', 'play', 'apple'/.test(read('server/db/migrations/0027_billing_apple.sql')) && /"apple"/.test(read('server/account/plans.mjs')));
 ok('the variables are listed for the host', ['REVENUECAT_APPLE_KEY', 'REVENUECAT_GOOGLE_KEY', 'REVENUECAT_SECRET_KEY', 'REVENUECAT_WEBHOOK_AUTH'].every((k) => read('render.yaml').includes(k)));
 

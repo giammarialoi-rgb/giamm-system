@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signaler un contenu illicite - Nurvan</title>
+<meta name="description" content="Comment signaler à Nurvan un contenu illicite, même sans compte, et le point de contact prévu par le Digital Services Act.">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>Signaler un contenu illicite</h1>
+  <p class="muted">Ceci est une traduction fournie pour faciliter la lecture. En cas de divergence, la <a href="?lang=it">version italienne</a> prévaut.</p>
+  <p class="muted">Dernière mise à jour : <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    Brouillon : les coordonnées du responsable du traitement n'ont pas encore été indiquées. Cette page doit être complétée avant sa publication.
+  </div>
+
+  <p>Toute personne peut nous signaler un contenu présent sur Nurvan qu'elle estime illicite, même sans compte : par exemple une photo de toi mise en ligne par quelqu'un d'autre sans ton autorisation, des données personnelles diffusées sans consentement, des menaces ou une arnaque. Sur Nurvan, les photos et les documents ne sont pas publics : ils restent entre un coach et ses athlètes. Les programmes se partagent avec un code et les messages se trouvent dans le chat entre coach et athlète.</p>
+  <p>Si tu utilises Nurvan et que le problème se trouve dans un chat, tu peux aussi utiliser <strong>Signaler</strong> et <strong>Bloquer</strong> directement depuis le chat.</p>
+
+  <h2>Envoyer le signalement</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">De quel type de contenu s'agit-il</label>
+    <select id="report-kind" required>
+      <option value="">Choisis…</option>
+      <option value="rights">Il porte atteinte à mes droits (photos ou images de moi utilisées sans autorisation, droit d'auteur)</option>
+      <option value="privacy">Données personnelles ou photos d'une personne diffusées sans consentement</option>
+      <option value="hate">Haine, menaces, harcèlement ou incitation à la violence</option>
+      <option value="csam">Abus sexuels sur mineurs</option>
+      <option value="fraud">Arnaque, fraude ou usurpation d'identité</option>
+      <option value="health">Produits ou pratiques illégaux ou dangereux pour la santé</option>
+      <option value="other">Autre contenu illicite</option>
+    </select>
+
+    <label for="report-location">Où il se trouve</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="Le lien, le nom du coach ou de l'utilisateur, le code du programme, le chat et la date : tout ce qui nous aide à le trouver."></textarea>
+
+    <label for="report-explanation">Pourquoi il est illicite</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="Explique de façon précise pourquoi tu estimes que le contenu est illicite."></textarea>
+
+    <label for="report-name">Prénom et nom</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">E-mail</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">Le nom et l'e-mail servent à te confirmer la réception et à te communiquer la décision. Tu ne peux les laisser vides que pour les signalements d'abus sexuels sur mineurs.</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>Je déclare de bonne foi que les informations et les allégations contenues dans ce signalement sont exactes et complètes.</span></label>
+
+    <button id="report-send" type="submit">Envoyer le signalement</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">Choisis le type de contenu que tu signales.</span>
+    <span data-msg="LOCATION">Indique où se trouve le contenu (lien, nom d'utilisateur, chat, date).</span>
+    <span data-msg="EXPLANATION">Explique pourquoi le contenu est illicite.</span>
+    <span data-msg="NAME">Écris ton prénom et ton nom.</span>
+    <span data-msg="EMAIL">Écris une adresse e-mail valide.</span>
+    <span data-msg="GOOD_FAITH">Confirme la déclaration de bonne foi.</span>
+    <span data-msg="RATE">Tu as envoyé beaucoup de signalements aujourd'hui. Pour d'autres, écris à info@nurvan.app.</span>
+    <span data-msg="FAIL">Nous ne parvenons pas à envoyer le signalement pour le moment. Réessaie dans quelques instants ou écris à info@nurvan.app.</span>
+    <span data-msg="SENDING">Envoi en cours…</span>
+    <span data-msg="OK">Signalement reçu, numéro {id}. Si tu as laissé ton e-mail, nous t'avons envoyé une confirmation : nous t'écrirons pour te communiquer la décision.</span>
+  </div>
+
+  <h2>Ce qui se passe ensuite</h2>
+  <ul>
+    <li>Nous te confirmons la réception par e-mail, avec le numéro du signalement.</li>
+    <li>Une personne l'examine avec attention et de manière objective, normalement sous 24 heures. Nous n'utilisons pas de systèmes automatisés pour décider.</li>
+    <li>Si le contenu est illicite ou enfreint nos <a href="/termini">conditions d'utilisation</a>, nous le supprimons ou en bloquons l'accès et pouvons suspendre le compte. La personne qui l'avait mis en ligne reçoit la motivation.</li>
+    <li>Nous t'écrivons la décision et sa motivation. Si tu n'es pas d'accord, tu peux la contester en répondant à l'e-mail dans un délai de 6 mois, ou t'adresser à un organe certifié de règlement extrajudiciaire des litiges ou à l'autorité judiciaire.</li>
+    <li>Si le signalement concerne une infraction pénale qui menace la vie ou la sécurité des personnes, nous en informons les autorités compétentes.</li>
+  </ul>
+
+  <h2>Point de contact (Digital Services Act)</h2>
+  <p>Le point de contact unique pour les utilisateurs et pour les autorités des États membres, la Commission européenne et le Comité européen des services numériques (articles 11 et 12 du règlement (UE) 2022/2065) est l'adresse <a data-legal="privacyEmail" href="#"></a>. Tu peux nous écrire en italien ou en anglais.</p>
+  <p>Le service est fourni par <span data-legal="controllerName"></span>, <span data-legal="controllerAddress"></span>.</p>
+
+  <h2>Utilisation abusive des signalements</h2>
+  <p>Après un avertissement, nous pouvons suspendre pendant une période raisonnable le traitement des signalements de toute personne qui en envoie fréquemment de manifestement infondés.</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">Politique de confidentialité</a>
+    <a href="/termini">Conditions d'utilisation</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>

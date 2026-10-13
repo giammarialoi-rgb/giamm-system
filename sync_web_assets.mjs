@@ -100,6 +100,14 @@ export function syncWebAssetsToAndroid({ root = process.cwd(), required = true }
     fs.cpSync(i18nSrc, i18nDest, { recursive: true });
     console.log('  ✓ Synced dir: i18n');
   }
+  // The fonts, served from the app itself (never from Google).
+  const fontsSrc = path.join(webDir, 'fonts');
+  if (fs.existsSync(fontsSrc)) {
+    const fontsDest = path.join(assetsDir, 'fonts');
+    fs.rmSync(fontsDest, { recursive: true, force: true });
+    fs.cpSync(fontsSrc, fontsDest, { recursive: true });
+    console.log('  ✓ Synced dir: fonts');
+  }
   // The exercise images shipped with the app (tools/bundle_exercise_media.mjs).
   const mediaSrc = path.join(webDir, 'media');
   if (fs.existsSync(mediaSrc)) {

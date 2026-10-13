@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Denunciar um conteúdo ilegal - Nurvan</title>
+<meta name="description" content="Como denunciar à Nurvan um conteúdo ilegal, mesmo sem conta, e o ponto de contato previsto pelo Digital Services Act.">
+<link rel="icon" href="favicon.png">
+<link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<main>
+  <header class="brand"><img src="nurvan_app_icon.png" alt="Nurvan"><span>NURVAN</span></header>
+  <h1>Denunciar um conteúdo ilegal</h1>
+  <p class="muted">Esta é uma tradução fornecida por conveniência. Em caso de qualquer diferença, prevalece a <a href="?lang=it">versão em italiano</a>.</p>
+  <p class="muted">Última atualização: <span data-legal="lastUpdated"></span></p>
+
+  <div id="legal-draft" class="draft" hidden>
+    Rascunho: os dados do controlador ainda não foram indicados. Esta página deve ser completada antes da publicação.
+  </div>
+
+  <p>Qualquer pessoa pode nos denunciar um conteúdo presente na Nurvan que considere ilegal, mesmo sem ter uma conta: por exemplo, uma foto sua enviada por outra pessoa sem a sua permissão, dados pessoais divulgados sem consentimento, ameaças ou um golpe. Na Nurvan, fotos e documentos não são públicos: ficam entre um treinador e os seus atletas. Os programas são compartilhados com um código e as mensagens estão no chat entre treinador e atleta.</p>
+  <p>Se você usa a Nurvan e o problema está em um chat, também pode usar <strong>Denunciar</strong> e <strong>Bloquear</strong> diretamente no chat.</p>
+
+  <h2>Envie a denúncia</h2>
+  <form id="report-form" class="report-form" novalidate>
+    <label for="report-kind">Que tipo de conteúdo é</label>
+    <select id="report-kind" required>
+      <option value="">Escolha…</option>
+      <option value="rights">Viola os meus direitos (fotos ou imagens minhas usadas sem permissão, direitos autorais)</option>
+      <option value="privacy">Dados pessoais ou fotos de uma pessoa divulgados sem consentimento</option>
+      <option value="hate">Ódio, ameaças, assédio ou incitação à violência</option>
+      <option value="csam">Abuso sexual infantil</option>
+      <option value="fraud">Golpe, fraude ou falsa identidade</option>
+      <option value="health">Produtos ou práticas ilegais ou perigosos para a saúde</option>
+      <option value="other">Outro conteúdo ilegal</option>
+    </select>
+
+    <label for="report-location">Onde se encontra</label>
+    <textarea id="report-location" rows="3" maxlength="2000" required placeholder="O link, o nome do treinador ou do usuário, o código do programa, o chat e a data: tudo o que nos ajude a encontrá-lo."></textarea>
+
+    <label for="report-explanation">Por que é ilegal</label>
+    <textarea id="report-explanation" rows="5" maxlength="5000" required placeholder="Explique com precisão por que você considera que o conteúdo é ilegal."></textarea>
+
+    <label for="report-name">Nome e sobrenome</label>
+    <input id="report-name" type="text" maxlength="120" autocomplete="name">
+
+    <label for="report-email">Email</label>
+    <input id="report-email" type="email" maxlength="200" autocomplete="email">
+    <p class="muted small" id="report-anon-note">O nome e o email servem para confirmar o recebimento e comunicar a decisão a você. Somente nas denúncias de abuso sexual infantil você pode deixá-los em branco.</p>
+
+    <label class="check"><input id="report-good-faith" type="checkbox" required> <span>Declaro de boa-fé que as informações e as alegações contidas nesta denúncia são exatas e completas.</span></label>
+
+    <button id="report-send" type="submit">Envie a denúncia</button>
+    <p id="report-result" class="report-result" role="status" hidden></p>
+  </form>
+  <div id="report-messages" hidden>
+    <span data-msg="KIND">Escolha que tipo de conteúdo você está denunciando.</span>
+    <span data-msg="LOCATION">Indique onde se encontra o conteúdo (link, nome de usuário, chat, data).</span>
+    <span data-msg="EXPLANATION">Explique por que o conteúdo é ilegal.</span>
+    <span data-msg="NAME">Escreva seu nome e sobrenome.</span>
+    <span data-msg="EMAIL">Escreva um endereço de email válido.</span>
+    <span data-msg="GOOD_FAITH">Confirme a declaração de boa-fé.</span>
+    <span data-msg="RATE">Você enviou muitas denúncias hoje. Para outras, escreva para info@nurvan.app.</span>
+    <span data-msg="FAIL">Não conseguimos enviar a denúncia agora. Tente novamente em instantes ou escreva para info@nurvan.app.</span>
+    <span data-msg="SENDING">Enviando…</span>
+    <span data-msg="OK">Denúncia recebida, número {id}. Se você deixou seu email, enviamos a confirmação: vamos escrever para você com a decisão.</span>
+  </div>
+
+  <h2>O que acontece depois</h2>
+  <ul>
+    <li>Confirmamos o recebimento por email, com o número da denúncia.</li>
+    <li>Uma pessoa a analisa com atenção e de forma objetiva, normalmente em até 24 horas. Não usamos sistemas automatizados para decidir.</li>
+    <li>Se o conteúdo for ilegal ou violar os nossos <a href="/termini">termos de serviço</a>, nós o removemos ou bloqueamos o acesso a ele e podemos suspender a conta. Quem o enviou recebe a fundamentação.</li>
+    <li>Escrevemos a você a decisão e o motivo. Se não concordar, você pode contestá-la respondendo ao email no prazo de 6 meses, ou recorrer a um órgão certificado de resolução extrajudicial de litígios ou à autoridade judicial.</li>
+    <li>Se a denúncia disser respeito a um crime que ameace a vida ou a segurança das pessoas, informamos as autoridades competentes.</li>
+  </ul>
+
+  <h2>Ponto de contato (Digital Services Act)</h2>
+  <p>O ponto de contato único para os usuários e para as autoridades dos Estados-Membros, a Comissão Europeia e o Comité Europeu dos Serviços Digitais (artigos 11.º e 12.º do Regulamento (UE) 2022/2065) é o endereço <a data-legal="privacyEmail" href="#"></a>. Você pode nos escrever em italiano ou em inglês.</p>
+  <p>O serviço é prestado por <span data-legal="controllerName"></span>, <span data-legal="controllerAddress"></span>.</p>
+
+  <h2>Uso indevido das denúncias</h2>
+  <p>Após um aviso, podemos suspender por um período razoável a análise das denúncias de quem envia com frequência denúncias manifestamente infundadas.</p>
+
+  <nav class="legal-links">
+    <a href="/privacy">Política de privacidade</a>
+    <a href="/termini">Termos de serviço</a>
+  </nav>
+</main>
+<script src="features.js"></script>
+<script src="legal-pages.js"></script>
+<script src="segnala-contenuto.js"></script>
+</body>
+</html>
