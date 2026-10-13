@@ -45,12 +45,24 @@
     <li>Poids, mensurations et composition corporelle, photos des bilans physiques.</li>
     <li>Alimentation, journal alimentaire, photos des repas, compléments alimentaires.</li>
     <li>Traitements, médicaments et analyses de sang que tu choisis d'enregistrer.</li>
-    <li>Sommeil, fréquence cardiaque au repos, état de récupération et réponses aux check-ins, si tu les saisis.</li>
+    <li>Sommeil, fréquence cardiaque au repos, variabilité de la fréquence cardiaque (HRV), pas, état de récupération et réponses aux check-ins, si tu les saisis toi-même (par exemple dans la section Santé).</li>
   </ul>
-  <p>Nurvan ne lit pas les données d'autres apps (par exemple Connect Santé ou Apple Santé) : les valeurs de récupération sont des estimations calculées à partir de ce que tu enregistres toi-même.</p>
+  <p>Nurvan ne lit pas les données d'autres apps (par exemple Connect Santé ou Apple Santé) : les valeurs de récupération sont des estimations calculées à partir de ce que tu enregistres toi-même. Le sommeil, la fréquence cardiaque au repos et la HRV saisis dans la section Santé restent dans ton compte, et ton coach ne les voit que si tu actives le partage depuis cette même section. Ils ne sont pas envoyés au Coach AI.</p>
+  <h3>Achats et abonnements</h3>
+  <ul>
+    <li>Si tu achètes une formule payante dans l'app, le paiement est géré par Apple (App Store) ou Google (Google Play) : Nurvan ne voit pas et ne conserve pas le numéro de ta carte ni d'autres données de paiement.</li>
+    <li data-web-only>Si tu achètes une formule sur le site, tu saisis les données de ta carte sur la page de Stripe : Nurvan ne les voit pas et ne les conserve pas. Nurvan reçoit de Stripe l'identifiant du client, la formule, le statut et les dates de l'abonnement, et conserve l'identifiant du client Stripe pour ouvrir le portail de gestion de l'abonnement. Stripe traite les données de paiement en qualité de responsable du traitement autonome pour les obligations de lutte contre le blanchiment et la fraude.</li>
+    <li>Pour savoir quelle formule tu as, Nurvan reçoit de la boutique, via le service RevenueCat, l'identifiant de ton compte Nurvan, le produit acheté, la boutique, les dates d'achat et d'expiration et le statut de l'abonnement.</li>
+  </ul>
   <h3>Données de la relation coach-athlète</h3>
   <ul>
     <li>Si tu utilises Nurvan avec un coach : les messages, check-ins, photos et documents que tu échanges avec lui, les programmes qu'il t'attribue, les notes qu'il rédige à ton sujet.</li>
+  </ul>
+  <h3>Signalements et blocages dans le chat</h3>
+  <ul>
+    <li>Si tu signales un comportement dans le chat avec ton coach ou avec un athlète : qui signale et qui est signalé, le motif choisi, le texte que tu écris et, seulement si tu le choisis, les derniers messages de la conversation.</li>
+    <li>Le chat est chiffré de bout en bout : Nurvan ne peut pas le lire. Les derniers messages arrivent à Nurvan, déchiffrés par ton téléphone, uniquement si tu laisses cochée l'option pour les joindre.</li>
+    <li>Si tu bloques un chat, Nurvan enregistre qui l'a bloqué et quand, pour empêcher que des messages passent tant qu'il n'est pas débloqué.</li>
   </ul>
   <h3>Signalements de contenus illicites et rétractation</h3>
   <ul>
@@ -76,7 +88,9 @@
     <tr><td>Traiter les données de santé que tu enregistres, pour te les afficher, calculer des statistiques et, si tu as un coach, les partager avec lui.</td><td>Consentement explicite (art. 9.2.a du RGPD), que tu donnes à l'inscription et que tu peux retirer en supprimant le compte.</td></tr>
     <tr><td>Fonctions d'intelligence artificielle.</td><td>Consentement (art. 6.1.a et 9.2.a du RGPD), distinct et révocable à tout moment depuis Réglages › Confidentialité et données.</td></tr>
     <tr><td>Sécurité du service, prévention des abus et des fraudes, journaux techniques.</td><td>Intérêt légitime du responsable du traitement (art. 6.1.f du RGPD).</td></tr>
+    <tr><td>Examiner les signalements dans le chat et protéger leurs auteurs. Si les messages joints contiennent des données de santé, nous les traitons pour établir et défendre des droits (art. 9.2.f du RGPD) et parce que tu choisis de les joindre.</td><td>Intérêt légitime du responsable du traitement à maintenir un service sûr (art. 6.1.f du RGPD) ; pour les messages joints, également ton consentement (art. 6.1.a).</td></tr>
     <tr><td>Examiner les signalements de contenus illicites et communiquer la décision à leurs auteurs et aux personnes concernées.</td><td>Obligation légale (art. 6.1.c RGPD, règlement (UE) 2022/2065 sur les services numériques).</td></tr>
+    <tr><td>Activer et maintenir la formule que tu as achetée dans la boutique ou sur le site.</td><td>Exécution du contrat (art. 6.1.b du RGPD).</td></tr>
     <tr><td>Obligations légales (par exemple fiscales, si tu achètes une formule payante).</td><td>Obligation légale (art. 6.1.c du RGPD).</td></tr>
   </table>
   </div>
@@ -95,7 +109,9 @@
     <tr><td>Render Services, Inc.</td><td>Serveurs et base de données de l'app (région : <span data-legal="hostingRegion"></span>).</td><td>Toutes les données synchronisées avec le compte.</td></tr>
     <tr><td>Cloudflare, Inc.</td><td>Réseau et protection du trafic vers les serveurs.</td><td>Données techniques des requêtes.</td></tr>
     <tr><td>Google LLC / Google Ireland Ltd.</td><td>Connexion avec Google ; API Gemini pour les fonctions IA, uniquement si tu les actives ; polices de caractères de la version web.</td><td>Identité Google ; contenus envoyés aux fonctions IA ; adresse IP.</td></tr>
-    <tr><td>Apple Inc.</td><td>Se connecter avec Apple.</td><td>Identité Apple.</td></tr>
+    <tr><td>Apple Inc.</td><td>Se connecter avec Apple ; achats et abonnements dans l'app iPhone (le paiement est géré par Apple).</td><td>Identité Apple ; l'achat, qu'Apple communique à RevenueCat.</td></tr>
+    <tr data-web-only><td>Stripe Payments Europe Ltd. / Stripe, Inc.</td><td>Paiements par carte des abonnements achetés sur le site (page de paiement et portail client).</td><td>Nom et e-mail du compte, identifiant du compte Nurvan, formule ; les données de la carte sont collectées uniquement par Stripe.</td></tr>
+    <tr><td>RevenueCat, Inc.</td><td>Vérifie les achats effectués dans les boutiques (Apple, Google Play) et indique à Nurvan quelle formule est active.</td><td>Identifiant du compte Nurvan, produit acheté, boutique, dates d'achat et d'expiration.</td></tr>
     <tr><td>jsDelivr (Prospect One / Cloudflare, Fastly)</td><td>Télécharge, uniquement lorsque tu les utilises, les bibliothèques qui lisent les photos et les PDF sur ton appareil (reconnaissance du texte, photos HEIC de l'iPhone, pages des PDF sans texte). Avec la lecture sur l'appareil, les photos et les PDF ne quittent pas le téléphone ; avec la lecture avancée, que tu choisis toi-même pour chaque document, les pages sont envoyées à Google Gemini comme pour les autres fonctions IA.</td><td>Adresse IP et données techniques de la requête.</td></tr>
     <tr><td>Resend (Plus Five Five, Inc.)</td><td>Envoi des e-mails du compte : confirmation de l'adresse, récupération et changement du mot de passe.</td><td>Adresse e-mail, codes et liens à usage unique.</td></tr>
     <tr><td>PeerJS (PeerServer) / Google (serveurs STUN)</td><td>Ils mettent en relation les deux appareils lors des appels vidéo coach-client, uniquement quand tu lances ou reçois un appel. L'audio et la vidéo circulent directement entre les appareils et ne passent pas par Nurvan.</td><td>Adresse IP et un identifiant temporaire de l'appel.</td></tr>
@@ -108,12 +124,14 @@
   <p>Autres traitements, en bref. Comptage des usages : à l'ouverture, l'app envoie, au plus une fois par jour, la plateforme (iPhone, Android, web) et s'il s'agit de la première ouverture ; le serveur compte les appareils distincts avec un code quotidien qu'il oublie au bout de deux jours, sans identifiant, compte ni contenu, et ce n'est pas du pistage. Noms d'aliments : les noms trouvés dans les recherches peuvent être traduits dans ta langue avec Google Gemini (noms d'aliments uniquement, aucune donnée personnelle), même sans le consentement aux fonctions IA. Fonctions IA : Nurvan n'utilise pas les contenus envoyés pour entraîner des modèles ni pour la publicité et ne les vend pas ; Google les traite selon les conditions de l'API Gemini.</p>
 
   <h2>6. Transferts hors de l'Union européenne</h2>
-  <p>Certains prestataires (Google, Apple, Render, Cloudflare, Resend) ont leur siège aux États-Unis et peuvent traiter des données en dehors de l'Espace économique européen. Le transfert a lieu sur la base de la décision d'adéquation UE-États-Unis (EU-US Data Privacy Framework) pour les prestataires certifiés, ou des clauses contractuelles types approuvées par la Commission européenne.</p>
+  <p>Certains prestataires (Google, Apple, Render, Cloudflare, Resend, RevenueCat<span data-web-only>, Stripe</span>) ont leur siège aux États-Unis et peuvent traiter des données en dehors de l'Espace économique européen. Le transfert a lieu sur la base de la décision d'adéquation UE-États-Unis (EU-US Data Privacy Framework) pour les prestataires certifiés, ou des clauses contractuelles types approuvées par la Commission européenne.</p>
 
   <h2>7. Durée de conservation des données</h2>
   <ul>
     <li>Les données du compte, d'entraînement et de santé : tant que le compte existe. Lorsque tu le supprimes, elles sont effacées immédiatement de la base de données.</li>
     <li>Photos et documents partagés avec le coach : au maximum 12 mois à compter du téléversement, ou avant s'ils sont retirés ou si le compte est supprimé.</li>
+    <li>Données des achats (produit, boutique, dates, statut) : tant que le compte existe, et pendant la durée exigée par la loi pour la comptabilité. Le paiement lui-même reste auprès de la boutique.</li>
+    <li>Signalements dans le chat, avec les éventuels messages joints : jusqu'à ce qu'ils aient été examinés, puis pendant 12 mois supplémentaires ; ils sont ensuite supprimés. Le blocage d'un chat dure jusqu'à ce que la personne qui l'a mis le retire.</li>
     <li>Signalements de contenus illicites : jusqu'à ce qu'ils soient tranchés, puis pendant 12 mois supplémentaires, afin de pouvoir répondre à une contestation ; ils sont ensuite supprimés.</li>
     <li data-web-only>Demandes de rétractation d'un abonnement acheté sur le site : pendant 10 ans, comme preuve de la rétractation et du remboursement à des fins fiscales et comptables.</li>
     <li>Les copies de sauvegarde de la base de données du prestataire d'hébergement sont écrasées selon leur cycle de rotation.</li>

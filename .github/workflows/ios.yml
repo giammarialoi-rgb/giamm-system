@@ -98,9 +98,16 @@ jobs:
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        # altool can print a refusal (for example a version already approved, "train closed") and still
+        # exit 0: the step fails unless Apple confirms the upload.
         run: |
+          set -o pipefail
           xcrun altool --upload-app -f $RUNNER_TEMP/ipa/*.ipa -t ios \
-            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee $RUNNER_TEMP/altool.log
+          if grep -qE "ERROR:|Validation failed|UPLOAD FAILED" $RUNNER_TEMP/altool.log || ! grep -qE "UPLOAD SUCCEEDED|No errors uploading" $RUNNER_TEMP/altool.log; then
+            echo "::error::Apple did not accept the build (see the log above). If the train is closed, raise versionName in release.json."
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:

@@ -244,7 +244,7 @@ assert(base.includes("workoutSessionTimerHtml") && base.includes("pauseWorkoutSe
 assert(ui.includes("ensureOfflineSyncListeners") && ui.includes("flushAllOfflineQueues") && ui.includes("account-sync") && base.includes("queueAccountSyncIfOffline"), "web offline queue + reconnect flush");
 assert(base.includes("onProfilePhotoSelected") && base.includes("compressProfilePhoto") && base.includes("photoThumb"), "profile photo upload");
 const releaseMeta = JSON.parse(fs.readFileSync(path.join(__dirname, "release.json"), "utf8"));
-assert(releaseMeta.versionName === "1.5.34" && fs.readFileSync(path.join(__dirname, "app/build.gradle"), "utf8").includes("release.json"), "APK version comes from release metadata");
+assert(releaseMeta.versionName === "1.5.35" && fs.readFileSync(path.join(__dirname, "app/build.gradle"), "utf8").includes("release.json"), "APK version comes from release metadata");
 assert(ui.includes("Cosa vuoi assegnare a") && ui.includes("forceAsk: true") && base.includes("forceAsk"), "assign from library asks domains");
 assert(ui.includes("coachStaySectionForSwitch") && ui.includes("openCoachClientChat(id)") && ui.includes("stay.kind === 'chat'"), "header client switch stays on current section");
 assert(ui.includes("primeCoachWorkspaceForClient") && ui.includes("coachClientDisplayName"), "header switch refreshes client name on banner/chat");

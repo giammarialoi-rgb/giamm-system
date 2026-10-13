@@ -45,12 +45,24 @@
     <li>Peso, medidas y composición corporal, fotos de los controles físicos.</li>
     <li>Alimentación, diario de alimentación, fotos de las comidas, suplementos.</li>
     <li>Terapias, medicamentos y análisis de sangre que decidas registrar.</li>
-    <li>Sueño, frecuencia cardíaca en reposo, estado de recuperación y respuestas a los check-in, si los introduces.</li>
+    <li>Sueño, frecuencia cardíaca en reposo, variabilidad de la frecuencia cardíaca (HRV), pasos, estado de recuperación y respuestas a los check-in, si los introduces tú (por ejemplo, en la sección Salud).</li>
   </ul>
-  <p>Nurvan no lee datos de otras apps (por ejemplo, Health Connect o Apple Salud): los valores de recuperación son estimaciones calculadas a partir de lo que registras tú.</p>
+  <p>Nurvan no lee datos de otras apps (por ejemplo, Health Connect o Apple Salud): los valores de recuperación son estimaciones calculadas a partir de lo que registras tú. El sueño, la frecuencia cardíaca en reposo y la HRV que escribes en la sección Salud se quedan en tu cuenta y tu coach solo los ve si activas la opción de compartir desde esa misma sección. No se envían al Coach AI.</p>
+  <h3>Compras y suscripciones</h3>
+  <ul>
+    <li>Si compras un plan de pago en la app, el pago lo gestiona Apple (App Store) o Google (Google Play): Nurvan no ve ni conserva el número de tu tarjeta ni otros datos de pago.</li>
+    <li data-web-only>Si compras un plan desde el sitio, los datos de la tarjeta los introduces en la página de Stripe: Nurvan no los ve ni los conserva. Nurvan recibe de Stripe el identificador del cliente, el plan, el estado y las fechas de la suscripción, y conserva el identificador del cliente de Stripe para abrir el portal de gestión de la suscripción. Stripe trata los datos de pago como responsable del tratamiento independiente para las obligaciones de prevención del blanqueo de capitales y del fraude.</li>
+    <li>Para saber qué plan tienes, Nurvan recibe de la tienda, a través del servicio RevenueCat, el identificador de tu cuenta de Nurvan, el producto comprado, la tienda, las fechas de compra y de vencimiento y el estado de la suscripción.</li>
+  </ul>
   <h3>Datos de la relación coach-atleta</h3>
   <ul>
     <li>Si usas Nurvan con un coach: mensajes, check-in, fotos y documentos que intercambias con él, programas que te asigna, notas que escribe sobre ti.</li>
+  </ul>
+  <h3>Denuncias y bloqueos en el chat</h3>
+  <ul>
+    <li>Si denuncias un comportamiento en el chat con tu coach o con un atleta: quién denuncia y quién es denunciado, el motivo elegido, el texto que escribes y, solo si lo eliges, los últimos mensajes de la conversación.</li>
+    <li>El chat está cifrado de extremo a extremo: Nurvan no puede leerlo. Los últimos mensajes llegan a Nurvan descifrados por tu teléfono solo si dejas marcada la opción para adjuntarlos.</li>
+    <li>Si bloqueas un chat, Nurvan registra quién lo ha bloqueado y cuándo, para impedir que pasen mensajes hasta que se desbloquee.</li>
   </ul>
   <h3>Denuncias de contenidos ilícitos y desistimiento</h3>
   <ul>
@@ -76,7 +88,9 @@
     <tr><td>Tratar los datos relativos a la salud que registras, para mostrártelos, calcular estadísticas y, si tienes un coach, compartirlos con él.</td><td>Consentimiento explícito (art. 9.2.a RGPD), que das al registrarte y puedes retirar eliminando la cuenta.</td></tr>
     <tr><td>Funciones de inteligencia artificial.</td><td>Consentimiento (arts. 6.1.a y 9.2.a RGPD), separado y que puedes retirar en cualquier momento desde Ajustes › Privacidad y datos.</td></tr>
     <tr><td>Seguridad del servicio, prevención de abusos y fraudes, registros técnicos.</td><td>Interés legítimo del responsable (art. 6.1.f RGPD).</td></tr>
+    <tr><td>Examinar las denuncias en el chat y proteger a quien las presenta. Si los mensajes adjuntos contienen datos relativos a la salud, los tratamos para determinar y defender derechos (art. 9.2.f RGPD) y porque eliges tú adjuntarlos.</td><td>Interés legítimo del responsable en mantener un servicio seguro (art. 6.1.f RGPD); para los mensajes adjuntos, también tu consentimiento (art. 6.1.a).</td></tr>
     <tr><td>Examinar las denuncias de contenidos ilícitos y comunicar la decisión a quien las presenta y a quien se ve afectado.</td><td>Obligación legal (art. 6.1.c RGPD, Reglamento (UE) 2022/2065 de servicios digitales).</td></tr>
+    <tr><td>Activar y mantener el plan que has comprado en la tienda o en el sitio.</td><td>Ejecución del contrato (art. 6.1.b RGPD).</td></tr>
     <tr><td>Cumplimiento de obligaciones legales (por ejemplo, fiscales, si compras un plan de pago).</td><td>Obligación legal (art. 6.1.c RGPD).</td></tr>
   </table>
   </div>
@@ -95,7 +109,9 @@
     <tr><td>Render Services, Inc.</td><td>Servidores y base de datos de la app (región: <span data-legal="hostingRegion"></span>).</td><td>Todos los datos sincronizados con la cuenta.</td></tr>
     <tr><td>Cloudflare, Inc.</td><td>Red y protección del tráfico hacia los servidores.</td><td>Datos técnicos de las solicitudes.</td></tr>
     <tr><td>Google LLC / Google Ireland Ltd.</td><td>Inicio de sesión con Google; API Gemini para las funciones de IA, solo si las activas; fuentes tipográficas de la versión web.</td><td>Identidad de Google; contenidos enviados a las funciones de IA; dirección IP.</td></tr>
-    <tr><td>Apple Inc.</td><td>Iniciar sesión con Apple.</td><td>Identidad de Apple.</td></tr>
+    <tr><td>Apple Inc.</td><td>Iniciar sesión con Apple; compras y suscripciones en la app de iPhone (el pago lo gestiona Apple).</td><td>Identidad de Apple; la compra, que Apple comunica a RevenueCat.</td></tr>
+    <tr data-web-only><td>Stripe Payments Europe Ltd. / Stripe, Inc.</td><td>Pagos con tarjeta de las suscripciones compradas desde el sitio (página de pago y portal de clientes).</td><td>Nombre y correo electrónico de la cuenta, identificador de la cuenta de Nurvan, plan; los datos de la tarjeta solo los recoge Stripe.</td></tr>
+    <tr><td>RevenueCat, Inc.</td><td>Verifica las compras realizadas en las tiendas (Apple, Google Play) y comunica a Nurvan qué plan está activo.</td><td>Identificador de la cuenta de Nurvan, producto comprado, tienda, fechas de compra y de vencimiento.</td></tr>
     <tr><td>jsDelivr (Prospect One / Cloudflare, Fastly)</td><td>Descarga, solo cuando las usas, las bibliotecas que leen fotos y PDF en tu dispositivo (reconocimiento de texto, fotos HEIC del iPhone, páginas de los PDF sin texto). Con la lectura en el dispositivo, las fotos y los PDF no salen del teléfono; con la lectura avanzada, que eliges tú para cada documento, las páginas van a Google Gemini como en las demás funciones de IA.</td><td>Dirección IP y datos técnicos de la solicitud.</td></tr>
     <tr><td>Resend (Plus Five Five, Inc.)</td><td>Envío de los correos electrónicos de la cuenta: confirmación de la dirección, recuperación y cambio de contraseña.</td><td>Dirección de correo electrónico, códigos y enlaces de un solo uso.</td></tr>
     <tr><td>PeerJS (PeerServer) / Google (servidores STUN)</td><td>Ponen en contacto los dos dispositivos en las videollamadas entrenador-cliente, solo cuando inicias o recibes una llamada. Audio y vídeo viajan directamente entre los dispositivos y no pasan por Nurvan.</td><td>Dirección IP y un identificador temporal de la llamada.</td></tr>
@@ -108,12 +124,14 @@
   <p>Otros tratamientos, en breve. Recuento de usos: al abrir, la app envía, como máximo una vez al día, la plataforma (iPhone, Android, web) y si es la primera apertura; el servidor cuenta dispositivos distintos con un código diario que olvida a los dos días, sin identificadores, cuenta ni contenidos, y no es seguimiento. Nombres de alimentos: los nombres hallados en las búsquedas pueden traducirse a tu idioma con Google Gemini (solo nombres de alimentos, sin datos personales), incluso sin el consentimiento a las funciones de IA. Funciones de IA: Nurvan no usa los contenidos enviados para entrenar modelos ni para publicidad y no los vende; Google los trata según los términos de la API de Gemini.</p>
 
   <h2>6. Transferencias fuera de la Unión Europea</h2>
-  <p>Algunos proveedores (Google, Apple, Render, Cloudflare, Resend) tienen su sede en Estados Unidos y pueden tratar datos fuera del Espacio Económico Europeo. La transferencia se realiza sobre la base de la decisión de adecuación UE-EE. UU. (EU-US Data Privacy Framework) para los proveedores certificados, o de las cláusulas contractuales tipo aprobadas por la Comisión Europea.</p>
+  <p>Algunos proveedores (Google, Apple, Render, Cloudflare, Resend, RevenueCat<span data-web-only>, Stripe</span>) tienen su sede en Estados Unidos y pueden tratar datos fuera del Espacio Económico Europeo. La transferencia se realiza sobre la base de la decisión de adecuación UE-EE. UU. (EU-US Data Privacy Framework) para los proveedores certificados, o de las cláusulas contractuales tipo aprobadas por la Comisión Europea.</p>
 
   <h2>7. Durante cuánto tiempo conservamos los datos</h2>
   <ul>
     <li>Los datos de la cuenta, de entrenamiento y relativos a la salud: mientras la cuenta exista. Cuando la eliminas se borran de inmediato de la base de datos.</li>
     <li>Fotos y documentos compartidos con el coach: como máximo 12 meses desde su carga, o antes si se quitan o se elimina la cuenta.</li>
+    <li>Datos de las compras (producto, tienda, fechas, estado): mientras la cuenta exista y durante el tiempo que la ley exige para la contabilidad. El pago en sí queda en la tienda.</li>
+    <li>Denuncias en el chat, con los mensajes adjuntos si los hay: hasta que se hayan examinado y después durante otros 12 meses; después se eliminan. El bloqueo de un chat dura hasta que quien lo ha puesto lo quita.</li>
     <li>Denuncias de contenidos ilícitos: hasta que se resuelven y después durante otros 12 meses, para poder responder a una impugnación; después se eliminan.</li>
     <li data-web-only>Solicitudes de desistimiento de una suscripción comprada en el sitio: durante 10 años, como prueba del desistimiento y del reembolso a efectos fiscales y contables.</li>
     <li>Las copias de seguridad de la base de datos del proveedor de alojamiento se sobrescriben según su ciclo de rotación.</li>

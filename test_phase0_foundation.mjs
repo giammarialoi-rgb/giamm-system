@@ -25,7 +25,7 @@ function ok(condition, message) {
 }
 
 const release = JSON.parse(fs.readFileSync(path.join(root, "release.json"), "utf8"));
-ok(release.versionName === "1.5.34", "release metadata preserves baseline version");
+ok(release.versionName === "1.5.35", "release metadata preserves baseline version");
 ok(release.androidVersionCode === 41, "release metadata preserves Android version code");
 ok(Number(release.schemaTarget) >= 1, "release metadata declares schema target");
 

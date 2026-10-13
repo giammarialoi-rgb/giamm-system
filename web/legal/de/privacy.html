@@ -45,12 +45,24 @@
     <li>Gewicht, Körpermaße und Körperzusammensetzung, Fotos der Körper-Checks.</li>
     <li>Ernährung, Ernährungstagebuch, Fotos der Mahlzeiten, Nahrungsergänzungsmittel.</li>
     <li>Therapien, Medikamente und Blutuntersuchungen, die du erfassen möchtest.</li>
-    <li>Schlaf, Ruhepuls, Erholungszustand und Antworten auf die Check-ins, sofern du sie einträgst.</li>
+    <li>Schlaf, Ruhepuls, Herzfrequenzvariabilität (HRV), Schritte, Erholungszustand und Antworten auf die Check-ins, sofern du sie selbst einträgst (zum Beispiel im Bereich Gesundheit).</li>
   </ul>
-  <p>Nurvan liest keine Daten aus anderen Apps (zum Beispiel Health Connect oder Apple Health): Die Erholungswerte sind Schätzungen, die aus dem berechnet werden, was du selbst erfasst.</p>
+  <p>Nurvan liest keine Daten aus anderen Apps (zum Beispiel Health Connect oder Apple Health): Die Erholungswerte sind Schätzungen, die aus dem berechnet werden, was du selbst erfasst. Schlaf, Ruhepuls und HRV, die du im Bereich Gesundheit einträgst, bleiben in deinem Konto, und dein Coach sieht sie nur, wenn du die Freigabe in genau diesem Bereich aktivierst. Sie werden nicht an Coach AI gesendet.</p>
+  <h3>Käufe und Abos</h3>
+  <ul>
+    <li>Wenn du in der App einen kostenpflichtigen Tarif kaufst, wird die Zahlung von Apple (App Store) oder Google (Google Play) abgewickelt: Nurvan sieht und speichert weder deine Kartennummer noch andere Zahlungsdaten.</li>
+    <li data-web-only>Wenn du einen Tarif auf der Website kaufst, gibst du die Kartendaten auf der Seite von Stripe ein: Nurvan sieht und speichert sie nicht. Nurvan erhält von Stripe die Kundenkennung, den Tarif, den Status und die Daten des Abos und speichert die Stripe-Kundenkennung, um das Portal zur Verwaltung des Abos zu öffnen. Stripe verarbeitet die Zahlungsdaten als eigenständiger Verantwortlicher für die Pflichten zur Bekämpfung von Geldwäsche und Betrug.</li>
+    <li>Um zu wissen, welchen Tarif du hast, erhält Nurvan vom Store über den Dienst RevenueCat die Kennung deines Nurvan-Kontos, das gekaufte Produkt, den Store, das Kauf- und das Ablaufdatum und den Status des Abos.</li>
+  </ul>
   <h3>Daten aus dem Verhältnis zwischen Coach und Athlet</h3>
   <ul>
     <li>Wenn du Nurvan mit einem Coach nutzt: Nachrichten, Check-ins, Fotos und Dokumente, die du mit ihm austauschst, Programme, die er dir zuweist, Notizen, die er über dich schreibt.</li>
+  </ul>
+  <h3>Meldungen und Blockierungen im Chat</h3>
+  <ul>
+    <li>Wenn du ein Verhalten im Chat mit deinem Coach oder mit einem Athleten meldest: wer meldet und wer gemeldet wird, der gewählte Grund, der Text, den du schreibst, und, nur wenn du es auswählst, die letzten Nachrichten des Gesprächs.</li>
+    <li>Der Chat ist Ende-zu-Ende-verschlüsselt: Nurvan kann ihn nicht lesen. Die letzten Nachrichten gelangen, von deinem Telefon entschlüsselt, nur dann zu Nurvan, wenn du die Option zum Anhängen angehakt lässt.</li>
+    <li>Wenn du einen Chat blockierst, speichert Nurvan, wer ihn blockiert hat und wann, um zu verhindern, dass Nachrichten durchkommen, bis die Blockierung aufgehoben wird.</li>
   </ul>
   <h3>Meldungen rechtswidriger Inhalte und Widerruf</h3>
   <ul>
@@ -76,7 +88,9 @@
     <tr><td>Die Gesundheitsdaten verarbeiten, die du erfasst, um sie dir anzuzeigen, Statistiken zu berechnen und sie, wenn du einen Coach hast, mit ihm zu teilen.</td><td>Ausdrückliche Einwilligung (Art. 9 Abs. 2 lit. a DSGVO), die du bei der Registrierung erteilst und die du widerrufen kannst, indem du das Konto löschst.</td></tr>
     <tr><td>Funktionen mit künstlicher Intelligenz.</td><td>Einwilligung (Art. 6 Abs. 1 lit. a und Art. 9 Abs. 2 lit. a DSGVO), gesondert und jederzeit widerrufbar unter Einstellungen › Datenschutz und Daten.</td></tr>
     <tr><td>Sicherheit des Dienstes, Verhinderung von Missbrauch und Betrug, technische Protokolle.</td><td>Berechtigtes Interesse des Verantwortlichen (Art. 6 Abs. 1 lit. f DSGVO).</td></tr>
+    <tr><td>Meldungen im Chat prüfen und die meldenden Personen schützen. Wenn die angehängten Nachrichten Gesundheitsdaten enthalten, verarbeiten wir sie zur Feststellung und Verteidigung von Rechten (Art. 9 Abs. 2 lit. f DSGVO) und weil du dich entscheidest, sie anzuhängen.</td><td>Berechtigtes Interesse des Verantwortlichen an einem sicheren Dienst (Art. 6 Abs. 1 lit. f DSGVO); für die angehängten Nachrichten auch deine Einwilligung (Art. 6 Abs. 1 lit. a).</td></tr>
     <tr><td>Meldungen rechtswidriger Inhalte prüfen und die Entscheidung den meldenden und den betroffenen Personen mitteilen.</td><td>Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO, Verordnung (EU) 2022/2065 über digitale Dienste).</td></tr>
+    <tr><td>Den Tarif aktivieren und aufrechterhalten, den du im Store oder auf der Website gekauft hast.</td><td>Erfüllung des Vertrags (Art. 6 Abs. 1 lit. b DSGVO).</td></tr>
     <tr><td>Erfüllung gesetzlicher Pflichten (zum Beispiel steuerlicher Pflichten, wenn du einen kostenpflichtigen Tarif erwirbst).</td><td>Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO).</td></tr>
   </table>
   </div>
@@ -95,7 +109,9 @@
     <tr><td>Render Services, Inc.</td><td>Server und Datenbank der App (Region: <span data-legal="hostingRegion"></span>).</td><td>Alle mit dem Konto synchronisierten Daten.</td></tr>
     <tr><td>Cloudflare, Inc.</td><td>Netzwerk und Schutz des Datenverkehrs zu den Servern.</td><td>Technische Daten der Anfragen.</td></tr>
     <tr><td>Google LLC / Google Ireland Ltd.</td><td>Anmeldung mit Google; Gemini-API für die KI-Funktionen, nur wenn du sie aktivierst; Schriftarten der Webversion.</td><td>Google-Identität; an die KI-Funktionen übermittelte Inhalte; IP-Adresse.</td></tr>
-    <tr><td>Apple Inc.</td><td>Mit Apple anmelden.</td><td>Apple-Identität.</td></tr>
+    <tr><td>Apple Inc.</td><td>Mit Apple anmelden; Käufe und Abos in der iPhone-App (die Zahlung wird von Apple abgewickelt).</td><td>Apple-Identität; der Kauf, den Apple an RevenueCat übermittelt.</td></tr>
+    <tr data-web-only><td>Stripe Payments Europe Ltd. / Stripe, Inc.</td><td>Kartenzahlungen für auf der Website gekaufte Abos (Zahlungsseite und Kundenportal).</td><td>Name und E-Mail des Kontos, Kennung des Nurvan-Kontos, Tarif; die Kartendaten erhebt nur Stripe.</td></tr>
+    <tr><td>RevenueCat, Inc.</td><td>Prüft die in den Stores (Apple, Google Play) getätigten Käufe und teilt Nurvan mit, welcher Tarif aktiv ist.</td><td>Kennung des Nurvan-Kontos, gekauftes Produkt, Store, Kauf- und Ablaufdatum.</td></tr>
     <tr><td>jsDelivr (Prospect One / Cloudflare, Fastly)</td><td>Lädt, nur wenn du sie verwendest, die Bibliotheken herunter, die Fotos und PDFs auf deinem Gerät lesen (Texterkennung, HEIC-Fotos des iPhones, PDF-Seiten ohne Text). Beim Lesen auf dem Gerät verlassen Fotos und PDFs das Telefon nicht; beim erweiterten Lesen, das du für jedes Dokument selbst wählst, gehen die Seiten an Google Gemini wie bei den anderen KI-Funktionen.</td><td>IP-Adresse und technische Daten der Anfrage.</td></tr>
     <tr><td>Resend (Plus Five Five, Inc.)</td><td>Versand der E-Mails zum Konto: Bestätigung der Adresse, Wiederherstellung und Änderung des Passworts.</td><td>E-Mail-Adresse, Einmalcodes und Einmallinks.</td></tr>
     <tr><td>PeerJS (PeerServer) / Google (STUN-Server)</td><td>Sie verbinden die beiden Geräte bei Videoanrufen zwischen Coach und Kunde, nur wenn du einen Anruf startest oder erhältst. Audio und Video laufen direkt zwischen den Geräten und nicht über Nurvan.</td><td>IP-Adresse und eine temporäre Anruf-Kennung.</td></tr>
@@ -108,12 +124,14 @@
   <p>Weitere Verarbeitungen, kurz. Nutzungszählung: Beim Öffnen sendet die App höchstens einmal täglich die Plattform (iPhone, Android, Web) und ob es das erste Öffnen ist; der Server zählt verschiedene Geräte mit einem Tagescode, den er nach zwei Tagen vergisst, ohne Kennungen, Konto oder Inhalte, und es ist kein Tracking. Lebensmittelnamen: In Suchen gefundene Namen können mit Google Gemini in deine Sprache übersetzt werden (nur Lebensmittelnamen, keine personenbezogenen Daten), auch ohne die Einwilligung zu den KI-Funktionen. KI-Funktionen: Nurvan nutzt die gesendeten Inhalte weder zum Training von Modellen noch für Werbung und verkauft sie nicht; Google verarbeitet sie nach den Bedingungen der Gemini-API.</p>
 
   <h2>6. Übermittlungen außerhalb der Europäischen Union</h2>
-  <p>Einige Anbieter (Google, Apple, Render, Cloudflare, Resend) haben ihren Sitz in den Vereinigten Staaten und können Daten außerhalb des Europäischen Wirtschaftsraums verarbeiten. Die Übermittlung erfolgt auf der Grundlage des Angemessenheitsbeschlusses EU-USA (EU-US Data Privacy Framework) für die zertifizierten Anbieter oder der von der Europäischen Kommission genehmigten Standardvertragsklauseln.</p>
+  <p>Einige Anbieter (Google, Apple, Render, Cloudflare, Resend, RevenueCat<span data-web-only>, Stripe</span>) haben ihren Sitz in den Vereinigten Staaten und können Daten außerhalb des Europäischen Wirtschaftsraums verarbeiten. Die Übermittlung erfolgt auf der Grundlage des Angemessenheitsbeschlusses EU-USA (EU-US Data Privacy Framework) für die zertifizierten Anbieter oder der von der Europäischen Kommission genehmigten Standardvertragsklauseln.</p>
 
   <h2>7. Wie lange wir die Daten speichern</h2>
   <ul>
     <li>Die Kontodaten, Trainingsdaten und Gesundheitsdaten: solange das Konto besteht. Wenn du es löschst, werden sie sofort aus der Datenbank gelöscht.</li>
     <li>Mit dem Coach geteilte Fotos und Dokumente: höchstens 12 Monate ab dem Hochladen, oder früher, wenn sie entfernt werden oder das Konto gelöscht wird.</li>
+    <li>Kaufdaten (Produkt, Store, Daten, Status): solange das Konto besteht und so lange, wie das Gesetz es für die Buchhaltung verlangt. Die Zahlung selbst verbleibt beim Store.</li>
+    <li>Meldungen im Chat, mit eventuell angehängten Nachrichten: bis sie geprüft wurden und danach weitere 12 Monate; danach werden sie gelöscht. Die Blockierung eines Chats gilt, bis die Person, die sie eingerichtet hat, sie aufhebt.</li>
     <li>Meldungen rechtswidriger Inhalte: bis zur Entscheidung und danach weitere 12 Monate, um auf eine Anfechtung antworten zu können; danach werden sie gelöscht.</li>
     <li data-web-only>Anträge auf Widerruf eines auf der Website gekauften Abos: 10 Jahre lang, als Nachweis des Widerrufs und der Erstattung für steuerliche und buchhalterische Zwecke.</li>
     <li>Die Sicherungskopien der Datenbank beim Hosting-Anbieter werden gemäß ihrem Rotationszyklus überschrieben.</li>

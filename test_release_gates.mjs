@@ -13,7 +13,7 @@ function ok(value, message) {
 }
 
 const release = JSON.parse(fs.readFileSync(path.join(root, "release.json"), "utf8"));
-ok(release.versionName === "1.5.34", "release baseline remains 1.5.34");
+ok(release.versionName === "1.5.35", "release baseline is 1.5.35 (1.5.34 is the train approved on the App Store, closed to new builds)");
 ok(release.schemaTarget === "0036", "schema target includes all Coach OS migrations");
 
 const migrations = await loadMigrationFiles();
