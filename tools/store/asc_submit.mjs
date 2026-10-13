@@ -69,13 +69,22 @@ async function main() {
   console.log('App:', app.attributes.name, '(' + app.id + ')');
 
   const wanted = String(process.env.BUILD || '').trim();
+  // With VERSION, only a build of that version will do: a fresh upload takes some minutes to be listed
+  // by Apple, and in the meantime the newest listed build is an older one (of a closed version).
+  const wantedVersion = String(process.env.VERSION || '').trim();
   let build = null, version = '';
   for (let tries = 0; tries < 80; tries++) {
-    const q = '/v1/builds?filter[app]=' + app.id + '&filter[expired]=false&sort=-uploadedDate&limit=20&include=preReleaseVersion' + (wanted ? '&filter[version]=' + encodeURIComponent(wanted) : '');
+    const q = '/v1/builds?filter[app]=' + app.id + '&filter[expired]=false&sort=-uploadedDate&limit=20&include=preReleaseVersion' +
+      (wanted ? '&filter[version]=' + encodeURIComponent(wanted) : '') + (wantedVersion ? '&filter[preReleaseVersion.version]=' + encodeURIComponent(wantedVersion) : '');
     const res = await call('GET', q);
     const pre = new Map((res.included || []).filter((x) => x.type === 'preReleaseVersions').map((x) => [x.id, x.attributes.version]));
     const b = (res.data || [])[0];
-    if (!b) throw new Error(wanted ? 'Build ' + wanted + ' non trovata.' : 'Nessuna build su TestFlight.');
+    if (!b && (wanted || wantedVersion)) {
+      console.log('La build ' + (wanted || 'della versione ' + wantedVersion) + ' non è ancora visibile su App Store Connect, aspetto 30 secondi…');
+      await new Promise((r) => setTimeout(r, 30000));
+      continue;
+    }
+    if (!b) throw new Error('Nessuna build su TestFlight.');
     const preId = b.relationships && b.relationships.preReleaseVersion && b.relationships.preReleaseVersion.data && b.relationships.preReleaseVersion.data.id;
     version = pre.get(preId) || '';
     if (b.attributes.processingState === 'VALID') { build = b; break; }
