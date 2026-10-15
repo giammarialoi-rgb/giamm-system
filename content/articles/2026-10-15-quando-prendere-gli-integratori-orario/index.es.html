@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuándo tomar los suplementos: ¿importa la hora? | Nurvan</title>
+<meta name="description" content="Melatonina, hierro, vitamina D, creatina: en qué suplementos el horario cambia el resultado y en cuáles no. Los ocho estudios citados, verificados uno a uno.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entrenamiento</a><a href="#">Nutrición</a><a href="#">Suplementos</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descargar la app</a></div></header>
+<main class="wrap" lang="es">
+<div class="crumb">Blog · Suplementos · Evidencia</div>
+<h1>Cuándo tomar los suplementos: ¿de verdad importa la hora?</h1>
+<p class="lede">Casi todos los suplementos vienen con una regla sobre el momento de tomarlos: la melatonina media hora antes de dormir, el hierro en ayunas, la creatina justo al terminar de entrenar. Una publicación muy comentada sostiene que para la mayoría esa regla no cambia nada, y lo respalda con ocho citas. Las he leído todas: existen y son pertinentes, lo que en el fitness de las redes ya es noticia. Pero en tres casos el dato citado esconde un detalle que cambia cómo lo usarías, y el dato más útil para quien entrena no aparece por ninguna parte.</p>
+<div class="meta"><span>15 de octubre de 2026</span><span><b>16</b> min de lectura</span><span><b>8</b> estudios citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · actualizado el 15 de octubre de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Cuándo tomar los suplementos: ¿de verdad importa la hora?"><figcaption class="cap">epSos.de, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Medical_Drugs_for_Pharmacy_Health_Shop_of_Medicine.png), CC BY 2.0</figcaption></figure>
+<div class="box"><h2>En resumen</h2><ul><li><strong>La melatonina mueve el reloj biológico sobre todo a última hora de la tarde y casi nada en la primera mitad de la noche.</strong> Confirmado: en 27 adultos el adelanto máximo fue de 1,8 horas, con una "zona muerta" durante el sueño temprano (Burgess et al., 2008).</li><li><strong>Pero quien la toma antes de dormir no quiere mover un reloj: quiere dormirse.</strong> Ese efecto, que la publicación apenas menciona, vale unos <strong>7 minutos</strong> de latencia (Ferracioli-Oda et al., 2013).</li><li><strong>El hierro es el caso en que el horario decide de verdad</strong>, pero la variable no es la hora: es el intervalo. En días alternos se absorbieron <strong>175 mg frente a 131 mg</strong>, con las mismas dosis (Stoffel et al., 2017). En mujeres con reservas bajas, no en cualquiera.</li><li><strong>El "+57%" de la vitamina D sale de 17 pacientes sin grupo de control</strong> y con una variabilidad enorme (±36,7%). El principio —tomarla con la comida más grasa— se sostiene; el número no.</li><li><strong>Lo que falta en la publicación</strong>: el horario que de verdad importa en el gimnasio no es el de las pastillas sino el de la proteína, y ahí el metaanálisis dice que el efecto desaparece al tener en cuenta la proteína total del día (Schoenfeld et al., 2013).</li></ul></div>
+<h2>Una publicación discutida, pero con las fuentes en su sitio</h2>
+<p>En los comentarios se la acusa de estar generada con inteligencia artificial: un lector dice que el gráfico de la melatonina está mal, otro que la diapositiva del hierro se contradice, un tercero simplemente pide que se lo expliquen. Son críticas razonables sobre la forma. En el fondo, sin embargo, los ocho PMID existen, tratan realmente el tema al que se asocian y en su mayoría dan los números que se les atribuyen. Es mejor que la media de los carruseles que revisamos aquí.</p>
+<p>El problema no son las citas: es lo que hay entre ellas. Un número correcto, sacado del contexto en el que se midió, se convierte en una regla que quizá no se aplique a ti.</p>
+<h2>Melatonina: mover el reloj y dormirse son dos cosas distintas</h2>
+<p>Es el punto que más confundió a los comentaristas, y la confusión tiene base: la melatonina hace dos trabajos diferentes.</p>
+<p>El primero es <strong>mover el reloj biológico</strong>. El estudio citado es sólido: Burgess y sus colegas dieron 3 mg de melatonina a 27 adultos sin horarios impuestos y construyeron una curva que indica cuánto desplaza el ritmo según la hora de la toma. El adelanto máximo llega a última hora de la tarde, unas 5 horas antes de que empiece la producción natural de melatonina, y vale <strong>1,8 horas</strong>. En la primera mitad del sueño habitual hay una zona donde el efecto es prácticamente nulo. Los propios autores concluyen que usarla de noche como somnífero tiene un efecto mínimo sobre el desplazamiento de fase. Todo esto la publicación lo cuenta bien.</p>
+<p>El segundo trabajo es <strong>ayudarte a dormirte antes</strong>. Es otro mecanismo, y la publicación lo despacha con un "puede darte sueño igualmente". ¿Cuánto? El metaanálisis más citado —19 estudios y 1.683 personas con trastornos primarios del sueño— mide una reducción de la latencia de <strong>7,06 minutos</strong> (IC 95% 4,37-9,75) y 8,25 minutos más de sueño total. Estadísticamente firme, clínicamente pequeño. Ese dato cambia las expectativas de cualquiera que compre melatonina, y no está en la publicación.</p>
+<figure><div class="chart"><svg role="img" aria-label="Reducción de la latencia del sueño frente a placebo: melatonina 7,1 minutos en 19 estudios y 1.683 personas, magnesio 17,4 minutos en 3 ensayos aleatorizados y 151 mayores" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" width="880" height="420" role="img" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="880" height="420" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="26" font-weight="700" text-anchor="start">Cuánto antes te duermes</text>
+<text x="40" y="78" fill="#a0a0a0" font-size="15" text-anchor="start">Reducción de la latencia del sueño frente a placebo (minutos)</text>
+<text x="40" y="146" fill="#f0f0f0" font-size="19" font-weight="600">Melatonina</text>
+<text x="40" y="168" fill="#a0a0a0" font-size="13">19 estudios, 1.683 personas</text>
+<rect x="300" y="130" width="177" height="40" rx="5" fill="#aa8a2e"/>
+<text x="491" y="158" fill="#f3e5ab" font-size="24" font-weight="700">7,1 min</text>
+<text x="40" y="256" fill="#f0f0f0" font-size="19" font-weight="600">Magnesio</text>
+<text x="40" y="278" fill="#a0a0a0" font-size="13">3 ECA, 151 mayores · calidad baja</text>
+<rect x="300" y="240" width="435" height="40" rx="5" fill="#d4af37"/>
+<text x="749" y="268" fill="#f3e5ab" font-size="24" font-weight="700">17,4 min</text>
+<line x1="40" y1="358" x2="840" y2="358" stroke="#2a2a2a" stroke-width="1"/>
+<text x="40" y="384" fill="#a0a0a0" font-size="12.5" text-anchor="start">Fuentes: Ferracioli-Oda et al., 2013 (PMID 23691095) · Mah &amp; Pitre, 2021 (PMID 33865376)</text>
+<text x="40" y="404" fill="#aa8a2e" font-size="12" font-weight="600" text-anchor="start">NURVAN</text>
+</svg></div><figcaption class="cap">Dos cifras que la publicación nunca pone una al lado de la otra. Ojo a la calidad de la evidencia: la de la melatonina viene de 19 estudios, la del magnesio de 3 ensayos en mayores que los propios revisores calificaron de calidad baja.</figcaption></figure>
+<h2>Hierro: aquí el horario cuenta, pero la variable es el intervalo</h2>
+<p>Aquí la publicación acierta de pleno, y es el caso más interesante de los ocho. El hierro eleva la hepcidina, la hormona que cierra la absorción, y la hepcidina se mantiene alta el tiempo suficiente para penalizar la dosis del día siguiente.</p>
+<p>En el ensayo de Stoffel y colaboradores, publicado en <em>Lancet Haematology</em>, mujeres con ferritina baja tomaron 60 mg de hierro durante 14 días seguidos o las mismas 14 dosis en días alternos a lo largo de 28 días. Resultado: <strong>131,0 mg absorbidos frente a 175,3 mg</strong>, es decir el 16,3% de la dosis frente al 21,8% (p = 0,0010). Partir la dosis diaria en dos no ayudó (p = 0,33) y además subió la hepcidina.</p>
+<figure><div class="chart"><svg role="img" aria-label="Hierro total absorbido con las mismas catorce dosis de 60 mg: 131,0 mg en días consecutivos, 175,3 mg en días alternos" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" width="880" height="420" role="img" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="880" height="420" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="26" font-weight="700" text-anchor="start">Hierro: las mismas 14 dosis de 60 mg</text>
+<text x="40" y="78" fill="#a0a0a0" font-size="15" text-anchor="start">Hierro total absorbido, mujeres con reservas bajas (mg)</text>
+<text x="40" y="146" fill="#f0f0f0" font-size="19" font-weight="600">Días consecutivos</text>
+<text x="40" y="168" fill="#a0a0a0" font-size="13">absorbido el 16,3% de la dosis</text>
+<rect x="300" y="130" width="327" height="40" rx="5" fill="#aa8a2e"/>
+<text x="641" y="158" fill="#f3e5ab" font-size="24" font-weight="700">131,0 mg</text>
+<text x="40" y="256" fill="#f0f0f0" font-size="19" font-weight="600">Días alternos</text>
+<text x="40" y="278" fill="#a0a0a0" font-size="13">absorbido el 21,8% de la dosis</text>
+<rect x="300" y="240" width="438" height="40" rx="5" fill="#d4af37"/>
+<text x="752" y="268" fill="#f3e5ab" font-size="24" font-weight="700">175,3 mg</text>
+<line x1="40" y1="358" x2="840" y2="358" stroke="#2a2a2a" stroke-width="1"/>
+<text x="40" y="384" fill="#a0a0a0" font-size="12.5" text-anchor="start">Fuente: Stoffel et al., 2017, Lancet Haematology (PMID 29032957)</text>
+<text x="40" y="404" fill="#aa8a2e" font-size="12" font-weight="600" text-anchor="start">NURVAN</text>
+</svg></div><figcaption class="cap">Las mismas dosis, distinto resultado: en días alternos se absorbe alrededor de un tercio más. Ensayo en mujeres de 18 a 40 años con ferritina ≤ 25 µg/L.</figcaption></figure>
+<p><strong>Lo que la publicación no dice</strong>: las participantes eran mujeres con las reservas de hierro ya agotadas. No es un hallazgo para la población general, y la suplementación con hierro es un tratamiento que se ajusta con analíticas, no algo que se empieza porque uno se siente cansado. La pauta en días alternos es una conversación con quien te recetó el hierro.</p>
+<p>Sobre el café la publicación es precisa: en el estudio de Morck y colaboradores de 1983, el café tomado <strong>una hora antes</strong> de la comida no redujo la absorción, mientras que el mismo café <strong>una hora después</strong> la bajó de alrededor del 5,9% a cerca del 1,6%. Conviene añadir que allí se hablaba de hierro no hemo de un alimento, no de un comprimido, y que los participantes tenían reservas normales.</p>
+<h2>Vitamina D y omega-3: no es la hora, es la comida</h2>
+<p>El mecanismo está bien planteado —son liposolubles, así que importa la grasa de la comida con la que llegan—, pero los números merecen una lectura más fina.</p>
+<p><strong>Vitamina D, +57%.</strong> La cifra está bien recogida (56,7%), pero procede de un estudio con <strong>17 pacientes y sin grupo de control</strong>: personas que no respondían al tratamiento y a las que se pidió mover el suplemento a la comida más abundante. La desviación estándar es de ±36,7%, es decir que el aumento variaba enormemente de una persona a otra, y las dosis iban de 1.000 a 50.000 UI. El consejo práctico sigue siendo sensato y gratis; el "+57%" no es una promesa.</p>
+<p><strong>Omega-3, 3 personas de 50.</strong> También es exacto: con una comida baja en grasa, solo 3 de 50 sujetos que tomaban la forma éster etílico mantuvieron al menos la mitad de la absorción que tenían con una comida rica. Falta un contexto importante: el estudio compara un producto de 4 gramos con receta frente a un competidor, y está firmado y financiado por la empresa que fabrica ese competidor, el que gana. No lo invalida, pero es un conflicto de intereses que una diapositiva debería declarar. Para quien toma un aceite de pescado normal de farmacia, la traducción práctica es sencilla: con comida, no en ayunas.</p>
+<h2>Creatina y magnesio: dónde acierta y dónde se queda corta</h2>
+<p><strong>Creatina.</strong> El ensayo citado comparó 5 g antes frente a 5 g después de entrenar en 19 culturistas aficionados durante 4 semanas: ninguna diferencia estadísticamente significativa. Curiosamente, la publicación es más prudente que los autores, que concluyen que tomarla después es "posiblemente mejor" usando la <em>magnitude-based inference</em>, un método hoy muy criticado. En las pruebas estándar, la diferencia no está. En la creatina lo que cuenta es la constancia, no el reloj: la pusimos en lo más alto de nuestra <a href="/es/blog/clasificacion-suplementos-fuerza-tier-list">tier list de suplementos para la fuerza</a>.</p>
+<p><strong>Magnesio.</strong> La publicación dice que quienes revisaron los estudios sobre el sueño los calificaron de "deficientes". Es verdad, esa es la palabra. Pero esa misma revisión, al juntar 3 ensayos aleatorizados con 151 mayores, encuentra una reducción de la latencia de <strong>17,36 minutos</strong> (p = 0,0006): más del doble que la melatonina. Con mucha menos certeza, en otra población y con muy poca gente. Despacharlo como "evidencia deficiente" esconde el número más curioso de toda la publicación.</p>
+<p><strong>Cafeína.</strong> Aquí acierta: 400 mg tomados 6 horas antes de acostarse alteran el sueño de forma medible frente a placebo. Traducirlo a "cuatro tazas" es el punto débil, y un lector lo señala: la cafeína de una taza varía muchísimo. Lo contamos a fondo en <a href="/es/blog/cafeina-sueno-cuando-dejar-el-cafe">a qué hora dejar el café</a>.</p>
+<h2>Lo que dice realmente la investigación</h2>
+<table><thead><tr><th>Afirmación de la publicación</th><th>Veredicto</th><th>Por qué</th></tr></thead><tbody><tr><td>La melatonina mueve poquísimo el reloj si se toma antes de dormir</td><td><strong>Confirmado</strong></td><td>Zona muerta en el sueño temprano; adelanto máximo de 1,8 h a última hora de la tarde (Burgess 2008)</td></tr><tr><td>"Puede darte sueño igualmente"</td><td><strong>Matizable</strong></td><td>Existe, pero vale 7,06 minutos menos de latencia (Ferracioli-Oda 2013)</td></tr><tr><td>Cafeína 6 horas antes altera el sueño</td><td><strong>Confirmado</strong></td><td>400 mg a 0, 3 y 6 horas: las tres significativas frente a placebo (Drake 2013)</td></tr><tr><td>Hierro en días alternos: 175 mg frente a 131 mg</td><td><strong>Confirmado</strong></td><td>Pero en mujeres con ferritina ≤ 25 µg/L, no en la población general (Stoffel 2017)</td></tr><tr><td>Café una hora antes inocuo, una hora después perjudicial</td><td><strong>Confirmado</strong></td><td>Del 5,88% al 1,64%; se refiere al hierro de la comida, no al comprimido (Morck 1983)</td></tr><tr><td>Vitamina D con la comida más grande: +57%</td><td><strong>Matizable</strong></td><td>17 pacientes, sin control, ±36,7% de variabilidad (Mulligan 2010)</td></tr><tr><td>Omega-3: 3 de 50 con comida baja en grasa</td><td><strong>Matizable</strong></td><td>Estudio de la empresa del producto ganador, dosis de 4 g con receta (Davidson 2012)</td></tr><tr><td>Creatina: antes o después da igual</td><td><strong>Confirmado</strong></td><td>Sin diferencias en las pruebas estándar; los autores concluyen lo contrario con un método criticado (Antonio 2013)</td></tr><tr><td>Magnesio: evidencia deficiente</td><td><strong>Matizable</strong></td><td>Cierto en calidad, pero el efecto medido es de −17,36 minutos de latencia (Mah 2021)</td></tr></tbody></table>
+<h2>El horario que sí importa, y que no está en la publicación</h2>
+<p>Si entrenas, la pregunta sobre el momento que de verdad te haces no es la de la melatonina: es la de la proteína, la famosa ventana anabólica.</p>
+<p>La metarregresión de Schoenfeld, Aragon y Krieger reunió 23 estudios sobre hipertrofia y 20 sobre fuerza. En un análisis simple, tomar proteína alrededor del entrenamiento parecía dar una ventaja pequeña o moderada en hipertrofia. Cuando los autores controlaron las covariables, ese efecto desapareció: el predictor más fuerte del crecimiento muscular era <strong>la proteína total del día</strong>, no la hora a la que se tomaba. En esos estudios, quien hacía timing simplemente comía más proteína.</p>
+<p>Es el mismo principio que vale para casi todos los suplementos de la lista: la dosis diaria y la constancia deciden el resultado, el reloj casi nunca. También pasa con la composición corporal: las palancas grandes están en el total del día, como vimos al hablar de <a href="/es/blog/recomposicion-corporal-perder-grasa-ganar-musculo">recomposición corporal</a>.</p>
+<h2>Cómo aplicarlo</h2>
+<ol class="steps"><li><strong>Pregúntate si tu suplemento entra en una de las tres categorías que sí tienen horario.</strong> Hierro (el intervalo entre dosis), liposolubles como la vitamina D y el omega-3 (la comida), y lo que actúa sobre el sueño o el estado de alerta como la cafeína y la melatonina (las horas respecto a la cama). Todo lo demás: tómalo cuando te acuerdes.</li><li><strong>Ata el suplemento a un hábito que ya tengas</strong>, no a una hora exacta. Vitamina D y omega-3 en la comida principal: la grasa ya está y la rutina se sostiene sola.</li><li><strong>Con la creatina elige el momento más cómodo y no lo cambies</strong>: la constancia a lo largo de los meses pesa mucho más que treinta minutos antes o después.</li><li><strong>Si usas melatonina para dormir, espera unos pocos minutos de diferencia.</strong> Si el problema es de horarios —turnos, jet lag—, entonces el momento sí importa y es un asunto para el médico, no para un carrusel.</li><li><strong>Hierro solo por indicación médica y con analítica.</strong> La pauta en días alternos es una pregunta para quien te lo recetó, no una decisión en solitario.</li></ol>
+<div class="app"><div><h3>Con Nurvan la suplementación deja de ser una lista de horarios</h3><p>La sección de suplementación de Nurvan registra qué tomas, cuánto y con qué frecuencia, y lo mantiene junto al entrenamiento, el diario de comidas y las analíticas. Así, cuando te preguntes "¿esto funciona?", mirarás semanas de constancia real y no la sensación de anoche. ****</p></div><a class="cta" href="https://nurvan.app">Prueba Nurvan</a></div>
+<h2>Preguntas frecuentes</h2>
+<details><summary>¿A qué hora se toma la melatonina?</summary><p>Depende de lo que busques. Para adelantar el reloj, el efecto es máximo a última hora de la tarde, muchas horas antes de dormir, y casi nulo en la primera mitad de la noche (Burgess et al., 2008). Para dormirte un poco antes se toma por la noche, pero el efecto medio medido ronda los 7 minutos. Si el problema es un trastorno del sueño real, habla con tu médico.</p></details>
+<details><summary>¿La creatina se toma antes o después de entrenar?</summary><p>El ensayo que compara ambas opciones no encuentra diferencias estadísticamente significativas en 4 semanas (Antonio y Ciccone, 2013). Cuenta mucho más tomarla todos los días, también los de descanso.</p></details>
+<details><summary>¿La vitamina D hay que tomarla con comida?</summary><p>Es liposoluble, así que se absorbe mejor con una comida que contenga grasa. En el estudio con 17 pacientes, pasarla a la comida más abundante subió los valores en sangre un 57% de media, pero era una serie pequeña sin grupo de control y con mucha variación individual.</p></details>
+<details><summary>¿El café bloquea el hierro?</summary><p>Reduce la absorción del hierro no hemo si se bebe con la comida o hasta una hora después; una hora antes no tuvo efectos medibles (Morck et al., 1983). Si estás en tratamiento con hierro, lo práctico es separar el café del momento de la toma, siguiendo las instrucciones de tu médico.</p></details>
+<h2>Lee también</h2>
+<ul><li><a href="/es/blog/clasificacion-suplementos-fuerza-tier-list">Tier list de suplementos para la fuerza: qué dice la investigación</a> — qué sustancias mueven de verdad tu máximo, de la creatina al HMB.</li><li><a href="/es/blog/cafeina-sueno-cuando-dejar-el-cafe">Cafeína y sueño: a qué hora dejar el café</a> — por qué "una taza" no es una dosis y cuántas horas hacen falta de verdad.</li><li><a href="/es/blog/recomposicion-corporal-perder-grasa-ganar-musculo">Recomposición corporal: perder grasa y ganar músculo</a> — qué decide el resultado cuando dieta y entrenamiento van juntos.</li></ul>
+<h2>Fuentes</h2>
+<ol class="refs"><li>Burgess HJ, Revell VL, Eastman CI, 2008. <em>A three pulse phase response curve to three milligrams of melatonin in humans.</em> The Journal of Physiology 586(2):639-47. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/18006583/">18006583</a> · DOI <a href="https://doi.org/10.1113/jphysiol.2007.143180">10.1113/jphysiol.2007.143180</a></li><li>Ferracioli-Oda E, Qawasmi A, Bloch MH, 2013. <em>Meta-analysis: melatonin for the treatment of primary sleep disorders.</em> PLoS One 8(5):e63773. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/23691095/">23691095</a> · DOI <a href="https://doi.org/10.1371/journal.pone.0063773">10.1371/journal.pone.0063773</a></li><li>Drake C, Roehrs T, Shambroom J, Roth T, 2013. <em>Caffeine effects on sleep taken 0, 3, or 6 hours before going to bed.</em> Journal of Clinical Sleep Medicine 9(11):1195-200. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/24235903/">24235903</a> · DOI <a href="https://doi.org/10.5664/jcsm.3170">10.5664/jcsm.3170</a></li><li>Stoffel NU, Cercamondi CI, Brittenham G, et al., 2017. <em>Iron absorption from oral iron supplements given on consecutive versus alternate days...</em> The Lancet Haematology 4(11):e524-e533. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/29032957/">29032957</a> · DOI <a href="https://doi.org/10.1016/S2352-3026(17">10.1016/S2352-3026(17)30182-5</a>30182-5)</li><li>Morck TA, Lynch SR, Cook JD, 1983. <em>Inhibition of food iron absorption by coffee.</em> The American Journal of Clinical Nutrition 37(3):416-20. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/6402915/">6402915</a> · DOI <a href="https://doi.org/10.1093/ajcn/37.3.416">10.1093/ajcn/37.3.416</a></li><li>Mulligan GB, Licata A, 2010. <em>Taking vitamin D with the largest meal improves absorption and results in higher serum levels of 25-hydroxyvitamin D.</em> Journal of Bone and Mineral Research 25(4):928-30. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/20200983/">20200983</a> · DOI <a href="https://doi.org/10.1002/jbmr.67">10.1002/jbmr.67</a></li><li>Davidson MH, Johnson J, Rooney MW, Kyle ML, Kling DF, 2012. <em>A novel omega-3 free fatty acid formulation has dramatically improved bioavailability during a low-fat diet compared with omega-3-acid ethyl esters: the ECLIPSE study.</em> Journal of Clinical Lipidology 6(6):573-84. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/23312053/">23312053</a> · DOI <a href="https://doi.org/10.1016/j.jacl.2012.01.002">10.1016/j.jacl.2012.01.002</a></li><li>Antonio J, Ciccone V, 2013. <em>The effects of pre versus post workout supplementation of creatine monohydrate on body composition and strength.</em> Journal of the International Society of Sports Nutrition 10:36. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/23919405/">23919405</a> · DOI <a href="https://doi.org/10.1186/1550-2783-10-36">10.1186/1550-2783-10-36</a></li><li>Mah J, Pitre T, 2021. <em>Oral magnesium supplementation for insomnia in older adults: a Systematic Review &amp; Meta-Analysis.</em> BMC Complementary Medicine and Therapies 21(1):125. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33865376/">33865376</a> · DOI <a href="https://doi.org/10.1186/s12906-021-03297-z">10.1186/s12906-021-03297-z</a></li><li>Schoenfeld BJ, Aragon AA, Krieger JW, 2013. <em>The effect of protein timing on muscle strength and hypertrophy: a meta-analysis.</em> Journal of the International Society of Sports Nutrition 10(1):53. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/24299050/">24299050</a> · DOI <a href="https://doi.org/10.1186/1550-2783-10-53">10.1186/1550-2783-10-53</a></li></ol>
+<p>Búsquedas bibliográficas realizadas en PubMed. Punto de partida: la publicación de William Wallace (<a href="https://www.instagram.com/p/Dc_e9fmkc1z/">@dr.williamwallace</a>, 7 de septiembre de 2026). No se ha reproducido ningún texto ni imagen de la publicación: sus referencias se releyeron en las fuentes originales.</p>
+<p>Giammaria Loi es el fundador de Nurvan. Entrena con pesas desde 2012, trabaja como entrenador personal y coach certificado FIPE desde 2013 y compite en powerlifting a nivel nacional desde 2018. Cada artículo que firma parte de los estudios científicos y llega a lo que funciona de verdad en el gimnasio. <a href="/autore/giammaria-loi">Página del autor</a></p>
+<p class="note">Nota: contenido informativo, no sustituye la opinión de un médico o profesional. La suplementación con hierro y los trastornos del sueño requieren una valoración médica individual.</p>
+</main>
+<footer>NURVAN · nurvan.app · 15 de octubre de 2026</footer>
+</body>
+</html>

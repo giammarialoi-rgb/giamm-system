@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wann Supplemente einnehmen: zählt die Uhrzeit? | Nurvan</title>
+<meta name="description" content="Melatonin, Eisen, Vitamin D, Kreatin: bei welchen Supplementen der Zeitpunkt das Ergebnis verändert und bei welchen nicht. Acht Studien einzeln geprüft.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Ernährung</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">App laden</a></div></header>
+<main class="wrap" lang="de">
+<div class="crumb">Blog · Supplements · Evidenz</div>
+<h1>Wann Supplemente einnehmen: zählt die Uhrzeit wirklich?</h1>
+<p class="lede">Fast jedes Supplement kommt mit einer Regel zum Zeitpunkt: Melatonin eine halbe Stunde vor dem Schlafen, Eisen nüchtern, Kreatin direkt nach dem Training. Ein viel diskutierter Beitrag behauptet, dass diese Regel bei den meisten nichts bewirkt, und stützt das auf acht Quellenangaben. Ich habe alle acht gelesen: Sie existieren und sind einschlägig — was in der Fitness-Welt der sozialen Netzwerke schon eine Nachricht ist. Aber in drei Fällen verbirgt die genannte Zahl ein Detail, das die praktische Anwendung verändert, und die nützlichste Information für alle, die trainieren, fehlt ganz.</p>
+<div class="meta"><span>15. Oktober 2026</span><span><b>15</b> Min. Lesezeit</span><span><b>8</b> zitierte Studien</span><span>Von <a href="/autore/giammaria-loi">Giammaria Loi</a> · aktualisiert am 15. Oktober 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Wann Supplemente einnehmen: zählt die Uhrzeit wirklich?"><figcaption class="cap">epSos.de, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Medical_Drugs_for_Pharmacy_Health_Shop_of_Medicine.png), CC BY 2.0</figcaption></figure>
+<div class="box"><h2>Kurz gefasst</h2><ul><li><strong>Melatonin verschiebt die innere Uhr vor allem am späten Nachmittag und kaum in der ersten Hälfte der Nacht.</strong> Bestätigt: Bei 27 Erwachsenen betrug die maximale Vorverlagerung 1,8 Stunden, mit einer „toten Zone" im frühen Schlaf (Burgess et al., 2008).</li><li><strong>Wer es vor dem Schlafen nimmt, will aber keine Uhr verschieben, sondern einschlafen.</strong> Dieser Effekt, im Beitrag nur gestreift, ist rund <strong>7 Minuten</strong> Einschlafzeit wert (Ferracioli-Oda et al., 2013).</li><li><strong>Bei Eisen entscheidet der Zeitpunkt tatsächlich</strong> — nicht die Uhrzeit, sondern der Abstand. Jeden zweiten Tag wurden <strong>175 mg statt 131 mg</strong> aufgenommen, bei identischen Dosen (Stoffel et al., 2017). Bei Frauen mit niedrigen Speichern, nicht bei jedem.</li><li><strong>Die „+57 %" bei Vitamin D stammen von 17 Patienten ohne Kontrollgruppe</strong>, mit enormer Streuung (±36,7 %). Das Prinzip — zur fettreichsten Mahlzeit — hält; die Zahl nicht.</li><li><strong>Was im Beitrag fehlt</strong>: Der Zeitpunkt, der im Training wirklich zählt, betrifft nicht Kapseln, sondern Protein — und dort zeigt die Meta-Analyse, dass der Effekt verschwindet, sobald man die Gesamtproteinzufuhr des Tages berücksichtigt (Schoenfeld et al., 2013).</li></ul></div>
+<h2>Ein umstrittener Beitrag, dessen Quellen aber sitzen</h2>
+<p>In den Kommentaren wird dem Beitrag vorgeworfen, von einer künstlichen Intelligenz erzeugt zu sein: Ein Leser sagt, die Melatonin-Grafik sei falsch, ein anderer, die Eisen-Folie widerspreche sich selbst, ein dritter bittet schlicht um eine Erklärung. Berechtigte Kritik an der Form. Inhaltlich existieren jedoch alle acht PMID, sie behandeln tatsächlich das jeweils zugeordnete Thema und nennen überwiegend die Zahlen, die ihnen zugeschrieben werden. Das ist besser als der Durchschnitt der Karussells, die wir hier prüfen.</p>
+<p>Das Problem sind nicht die Quellen, sondern das, was dazwischen steht: Eine korrekte Zahl, aus dem Kontext ihrer Messung gelöst, wird zu einer Regel, die auf dich womöglich nicht zutrifft.</p>
+<h2>Melatonin: die Uhr verschieben und einschlafen sind zwei Dinge</h2>
+<p>Das ist der Punkt, der die meisten Leser verwirrt hat, und die Verwirrung hat einen Grund: Melatonin leistet zwei verschiedene Dinge.</p>
+<p>Das erste ist <strong>die innere Uhr verschieben</strong>. Die zitierte Studie ist solide: Burgess und Kollegen gaben 27 Erwachsenen ohne feste Zeitvorgaben 3 mg Melatonin und erstellten eine Kurve, die zeigt, wie stark das Hormon den Rhythmus je nach Einnahmezeitpunkt verschiebt. Die größte Vorverlagerung ergibt sich am späten Nachmittag, etwa 5 Stunden vor Beginn der körpereigenen Melatoninproduktion, und beträgt <strong>1,8 Stunden</strong>. In der ersten Hälfte des gewohnten Schlafs gibt es eine Zone, in der der Effekt praktisch null ist. Die Autoren schließen selbst, dass die nächtliche Einnahme als Schlafmittel kaum phasenverschiebend wirkt. All das gibt der Beitrag korrekt wieder.</p>
+<p>Die zweite Aufgabe ist, <strong>dir beim schnelleren Einschlafen zu helfen</strong>. Das ist ein anderer Mechanismus, und der Beitrag erledigt ihn mit einem „es kann trotzdem müde machen". Wie müde? Die meistzitierte Meta-Analyse — 19 Studien, 1.683 Personen mit primären Schlafstörungen — misst eine Verkürzung der Einschlafzeit um <strong>7,06 Minuten</strong> (95 % KI 4,37-9,75) und 8,25 Minuten mehr Gesamtschlaf. Statistisch belastbar, klinisch klein. Diese Zahl verändert die Erwartung jeder Person, die Melatonin kauft, und sie steht nirgends im Beitrag.</p>
+<figure><div class="chart"><svg role="img" aria-label="Verkürzung der Einschlafzeit gegenüber Placebo: Melatonin 7,1 Minuten aus 19 Studien mit 1.683 Personen, Magnesium 17,4 Minuten aus 3 randomisierten Studien mit 151 älteren Menschen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" width="880" height="420" role="img" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="880" height="420" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="26" font-weight="700" text-anchor="start">Wie viel früher du einschläfst</text>
+<text x="40" y="78" fill="#a0a0a0" font-size="15" text-anchor="start">Verkürzung der Einschlafzeit gegenüber Placebo (Minuten)</text>
+<text x="40" y="146" fill="#f0f0f0" font-size="19" font-weight="600">Melatonin</text>
+<text x="40" y="168" fill="#a0a0a0" font-size="13">19 Studien, 1.683 Personen</text>
+<rect x="300" y="130" width="177" height="40" rx="5" fill="#aa8a2e"/>
+<text x="491" y="158" fill="#f3e5ab" font-size="24" font-weight="700">7,1 Min.</text>
+<text x="40" y="256" fill="#f0f0f0" font-size="19" font-weight="600">Magnesium</text>
+<text x="40" y="278" fill="#a0a0a0" font-size="13">3 RCT, 151 Ältere · niedrige Qualität</text>
+<rect x="300" y="240" width="435" height="40" rx="5" fill="#d4af37"/>
+<text x="749" y="268" fill="#f3e5ab" font-size="24" font-weight="700">17,4 Min.</text>
+<line x1="40" y1="358" x2="840" y2="358" stroke="#2a2a2a" stroke-width="1"/>
+<text x="40" y="384" fill="#a0a0a0" font-size="12.5" text-anchor="start">Quellen: Ferracioli-Oda et al., 2013 (PMID 23691095) · Mah &amp; Pitre, 2021 (PMID 33865376)</text>
+<text x="40" y="404" fill="#aa8a2e" font-size="12" font-weight="600" text-anchor="start">NURVAN</text>
+</svg></div><figcaption class="cap">Zwei Zahlen, die der Beitrag nie nebeneinanderstellt. Auf die Evidenzqualität achten: Der Melatonin-Wert stammt aus 19 Studien, der Magnesium-Wert aus 3 Studien an älteren Menschen, die die Autoren selbst als von niedriger Qualität einstufen.</figcaption></figure>
+<h2>Eisen: hier zählt der Zeitpunkt, aber die Variable ist der Abstand</h2>
+<p>Hier hat der Beitrag vollkommen recht, und es ist der interessanteste der acht Fälle. Eisen erhöht Hepcidin, das Hormon, das die Aufnahme drosselt, und Hepcidin bleibt lange genug erhöht, um die Dosis des Folgetages zu benachteiligen.</p>
+<p>In der Studie von Stoffel und Kollegen in <em>Lancet Haematology</em> nahmen Frauen mit niedrigem Ferritin 60 mg Eisen an 14 aufeinanderfolgenden Tagen oder dieselben 14 Dosen jeden zweiten Tag über 28 Tage. Ergebnis: <strong>131,0 mg aufgenommen gegenüber 175,3 mg</strong>, also 16,3 % der Dosis gegenüber 21,8 % (p = 0,0010). Die Tagesdosis auf zwei Gaben aufzuteilen half nicht (p = 0,33) und erhöhte das Hepcidin zusätzlich.</p>
+<figure><div class="chart"><svg role="img" aria-label="Insgesamt aufgenommenes Eisen bei denselben vierzehn Dosen à 60 mg: 131,0 mg bei täglicher Einnahme, 175,3 mg jeden zweiten Tag" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 420" width="880" height="420" role="img" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif">
+<rect width="880" height="420" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="26" font-weight="700" text-anchor="start">Eisen: dieselben 14 Dosen à 60 mg</text>
+<text x="40" y="78" fill="#a0a0a0" font-size="15" text-anchor="start">Insgesamt aufgenommenes Eisen, Frauen mit niedrigen Speichern (mg)</text>
+<text x="40" y="146" fill="#f0f0f0" font-size="19" font-weight="600">Tägliche Einnahme</text>
+<text x="40" y="168" fill="#a0a0a0" font-size="13">16,3 % der Dosis aufgenommen</text>
+<rect x="300" y="130" width="327" height="40" rx="5" fill="#aa8a2e"/>
+<text x="641" y="158" fill="#f3e5ab" font-size="24" font-weight="700">131,0 mg</text>
+<text x="40" y="256" fill="#f0f0f0" font-size="19" font-weight="600">Jeden zweiten Tag</text>
+<text x="40" y="278" fill="#a0a0a0" font-size="13">21,8 % der Dosis aufgenommen</text>
+<rect x="300" y="240" width="438" height="40" rx="5" fill="#d4af37"/>
+<text x="752" y="268" fill="#f3e5ab" font-size="24" font-weight="700">175,3 mg</text>
+<line x1="40" y1="358" x2="840" y2="358" stroke="#2a2a2a" stroke-width="1"/>
+<text x="40" y="384" fill="#a0a0a0" font-size="12.5" text-anchor="start">Quelle: Stoffel et al., 2017, Lancet Haematology (PMID 29032957)</text>
+<text x="40" y="404" fill="#aa8a2e" font-size="12" font-weight="600" text-anchor="start">NURVAN</text>
+</svg></div><figcaption class="cap">Gleiche Dosen, anderes Ergebnis: jeden zweiten Tag wird rund ein Drittel mehr aufgenommen. Studie an Frauen zwischen 18 und 40 Jahren mit Ferritin ≤ 25 µg/l.</figcaption></figure>
+<p><strong>Was der Beitrag nicht sagt</strong>: Die Teilnehmerinnen waren Frauen mit bereits erschöpften Eisenspeichern. Das ist kein Befund für die Allgemeinbevölkerung, und Eisensupplementierung ist eine Therapie, die anhand von Blutwerten eingestellt wird — nichts, womit man beginnt, weil man sich müde fühlt. Das Schema jeden zweiten Tag gehört in das Gespräch mit der Person, die das Eisen verordnet hat.</p>
+<p>Beim Kaffee ist der Beitrag präzise: In der Studie von Morck und Kollegen aus dem Jahr 1983 senkte Kaffee <strong>eine Stunde vor</strong> der Mahlzeit die Aufnahme nicht, während derselbe Kaffee <strong>eine Stunde danach</strong> sie von etwa 5,9 % auf etwa 1,6 % drückte. Zu präzisieren ist allerdings: Es ging um Nicht-Häm-Eisen aus einer Mahlzeit, nicht um eine Eisentablette, und die Teilnehmer hatten normale Speicher.</p>
+<h2>Vitamin D und Omega-3: nicht die Uhrzeit, die Mahlzeit</h2>
+<p>Der Mechanismus ist gut dargestellt — beide sind fettlöslich, es zählt also das Fett der Mahlzeit —, aber die Zahlen verdienen einen genaueren Blick.</p>
+<p><strong>Vitamin D, +57 %.</strong> Die Zahl ist korrekt wiedergegeben (56,7 %), stammt aber aus einer Studie mit <strong>17 Patienten ohne Kontrollgruppe</strong>: Menschen, die auf die Therapie nicht ansprachen und gebeten wurden, ihr Präparat zur größten Mahlzeit zu verlegen. Die Standardabweichung beträgt ±36,7 %, der Anstieg schwankte also enorm von Person zu Person, und die Dosen reichten von 1.000 bis 50.000 IE. Der praktische Rat bleibt sinnvoll und kostenlos; die „+57 %" sind kein Versprechen.</p>
+<p><strong>Omega-3, 3 von 50 Personen.</strong> Auch das stimmt: Bei einer fettarmen Mahlzeit behielten nur 3 von 50 Probanden mit der Ethylester-Form mindestens die Hälfte der Aufnahme, die sie mit einer fettreichen Mahlzeit erreichten. Der fehlende Kontext ist relevant: Die Studie vergleicht ein verschreibungspflichtiges 4-Gramm-Produkt mit einem Konkurrenzprodukt und ist von dem Unternehmen verfasst und finanziert, das den Gewinner herstellt. Das macht sie nicht falsch, aber es ist ein Interessenkonflikt, den eine Folie offenlegen sollte. Wer ein normales Fischöl aus der Drogerie nimmt, übersetzt es einfach: zu einer Mahlzeit, nicht nüchtern.</p>
+<h2>Kreatin und Magnesium: wo der Beitrag recht hat und wo er zu früh aufhört</h2>
+<p><strong>Kreatin.</strong> Die zitierte Studie verglich 5 g vor und 5 g nach dem Training bei 19 Freizeit-Bodybuildern über 4 Wochen: kein statistisch signifikanter Unterschied. Kurioserweise ist der Beitrag vorsichtiger als die Autoren, die in ihrem Fazit schreiben, nach dem Training sei „möglicherweise besser" — auf Basis der <em>magnitude-based inference</em>, einer heute weithin kritisierten Methode. In den Standardtests gibt es den Unterschied nicht. Bei Kreatin zählt die Konstanz, nicht die Uhr: Wir haben es in unserer <a href="/de/blog/kraftsport-supplemente-tier-list">Tier-List der Supplemente für Kraft</a> ganz nach oben gesetzt.</p>
+<p><strong>Magnesium.</strong> Der Beitrag sagt, die Autoren der Übersichtsarbeit zum Schlaf hätten die Evidenz als „minderwertig" bezeichnet. Das stimmt, genau dieses Wort steht dort. Doch dieselbe Übersichtsarbeit findet, wenn sie 3 randomisierte Studien mit 151 älteren Menschen zusammenfasst, eine Verkürzung der Einschlafzeit um <strong>17,36 Minuten</strong> (p = 0,0006): mehr als das Doppelte des Melatonin-Werts. Mit weit geringerer Sicherheit, in einer anderen Population und bei sehr wenigen Personen. Es mit „minderwertiger Evidenz" abzutun, begräbt die kurioseste Zahl des gesamten Beitrags.</p>
+<p><strong>Koffein.</strong> Hier liegt der Beitrag richtig: 400 mg sechs Stunden vor dem Zubettgehen stören den Schlaf messbar gegenüber Placebo. Die Übersetzung in „vier Tassen" ist die Schwachstelle, und ein Leser weist darauf hin: Der Koffeingehalt einer Tasse schwankt gewaltig. Ausführlich steht das in <a href="/de/blog/koffein-schlaf-wann-letzter-kaffee">wann der letzte Kaffee</a>.</p>
+<h2>Was die Forschung wirklich sagt</h2>
+<table><thead><tr><th>Aussage im Beitrag</th><th>Urteil</th><th>Warum</th></tr></thead><tbody><tr><td>Melatonin verschiebt die Uhr kaum, wenn es vor dem Schlafen genommen wird</td><td><strong>Bestätigt</strong></td><td>Tote Zone im frühen Schlaf; maximale Vorverlagerung 1,8 h am späten Nachmittag (Burgess 2008)</td></tr><tr><td>„Es kann trotzdem müde machen"</td><td><strong>Zu präzisieren</strong></td><td>Der Effekt besteht, ist aber 7,06 Minuten kürzere Einschlafzeit wert (Ferracioli-Oda 2013)</td></tr><tr><td>Koffein 6 Stunden vorher stört den Schlaf</td><td><strong>Bestätigt</strong></td><td>400 mg nach 0, 3 und 6 Stunden: alle drei signifikant gegenüber Placebo (Drake 2013)</td></tr><tr><td>Eisen jeden zweiten Tag: 175 mg statt 131 mg</td><td><strong>Bestätigt</strong></td><td>Aber bei Frauen mit Ferritin ≤ 25 µg/l, nicht in der Allgemeinbevölkerung (Stoffel 2017)</td></tr><tr><td>Kaffee eine Stunde vorher harmlos, eine Stunde danach schädlich</td><td><strong>Bestätigt</strong></td><td>Von 5,88 % auf 1,64 %; betrifft das Eisen der Mahlzeit, nicht die Tablette (Morck 1983)</td></tr><tr><td>Vitamin D zur größten Mahlzeit: +57 %</td><td><strong>Zu präzisieren</strong></td><td>17 Patienten, keine Kontrollgruppe, ±36,7 % Streuung (Mulligan 2010)</td></tr><tr><td>Omega-3: 3 von 50 bei fettarmer Mahlzeit</td><td><strong>Zu präzisieren</strong></td><td>Studie des Herstellers des Gewinnerprodukts, 4-g-Dosis auf Rezept (Davidson 2012)</td></tr><tr><td>Kreatin: vorher oder nachher macht keinen Unterschied</td><td><strong>Bestätigt</strong></td><td>Kein Unterschied in Standardtests; die Autoren schließen mit einer kritisierten Methode das Gegenteil (Antonio 2013)</td></tr><tr><td>Magnesium: minderwertige Evidenz</td><td><strong>Zu präzisieren</strong></td><td>Richtig bei der Qualität, aber der gemessene Effekt beträgt −17,36 Minuten Einschlafzeit (Mah 2021)</td></tr></tbody></table>
+<h2>Der Zeitpunkt, der wirklich zählt, und der im Beitrag fehlt</h2>
+<p>Wer trainiert, stellt sich die eigentliche Zeitpunktfrage nicht beim Melatonin, sondern beim Protein: das berühmte anabole Fenster.</p>
+<p>Die Meta-Regression von Schoenfeld, Aragon und Krieger fasste 23 Studien zur Hypertrophie und 20 zur Kraft zusammen. In einer einfachen Auswertung sah Protein rund um das Training nach einem kleinen bis mittleren Vorteil für die Hypertrophie aus. Sobald die Autoren die Kovariaten kontrollierten, verschwand dieser Effekt: Der stärkste Prädiktor für Muskelwachstum war <strong>die gesamte Proteinzufuhr des Tages</strong>, nicht die Uhrzeit der Einnahme. Wer in diesen Studien auf Timing achtete, aß schlicht mehr Protein.</p>
+<p>Dasselbe Prinzip gilt für fast jedes Supplement der Liste: Tagesdosis und Konstanz entscheiden über das Ergebnis, die Uhr fast nie. Für die Körperzusammensetzung gilt es ebenso — die großen Hebel liegen in der Tagessumme, wie wir bei der <a href="/de/blog/koerperrekomposition-fett-verlieren-muskeln-aufbauen">Körperrekomposition</a> gesehen haben.</p>
+<h2>So setzt du es um</h2>
+<ol class="steps"><li><strong>Frag dich, ob dein Supplement in eine der drei Kategorien mit Uhrzeit fällt.</strong> Eisen (der Abstand zwischen den Dosen), Fettlösliches wie Vitamin D und Omega-3 (die Mahlzeit) und alles, was auf Schlaf oder Wachheit wirkt, wie Koffein und Melatonin (die Stunden vor dem Bett). Alles andere: nimm es, wenn du daran denkst.</li><li><strong>Koppel das Supplement an eine Gewohnheit, die du schon hast</strong>, nicht an eine genaue Uhrzeit. Vitamin D und Omega-3 zur Hauptmahlzeit: Das Fett ist ohnehin da, und die Routine trägt sich selbst.</li><li><strong>Bei Kreatin nimm den bequemsten Zeitpunkt und bleib dabei</strong>: Konstanz über Monate wiegt weit mehr als dreißig Minuten vor oder nach der Einheit.</li><li><strong>Wenn du Melatonin zum Einschlafen nutzt, erwarte wenige Minuten Unterschied.</strong> Liegt das Problem an den Zeiten — Schichtarbeit, Jetlag —, dann zählt der Zeitpunkt sehr wohl, und das gehört zu einer Ärztin oder einem Arzt, nicht in ein Karussell.</li><li><strong>Eisen nur auf ärztliche Anweisung und auf Basis von Blutwerten.</strong> Das Schema jeden zweiten Tag ist eine Frage an die verordnende Person, keine Entscheidung im Alleingang.</li></ol>
+<div class="app"><div><h3>Mit Nurvan ist Supplementierung keine Liste von Uhrzeiten mehr</h3><p>Der Supplement-Bereich von Nurvan erfasst, was du nimmst, wie viel und wie oft, und hält das zusammen mit Training, Ernährungstagebuch und Laborwerten. Wenn du dich fragst „wirkt das?", siehst du Wochen echter Konstanz statt des Eindrucks von gestern Abend. ****</p></div><a class="cta" href="https://nurvan.app">Nurvan ausprobieren</a></div>
+<h2>Häufige Fragen</h2>
+<details><summary>Wann nimmt man Melatonin ein?</summary><p>Das hängt vom Ziel ab. Um die innere Uhr vorzuverlegen, ist der Effekt am späten Nachmittag am größten, viele Stunden vor dem Schlafen, und in der ersten Nachthälfte fast null (Burgess et al., 2008). Um etwas schneller einzuschlafen, nimmt man es abends, aber der gemessene Durchschnittseffekt liegt bei rund 7 Minuten. Bei einer echten Schlafstörung sprich mit einer Ärztin oder einem Arzt.</p></details>
+<details><summary>Kreatin vor oder nach dem Training?</summary><p>Die Studie, die beide Varianten vergleicht, findet über 4 Wochen keinen statistisch signifikanten Unterschied (Antonio und Ciccone, 2013). Weit wichtiger ist, es täglich zu nehmen, auch an Ruhetagen.</p></details>
+<details><summary>Muss Vitamin D zu einer Mahlzeit eingenommen werden?</summary><p>Es ist fettlöslich und wird daher mit einer fetthaltigen Mahlzeit besser aufgenommen. In der Studie mit 17 Patienten hob die Verlegung zur größten Mahlzeit die Blutwerte um durchschnittlich 57 %, aber es war eine kleine Serie ohne Kontrollgruppe und mit großer individueller Streuung.</p></details>
+<details><summary>Blockiert Kaffee die Eisenaufnahme?</summary><p>Er senkt die Aufnahme von Nicht-Häm-Eisen, wenn er zur Mahlzeit oder bis zu einer Stunde danach getrunken wird; eine Stunde vorher hatte er keine messbare Wirkung (Morck et al., 1983). Unter Eisentherapie ist der praktische Schritt, Kaffee und Einnahme zeitlich zu trennen, nach Anweisung deiner Ärztin oder deines Arztes.</p></details>
+<h2>Lies auch</h2>
+<ul><li><a href="/de/blog/kraftsport-supplemente-tier-list">Tier-List der Supplemente für Kraft: was die Forschung sagt</a> — welche Substanzen dein Maximalgewicht wirklich bewegen, von Kreatin bis HMB.</li><li><a href="/de/blog/koffein-schlaf-wann-letzter-kaffee">Koffein und Schlaf: wann der letzte Kaffee</a> — warum „eine Tasse" keine Dosis ist und wie viele Stunden es wirklich braucht.</li><li><a href="/de/blog/koerperrekomposition-fett-verlieren-muskeln-aufbauen">Körperrekomposition: Fett verlieren und Muskeln aufbauen</a> — was das Ergebnis wirklich entscheidet, wenn Ernährung und Training zusammenlaufen.</li></ul>
+<h2>Quellen</h2>
+<ol class="refs"><li>Burgess HJ, Revell VL, Eastman CI, 2008. <em>A three pulse phase response curve to three milligrams of melatonin in humans.</em> The Journal of Physiology 586(2):639-47. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/18006583/">18006583</a> · DOI <a href="https://doi.org/10.1113/jphysiol.2007.143180">10.1113/jphysiol.2007.143180</a></li><li>Ferracioli-Oda E, Qawasmi A, Bloch MH, 2013. <em>Meta-analysis: melatonin for the treatment of primary sleep disorders.</em> PLoS One 8(5):e63773. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/23691095/">23691095</a> · DOI <a href="https://doi.org/10.1371/journal.pone.0063773">10.1371/journal.pone.0063773</a></li><li>Drake C, Roehrs T, Shambroom J, Roth T, 2013. <em>Caffeine effects on sleep taken 0, 3, or 6 hours before going to bed.</em> Journal of Clinical Sleep Medicine 9(11):1195-200. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/24235903/">24235903</a> · DOI <a href="https://doi.org/10.5664/jcsm.3170">10.5664/jcsm.3170</a></li><li>Stoffel NU, Cercamondi CI, Brittenham G, et al., 2017. <em>Iron absorption from oral iron supplements given on consecutive versus alternate days...</em> The Lancet Haematology 4(11):e524-e533. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/29032957/">29032957</a> · DOI <a href="https://doi.org/10.1016/S2352-3026(17">10.1016/S2352-3026(17)30182-5</a>30182-5)</li><li>Morck TA, Lynch SR, Cook JD, 1983. <em>Inhibition of food iron absorption by coffee.</em> The American Journal of Clinical Nutrition 37(3):416-20. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/6402915/">6402915</a> · DOI <a href="https://doi.org/10.1093/ajcn/37.3.416">10.1093/ajcn/37.3.416</a></li><li>Mulligan GB, Licata A, 2010. <em>Taking vitamin D with the largest meal improves absorption and results in higher serum levels of 25-hydroxyvitamin D.</em> Journal of Bone and Mineral Research 25(4):928-30. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/20200983/">20200983</a> · DOI <a href="https://doi.org/10.1002/jbmr.67">10.1002/jbmr.67</a></li><li>Davidson MH, Johnson J, Rooney MW, Kyle ML, Kling DF, 2012. <em>A novel omega-3 free fatty acid formulation has dramatically improved bioavailability during a low-fat diet compared with omega-3-acid ethyl esters: the ECLIPSE study.</em> Journal of Clinical Lipidology 6(6):573-84. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/23312053/">23312053</a> · DOI <a href="https://doi.org/10.1016/j.jacl.2012.01.002">10.1016/j.jacl.2012.01.002</a></li><li>Antonio J, Ciccone V, 2013. <em>The effects of pre versus post workout supplementation of creatine monohydrate on body composition and strength.</em> Journal of the International Society of Sports Nutrition 10:36. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/23919405/">23919405</a> · DOI <a href="https://doi.org/10.1186/1550-2783-10-36">10.1186/1550-2783-10-36</a></li><li>Mah J, Pitre T, 2021. <em>Oral magnesium supplementation for insomnia in older adults: a Systematic Review &amp; Meta-Analysis.</em> BMC Complementary Medicine and Therapies 21(1):125. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33865376/">33865376</a> · DOI <a href="https://doi.org/10.1186/s12906-021-03297-z">10.1186/s12906-021-03297-z</a></li><li>Schoenfeld BJ, Aragon AA, Krieger JW, 2013. <em>The effect of protein timing on muscle strength and hypertrophy: a meta-analysis.</em> Journal of the International Society of Sports Nutrition 10(1):53. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/24299050/">24299050</a> · DOI <a href="https://doi.org/10.1186/1550-2783-10-53">10.1186/1550-2783-10-53</a></li></ol>
+<p>Literaturrecherche durchgeführt auf PubMed. Ausgangspunkt: der Beitrag von William Wallace (<a href="https://www.instagram.com/p/Dc_e9fmkc1z/">@dr.williamwallace</a>, 7. September 2026). Weder Text noch Bild des Beitrags wurden reproduziert: Seine Quellenangaben wurden in den Originalarbeiten nachgelesen.</p>
+<p>Giammaria Loi ist der Gründer von Nurvan. Er trainiert seit 2012 mit Gewichten, arbeitet seit 2013 als FIPE-zertifizierter Personal Trainer und Coach und startet seit 2018 im Powerlifting auf nationaler Ebene. Jeder Artikel, den er zeichnet, geht von den Studien aus und endet bei dem, was im Gym wirklich funktioniert. <a href="/autore/giammaria-loi">Autorenseite</a></p>
+<p class="note">Hinweis: informativer Inhalt, kein Ersatz für ärztlichen oder fachlichen Rat. Eisensupplementierung und Schlafstörungen erfordern eine individuelle medizinische Beurteilung.</p>
+</main>
+<footer>NURVAN · nurvan.app · 15. Oktober 2026</footer>
+</body>
+</html>
