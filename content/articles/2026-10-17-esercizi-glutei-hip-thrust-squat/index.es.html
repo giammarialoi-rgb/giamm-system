@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ejercicios de glúteos: ¿hip thrust o sentadilla? | Nurvan</title>
+<meta name="description" content="¿Hacen falta tres categorías de ejercicios para los glúteos? Hip thrust y sentadilla hacen crecer igual y el pump no es un mecanismo: nueve estudios.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entrenamiento</a><a href="#">Nutrición</a><a href="#">Suplementos</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descarga la app</a></div></header>
+<main class="wrap" lang="es">
+<div class="crumb">Blog · Entrenamiento · Evidencia</div>
+<h1>Ejercicios de glúteos: ¿hip thrust o sentadilla?</h1>
+<p class="lede">Un carrusel muy compartido afirma que los glúteos necesitan tres categorías obligatorias en cada día de pierna: básicos pesados, accesorios y trabajo de aislamiento "de pump". El esquema es ordenado y suena bien. He leído nueve estudios para comprobarlo. El consejo final —no hagas solo hip thrust— se sostiene. Dos de los tres pilares sobre los que se apoya, no: el pump no es el mecanismo que dice el post, y el ejercicio que "activa más" no es el que más hace crecer.</p>
+<div class="meta"><span>17 de octubre de 2026</span><span><b>12</b> min de lectura</span><span><b>9</b> estudios citados</span><span><a href="/autore/giammaria-loi">Giammaria Loi</a></span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Woman performing a barbell back squat in a gym, seen from behind"><figcaption class="cap">Nenad Stojkovic, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Woman_doing_squat_workout_in_gym_with_barbell,_back_view.jpg), CC BY 2.0</figcaption></figure>
+<div class="box"><h2>En resumen</h2><ul><li><strong>Hip thrust y sentadilla hacen crecer los glúteos por igual.</strong> Nueve semanas, resonancia magnética, mismo número de series: ninguna diferencia medible (Plotkin et al., 2023).</li><li><strong>El hip thrust activa mucho más</strong> —hasta 69,5% frente a 29,4% de señal eléctrica en el glúteo mayor— <strong>y eso no predice el crecimiento</strong> (Contreras et al., 2015; Plotkin et al., 2023).</li><li><strong>El "pump" no es el tercer mecanismo del crecimiento.</strong> El estrés metabólico, la hinchazón celular y las hormonas agudas no tienen respaldo como causas independientes de hipertrofia (Van Every et al., 2025).</li><li><strong>Variar los ejercicios sí sirve</strong>, pero por otro motivo: extensión y abducción de cadera hacen crecer <em>zonas distintas</em> del mismo músculo (Attarieh et al., 2026).</li><li><strong>Los 30-60 segundos de descanso</strong> del trabajo de pump son el punto más débil: por debajo de 60 segundos la hipertrofia tiende a empeorar (Singer et al., 2024).</li></ul></div>
+<h2>Lo que propone el post</h2>
+<p>Tres categorías, cada día de pierna. Básicos pesados (sentadilla, peso muerto, unilateral) para la tensión mecánica. Accesorios centrados en el glúteo (hip thrust, buenos días, peso muerto rumano) para el crecimiento de la fibra. Aislamiento a altas repeticiones (patadas, abducciones) para el pump, descrito en las diapositivas como "el tercer mecanismo del crecimiento muscular: el estrés metabólico".</p>
+<p>Antes de la ciencia, una rareza: <strong>el pie de foto y la tabla no coinciden</strong>. El texto prescribe 5-8, 8-20 y 25+ repeticiones; la tabla de la primera diapositiva dice 3-8, 8-15 y 15-25+. Quien lee el texto y quien mira la imagen salen con dos programas distintos. Es un detalle, pero dice algo sobre la precisión real de estos esquemas.</p>
+<h2>"Activa más" no significa "crece más"</h2>
+<p>Esta es la parte que debería cambiar de verdad cómo eliges los ejercicios.</p>
+<p>En 2015 un grupo que incluía a Bret Contreras —quien popularizó el hip thrust— midió la actividad eléctrica muscular (electromiografía o EMG: cuánta señal llega al músculo durante el ejercicio) en trece mujeres entrenadas, comparando hip thrust y sentadilla con cargas de 10 repeticiones. El resultado es rotundo: en la parte alta del glúteo mayor el hip thrust promedia <strong>69,5% del máximo frente al 29,4%</strong> de la sentadilla; en la parte baja, <strong>86,8% frente a 45,4%</strong>. En el vasto lateral, es decir el muslo, no hay diferencia significativa.</p>
+<p>Si la activación fuera buena guía, el hip thrust debería hacer crecer el glúteo casi el doble. En 2023 el propio Contreras firmó el estudio que puso a prueba esa idea: 34 personas no entrenadas, nueve semanas supervisadas, solo sentadilla o solo hip thrust, <strong>series igualadas</strong>, área muscular medida por resonancia magnética.</p>
+<p>El crecimiento del glúteo resultó <strong>similar en ambos grupos</strong>. Las estimaciones se inclinan algo hacia el hip thrust —1,6 cm² en la porción baja, 0,5 en la media, 0,5 en la alta— con márgenes de error tan amplios que contienen el cero sin problema. Los autores lo escriben sin rodeos: la mayor señal EMG durante el hip thrust <em>no predijo de forma consistente</em> la hipertrofia del glúteo.</p>
+<figure class="chartfig"><img src="images/chart-attivazione-crescita.es.svg" alt="Activación frente a crecimiento real: el hip thrust produce mucha más señal EMG que la sentadilla en el glúteo mayor, pero tras nueve semanas la diferencia de crecimiento medida por resonancia contiene el cero"><figcaption class="cap">A la izquierda, cuánta señal llega al músculo (Contreras et al., 2015, cargas de 10 repeticiones). A la derecha, la diferencia de crecimiento tras nueve semanas en centímetros cuadrados, con intervalos del 95% (Plotkin et al., 2023). Los valores positivos favorecen la sentadilla, los negativos el hip thrust: los tres intervalos cruzan el cero.</figcaption></figure>
+<p>El mismo estudio añade dos datos que el post no da: la sentadilla hizo crecer <strong>cuádriceps (+3,6 cm²) y aductores (+2,5 cm²)</strong> mucho más que el hip thrust, y la transferencia al peso muerto fue <strong>idéntica</strong>. Es el mismo principio que conté hablando de <a href="/es/blog/extension-de-piernas-o-prensa-recto-femoral">extensión de piernas y prensa</a>: el ejercicio que más "sientes" no es automáticamente el que más construye.</p>
+<h2>El pump no es un mecanismo de crecimiento</h2>
+<p>La tercera categoría se apoya en una frase concreta: el pump sería hinchazón celular y acumulación de fatiga, "el tercer mecanismo del crecimiento muscular: el estrés metabólico".</p>
+<p>Esa idea tuvo diez años de gloria y hoy es la esquina más discutida de la literatura. Una revisión de 2025 en el <em>Journal of Sport and Health Science</em>, firmada entre otros por Stuart Phillips, la incluye explícitamente entre los conceptos superados: las afirmaciones de que las respuestas hormonales agudas, el estrés metabólico, la hinchazón celular o "el pump" contribuyan de forma relevante a la hipertrofia <strong>no están respaldadas por la evidencia científica</strong>. En el mismo cajón acaba la hipertrofia "sarcoplásmica".</p>
+<p>No es una novedad repentina. Ya en 2017 una revisión dedicada a la pregunta —¿los metabolitos producidos durante el ejercicio aumentan la hipertrofia?— concluía que <strong>los metabolitos no tienen propiedades anabólicas por sí mismos</strong>. Pueden ayudar, pero solo de una manera: aumentando el reclutamiento de fibras, es decir llevando más fibras al mismo estímulo mecánico. Actúan <em>a través</em> de la tensión, no junto a ella.</p>
+<p>Nada de esto significa que las series de 25 repeticiones no construyan músculo. Lo hacen, como veremos. Significa que no las haces por el motivo escrito en la diapositiva, y llamarlas "categoría obligatoria" por un mecanismo que no existe es una forma frágil de construir un programa.</p>
+<h2>Variar funciona, pero por regiones</h2>
+<p>Aquí el post acierta, y la investigación reciente le da un motivo mejor que el que usa.</p>
+<p>Un estudio publicado en octubre de 2026 comparó diez semanas de <strong>extensión de cadera en polea frente a abducción de cadera</strong>, con un diseño especialmente limpio: cada participante entrenaba una pierna con un ejercicio y la otra con el otro, mismo volumen (unas 10 series semanales, 8-12 repeticiones), con resonancia magnética en tres regiones del glúteo mayor.</p>
+<p>La extensión produjo más crecimiento total (<strong>+9% frente a +5%</strong>), pero lo interesante es <em>dónde</em>. La extensión crece sobre todo abajo: +5% arriba, +8% en el centro, <strong>+14% abajo</strong>. La abducción hace lo contrario: <strong>+10% arriba</strong>, +4% en el centro, +1% abajo. Y solo la abducción tocó el glúteo medio y menor de forma apreciable.</p>
+<figure class="chartfig"><img src="images/chart-regioni-glutei.es.svg" alt="Dos ejercicios, dos mapas de crecimiento: la extensión de cadera hace crecer sobre todo la porción distal del glúteo mayor, la abducción la proximal"><figcaption class="cap">Crecimiento del área transversal del glúteo mayor por región tras 10 semanas, medido por resonancia magnética. Diseño intrasujeto: una pierna por ejercicio, mismo volumen. Fuente: Attarieh et al., 2026.</figcaption></figure>
+<p>Es la primera evidencia directa de que la selección de ejercicios modula el crecimiento <strong>regional</strong> del glúteo. Así que sí: las abducciones merecen un sitio. Pero no como "trabajo de pump a 25 repeticiones con 30 segundos de descanso", sino como ejercicio que entrena una porción que la extensión alcanza poco, con el mismo empeño que el resto.</p>
+<p>El fondo lo pone el metaanálisis de 2025 sobre hipertrofia del glúteo mayor: en 12 estudios el entrenamiento de fuerza produce un efecto moderado (0,71 en escala estandarizada, con poca heterogeneidad), y <strong>funcionan sentadilla profunda o paralela, prensa, extensiones de cadera e hip thrust</strong>, solos o combinados. No hay jerarquía obligatoria.</p>
+<h2>Repeticiones y descansos: qué aguanta y qué no</h2>
+<p>La frase de la cuarta diapositiva —todos los rangos construyen músculo si la serie llega cerca del fallo— es <strong>correcta</strong>. El metaanálisis en red de 2021 sobre 28 estudios y 747 adultos, con todas las series al fallo, no encuentra diferencias de hipertrofia entre cargas altas (hasta 8 repeticiones), medias (9-15) y bajas (más de 15). En fuerza máxima sí hay diferencia, a favor de las cargas altas.</p>
+<p>El punto débil es el descanso. El metaanálisis bayesiano de 2024 encuentra una pequeña ventaja para descansos <strong>por encima de 60 segundos</strong>, probablemente porque los descansos cortos hunden la carga total levantada; más allá de 90 segundos, ninguna diferencia apreciable. El post pone <strong>30-60 segundos</strong> justo en el trabajo de más repeticiones, que ya es el más fatigante: la combinación que más riesgo tiene de costar volumen sin comprar nada. En el otro extremo, los 3 minutos de los básicos sirven para la fuerza, pero no añaden nada sobre 90 segundos si solo buscas crecer.</p>
+<p>¿Y las "tres categorías obligatorias"? La síntesis de la conferencia de Jyväskylä de 2025, publicada en 2026, ordena las variables: series semanales, volumen-carga, duración de los descansos y cercanía al fallo influyen de forma relevante en la hipertrofia, <strong>mientras que la selección de ejercicios puede ser flexible</strong>. Es justo lo contrario de la jerarquía del post, que rigidiza la variable más flexible y deja sueltas las que cuentan.</p>
+<h2>Lo que dice de verdad la investigación</h2>
+<div class="verdict">
+<div class="v"><span class="pill ok">Confirmado</span><p>Todos los rangos construyen músculo si la serie llega cerca del fallo: ninguna diferencia de hipertrofia entre cargas altas, medias y bajas en 28 estudios. La fuerza máxima sigue necesitando cargas altas.</p></div>
+<div class="v"><span class="pill ok">Confirmado</span><p>No basta el hip thrust, pero no por los motivos del post: ejercicios distintos hacen crecer regiones distintas del glúteo mayor. La extensión crece la porción baja (+14%), la abducción la alta (+10%).</p></div>
+<div class="v"><span class="pill ok">Confirmado</span><p>Muchos ejercicios funcionan para el glúteo —sentadilla profunda o paralela, prensa, extensiones de cadera, hip thrust— con un efecto moderado y coherente entre estudios.</p></div>
+<div class="v"><span class="pill part">Matizar</span><p>"Tres categorías obligatorias cada día de pierna": la literatura coloca la selección de ejercicios entre las variables flexibles, y las series semanales, el volumen-carga, los descansos y la cercanía al fallo entre las que cuentan.</p></div>
+<div class="v"><span class="pill part">Matizar</span><p>Los 30-60 segundos de descanso en el trabajo de altas repeticiones: por encima de 60 segundos la hipertrofia va mejor y más allá de 90 ya no cambia. Los 3 minutos de los básicos sirven a la fuerza.</p></div>
+<div class="v"><span class="pill no">Desmentido</span><p>El "pump" como tercer mecanismo del crecimiento: estrés metabólico, hinchazón celular y respuestas hormonales agudas no están respaldados como causas independientes de hipertrofia.</p></div>
+<div class="v"><span class="pill no">Desmentido</span><p>Elegir ejercicios según cuánto "activan": el hip thrust produce más del doble de señal EMG que la sentadilla en el glúteo mayor, y tras nueve semanas de resonancia el crecimiento es el mismo.</p></div>
+<div class="v"><span class="pill nv">No verificable</span><p>Los rangos del propio post: el texto dice 5-8 / 8-20 / 25+, la tabla de la primera diapositiva dice 3-8 / 8-15 / 15-25+. No coinciden y ninguno remite a una fuente citada.</p></div>
+</div>
+<h2>Cómo aplicarlo</h2>
+<ol class="steps">
+<li><strong>Elige dos o tres ejercicios de extensión de cadera y mantenlos.</strong> Sentadilla profunda, hip thrust, peso muerto rumano, extensiones en polea: valen todos. El crecimiento viene de la carga que sube con el tiempo, no del ejercicio que mejor "sientes".</li>
+<li><strong>Añade abducciones para la parte alta.</strong> No como remate final, sino como ejercicio con el mismo empeño que el resto: en los datos es el único que llega a la porción proximal y al glúteo medio.</li>
+<li><strong>Cuenta series semanales, no categorías.</strong> Es la variable que la investigación pone primero. Diez series semanales de extensión de cadera produjeron +9% de área en diez semanas en personas no entrenadas.</li>
+<li><strong>No bajes de 60 segundos de descanso</strong>, ni siquiera en las series largas. Y no hace falta pasar de 90-120 segundos si el objetivo es crecer: guarda los 3 minutos para los básicos pesados.</li>
+<li><strong>Lleva las series cerca del fallo y anota cuánto.</strong> Las repeticiones en reserva (RIR) son lo que hace comparable una serie de 6 y una de 25. Sin ese número, "altas repeticiones" no significa nada: es el tema de <a href="/es/blog/cuantas-repeticiones-masa-muscular">cuántas repeticiones hacen falta para la masa</a>.</li>
+<li><strong>Deja de perseguir el ardor.</strong> El pump es una sensación, no una medida. Si lo usas para juzgar una sesión, estás evaluando el riego sanguíneo, no el crecimiento.</li>
+</ol>
+<div class="app"><div><h3>Cuenta el volumen, no el ardor</h3><p>Nurvan cuenta las series semanales por grupo muscular y registra carga y RIR en cada serie: ves si tus glúteos han recibido de verdad diez series esta semana y si la carga sube, en vez de fiarte de cómo te has sentido. Los descansos se cronometran dentro de la rutina.</p></div><a class="cta" href="https://nurvan.app">Prueba Nurvan</a></div>
+<h2>Preguntas frecuentes</h2>
+<details><summary>¿Hip thrust o sentadilla para los glúteos?</summary><p>
+Los dos, y si solo puedes elegir uno la investigación no corona ganador. En nueve semanas con resonancia y series igualadas el crecimiento del glúteo fue similar. La sentadilla además hace crecer cuádriceps y aductores; el hip thrust permite cargas mucho mayores en ese movimiento concreto. Lo decide el resto de tu programa, no el músculo.
+</p></details>
+<details><summary>¿Sirven las altas repeticiones para glúteos?</summary><p>
+Sí, pero no por el pump. Las series largas construyen tanto como las cortas si llegan cerca del fallo, y en ese punto son mucho más fatigantes. Si las usas, dales el mismo descanso que al resto: por debajo de 60 segundos el efecto tiende a empeorar.
+</p></details>
+<details><summary>¿Las abducciones y las patadas sirven de verdad?</summary><p>
+Sí, y por un motivo mejor que el habitual. En el estudio de 2026 la abducción hizo crecer la porción alta del glúteo mayor un 10% frente al 5% de la extensión, y alcanzó el glúteo medio. Es un ejercicio con otra diana, no un remate.
+</p></details>
+<details><summary>¿Cuántas veces por semana entrenar glúteos?</summary><p>
+Los datos más directos sobre este músculo vienen de programas con dos sesiones semanales y unas diez series a la semana, que produjeron crecimiento medible en diez semanas. El número de sesiones importa menos que el total semanal de series: el reto es repartirlo de forma sostenible, como cuento en <a href="/es/blog/rutina-entrenamiento-principiante-avanzado">rutinas para principiantes y avanzados</a>.
+</p></details>
+<h2>Lee también</h2>
+<ul>
+<li><a href="/es/blog/extension-de-piernas-o-prensa-recto-femoral">Extensión de piernas o prensa: qué crece de verdad</a> — cuando el ejercicio "más completo" no hace crecer el músculo que te interesa</li>
+<li><a href="/es/blog/cuantas-repeticiones-masa-muscular">Cuántas repeticiones para masa muscular: el mito del 8-12</a> — cargas, series y descansos elegidos con datos</li>
+<li><a href="/es/blog/rutina-entrenamiento-principiante-avanzado">Rutina de entrenamiento: principiante o avanzado</a> — cómo repartir las series semanales</li>
+</ul>
+<h2>Fuentes</h2>
+<ol class="refs">
+<li>Plotkin DL, Rodas MA, Vigotsky AD, et al., 2023. Hip thrust and back squat training elicit similar gluteus muscle hypertrophy and transfer similarly to the deadlift. <em>Front Physiol</em> 14:1279170. PMID 37877099 — <a href="https://doi.org/10.3389/fphys.2023.1279170">doi.org/10.3389/fphys.2023.1279170</a></li>
+<li>Contreras B, Vigotsky AD, Schoenfeld BJ, Beardsley C, Cronin J, 2015. A comparison of gluteus maximus, biceps femoris, and vastus lateralis electromyographic activity in the back squat and barbell hip thrust exercises. <em>J Appl Biomech</em> 31(6):452-458. PMID 26214739 — <a href="https://doi.org/10.1123/jab.2014-0301">doi.org/10.1123/jab.2014-0301</a></li>
+<li>Van Every DW, Lees MJ, Wilson B, Nippard J, Phillips SM, 2025. Load-induced human skeletal muscle hypertrophy: mechanisms, myths, and misconceptions. <em>J Sport Health Sci</em> 15:101104. PMID 41276164 — <a href="https://doi.org/10.1016/j.jshs.2025.101104">doi.org/10.1016/j.jshs.2025.101104</a></li>
+<li>Dankel SJ, Mattocks KT, Jessee MB, et al., 2017. Do metabolites that are produced during resistance exercise enhance muscle hypertrophy? <em>Eur J Appl Physiol</em> 117(11):2125-2135. PMID 28776271 — <a href="https://doi.org/10.1007/s00421-017-3690-1">doi.org/10.1007/s00421-017-3690-1</a></li>
+<li>Attarieh P, Nunes JP, Khani S, et al., 2026. Regional hypertrophy of the gluteal muscles is task-specific: differential responses to 10 weeks of hip extension versus hip abduction training. <em>J Strength Cond Res</em>, publicación anticipada en línea. PMID 42842490 — <a href="https://doi.org/10.1519/JSC.0000000000005701">doi.org/10.1519/JSC.0000000000005701</a></li>
+<li>Krause Neto W, Krause TLV, Gama EF, 2025. The impact of resistance training on gluteus maximus hypertrophy: a systematic review and meta-analysis. <em>Front Physiol</em> 16:1542334. PMID 40276368 — <a href="https://doi.org/10.3389/fphys.2025.1542334">doi.org/10.3389/fphys.2025.1542334</a></li>
+<li>Lopez P, Radaelli R, Taaffe DR, et al., 2021. Resistance training load effects on muscle hypertrophy and strength gain: systematic review and network meta-analysis. <em>Med Sci Sports Exerc</em> 53(6):1206-1216. PMID 33433148 — <a href="https://doi.org/10.1249/MSS.0000000000002585">doi.org/10.1249/MSS.0000000000002585</a></li>
+<li>Singer A, Wolf M, Generoso L, et al., 2024. Give it a rest: a systematic review with Bayesian meta-analysis on the effect of inter-set rest interval duration on muscle hypertrophy. <em>Front Sports Act Living</em> 6:1429789. PMID 39205815 — <a href="https://doi.org/10.3389/fspor.2024.1429789">doi.org/10.3389/fspor.2024.1429789</a></li>
+<li>Roberts MD, Bamman MM, Hornberger TA, et al., 2026. Research into resistance training response heterogeneity: a summary of the 2025 conference at the University of Jyväskylä. <em>J Appl Physiol</em> 140(6):1761-1776. PMID 42172438 — <a href="https://doi.org/10.1152/japplphysiol.00289.2026">doi.org/10.1152/japplphysiol.00289.2026</a></li>
+</ol>
+<p>Punto de partida: carrusel de <a href="https://www.instagram.com/p/Dc57wEdESMF/">John Rusin</a> (5 de septiembre de 2026). No se ha reproducido ningún texto ni imagen del post: todas las afirmaciones se han reescrito y verificado en la literatura primaria.</p>
+<p>Giammaria Loi es el fundador de Nurvan. Entrena con pesas desde 2012, trabaja como entrenador personal y coach certificado FIPE desde 2013 y compite en powerlifting a nivel nacional desde 2018. Cada artículo que firma parte de los estudios científicos y llega a lo que funciona de verdad en el gimnasio. <a href="/autore/giammaria-loi">Página del autor</a></p>
+<p class="note">Nota: contenido informativo, no sustituye la opinión de un médico o profesional cualificado. Si tienes dolor de cadera o espalda o una lesión en curso, hazte valorar antes de cambiar tu entrenamiento.</p>
+</main>
+<footer>NURVAN · nurvan.app · 17 de octubre de 2026</footer>
+</body>
+</html>
