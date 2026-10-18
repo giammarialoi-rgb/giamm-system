@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Honig vor dem Schlafen: bringt das wirklich was? | Nurvan</title>
+<meta name="description" content="Weniger nächtliches Aufwachen durch einen Löffel Honig? Der Leberglykogen-Mechanismus anhand von 11 Studien geprüft: was hält und was nicht.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Ernährung</a><a href="#">Supplemente</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">App laden</a></div></header>
+<main class="wrap" lang="de">
+<div class="crumb">Blog · Ernährung · Evidenz</div>
+<h1>Honig vor dem Schlafen: bringt das wirklich was?</h1>
+<p class="lede">Ein vielgeteiltes Karussell erklärt, warum ein Löffel Honig vor dem Schlafen das Aufwachen um drei Uhr nachts verhindern soll: Die Leber verbraucht ihr Glykogen, das Cortisol springt an, du wachst auf. Die Kette ist gut erzählt, und der Beitrag ist ehrlicher als der Durchschnitt — er räumt ein, dass die Humandaten zum Schlaf dünn sind. Ich habe elf Studien gelesen, um den Rest zu prüfen. Der Mechanismus scheitert an genau den zwei Punkten, auf denen alles ruht, und die fehlende Zahl ist immer dieselbe: die Dosis.</p>
+<div class="meta"><span>18. Oktober 2026</span><span><b>10</b> Min. Lesezeit</span><span><b>11</b> zitierte Studien</span><span><a href="/autore/giammaria-loi">Giammaria Loi</a></span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Glas mit Honig und ein Holzlöffel, von dem Honig tropft"><figcaption class="cap">Scott Bauer, USDA Agricultural Research Service, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Runny_hunny.jpg), gemeinfrei</figcaption></figure>
+<div class="box"><h2>Kurz gefasst</h2><ul><li><strong>Nachts läuft die Leber nicht leer.</strong> Schon in den ersten 22 Stunden des Fastens stellt die Leber 64 % der zirkulierenden Glukose selbst her, statt sie dem Speicher zu entnehmen (Rothman et al., 1991).</li><li><strong>Das Cortisol, das gegen Ende der Nacht steigt, ist eine Uhr, kein Alarm.</strong> Es ist der zirkadiane Rhythmus: am niedrigsten beim Einschlafen, am höchsten im Moment des Aufwachens (Mohd Azmi et al., 2021).</li><li><strong>Um einen gesunden Menschen über den Blutzucker zu wecken, braucht es 2,2 mmol/l</strong> — eine mit Insulin erzeugte schwere Unterzuckerung —, und selbst dann wachten nur 10 von 16 auf (Schultes et al., 2007).</li><li><strong>Ein Esslöffel Honig sind 16 Gramm Zucker</strong> (CREA-Tabellen). Die Studie, die den Fruktose-Mechanismus belegt, verwendete 562 Gramm in fünf Stunden (Fuchs et al., 2016).</li><li><strong>„Reine Glukose füllt das Leberglykogen nicht auf" ist falsch:</strong> In derselben Studie legte Glukose allein 16,4 Gramm zu, etwa die Hälfte von Saccharose. Die Hälfte, nicht null.</li></ul></div>
+<h2>Was der Beitrag behauptet</h2>
+<p>Die Kette geht so. Das Gehirn macht 2 % des Körpergewichts aus, verbrennt aber rund 20 % der Ruheglukose. Nachts verbraucht es weiter, das Leberglykogen geht zur Neige, der Körper mobilisiert „Notfalltreibstoff", indem er gegen zwei Uhr das Cortisol anhebt, und das Cortisol reißt dich aus dem Tiefschlaf. Honig, halb Glukose und halb Fruktose, liefere dem Gehirn sofort Zucker und der Leber die Fruktose zum Wiederaufbau des Speichers. Protokoll: ein Esslöffel roher Honig dreißig Minuten vor dem Schlafengehen.</p>
+<p>Der erste Baustein stimmt. Das Gehirn ist ein extrem teures Organ: Es verbraucht durchgehend zwischen 20 % und 25 % der Energie des gesamten Organismus, auch im Schlaf. Darüber gibt es keine Diskussion.</p>
+<p>Zu sagen ist auch, dass dieser Beitrag transparenter ist als fast alles Vergleichbare: Eine ganze Folie widmet sich der Stärke der Evidenz und räumt offen ein, dass die Humanstudien zu Honig und Schlaf „dünn" sind und vieles aus Tierversuchen hochgerechnet wird. Das ist selten und verdient Anerkennung. Das Problem: Die zwei Folien davor präsentieren als gesicherte Physiologie zwei Schritte, die Humanstudien anders erzählen. Zur Einordnung: Instagram kennzeichnet diesen Beitrag als <strong>mit künstlicher Intelligenz erzeugten oder bearbeiteten Inhalt</strong>.</p>
+<h2>Die Leber läuft im Schlaf nicht leer</h2>
+<p>Hier fällt der erste Baustein des Mechanismus.</p>
+<p>Die Leber hat zwei Wege, den Blutzucker stabil zu halten, wenn du nichts isst. Sie kann Glykogen abbauen, den fertigen Zuckerspeicher (Glykogenolyse), oder sie kann aus Laktat, Aminosäuren und Glycerin neue Glukose <em>herstellen</em>: die Gluconeogenese, ein Prozess, der durchgehend läuft.</p>
+<p>1991 maß eine Gruppe aus Yale erstmals, wie viel jeder der beiden Wege beim Menschen beiträgt, und verfolgte per Magnetresonanz die Leberglykogen-Konzentration Stunde für Stunde über ein 68-stündiges Fasten. Das Ergebnis: <strong>Schon in den ersten 22 Stunden deckt die Gluconeogenese 64 % der gesamten Glukoseproduktion</strong>. Nach 36 Stunden sind es 82 %, nach 54 Stunden 96 %.</p>
+<figure class="chartfig"><img src="images/chart-glucosio-notte.de.svg" alt="Gestapeltes Balkendiagramm: Nach 22 Stunden Fasten stammen 64 % der produzierten Glukose aus der Gluconeogenese und 36 % aus dem Leberglykogen; nach 36 Stunden 82 % und 18 %; nach 54 Stunden 96 % und 4 %"><figcaption class="cap">Anteil der gesamten Glukoseproduktion, den die beiden Wege der Leber decken, zu drei Zeitpunkten des Fastens. Je länger das Fasten dauert, desto weniger zählt der Glykogenspeicher. Quelle: Rothman et al., 1991.</figcaption></figure>
+<p>Übersetzt: Der Leberglykogen-Speicher ist nicht die Säule, die deine Nacht trägt. Er ist schon am Ende eines Fastens, das dreimal so lang ist wie eine Nacht Schlaf, der kleinere Anteil. In den acht Stunden im Bett sinkt der Speicher sehr wohl, aber du bist noch in dem Fenster, in dem die Leber eine komplette zweite Produktionslinie laufen hat, die den größten Teil des Bedarfs deckt. Es gibt keinen Moment, in dem „der Sprit ausgeht" und der Notfall einsetzt.</p>
+<h2>Das Cortisol um drei Uhr ist kein Blutzucker-Alarm</h2>
+<p>Zweiter Baustein — und auch der hält nicht.</p>
+<p>Cortisol folgt einem sehr ausgeprägten zirkadianen Rhythmus, gesteuert von der Hypothalamus-Hypophysen-Nebennieren-Achse: <strong>Es ist zu Beginn des Schlafs am niedrigsten, steigt in der zweiten Nachthälfte an und erreicht seinen Höchstwert in dem Moment, in dem du aufwachst</strong>. Dieser nächtliche Anstieg ist keine Reaktion auf etwas, das im Stoffwechsel schiefgelaufen wäre: Er ist eingeplant, er bereitet den Organismus aufs Aufwachen vor, und er passiert auch bei denen, die bestens zu Abend gegessen haben.</p>
+<p>Aber kann ein niedriger Blutzucker wecken? Ja — und wir wissen genau, bei welchem Wert, denn es wurde gemessen. In einer 2007 in <em>PLoS Medicine</em> veröffentlichten Studie senkte man den Blutzucker im Schlaf per Insulininfusion, bei 16 Gesunden und 16 Menschen mit Typ-1-Diabetes. Der erreichte Tiefpunkt lag bei <strong>2,2 mmol/l</strong>, rund 40 mg/dl: eine schwere Unterzuckerung, die ein Eingreifen erfordert. An diesem Punkt wachten <strong>10 von 16 Gesunden</strong> auf — und nur eine von 16 Personen mit Diabetes.</p>
+<p>Das sind zwei Informationen in einer. Erstens: Der gesunde Organismus hat tatsächlich einen blutzuckergekoppelten Weckmechanismus, und das Adrenalin steigt im Mittel siebeneinhalb Minuten <em>vor</em> den ersten Anzeichen des Erwachens. Zweitens, und wichtiger: Dieser Mechanismus springt bei Werten an, die ein gesunder Mensch im Schlaf nach dem Abendessen nicht erreicht. Dafür brauchte es eine Insulininfusion.</p>
+<p>Wenn du um drei Uhr aufwachst, kommen viele plausible Ursachen infrage: Alkohol, Zimmertemperatur, Stress, Schlafapnoe, zu spät getrunkenes Koffein, normale kurze Wachphasen, an die man sich sonst nicht erinnert. Es ist dieselbe Überlegung wie bei <a href="/de/blog/koffein-schlaf-wann-letzter-kaffee">Koffein und Schlaf</a>: Bevor man zu einem Supplement greift, prüft man die Variablen mit gemessener Wirkung.</p>
+<h2>Ein Löffel ist viel zu wenig — und der Beitrag sagt es nie</h2>
+<p>Das ist die Zahl, die auf allen sieben Folien fehlt: <strong>wie viel Zucker in einem Löffel Honig steckt</strong>.</p>
+<p>Die CREA-Nährwerttabellen, dieselben, die Nurvan für das Ernährungstagebuch nutzt, geben Honig mit 80,3 Gramm Kohlenhydraten je 100 Gramm an — alles Einfachzucker — und 304 kcal, bei einer Standardportion von 20 Gramm. Ein Esslöffel sind also <strong>rund 16 Gramm Zucker und 61 Kalorien</strong>.</p>
+<p>Vergleichen wir das mit der Studie, die den vom Beitrag beschworenen Mechanismus belegt. 2016 entleerten fünfzehn trainierte Radfahrer ihre Speicher durch erschöpfende Belastung und nahmen dann fünf Stunden lang <strong>1,5 Gramm Kohlenhydrate je Kilo Körpergewicht pro Stunde</strong>: bei einem 75-Kilo-Athleten rund 112 Gramm pro Stunde, <strong>562 Gramm insgesamt</strong>. Das per Magnetresonanz gemessene Leberglykogen stieg mit Saccharose von 53,6 auf 86,8 Gramm.</p>
+<figure class="chartfig"><img src="images/chart-dose-miele.de.svg" alt="Balkendiagramm: 562 Gramm Zucker in der Studie von 2016 gegenüber 16 Gramm in einem Esslöffel Honig; Leberglykogen-Zuwachs in fünf Stunden, plus 33,2 Gramm mit Saccharose und plus 16,4 mit reiner Glukose"><figcaption class="cap">Oben die Dosis: die der Studie, die den Mechanismus belegt, und die eines Esslöffels Honig nach den CREA-Tabellen. Unten das per Magnetresonanz gemessene Ergebnis: Reine Glukose legt etwa die Hälfte von Saccharose zu, nicht null. Quellen: Fuchs et al., 2016; CREA 2019.</figcaption></figure>
+<p>Ein Esslöffel Honig sind <strong>2,9 %</strong> dieser Dosis. Und dieselbe Übersichtsarbeit zum Leberglykogen setzt die Schwelle, unterhalb derer Kohlenhydrate die Entleerung während der Belastung nicht verhindern: über <strong>1,5 Gramm pro Minute</strong>, also mehr als 90 Gramm pro Stunde. Fünf Löffel Honig pro Stunde, nicht einer am Ende des Tages.</p>
+<p>Das heißt nicht, dass 16 Gramm Zucker gar nichts tun. Es heißt, dass sie genau das nicht können, was der Beitrag ihnen zuschreibt: einen Leberspeicher füllen, der bei jenen Athleten zwischen 49 und 87 Gramm Glykogen enthielt.</p>
+<h2>„Reine Glukose bringt nichts&quot;: falsch — und dieselbe Studie sagt es</h2>
+<p>Folie 4 enthält die schärfste Behauptung des Beitrags, die, die Honig gegenüber jedem anderen Zucker rechtfertigt: Reine Glukose treibe den Blutzucker schnell hoch und ebenso schnell wieder runter, ohne das Leberglykogen „in nennenswertem Maß" aufzufüllen.</p>
+<p>Die Studie von 2016 verglich genau das: Saccharose gegen reine Glukose, gleiche Dosis, dieselben fünf Stunden. Saccharose schnitt besser ab, und das ist der Befund, der dem Fruktose-Teil recht gibt: <strong>+3,4 Gramm Leberglykogen pro Stunde</strong> gegenüber Glukose (95-%-Konfidenzintervall: 1,6 bis 5,1). Aber reine Glukose blieb nicht bei null: Sie brachte das Leberglykogen von 49,3 auf 65,7 Gramm, also <strong>+16,4 Gramm</strong>, gegenüber +33,2 bei Saccharose. Etwa die Hälfte. Beim Muskelglykogen waren beide Zucker identisch (p = 0,673).</p>
+<p>„Die Hälfte" und „in nicht nennenswertem Maß" sind nicht dasselbe. Der Fruktose-Vorteil ist real und gemessen, und er ist ein vernünftiger Grund, Honig, Saccharose oder eine Glukose-Fruktose-Mischung zu bevorzugen, wenn die Leber schnell wieder aufgeladen werden muss — etwa zwischen zwei Einheiten am selben Tag. Er ist kein Grund zu sagen, Glukose funktioniere nicht.</p>
+<h2>Beim Training dagegen ist etwas dran</h2>
+<p>Der Leistungsteil ist der solideste des Beitrags, und auch hier verändert das Detail den Sinn.</p>
+<p>Die Studie hinter der Behauptung stammt von 2004: neun Radfahrer, 64 Kilometer Einzelzeitfahren, drei verblindete Durchgänge mit <strong>15 Gramm Honig (glykämischer Index 35), 15 Gramm Dextrose (glykämischer Index 100) oder Placebo alle 16 Kilometer</strong>. Zeiten: Honig 128 Minuten 42 Sekunden, Dextrose 128:18, Placebo 131:18. Zwischen Honig und Dextrose beträgt der Unterschied <strong>0,39 %</strong>, mit einem Intervall von -3,39 % bis +4,15 %: kein Unterschied. Beide Kohlenhydrate zusammen schlagen das Placebo (p &lt; 0,02).</p>
+<p>Also ja: Honig zieht mit dem Gel gleich. Aber im selben Versuch <strong>zieht auch Dextrose gleich, also reine Glukose</strong> — genau das, was Folie 4 für nutzlos erklärt. Und die Dosis waren 15 Gramm alle 16 Kilometer, rund 60 Gramm in zwei Stunden: ein Löffel nach dem anderen, während der Belastung. Nicht ein Löffel vor dem Losfahren.</p>
+<p>Ein neuerer Befund dämpft die Begeisterung weiter: 2025 wurde ein Supplement aus Honigpulver und Protein an zwölf Radfahrern mit einem 20-Minuten-Zeitfahren nach 100 Minuten Arbeit getestet. Gesamtarbeit 294 kJ gegenüber 292 beim Placebo, mittlere Leistung 245 gegenüber 243 Watt: <strong>kein Unterschied</strong> (p = 0,72 und p = 0,61), auch nicht bei Blutzucker, Laktat oder empfundener Anstrengung.</p>
+<p>Beim Preis hat der Beitrag recht, und das ist ein echter praktischer Punkt: Wenn du drei Stunden fährst und 60 bis 90 Gramm Kohlenhydrate pro Stunde brauchst, kostet Honig einen Bruchteil dessen, was Gels kosten. Der doppelte Aufnahmeweg, den Folie 6 nennt — die Transporter SGLT1 für Glukose und GLUT5 für Fruktose, die parallel arbeiten —, ist real und zählt tatsächlich, <em>aber nur bei diesen Zufuhrraten</em>. Bei 16 Gramm gibt es keinen Weg zu sättigen.</p>
+<h2>Und Honig vor dem Schlafen? Die Daten fehlen</h2>
+<p>Zu Honig und Schlaf bei Erwachsenen habe ich auf PubMed keine randomisierte Studie gefunden. Die 2024 erschienene Übersichtsarbeit zum Thema beschreibt Honig als vielversprechenden Ansatz für den Schlaf, kommt aber zu dem Schluss, dass die Mechanismen ungeklärt sind und weitere Forschung nötig ist: eine Sammlung von Hypothesen, nicht von Ergebnissen.</p>
+<p>Die einzige randomisierte, kontrollierte Studie mit einem Schlaf-Endpunkt betrifft Kinder: 161 Kinder zwischen 1 und 5 Jahren mit Erkältungshusten, Akazienhonig gegen einen Placebo-Sirup mit Honiggeschmack in der Stunde vor dem Zubettgehen. Beide Gruppen besserten sich, <strong>ohne jeden Unterschied zwischen Honig und Placebo</strong>, weder beim Husten noch bei den Schlafproblemen. Ein anderer Kontext, aber es ist die einzige kontrollierte Evidenz, die existiert — und sie weist in die Gegenrichtung zur Erzählung des Beitrags.</p>
+<p>Etwas funktioniert allerdings tatsächlich mit Kohlenhydraten und Schlaf, und das übersieht der Beitrag. 2007 aßen zwölf gesunde Männer eine Mahlzeit mit hohem glykämischen Index <strong>vier Stunden vor dem Schlafengehen</strong>: Die Einschlaflatenz sank von 17,5 auf 9,0 Minuten (p = 0,009). Dieselbe Mahlzeit <strong>eine Stunde vorher</strong> wirkte schlechter: 14,6 Minuten. Das Protokoll des Beitrags nennt dreißig Minuten vor dem Licht-aus — genau die falsche Seite der einzigen verfügbaren Daten.</p>
+<h2>Was die Forschung wirklich sagt</h2>
+<div class="verdict">
+<div class="v"><span class="pill ok">Bestätigt</span><p>Das Gehirn ist ein enormer und konstanter Energieverbraucher: zwischen 20 % und 25 % des Verbrauchs des ganzen Organismus, Tag und Nacht.</p></div>
+<div class="v"><span class="pill ok">Bestätigt</span><p>Fruktose hilft beim Wiederauffüllen des Leberglykogens besser als Glukose allein: 3,4 Gramm pro Stunde mehr, per Magnetresonanz gemessen.</p></div>
+<div class="v"><span class="pill ok">Bestätigt</span><p>Im Ausdauerbereich zieht Honig über ein 64-km-Zeitfahren mit einem kommerziellen Gel gleich — in derselben Studie aber auch reine Glukose.</p></div>
+<div class="v"><span class="pill part">Zu präzisieren</span><p>„Das 1:1-Verhältnis ist der ganze Mechanismus&quot;: Die Richtung stimmt, die Dosis nicht. Ein Löffel sind 2,9 % der Kohlenhydrate aus der Studie, die diesen Mechanismus belegt.</p></div>
+<div class="v"><span class="pill part">Zu präzisieren</span><p>Honig kostet weniger als Gels: stimmt, aber der Vergleich gilt bei gleicher Dosis, also 60 bis 90 Gramm Kohlenhydrate pro Stunde während der Belastung, nicht ein Löffel.</p></div>
+<div class="v"><span class="pill no">Widerlegt</span><p>„Nachts verbraucht die Leber ihr Glykogen&quot;: Schon in den ersten 22 Stunden des Fastens stammen 64 % der produzierten Glukose aus der Gluconeogenese, nicht aus dem Speicher.</p></div>
+<div class="v"><span class="pill no">Widerlegt</span><p>„Leeres Glykogen lässt um zwei Uhr das Cortisol anspringen und weckt dich&quot;: Der nächtliche Cortisolanstieg ist zirkadian, und einen gesunden Menschen über den Blutzucker zu wecken erfordert einen insulininduzierten Abfall auf 2,2 mmol/l.</p></div>
+<div class="v"><span class="pill no">Widerlegt</span><p>„Reine Glukose füllt das Leberglykogen nicht nennenswert auf&quot;: Sie legte in fünf Stunden 16,4 Gramm zu, etwa die Hälfte von Saccharose.</p></div>
+<div class="v"><span class="pill nv">Nicht überprüfbar</span><p>„Nur roher Honig: verarbeiteter verliert die entscheidende Enzymaktivität.&quot; Keine Studie auf PubMed vergleicht rohen und verarbeiteten Honig bei Schlaf oder Glykogen; in der Studie von 2004 war der Honig ein kommerzielles Produkt und wirkte.</p></div>
+<div class="v"><span class="pill nv">Nicht überprüfbar</span><p>Weniger Aufwachen um drei Uhr durch einen Löffel Honig: keine randomisierte Studie bei Erwachsenen. Der einzige kontrollierte Schlaf-Endpunkt, bei Kindern, findet keinen Unterschied zum Placebo.</p></div>
+</div>
+<h2>So wendest du es an</h2>
+<ol class="steps"><li><strong>Wenn du nachts aufwachst, fang bei den Ursachen mit Daten an.</strong> Alkohol vor dem Schlafen, warmes Zimmer, spätes Koffein, Stress, Schlafapnoe. Sie haben gemessene Wirkungen auf den Schlaf; das Leberglykogen hat sie bei Gesunden nicht.</li><li><strong>Wenn du Kohlenhydrate für den Schlaf testen willst, verschieb sie.</strong> Der einzige positive Befund betrifft eine Mahlzeit mit hohem glykämischen Index vier Stunden vor dem Zubettgehen, nicht einen Löffel dreißig Minuten vorher. Ein normales Abendessen mit Kohlenhydraten erledigt das bereits.</li><li><strong>Nutze Honig dort, wo er wirklich hingehört: während langer Belastungen.</strong> Ab 90 Minuten 60 bis 90 Gramm Kohlenhydrate pro Stunde. Honig ist eine ausgezeichnete günstige Quelle, und die Glukose-Fruktose-Mischung ist bei diesen Mengen ein echter Vorteil.</li><li><strong>Nach dem Training zählt Fruktose, wenn bald die nächste Einheit kommt.</strong> Honig, Saccharose oder ein Glukose-Fruktose-Getränk laden die Leber fast doppelt so schnell wieder auf wie reine Glukose. Ist die nächste Einheit erst morgen, hast du alle Zeit und die Zuckerwahl fällt kaum ins Gewicht.</li><li><strong>Trag es ins Tagebuch ein.</strong> Ein Löffel sind 61 Kalorien und 16 Gramm Zucker: an einem Abend vernachlässigbar, als tägliche Gewohnheit zusätzlich zum Rest nicht mehr. Es ist dasselbe Thema wie bei <a href="/de/blog/machen-kohlenhydrate-dick-verstecktes-fett">Kohlenhydraten und verstecktem Fett</a>.</li><li><strong>Wenn du es probierst, probier es als echtes Experiment.</strong> Zwei Wochen mit und zwei ohne, gleiche Schlafenszeit, Wachphasen notiert. Das ist der beste Vorschlag des Beitrags und der einzige Weg, eine Wirkung von einer Erwartung zu unterscheiden.</li></ol>
+<div class="app"><div><h3>Honig im Tagebuch, mit den richtigen Zahlen</h3><p>Die Ernährung in Nurvan läuft über die offiziellen CREA-Tabellen: Du suchst „Honig&quot;, wählst die Portion, und die 16 Gramm Zucker landen dort, wo sie hingehören — in der Tagesbilanz. Und wenn du ihn als Treibstoff in langen Einheiten nutzt, trägst du ihn zusammen mit dem Training ein, statt ihn im Kopf zu behalten.</p></div><a class="cta" href="https://nurvan.app">Nurvan testen</a></div>
+<h2>Häufige Fragen</h2>
+<details><summary>Hilft Honig vor dem Schlafen wirklich beim Schlafen?</summary><p>Es gibt keine randomisierte Studie bei Erwachsenen, die das zeigt. Die einzige kontrollierte Studie mit einem Schlaf-Endpunkt betrifft hustende Kinder und findet keinen Unterschied zwischen Honig und Placebo-Sirup. Der Leberglykogen-Mechanismus, die meistgenannte Erklärung, hält den Daten nicht stand: Nachts stellt die Leber den Großteil der Glukose selbst her, statt sie dem Speicher zu entnehmen.</p></details>
+<details><summary>Warum wache ich nachts um drei auf?</summary><p>Bei Gesunden fast nie wegen des Blutzuckers: Dafür müsste er auf rund 2,2 mmol/l fallen, ein Wert, den man im Schlaf nach dem Abendessen nicht erreicht. Die häufigsten und am besten dokumentierten Ursachen sind Alkohol, Zimmertemperatur, zu spät getrunkenes Koffein, Stress und schlafbezogene Atemstörungen. Wenn das Aufwachen häufig ist und dich tagsüber müde zurücklässt, sprich mit deiner Ärztin oder deinem Arzt, statt ein Hausmittel zu suchen.</p></details>
+<details><summary>Honig oder Kohlenhydrat-Gel während des Trainings?</summary><p>Für die Leistung sind sie gleichwertig: Im direkten Vergleich über ein 64-km-Zeitfahren ergaben Honig und Dextrose dieselbe Zeit, beide besser als Placebo. Honig kostet deutlich weniger. Entscheidend ist die Dosis: Ab 90 Minuten Belastung brauchst du 60 bis 90 Gramm Kohlenhydrate pro Stunde, also vier bis fünf Löffel, nicht einen.</p></details>
+<details><summary>Ist roher Honig besser als verarbeiteter?</summary><p>Für Schlaf und Glykogen gibt es keine Studien, die beide vergleichen — die Aussage ist also ohne Beleg, weder bewiesen noch widerlegt. Bemerkenswert ist, dass der Honig in der Radfahrstudie ein kommerzielles Gel-Produkt war und genauso gut wirkte wie Dextrose.</p></details>
+<h2>Weiterlesen</h2><ul>
+<li><a href="/de/blog/koffein-schlaf-wann-letzter-kaffee">Koffein und Schlaf: wann der letzte Kaffee</a> — die realen Schwellen, von der Schlafenszeit rückwärts gerechnet</li>
+<li><a href="/de/blog/wann-nahrungsergaenzungsmittel-einnehmen">Wann Nahrungsergänzungsmittel einnehmen?</a> — acht Studien zum Timing — und wie viel es wirklich ändert</li>
+<li><a href="/de/blog/machen-kohlenhydrate-dick-verstecktes-fett">Machen Kohlenhydrate dick? Das versteckte Fett</a> — was wirklich in deinem Essen steckt, nach den CREA-Tabellen</li>
+</ul>
+<h2>Quellen</h2><ol class="refs">
+<li>Rothman DL, Magnusson I, Katz LD, Shulman RG, Shulman GI, 1991. Quantitation of hepatic glycogenolysis and gluconeogenesis in fasting humans with 13C NMR. <em>Science</em> 254(5031):573-576. PMID 1948033 — <a href="https://doi.org/10.1126/science.1948033">doi.org/10.1126/science.1948033</a></li>
+<li>Schultes B, Jauch-Chara K, Gais S, et al., 2007. Defective awakening response to nocturnal hypoglycemia in patients with type 1 diabetes mellitus. <em>PLoS Med</em> 4(2):e69. PMID 17326710 — <a href="https://doi.org/10.1371/journal.pmed.0040069">doi.org/10.1371/journal.pmed.0040069</a></li>
+<li>Mohd Azmi NAS, Juliana N, Azmani S, et al., 2021. Cortisol on circadian rhythm and its effect on cardiovascular system. <em>Int J Environ Res Public Health</em> 18(2):676. PMID 33466883 — <a href="https://doi.org/10.3390/ijerph18020676">doi.org/10.3390/ijerph18020676</a></li>
+<li>Beard E, Lengacher S, Dias S, Magistretti PJ, Finsterwald C, 2022. Astrocytes as key regulators of brain energy metabolism: new therapeutic perspectives. <em>Front Physiol</em> 12:825816. PMID 35087428 — <a href="https://doi.org/10.3389/fphys.2021.825816">doi.org/10.3389/fphys.2021.825816</a></li>
+<li>Fuchs CJ, Gonzalez JT, Beelen M, et al., 2016. Sucrose ingestion after exhaustive exercise accelerates liver, but not muscle glycogen repletion compared with glucose ingestion in trained athletes. <em>J Appl Physiol</em> 120(11):1328-1334. PMID 27013608 — <a href="https://doi.org/10.1152/japplphysiol.01023.2015">doi.org/10.1152/japplphysiol.01023.2015</a></li>
+<li>Gonzalez JT, Fuchs CJ, Betts JA, van Loon LJC, 2016. Liver glycogen metabolism during and after prolonged endurance-type exercise. <em>Am J Physiol Endocrinol Metab</em> 311(3):E543-E553. PMID 27436612 — <a href="https://doi.org/10.1152/ajpendo.00232.2016">doi.org/10.1152/ajpendo.00232.2016</a></li>
+<li>Earnest CP, Lancaster SL, Rasmussen CJ, et al., 2004. Low vs. high glycemic index carbohydrate gel ingestion during simulated 64-km cycling time trial performance. <em>J Strength Cond Res</em> 18(3):466-472. PMID 15320674 (der für diesen Artikel registrierte DOI ist ein nicht funktionierender Platzhalter; zitiert über PMID)</li>
+<li>Toniazzo T, de Almeida Azevedo R, Oliveira TN, et al., 2025. A novel honey powder-based supplement containing carbohydrate and protein did not improve endurance performance in recreationally trained cyclists. <em>Int J Sport Nutr Exerc Metab</em> 35(6):520-529. PMID 40812383 — <a href="https://doi.org/10.1123/ijsnem.2025-0021">doi.org/10.1123/ijsnem.2025-0021</a></li>
+<li>Nishimura T, Muta H, Hosaka T, Ueda M, Kishida K, 2022. Multicentre, randomised study found that honey had no pharmacological effect on nocturnal coughs and sleep quality at 1-5 years of age. <em>Acta Paediatr</em> 111(11):2157-2164. PMID 35927828 — <a href="https://doi.org/10.1111/apa.16509">doi.org/10.1111/apa.16509</a></li>
+<li>Zulkifli MF, Masimen MAA, Ridzuan PM, Wan Ismail WI, 2024. Exploring honey&#x27;s potential as a functional food for natural sleep aid. <em>Food Funct</em> 15(19):9678-9689. PMID 39248637 — <a href="https://doi.org/10.1039/d4fo02013h">doi.org/10.1039/d4fo02013h</a></li>
+<li>Afaghi A, O&#x27;Connor H, Chow CM, 2007. High-glycemic-index carbohydrate meals shorten sleep onset. <em>Am J Clin Nutr</em> 85(2):426-430. PMID 17284739 — <a href="https://doi.org/10.1093/ajcn/85.2.426">doi.org/10.1093/ajcn/85.2.426</a></li>
+<li>CREA — Forschungszentrum für Lebensmittel und Ernährung, italienische Nährwerttabellen, Stand 2019, Eintrag „Miele&quot; (Honig, Code 210010): 304 kcal, 80,3 g Kohlenhydrate, Standardportion 20 g.</li>
+</ol>
+<p>Ausgangspunkt: Karussell von <a href="https://www.instagram.com/p/DdwWWxYkfEW/">Christian Poulos</a> (26. September 2026), das Instagram als mit künstlicher Intelligenz erzeugten oder bearbeiteten Inhalt kennzeichnet. Kein Text und kein Bild des Beitrags wurde reproduziert: Die Aussagen wurden neu geschrieben und an der Primärliteratur überprüft.</p>
+<p>Giammaria Loi ist der Gründer von Nurvan. Er trainiert seit 2012 mit Gewichten, arbeitet seit 2013 als FIPE-zertifizierter Personal Trainer und Coach und startet seit 2018 auf nationaler Ebene im Powerlifting. Jeder Artikel, den er zeichnet, geht von den Studien aus und endet bei dem, was im Gym wirklich funktioniert. <a href="/autore/giammaria-loi">Autorenseite</a></p>
+<p class="note">Hinweis: informativer Inhalt, der die Beurteilung durch eine Ärztin, einen Arzt oder eine andere qualifizierte Fachperson nicht ersetzt. Wenn du häufig nachts aufwachst, müde aufstehst, Diabetes hast oder Medikamente nimmst, die den Blutzucker senken, sprich mit deiner Ärztin oder deinem Arzt: In diesen Fällen ist nächtliche Unterzuckerung ein echtes Problem und gehört in die Hände derer, die dich behandeln, nicht zu einem Löffel Honig.</p>
+</main>
+<footer>NURVAN · nurvan.app · 18. Oktober 2026</footer>
+</body>
+</html>

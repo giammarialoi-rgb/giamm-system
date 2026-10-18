@@ -1,0 +1,17 @@
+# Crediti immagini
+
+| File | Descrizione / alt | Autore | Fonte | Licenza |
+|---|---|---|---|---|
+| cover.jpg | IT: Vasetto di vetro con miele e un mestolo di legno da cui cola il miele · EN: Glass jar of honey with a wooden dipper, honey dripping from it | Scott Bauer, USDA Agricultural Research Service (immagine K7240-6 dell'archivio ARS) | https://commons.wikimedia.org/wiki/File:Runny_hunny.jpg | Pubblico dominio (`{{PD-USGov-USDA-ARS}}`, licenza verificata sul wikitesto della pagina Commons il 18/10/2026) |
+| chart-glucosio-notte.&lt;lang&gt;.svg (10 lingue) | Da dove viene il glucosio durante il digiuno: gluconeogenesi contro glicogeno epatico, 64%/36% a 22 ore, 82%/18% a 36 ore, 96%/4% a 54 ore | Nurvan | Rothman et al., 1991, Science (PMID 1948033) | Grafico originale Nurvan |
+| chart-dose-miele.&lt;lang&gt;.svg (10 lingue) | La dose: 562 g di zuccheri nello studio contro 16 g di un cucchiaio di miele; glicogeno epatico guadagnato in 5 ore, +33,2 g con saccarosio e +16,4 g con glucosio puro | Nurvan | Fuchs et al., 2016, J Appl Physiol (PMID 27013608); tabelle CREA 2019, codice 210010 | Grafico originale Nurvan |
+
+## Note sulle licenze
+
+- La copertina è un'opera del governo federale statunitense (fotografo Scott Bauer, Agricultural Research Service del Dipartimento dell'Agricoltura USA) ed è quindi di **pubblico dominio**. L'attribuzione non è giuridicamente obbligatoria ma viene riportata comunque nel campo `cover_credit` del frontmatter in tutte e dieci le lingue, con nome dell'autore, ente, link alla pagina del file su Wikimedia Commons e stato della licenza.
+- La licenza è stata verificata leggendo il **wikitesto** della pagina di descrizione del file su Commons (`?action=raw`): il file riporta `{{PD-USGov-USDA-ARS}}` e la fonte `{{USDA ARS|K7240-6}}`.
+- La foto è stata scaricata dall'endpoint ufficiale Wikimedia `Special:FilePath` alla risoluzione piena (1780x2700), poi ritagliata in 16:9 e ridimensionata a 1280x720 da Nurvan. Nessuna persona è inquadrata.
+- Scartate due alternative CC0 (`File:Honey dipper.jpg` e `File:Honey dripper stirring rod (Unsplash).jpg`): la prima mostra solo un mestolo asciutto senza miele, la seconda è sotto il tag `{{Unsplash}}` in categoria "review needed". A parità di idoneità si è preferita una licenza senza ambiguità.
+- **Nessuna slide del carosello di Christian Poulos è stata scaricata, usata o ripubblicata.** Del post sono stati letti solo testo delle slide, didascalia, autore e data, che sono dati e non contenuto creativo riprodotto. Il post è peraltro etichettato da Instagram come contenuto generato o modificato con l'intelligenza artificiale.
+- I due grafici sono interamente originali. Tutti i valori provengono dagli abstract pubblicati: gluconeogenesi 64 ± 5% / 82 ± 5% / 96 ± 1% a 22 / 36 / 54 ore (Rothman 1991, da cui le quote complementari di glicogenolisi 36 / 18 / 4%); glicogeno epatico totale 53,6 → 86,8 g con saccarosio e 49,3 → 65,7 g con glucosio, dose 1,5 g/kg/h per 5 ore (Fuchs 2016); miele 80,3 g di carboidrati per 100 g e porzione standard 20 g (CREA 2019, codice 210010, letto dal file `data/food-crea.json` del repo). Nessun valore è stato letto approssimativamente da una figura altrui.
+- I due numeri derivati che compaiono nel grafico sono calcoli nostri e dichiarati in didascalia: 562 g = 1,5 g/kg/h × 5 ore × 75 kg (il peso tipo usato nell'articolo, non un dato dello studio); 16 g = 80,3 g/100 g × 20 g di porzione.
