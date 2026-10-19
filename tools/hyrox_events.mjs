@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const SOURCE_DATE = '2026-10-12';
+const SOURCE_DATE = '2026-10-19';
 const SEASON = '2026/27';
 const BASE = 'https://hyrox.com/event/';
 
@@ -31,7 +31,7 @@ Birmingham | GB | 2026-10-27 | 2026-11-01 | hyrox-birmingham
 Amburgo | DE | 2026-10-28 | 2026-11-01 | intersport-hyrox-hamburg
 Nizza | FR | 2026-10-29 | 2026-11-01 | hyrox-nice-s26-27
 Città del Messico | MX | 2026-10-29 | 2026-11-01 | hyrox-mexico-city
-Shanghai | CN | 2026-10-31 | 2026-11-01 | hyrox-shanghai-1031
+Shanghai | CN | | | hyrox-shanghai-1031
 Dublino | IE | 2026-11-11 | 2026-11-15 | hyrox-dublin
 Düsseldorf | DE | 2026-11-11 | 2026-11-15 | hyrox-dusseldorf
 Barcellona | ES | 2026-11-11 | 2026-11-15 | hyrox-barcelona-2
@@ -77,6 +77,7 @@ Vienna | AT | 2027-02-19 | 2027-02-21 | hyrox-vienna
 Cancún | MX | 2027-02-19 | 2027-02-21 | hyrox-cancun
 Phoenix | US | 2027-02-25 | 2027-02-28 | inbody-hyrox-phoenix-26-27
 Mechelen | BE | 2027-03-03 | 2027-03-07 | hyrox-mechelen
+Hanoi | VN | 2027-03-06 | 2027-03-07 | hyrox-hanoi
 Glasgow | GB | 2027-03-10 | 2027-03-14 | hyrox-glasgow-2
 Taipei | TW | 2027-03-12 | 2027-03-14 | hyrox-taipei
 Las Vegas | US | 2027-03-12 | 2027-03-14 | hyrox-las-vegas-26-27
@@ -100,9 +101,8 @@ Monterrey | MX | 2027-04-16 | 2027-04-18 | hyrox-monterrey
 Ottawa | CA | 2027-04-21 | 2027-04-25 | hyrox-ottawa-26-27
 Atlanta | US | 2027-04-23 | 2027-04-25 | factor_-hyrox-atlanta
 Cracovia | PL | 2027-05-07 | 2027-05-09 | hyrox-krakow-26-27
-San Paolo (maggio) | BR | 2027-05-08 | 2027-05-09 | hyrox-sao-paulo
 Lione | FR | 2027-05-12 | 2027-05-16 | hyrox-lyon-s26-27
-Bengaluru | IN | 2027-05-12 | 2027-05-16 | hyrox-bengaluru
+Bengaluru | IN | 2027-05-19 | 2027-05-23 | hyrox-bengaluru
 Incheon | KR | 2027-05-13 | 2027-05-16 | hyrox-incheon
 San Diego | US | 2027-05-13 | 2027-05-16 | hyrox-san-diego-26-27
 Cardiff | GB | 2027-05-20 | 2027-05-29 | hyrox-cardiff-2
@@ -117,7 +117,7 @@ const COUNTRIES = {
   AE: 'Emirati Arabi Uniti', AR: 'Argentina', AT: 'Austria', AU: 'Australia', BE: 'Belgio', BR: 'Brasile', CA: 'Canada', CH: 'Svizzera',
   CN: 'Cina', DE: 'Germania', DK: 'Danimarca', EG: 'Egitto', ES: 'Spagna', FI: 'Finlandia', FR: 'Francia', GB: 'Regno Unito', HK: 'Hong Kong',
   HU: 'Ungheria', IE: 'Irlanda', IN: 'India', IT: 'Italia', JP: 'Giappone', KR: 'Corea del Sud', LV: 'Lettonia', MX: 'Messico', MY: 'Malesia',
-  NL: 'Paesi Bassi', NZ: 'Nuova Zelanda', PL: 'Polonia', SE: 'Svezia', SG: 'Singapore', TH: 'Thailandia', TW: 'Taiwan', US: 'Stati Uniti', ZA: 'Sudafrica'
+  NL: 'Paesi Bassi', NZ: 'Nuova Zelanda', PL: 'Polonia', SE: 'Svezia', SG: 'Singapore', TH: 'Thailandia', TW: 'Taiwan', US: 'Stati Uniti', VN: 'Vietnam', ZA: 'Sudafrica'
 };
 const slug = (s) => String(s).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
