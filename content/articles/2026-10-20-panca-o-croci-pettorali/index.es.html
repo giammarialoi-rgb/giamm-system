@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Press con mancuernas o aperturas: ¿qué hace crecer más? | Nurvan</title>
+<meta name="description" content="Un nuevo estudio dice que el press con mancuernas y las aperturas hacen crecer el pecho igual. Leí seis estudios: qué se sostiene y qué falta en el post.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in">
+<a class="logo" href="#">NUR<b>VAN</b></a>
+<nav><a href="#">Entrenamiento</a><a href="#">Nutrición</a><a href="#">Suplementación</a><a href="#">Coaching</a></nav>
+<a class="cta" href="https://nurvan.app">Prueba Nurvan</a>
+</div></header>
+<main class="wrap">
+<p class="crumb">Entrenamiento</p>
+<h1>Press con mancuernas o aperturas: ¿qué hace crecer más?</h1>
+<div class="meta">
+<span>Por <b><a href="/autore/giammaria-loi">Giammaria Loi</a></b></span>
+<span>actualizado el <b>2026-10-20</b></span>
+<span>Fuentes: <b>6</b></span>
+</div>
+<figure><img src="images/cover.jpg" alt="Press con mancuernas o aperturas: ¿qué hace crecer más?"><figcaption class="cap">U.S. Navy, foto de Mass Communication Specialist 3rd Class Eric J. Cutright, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:US_Navy_071017-N-0995C-008_Chief_Mineman_Kevin_Sperling,_an_officer_recruiter_at_Navy_Recruiting_Processing_Station_Honolulu,_presses_two_105-pound_dumbbells.jpg), dominio público</figcaption></figure>
+<p>Un carrusel muy compartido cuenta un estudio recién salido: diez semanas, press con mancuernas contra aperturas con mancuernas, y al final el pecho crece igual. La conclusión es cómoda —elige el que prefieras— y en buena medida se sostiene. Pero leí seis estudios indexados para comprobarla y aparecieron tres cosas que el post no dice: ese estudio todavía no está publicado, la zona del pecho donde la elección sí importa no se midió, y los dos ejercicios no cuestan lo mismo en músculos entrenados por minuto.</p>
+<div class="box"><h2>En resumen</h2>
+<ul><li><strong>El press con mancuernas y las aperturas hicieron crecer el pectoral de forma parecida</strong> en diez semanas. Pero el estudio está <em>aceptado</em>, no publicado: a 20 de octubre de 2026 no se puede comprobar en PubMed.</li><li><strong>Terminaron trece personas por grupo</strong> de las 46 que empezaron. Con esos números, "sin diferencia significativa" no significa "son equivalentes".</li><li><strong>La idea de que las aperturas crecen más por cargar el músculo estirado ya se había puesto a prueba</strong>, y por el mismo investigador que publicó el carrusel: efectos triviales, SMD de 0,05 a 0,09 (Varović et al., 2025).</li><li><strong>El press también te entrena deltoides anterior y tríceps</strong>: entre un 8% y un 81% más de actividad eléctrica que las aperturas (Solstad et al., 2020). Las aperturas no.</li><li><strong>Para el pecho alto la elección sí importa</strong>, y es justo la región que el nuevo estudio no midió: la única diferencia documentada es +0,62 cm de grosor con el press inclinado (Chaves et al., 2020).</li></ul></div>
+<h2>Qué compara realmente el estudio nuevo</h2>
+<p>El diseño, tal como lo describen los autores: personas con al menos seis meses de entrenamiento (tres o cuatro años de media), dos sesiones semanales durante diez semanas, <strong>un solo ejercicio por sesión</strong> —press con mancuernas o aperturas— y prohibido cualquier otro trabajo de pectoral y deltoides anterior. El volumen no se impuso: cada uno siguió con las series a las que estaba acostumbrado, una media de unas 14 series semanales en el grupo press y 13 en el de aperturas. Entre ocho y doce repeticiones a unas 2 repeticiones en reserva, con la última serie al fallo concéntrico. El grosor del pectoral se midió con ecógrafo en tres puntos, desde el centro del pecho hacia fuera.</p>
+<p>Resultado declarado: los dos grupos crecen en los tres puntos, sin diferencias entre grupos.</p>
+<p>Lo primero que el post no dice: <strong>este estudio todavía no está publicado</strong>. Lo busqué en PubMed por autor, por título y por coautores, y no aparece. La única fuente primaria localizable es un anuncio del último autor, Brad Schoenfeld, que escribe que el trabajo acaba de ser aceptado por el <em>Journal of Strength and Conditioning Research</em>. Sin DOI público, sin preprint. No es una acusación: entre aceptación y publicación suelen pasar semanas. Pero significa que nadie, yo incluido, puede leer aún las cifras, los intervalos ni las tablas. Por eso <strong>en este artículo no uso ni un solo número de ese estudio</strong>: todos los valores vienen de trabajos publicados y verificados.</p>
+<h2>"Sin diferencia significativa" no es "son iguales"</h2>
+<p>De los 46 participantes iniciales <strong>terminaron 26</strong>: trece por grupo. Los propios autores califican el abandono de inusualmente alto. Es el 43% de la muestra.</p>
+<p>Aquí hace falta una distinción que vale para la mitad del contenido fitness que lees. "Sin diferencia estadísticamente significativa" quiere decir que los datos recogidos no bastan para demostrar una diferencia. No quiere decir que no exista. Con trece personas por grupo un estudio solo detecta diferencias grandes: si el press hiciera crecer el pecho, pongamos, un 15% más que las aperturas, probablemente ni se enteraría. Para afirmar equivalencia hace falta un diseño hecho a propósito, con un margen declarado de antemano.</p>
+<p>La lectura honesta es: <strong>no tenemos pruebas de que uno sea mejor</strong>. Que ya es información útil, y es distinto de "son lo mismo".</p>
+<p>Es el mismo error de lectura que conté hablando de <a href="/es/blog/ejercicios-de-gluteos-hip-thrust-o-sentadilla">hip thrust y sentadilla para glúteos</a>: allí también las estimaciones se inclinaban hacia un lado, con intervalos que contenían el cero.</p>
+<h2>La hipótesis de partida ya tenía respuesta</h2>
+<p>Lo interesante es por qué se hizo el estudio: los investigadores esperaban que ganaran las <strong>aperturas</strong>. El razonamiento es el que se ha hecho popular estos años: las aperturas cargan el pectoral cuando está más estirado, y entrenar a longitudes musculares mayores debería dar más crecimiento.</p>
+<p>Solo que esa hipótesis ya tiene respuesta, y viene de la misma persona que publicó el carrusel. En 2025 Dorian Varović firmó un metaanálisis bayesiano de doce estudios que manipularon la longitud muscular —con el rango de movimiento o con la elección del ejercicio— y midieron el crecimiento en distintas zonas del mismo músculo. Los resultados son <strong>triviales</strong>: diferencia estandarizada de 0,05 en la zona proximal, 0,07 en el centro, 0,09 en la distal, con intervalos que contienen el cero. En porcentaje de crecimiento: entre 0,6% y 1,9%.</p>
+<figure><div class="chart" role="img" aria-label="Gráfico de tres puntos: la diferencia de crecimiento regional entre entrenar a longitudes musculares mayores o menores es próxima a cero en las tres zonas, con intervalos que cruzan el cero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" width="960" height="430" role="img">
+<rect width="960" height="430" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700">Longitudes musculares mayores: cuánto cambia el crecimiento</text>
+<text x="40" y="82" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15">Diferencia media estandarizada (SMD) · intervalo del 95%</text>
+<line x1="375.6" y1="118" x2="375.6" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="375.6" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">-0,1</text>
+<line x1="526.9" y1="118" x2="526.9" y2="340" stroke="#aa8a2e" stroke-width="2"/>
+<text x="526.9" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">0</text>
+<line x1="678.1" y1="118" x2="678.1" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="678.1" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">+0,1</text>
+<line x1="829.4" y1="118" x2="829.4" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="829.4" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">+0,2</text>
+<text x="526.9" y="110" fill="#aa8a2e" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="middle">sin diferencia</text>
+<text x="285" y="170" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Proximal (25%)</text>
+<line x1="421.0" y1="165" x2="768.9" y2="165" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="421.0" y1="156" x2="421.0" y2="174" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="768.9" y1="156" x2="768.9" y2="174" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="602.5" cy="165" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="149" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,05  (-0,07 / +0,16)</text>
+<text x="285" y="240" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Central (50%)</text>
+<line x1="496.6" y1="235" x2="753.8" y2="235" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="496.6" y1="226" x2="496.6" y2="244" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="753.8" y1="226" x2="753.8" y2="244" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="632.8" cy="235" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="219" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,07  (-0,02 / +0,15)</text>
+<text x="285" y="310" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Distal (75%)</text>
+<line x1="511.7" y1="305" x2="814.2" y2="305" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="511.7" y1="296" x2="511.7" y2="314" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="814.2" y1="296" x2="814.2" y2="314" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="663.0" cy="305" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="289" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,09  (-0,01 / +0,19)</text>
+<text x="40" y="408" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14">Varović et al., 2025 · metaanálisis de 12 estudios · PMID 40570881</text>
+</svg></div><figcaption class="cap">Diferencia estandarizada de crecimiento regional entre longitudes musculares mayores y menores. Los valores positivos favorecen las longitudes mayores. Los tres intervalos al 95% cruzan el cero. Fuente: Varović et al., 2025, metaanálisis bayesiano de 12 estudios (PMID 40570881).</figcaption></figure>
+<p>Hay una tendencia creciente de proximal a distal, y los autores la señalan. También señalan el límite más honesto: entre las condiciones comparadas la diferencia media de longitud muscular era solo del 21,8%.</p>
+<p>En el gimnasio: si eliges aperturas esperando el bonus del estiramiento, es probable que ese bonus no llegue.</p>
+<h2>Lo que el press te da y las aperturas no</h2>
+<p>Este es el dato práctico que falta por completo en el post, y responde a una pregunta que quedó sin respuesta en sus propios comentarios: <em>¿puedo entrenar el pecho como con el press pero sin implicar tríceps y deltoides?</em></p>
+<p>En 2020 un grupo noruego midió la actividad eléctrica de cuatro músculos en diecisiete hombres entrenados (casi cinco años de experiencia) durante press de banca con barra y aperturas con mancuernas, con cargas de seis repeticiones máximas, descomponiendo cada repetición en seis fases. El press produce más señal en <strong>pectoral mayor, deltoides anterior y tríceps</strong>, con diferencias <strong>del +8% al +81%</strong> según el músculo y la fase. Las aperturas ganan en un solo músculo: el <strong>bíceps</strong>, entre un 57% y un 86%, pero como antagonista que estabiliza el codo, no como músculo entrenado.</p>
+<figure><div class="chart" role="img" aria-label="Gráfico de barras: el press de banca con barra produce entre un 8% y un 81% más de actividad eléctrica en pectoral, deltoides anterior y tríceps; las aperturas producen entre un 57% y un 86% más en el bíceps como antagonista"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img">
+<rect width="960" height="400" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700">Press de banca con barra frente a aperturas: cuánta señal más</text>
+<text x="40" y="82" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15">Actividad eléctrica adicional (%)</text>
+<line x1="60.0" y1="110" x2="60.0" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="60.0" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">0%</text>
+<line x1="237.9" y1="110" x2="237.9" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="237.9" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">20%</text>
+<line x1="415.8" y1="110" x2="415.8" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="415.8" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">40%</text>
+<line x1="593.7" y1="110" x2="593.7" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="593.7" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">60%</text>
+<line x1="771.6" y1="110" x2="771.6" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="771.6" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">80%</text>
+<text x="60" y="154" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17">Press &gt; aperturas — pectoral, deltoides anterior, tríceps</text>
+<rect x="131.2" y="164" width="649.3" height="32" rx="6" fill="#d4af37" opacity="0.9"/>
+<text x="141.2" y="186" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700">+8%</text>
+<text x="770.5" y="186" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="end">+81%</text>
+<text x="60" y="259" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17">Aperturas &gt; press — bíceps (antagonista)</text>
+<rect x="567.0" y="269" width="257.9" height="32" rx="6" fill="#aa8a2e" opacity="0.9"/>
+<text x="577.0" y="291" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700">+57%</text>
+<text x="814.9" y="291" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="end">+86%</text>
+<text x="40" y="382" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14">Solstad et al., 2020 · 17 hombres entrenados, cargas 6RM · PMID 33239937</text>
+</svg></div><figcaption class="cap">Cuánta señal eléctrica adicional produce cada ejercicio, intervalo reportado por los autores a través de músculos y fases. Fuente: Solstad et al., 2020, 17 hombres entrenados, cargas de 6RM (PMID 33239937).</figcaption></figure>
+<p>Cuidado con darle la vuelta al razonamiento: la activación eléctrica <strong>no predice</strong> el crecimiento, y este blog ya lo mostró con datos al hablar de <a href="/es/blog/extension-de-piernas-o-prensa-recto-femoral">extensión de piernas y prensa</a>. El punto aquí es más simple: el press pone bajo carga tres músculos, las aperturas esencialmente uno. Si tu tiempo en el gimnasio es limitado —y lo es para casi todos—, ese criterio es más concreto que cualquier discusión sobre longitudes musculares.</p>
+<p>La otra cara también sirve: si el press te molesta en el hombro, las aperturas te permiten entrenar el pecho sin renunciar al crecimiento, y solo pierdes el trabajo de tríceps, que puedes recuperar en otro sitio.</p>
+<h2>Dónde sí importa la elección: el pecho alto</h2>
+<p>El límite más importante del nuevo estudio lo declaran los propios autores: el grosor se midió en tres puntos que van del centro del pecho hacia fuera, y <strong>la región clavicular —el pecho alto— no se midió directamente</strong>.</p>
+<p>Es un problema, porque es la única zona en la que, en los estudios publicados, la elección del ejercicio ha cambiado algo.</p>
+<p>En 2020 Chaves y colegas repartieron a 47 hombres no entrenados en tres grupos —solo banca plana, solo banca inclinada, o ambas— durante ocho semanas con el mismo número de series. La fuerza creció igual en los tres grupos (unos 10-11 kg, sin diferencias significativas). El grosor muscular cambió de forma distinta en <strong>un solo punto de tres</strong>: el segundo espacio intercostal, el pecho alto, donde la inclinada superó a la plana en <strong>0,62 cm (intervalo 0,23-1,00; p = 0,003)</strong> y a la combinación en <strong>0,50 cm (0,14-0,86; p = 0,008)</strong>.</p>
+<p>Dos detalles. Primero: el grupo que hacía <strong>las dos</strong> no superó a ninguno de los otros; hacer un poco de todo repartió el estímulo. Segundo: eran personas no entrenadas, así que es una indicación, no una ley.</p>
+<p>El mecanismo encaja con lo que se mide en agudo. En 2022 un grupo italo-brasileño registró los dos haces del pectoral en banca plana y a 45°: en la inclinada el haz clavicular trabaja más que el esternocostal, en la plana ocurre lo contrario, y la respuesta inmediata de la sección muscular sigue la misma dirección. En cuanto al ángulo exacto, treinta adultos entrenados probados en cinco inclinaciones muestran el pico del pecho alto a <strong>30°</strong>, mientras que las porciones media y baja rinden más a <strong>0°</strong>; por encima de 45° el trabajo pasa al deltoides anterior y el pectoral rinde menos.</p>
+<h2>Qué dice realmente la investigación</h2>
+<ul><li><strong>Confirmado</strong> — El pectoral mayor tiene dos regiones, clavicular y esternocostal, con inervación y respuesta separadas (Albarello et al., 2022).</li><li><strong>Confirmado</strong> — Ejercicios distintos producen crecimiento parecido cuando el agonista se solicita lo suficiente en rangos de movimiento comparables (Chaves et al., 2020; Kassiano et al., 2022).</li><li><strong>Por matizar</strong> — "Sin diferencia significativa" con 13 personas por grupo tras un 43% de abandonos no autoriza a hablar de equivalencia.</li><li><strong>Por matizar</strong> — Variar los ejercicios ayuda, pero solo si la variación es sistemática: rotar al azar ejercicios con el mismo estímulo puede empeorar los resultados (Kassiano et al., 2022).</li><li><strong>Desmentido</strong> — Que las aperturas crezcan más por cargar el músculo estirado: los efectos sobre el crecimiento regional son triviales (Varović et al., 2025).</li><li><strong>No verificable</strong> — Las cifras del estudio Dell'Avanzi: aceptado por el <em>Journal of Strength and Conditioning Research</em>, no publicado ni indexado a 20 de octubre de 2026.</li></ul>
+<h2>Cómo aplicarlo</h2>
+<ol class="steps"><li><strong>Elige el empuje que puedas cargar y progresar en el tiempo.</strong> Barra, mancuernas o máquina: a igualdad de series y de cercanía al fallo, el pecho crece. El criterio no es cuál "activa más", sino en cuál consigues sumar kilos o repeticiones mes a mes.</li><li><strong>Deja las aperturas como segundo ejercicio, no como sustituto obligatorio.</strong> Son útiles si el empuje te molesta en el hombro, si quieres volumen de pecho sin fatigar más el tríceps, o si simplemente te gustan y por eso las haces con constancia.</li><li><strong>Si tu punto débil es el pecho alto, pon el banco a 30°.</strong> Ahí rinde más la porción clavicular. Por encima de 45° entrenas sobre todo hombros.</li><li><strong>No mezcles al azar.</strong> Dos o tres ejercicios estables durante seis a doce semanas ganan a una rotación nueva cada semana.</li><li><strong>Lleva las series lo bastante cerca del fallo.</strong> El protocolo del estudio trabajaba a unas dos repeticiones en reserva con la última serie al fallo. El cuadro completo de series, repeticiones y descansos lo resumí <a href="/es/blog/cuantas-repeticiones-masa-muscular">aquí</a>.</li></ol>
+<h3>Prueba Nurvan — tu pecho crece si sube la carga</h3>
+<p>Lo que decide no es qué ejercicio "sientes" más, sino si ese ejercicio progresa. En Nurvan cada serie se registra con carga, repeticiones y RIR (cuántas repeticiones te quedaban), y la app te muestra la evolución ejercicio por ejercicio: así ves negro sobre blanco si tu press con mancuernas sube o lleva dos meses parado, y decides con tus números en vez de con el último estudio viral. <strong><a href="https://nurvan.app">Prueba Nurvan</a></strong></p>
+<h2>Preguntas frecuentes</h2>
+<p><strong>¿Mejor press o aperturas para el pecho?</strong> Para el pectoral en conjunto las pruebas no muestran ganador: los dos funcionan si las series llegan lo bastante cerca del fallo. El press, además, entrena deltoides anterior y tríceps en la misma serie, así que rinde más por minuto. Las aperturas siguen siendo una gran opción si el empuje te molesta.</p>
+<p><strong>¿Las aperturas sirven para el "pecho interno"?</strong> No. El pectoral mayor se divide en porción clavicular y esternocostal, no en una parte "interna" y otra "externa": ningún ejercicio hace crecer solo la zona central. Las diferencias regionales documentadas son alto contra bajo y dependen sobre todo del ángulo del banco.</p>
+<p><strong>¿Qué inclinación es mejor para el pecho alto?</strong> Treinta grados es donde la porción alta muestra la máxima actividad. A cero grados rinden más la media y la baja. Por encima de 45° el deltoides anterior toma el relevo.</p>
+<p><strong>¿Tengo que hacer los dos ejercicios?</strong> No es obligatorio. En el único estudio que comparó un grupo "ambos" con los grupos de un solo ejercicio, hacer los dos no dio mejores resultados. Elige según tiempo, material disponible y comodidad articular.</p>
+<h2>Lee también</h2>
+<ul><li><a href="/es/blog/extension-de-piernas-o-prensa-recto-femoral">Extensión de piernas o prensa: qué crece de verdad</a> — por qué "activa más" no es "crece más".</li><li><a href="/es/blog/ejercicios-de-gluteos-hip-thrust-o-sentadilla">Ejercicios de glúteos: ¿hip thrust o sentadilla?</a> — el mismo error de lectura en otro músculo.</li><li><a href="/es/blog/cuantas-repeticiones-masa-muscular">Repeticiones, series y descanso para la hipertrofia</a> — las variables que pesan más que el ejercicio.</li></ul>
+<h2>Fuentes</h2>
+<ol class="steps"><li>Solstad TE, Andersen V, Shaw M, Hoel EM, Vonheim A, Saeterbakken AH, 2020. <em>A Comparison of Muscle Activation between Barbell Bench Press and Dumbbell Flyes in Resistance-Trained Males.</em> Journal of Sports Science &amp; Medicine 19(4):645-651. <a href="https://pubmed.ncbi.nlm.nih.gov/33239937/">PMID 33239937</a></li><li>Chaves SFN, et al., 2020. <em>Effects of Horizontal and Incline Bench Press on Neuromuscular Adaptations in Untrained Young Men.</em> International Journal of Exercise Science 13(6):859-872. <a href="https://pubmed.ncbi.nlm.nih.gov/32922646/">PMID 32922646</a> · <a href="https://doi.org/10.70252/FDNB1158">DOI 10.70252/FDNB1158</a></li><li>Albarello JCS, et al., 2022. <em>Non-uniform excitation of pectoralis major induced by changes in bench press inclination leads to uneven variations in the cross-sectional area measured by panoramic ultrasonography.</em> Journal of Electromyography and Kinesiology 67:102722. <a href="https://pubmed.ncbi.nlm.nih.gov/36334406/">PMID 36334406</a> · <a href="https://doi.org/10.1016/j.jelekin.2022.102722">DOI 10.1016/j.jelekin.2022.102722</a></li><li>Varović D, Wolf M, Schoenfeld BJ, Steele J, Grgic J, Mikulic P, 2025. <em>Does Muscle Length Influence Regional Hypertrophy? A Systematic Review and Meta-Analysis.</em> International Journal of Sports Medicine 46(14):1027-1036. <a href="https://pubmed.ncbi.nlm.nih.gov/40570881/">PMID 40570881</a> · <a href="https://doi.org/10.1055/a-2615-4935">DOI 10.1055/a-2615-4935</a></li><li>Kassiano W, Nunes JP, Costa B, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2022. <em>Does Varying Resistance Exercises Promote Superior Muscle Hypertrophy and Strength Gains? A Systematic Review.</em> Journal of Strength and Conditioning Research 36(6):1753-1762. <a href="https://pubmed.ncbi.nlm.nih.gov/35438660/">PMID 35438660</a> · <a href="https://doi.org/10.1519/JSC.0000000000004258">DOI 10.1519/JSC.0000000000004258</a></li><li>Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM, 2020. <em>Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise.</em> International Journal of Environmental Research and Public Health 17(19):7339. <a href="https://pubmed.ncbi.nlm.nih.gov/33049982/">PMID 33049982</a> · <a href="https://doi.org/10.3390/ijerph17197339">DOI 10.3390/ijerph17197339</a></li><li>Dell'Avanzi FG, et al. <em>Dumbbell bench press and dumbbell fly elicit similar pectoralis major muscle hypertrophy in recreationally-trained individuals.</em> Aceptado por el Journal of Strength and Conditioning Research; a 20 de octubre de 2026 no publicado ni indexado en PubMed. Diseño y resultados referidos tal como los declaran los autores.</li></ol>
+<p>Referencias recuperadas a través de PubMed. Punto de partida: el carrusel de <strong>Dorian Varović</strong> (<a href="https://www.instagram.com/varovicdorian/">@varovicdorian</a>) del 9 de septiembre de 2026, <a href="https://www.instagram.com/p/DdFF9e8HIOQ/">post original</a>. No se ha reproducido ningún texto ni imagen del post.</p>
+<hr>
+<p><strong>Giammaria Loi</strong> es el fundador de Nurvan. Entrena con pesas desde 2012, trabaja como entrenador personal y coach certificado FIPE desde 2013 y compite en powerlifting a nivel nacional desde 2018.</p>
+<p class="cap" style="border-inline-start:3px solid var(--gold-dark);padding-inline-start:14px">Nota: contenido informativo, no sustituye la opinión de un médico o profesional cualificado. Si el empuje te duele en el hombro, hazlo valorar antes de insistir.</p>
+</main>
+<footer class="site" style="position:static;border-top:1px solid var(--line);border-bottom:none"><div class="in"><span class="cap">Nurvan · contenido informativo, no sustituye el consejo médico.</span></div></footer>
+</body>
+</html>

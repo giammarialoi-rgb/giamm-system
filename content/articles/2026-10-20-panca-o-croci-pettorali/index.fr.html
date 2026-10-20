@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Développé haltères ou écartés : qui fait le plus grossir ? | Nurvan</title>
+<meta name="description" content="Une nouvelle étude dit que le développé avec haltères et les écartés font grossir les pectoraux pareil. J&#x27;ai lu six études : ce qui tient, ce qui manque.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in">
+<a class="logo" href="#">NUR<b>VAN</b></a>
+<nav><a href="#">Entraînement</a><a href="#">Nutrition</a><a href="#">Compléments</a><a href="#">Coaching</a></nav>
+<a class="cta" href="https://nurvan.app">Essaie Nurvan</a>
+</div></header>
+<main class="wrap">
+<p class="crumb">Entraînement</p>
+<h1>Développé haltères ou écartés : qui fait le plus grossir ?</h1>
+<div class="meta">
+<span>Par <b><a href="/autore/giammaria-loi">Giammaria Loi</a></b></span>
+<span>mis à jour le <b>2026-10-20</b></span>
+<span>Sources: <b>6</b></span>
+</div>
+<figure><img src="images/cover.jpg" alt="Développé haltères ou écartés : qui fait le plus grossir ?"><figcaption class="cap">U.S. Navy, photo de Mass Communication Specialist 3rd Class Eric J. Cutright, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:US_Navy_071017-N-0995C-008_Chief_Mineman_Kevin_Sperling,_an_officer_recruiter_at_Navy_Recruiting_Processing_Station_Honolulu,_presses_two_105-pound_dumbbells.jpg), domaine public</figcaption></figure>
+<p>Un carrousel très partagé raconte une étude toute fraîche : dix semaines, développé couché avec haltères contre écartés avec haltères, et au bout du compte les pectoraux grossissent pareil. La conclusion est confortable — prends celui que tu préfères — et elle tient en grande partie. Mais j'ai lu six études indexées pour la vérifier, et trois choses absentes du post sont remontées : cette étude n'est pas encore publiée, la zone des pectoraux où le choix compte vraiment n'a pas été mesurée, et les deux exercices ne coûtent pas le même temps par muscle entraîné.</p>
+<div class="box"><h2>L'essentiel</h2>
+<ul><li><strong>Développé haltères et écartés ont fait grossir les pectoraux de façon comparable</strong> sur dix semaines. Mais l'étude est <em>acceptée</em>, pas publiée : au 20 octobre 2026 elle n'est pas vérifiable sur PubMed.</li><li><strong>Treize personnes par groupe ont terminé</strong>, sur 46 au départ. À ce niveau, « pas de différence significative » ne veut pas dire « les deux exercices se valent ».</li><li><strong>L'idée que les écartés font plus grossir parce qu'ils chargent le muscle allongé avait déjà été testée</strong> — par le chercheur même qui a publié le carrousel : effets triviaux, SMD de 0,05 à 0,09 (Varović et al., 2025).</li><li><strong>Le développé entraîne aussi le deltoïde antérieur et le triceps</strong> : de +8 % à +81 % d'activité électrique de plus que les écartés (Solstad et al., 2020). Les écartés non.</li><li><strong>Pour le haut des pectoraux le choix compte</strong>, et c'est précisément la région que la nouvelle étude n'a pas mesurée : la seule différence documentée est +0,62 cm d'épaisseur avec le développé incliné (Chaves et al., 2020).</li></ul></div>
+<h2>Ce que compare vraiment la nouvelle étude</h2>
+<p>Le protocole, tel que décrit par les auteurs : des pratiquants avec au moins six mois d'entraînement (trois à quatre ans en moyenne), deux séances par semaine pendant dix semaines, <strong>un seul exercice par séance</strong> — développé haltères ou écartés — et interdiction de tout autre travail de pectoraux et de deltoïde antérieur. Le volume n'était pas imposé : chacun gardait le nombre de séries auquel il était habitué, environ 14 séries hebdomadaires en moyenne pour le développé et 13 pour les écartés. Huit à douze répétitions à environ 2 répétitions en réserve, dernière série menée à l'échec concentrique. Épaisseur du pectoral mesurée à l'échographe en trois points, du centre du thorax vers l'extérieur.</p>
+<p>Résultat annoncé : les deux groupes progressent sur les trois points, sans différence entre groupes.</p>
+<p>Première chose que le post ne dit pas : <strong>cette étude n'est pas encore publiée</strong>. Je l'ai cherchée sur PubMed par auteur, par titre et par co-auteurs : elle n'y est pas. La seule source primaire disponible est une annonce du dernier auteur, Brad Schoenfeld, indiquant que le travail vient d'être accepté par le <em>Journal of Strength and Conditioning Research</em>. Pas de DOI public, pas de preprint. Ce n'est pas une accusation : des semaines séparent normalement l'acceptation de la publication. Mais cela signifie que personne, moi compris, ne peut encore lire les chiffres, les intervalles et les tableaux. C'est pourquoi <strong>aucun chiffre de cet article ne vient de cette étude</strong> : tout ce qui est quantitatif ci-dessous provient de travaux publiés et vérifiés.</p>
+<h2>« Pas de différence significative » n'est pas « c'est pareil »</h2>
+<p>Sur 46 participants au départ, <strong>26 ont terminé</strong> : treize par groupe. Les auteurs eux-mêmes qualifient l'abandon d'inhabituellement élevé. C'est 43 % de l'échantillon.</p>
+<p>Une distinction s'impose, et elle vaut pour la moitié du contenu fitness que tu lis. « Pas de différence statistiquement significative » signifie que les données recueillies ne suffisent pas à démontrer une différence. Pas qu'il n'y en a aucune. Avec treize personnes par groupe, une étude ne repère que de gros écarts : si le développé faisait grossir les pectoraux, mettons, 15 % de plus que les écartés, elle passerait probablement à côté. Pour affirmer l'équivalence, il faut un protocole conçu pour ça, avec une marge déclarée à l'avance.</p>
+<p>La lecture honnête est donc : <strong>nous n'avons aucune preuve que l'un soit meilleur</strong>. C'est déjà une information utile, et c'est différent de « c'est la même chose ».</p>
+<p>C'est la même erreur de lecture que j'ai racontée à propos du <a href="/fr/blog/exercices-fessiers-hip-thrust-ou-squat">hip thrust et du squat pour les fessiers</a> : là aussi les estimations penchaient d'un côté, avec des intervalles contenant largement le zéro.</p>
+<h2>L'hypothèse de départ avait déjà une réponse</h2>
+<p>Ce qui rend l'étude intéressante, c'est sa motivation : les chercheurs s'attendaient à ce que les <strong>écartés</strong> l'emportent. Le raisonnement est celui devenu populaire ces dernières années : les écartés chargent le pectoral quand il est le plus allongé, et s'entraîner à des longueurs musculaires plus grandes devrait produire plus de croissance.</p>
+<p>Sauf que cette hypothèse a déjà une réponse, et elle vient de la personne qui a publié le carrousel. En 2025, Dorian Varović a signé une méta-analyse bayésienne de douze études ayant manipulé la longueur musculaire — par l'amplitude de mouvement ou par le choix de l'exercice — et mesuré la croissance dans différentes zones d'un même muscle. Les résultats sont <strong>triviaux</strong> : différence standardisée de 0,05 en proximal, 0,07 au milieu, 0,09 en distal, avec des intervalles contenant tous le zéro. En pourcentage de croissance : entre 0,6 % et 1,9 %.</p>
+<figure><div class="chart" role="img" aria-label="Graphique à trois points : la différence de croissance régionale entre longueurs musculaires plus grandes ou plus courtes est proche de zéro aux trois sites, avec des intervalles qui traversent le zéro"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" width="960" height="430" role="img">
+<rect width="960" height="430" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700">Longueurs musculaires plus grandes : la croissance change-t-elle</text>
+<text x="40" y="82" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15">Différence moyenne standardisée (SMD) · intervalle 95 %</text>
+<line x1="375.6" y1="118" x2="375.6" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="375.6" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">-0,1</text>
+<line x1="526.9" y1="118" x2="526.9" y2="340" stroke="#aa8a2e" stroke-width="2"/>
+<text x="526.9" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">0</text>
+<line x1="678.1" y1="118" x2="678.1" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="678.1" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">+0,1</text>
+<line x1="829.4" y1="118" x2="829.4" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="829.4" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">+0,2</text>
+<text x="526.9" y="110" fill="#aa8a2e" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="middle">aucune différence</text>
+<text x="285" y="170" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Proximal (25 %)</text>
+<line x1="421.0" y1="165" x2="768.9" y2="165" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="421.0" y1="156" x2="421.0" y2="174" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="768.9" y1="156" x2="768.9" y2="174" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="602.5" cy="165" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="149" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,05  (-0,07 / +0,16)</text>
+<text x="285" y="240" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Milieu (50 %)</text>
+<line x1="496.6" y1="235" x2="753.8" y2="235" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="496.6" y1="226" x2="496.6" y2="244" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="753.8" y1="226" x2="753.8" y2="244" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="632.8" cy="235" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="219" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,07  (-0,02 / +0,15)</text>
+<text x="285" y="310" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Distal (75 %)</text>
+<line x1="511.7" y1="305" x2="814.2" y2="305" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="511.7" y1="296" x2="511.7" y2="314" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="814.2" y1="296" x2="814.2" y2="314" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="663.0" cy="305" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="289" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,09  (-0,01 / +0,19)</text>
+<text x="40" y="408" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14">Varović et al., 2025 · méta-analyse de 12 études · PMID 40570881</text>
+</svg></div><figcaption class="cap">Différence standardisée de croissance régionale entre longueurs musculaires plus grandes et plus courtes. Les valeurs positives favorisent les longueurs plus grandes. Les trois intervalles à 95 % traversent le zéro. Source : Varović et al., 2025, méta-analyse bayésienne de 12 études (PMID 40570881).</figcaption></figure>
+<p>Il existe une tendance croissante du proximal vers le distal, et les auteurs la signalent. Ils signalent aussi la limite la plus honnête : entre les conditions comparées, l'écart moyen de longueur musculaire n'était que de 21,8 %.</p>
+<p>En salle : si tu choisis les écartés en espérant le bonus « étirement », ce bonus a peu de chances d'arriver.</p>
+<h2>Ce que le développé t'apporte et pas les écartés</h2>
+<p>C'est la donnée pratique totalement absente du post, et elle répond à une question restée sans réponse dans ses propres commentaires : <em>puis-je entraîner mes pectoraux comme au développé, mais sans solliciter triceps et deltoïdes ?</em></p>
+<p>En 2020, une équipe norvégienne a mesuré l'activité électrique de quatre muscles chez dix-sept hommes entraînés (près de cinq ans d'expérience) au développé couché à la barre et aux écartés haltères, à des charges de six répétitions maximales, en découpant chaque répétition en six phases. Le développé produit plus de signal sur le <strong>grand pectoral, le deltoïde antérieur et le triceps</strong>, avec des écarts allant <strong>de +8 % à +81 %</strong> selon le muscle et la phase. Les écartés l'emportent sur un seul muscle : le <strong>biceps</strong>, de +57 % à +86 %, mais comme antagoniste stabilisant le coude, pas comme muscle travaillé.</p>
+<figure><div class="chart" role="img" aria-label="Graphique à barres : le développé couché à la barre produit de +8 % à +81 % d&#x27;activité électrique en plus sur pectoral, deltoïde antérieur et triceps ; les écartés produisent de +57 % à +86 % en plus sur le biceps comme antagoniste"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img">
+<rect width="960" height="400" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700">Développé couché contre écartés : combien de signal en plus</text>
+<text x="40" y="82" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15">Activité électrique supplémentaire (%)</text>
+<line x1="60.0" y1="110" x2="60.0" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="60.0" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">0%</text>
+<line x1="237.9" y1="110" x2="237.9" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="237.9" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">20%</text>
+<line x1="415.8" y1="110" x2="415.8" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="415.8" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">40%</text>
+<line x1="593.7" y1="110" x2="593.7" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="593.7" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">60%</text>
+<line x1="771.6" y1="110" x2="771.6" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="771.6" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">80%</text>
+<text x="60" y="154" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17">Développé &gt; écartés — pectoral, deltoïde ant., triceps</text>
+<rect x="131.2" y="164" width="649.3" height="32" rx="6" fill="#d4af37" opacity="0.9"/>
+<text x="141.2" y="186" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700">+8%</text>
+<text x="770.5" y="186" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="end">+81%</text>
+<text x="60" y="259" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17">Écartés &gt; développé — biceps (antagoniste)</text>
+<rect x="567.0" y="269" width="257.9" height="32" rx="6" fill="#aa8a2e" opacity="0.9"/>
+<text x="577.0" y="291" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700">+57%</text>
+<text x="814.9" y="291" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="end">+86%</text>
+<text x="40" y="382" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14">Solstad et al., 2020 · 17 hommes entraînés, charges 6RM · PMID 33239937</text>
+</svg></div><figcaption class="cap">Signal électrique supplémentaire produit par chaque exercice, intervalle rapporté par les auteurs selon les muscles et les phases. Source : Solstad et al., 2020, 17 hommes entraînés, charges 6RM (PMID 33239937).</figcaption></figure>
+<p>Attention à ne pas retourner le raisonnement : l'activation électrique <strong>ne prédit pas</strong> la croissance, et ce blog l'a déjà montré chiffres à l'appui à propos de la <a href="/fr/blog/leg-extension-ou-presse-a-cuisses-droit-femoral">leg extension et de la presse</a>. Le point ici est plus simple : le développé met trois muscles sous charge, les écartés essentiellement un. Si ton temps en salle est limité — et il l'est pour presque tout le monde — c'est un critère plus concret que n'importe quel débat sur les longueurs musculaires.</p>
+<p>Le revers est tout aussi utile : si le développé gêne ton épaule, les écartés permettent d'entraîner les pectoraux sans renoncer à la croissance, et tu n'y perds que le travail des triceps, rattrapable ailleurs.</p>
+<h2>Là où le choix compte vraiment : le haut des pectoraux</h2>
+<p>La limite la plus importante de la nouvelle étude est déclarée par les auteurs : l'épaisseur a été mesurée en trois points allant du centre vers l'extérieur, et <strong>la région claviculaire — le haut des pectoraux — n'a pas été mesurée directement</strong>.</p>
+<p>C'est gênant, car c'est la seule zone où, dans les études publiées, le choix de l'exercice a réellement changé quelque chose.</p>
+<p>En 2020, Chaves et ses collègues ont réparti 47 hommes non entraînés en trois groupes — banc plat seul, banc incliné seul, ou les deux — pendant huit semaines à nombre de séries égal. La force a progressé de la même façon dans les trois groupes (environ 10-11 kg, sans différence significative). L'épaisseur musculaire a évolué différemment sur <strong>un seul site sur trois</strong> : le deuxième espace intercostal, le haut des pectoraux, où l'incliné a dépassé le plat de <strong>0,62 cm (intervalle 0,23-1,00 ; p = 0,003)</strong> et la combinaison de <strong>0,50 cm (0,14-0,86 ; p = 0,008)</strong>.</p>
+<p>Deux détails. D'abord : le groupe faisant <strong>les deux</strong> n'a battu aucun des deux autres ; faire un peu de tout a dilué le stimulus. Ensuite : il s'agissait de débutants, donc c'est une indication, pas une loi.</p>
+<p>Le mécanisme colle à ce qu'on mesure en aigu. En 2022, une équipe italo-brésilienne a enregistré les deux faisceaux du pectoral au développé plat et à 45° : sur l'incliné le faisceau claviculaire travaille plus que le sterno-costal, sur le plat c'est l'inverse, et la réponse immédiate de la section musculaire suit la même direction. Quant à l'angle précis, trente adultes entraînés testés à cinq inclinaisons montrent un pic du haut des pectoraux à <strong>30°</strong>, tandis que les portions moyenne et basse rendent le plus à <strong>0°</strong> ; au-delà de 45°, le travail glisse vers le deltoïde antérieur et le pectoral rend moins.</p>
+<h2>Ce que dit vraiment la recherche</h2>
+<ul><li><strong>Confirmé</strong> — Le grand pectoral comporte deux régions, claviculaire et sterno-costale, avec innervation et réponses distinctes (Albarello et al., 2022).</li><li><strong>Confirmé</strong> — Des exercices différents produisent une croissance comparable quand l'agoniste est suffisamment sollicité sur des amplitudes voisines (Chaves et al., 2020 ; Kassiano et al., 2022).</li><li><strong>À nuancer</strong> — « Pas de différence significative » avec 13 personnes par groupe après 43 % d'abandons n'autorise pas à parler d'équivalence.</li><li><strong>À nuancer</strong> — Varier les exercices aide, mais seulement si la variation est systématique : alterner au hasard des exercices au stimulus redondant peut dégrader les résultats (Kassiano et al., 2022).</li><li><strong>Démenti</strong> — L'attente d'une croissance supérieure avec les écartés du fait de l'étirement : les effets sur la croissance régionale sont triviaux (Varović et al., 2025).</li><li><strong>Non vérifiable</strong> — Les chiffres de l'étude Dell'Avanzi : acceptée par le <em>Journal of Strength and Conditioning Research</em>, ni publiée ni indexée au 20 octobre 2026.</li></ul>
+<h2>Comment l'appliquer</h2>
+<ol class="steps"><li><strong>Choisis le mouvement de poussée que tu peux charger et faire progresser dans le temps.</strong> Barre, haltères ou machine : à séries égales et à proximité de l'échec égale, les pectoraux grossissent. Le critère n'est pas « lequel active le plus », mais sur lequel tu arrives à ajouter des kilos ou des répétitions mois après mois.</li><li><strong>Garde les écartés comme second exercice, pas comme remplaçant obligatoire.</strong> Ils sont utiles si la poussée gêne ton épaule, si tu veux du volume pectoral sans fatiguer davantage les triceps, ou simplement si tu les aimes et les fais donc régulièrement.</li><li><strong>Si le haut des pectoraux est ton point faible, règle le banc à 30°.</strong> C'est là que la portion claviculaire rend le plus. Au-delà de 45°, tu travailles surtout les épaules.</li><li><strong>Ne mélange pas au hasard.</strong> Deux ou trois exercices stables tenus six à douze semaines battent une rotation nouvelle chaque semaine.</li><li><strong>Approche suffisamment l'échec.</strong> Le protocole de l'étude travaillait à environ deux répétitions en réserve, dernière série à l'échec. Le tableau complet des séries, répétitions et récupérations est résumé <a href="/fr/blog/combien-de-repetitions-masse-musculaire">ici</a>.</li></ol>
+<h3>Essaie Nurvan — tes pectoraux grossissent si la charge monte</h3>
+<p>Ce qui décide n'est pas l'exercice que tu « sens » le plus, mais celui qui progresse. Dans Nurvan chaque série est enregistrée avec la charge, les répétitions et le RIR (combien de répétitions il te restait), et l'application affiche la tendance exercice par exercice : tu vois noir sur blanc si ton développé haltères monte ou stagne depuis deux mois, et tu décides avec tes chiffres plutôt qu'avec la dernière étude virale. <strong><a href="https://nurvan.app">Essaie Nurvan</a></strong></p>
+<h2>Questions fréquentes</h2>
+<p><strong>Développé ou écartés pour faire grossir les pectoraux ?</strong> Pour le pectoral dans son ensemble, les preuves disponibles ne désignent pas de vainqueur : les deux fonctionnent si les séries approchent suffisamment l'échec. Le développé entraîne en plus deltoïde antérieur et triceps dans la même série, donc il rend davantage par minute. Les écartés restent un excellent choix si la poussée te gêne.</p>
+<p><strong>Les écartés servent-ils à « l'intérieur » des pectoraux ?</strong> Non. Le grand pectoral se divise en portion claviculaire et sterno-costale, pas en une partie « interne » et une « externe » : aucun exercice ne fait grossir uniquement la zone centrale. Les différences régionales documentées opposent le haut et le bas, et dépendent surtout de l'inclinaison du banc.</p>
+<p><strong>Quelle inclinaison pour le haut des pectoraux ?</strong> Trente degrés est l'inclinaison où la portion haute montre l'activité maximale. À zéro degré, les portions moyenne et basse rendent le plus. Au-delà de 45°, le deltoïde antérieur prend le relais.</p>
+<p><strong>Faut-il faire les deux exercices ?</strong> Ce n'est pas obligatoire. Dans la seule étude ayant comparé un groupe « les deux » aux groupes à exercice unique, faire les deux n'a pas donné de meilleurs résultats. Choisis selon ton temps, ton matériel et ton confort articulaire.</p>
+<h2>À lire aussi</h2>
+<ul><li><a href="/fr/blog/leg-extension-ou-presse-a-cuisses-droit-femoral">Leg extension ou presse à cuisses : ce qui grossit vraiment</a> — pourquoi « active plus » ne veut pas dire « grossit plus ».</li><li><a href="/fr/blog/exercices-fessiers-hip-thrust-ou-squat">Exercices fessiers : hip thrust ou squat ?</a> — la même erreur de lecture sur un autre muscle.</li><li><a href="/fr/blog/combien-de-repetitions-masse-musculaire">Répétitions, séries et récupération pour l'hypertrophie</a> — les variables qui comptent plus que le choix de l'exercice.</li></ul>
+<h2>Sources</h2>
+<ol class="steps"><li>Solstad TE, Andersen V, Shaw M, Hoel EM, Vonheim A, Saeterbakken AH, 2020. <em>A Comparison of Muscle Activation between Barbell Bench Press and Dumbbell Flyes in Resistance-Trained Males.</em> Journal of Sports Science &amp; Medicine 19(4):645-651. <a href="https://pubmed.ncbi.nlm.nih.gov/33239937/">PMID 33239937</a></li><li>Chaves SFN, et al., 2020. <em>Effects of Horizontal and Incline Bench Press on Neuromuscular Adaptations in Untrained Young Men.</em> International Journal of Exercise Science 13(6):859-872. <a href="https://pubmed.ncbi.nlm.nih.gov/32922646/">PMID 32922646</a> · <a href="https://doi.org/10.70252/FDNB1158">DOI 10.70252/FDNB1158</a></li><li>Albarello JCS, et al., 2022. <em>Non-uniform excitation of pectoralis major induced by changes in bench press inclination leads to uneven variations in the cross-sectional area measured by panoramic ultrasonography.</em> Journal of Electromyography and Kinesiology 67:102722. <a href="https://pubmed.ncbi.nlm.nih.gov/36334406/">PMID 36334406</a> · <a href="https://doi.org/10.1016/j.jelekin.2022.102722">DOI 10.1016/j.jelekin.2022.102722</a></li><li>Varović D, Wolf M, Schoenfeld BJ, Steele J, Grgic J, Mikulic P, 2025. <em>Does Muscle Length Influence Regional Hypertrophy? A Systematic Review and Meta-Analysis.</em> International Journal of Sports Medicine 46(14):1027-1036. <a href="https://pubmed.ncbi.nlm.nih.gov/40570881/">PMID 40570881</a> · <a href="https://doi.org/10.1055/a-2615-4935">DOI 10.1055/a-2615-4935</a></li><li>Kassiano W, Nunes JP, Costa B, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2022. <em>Does Varying Resistance Exercises Promote Superior Muscle Hypertrophy and Strength Gains? A Systematic Review.</em> Journal of Strength and Conditioning Research 36(6):1753-1762. <a href="https://pubmed.ncbi.nlm.nih.gov/35438660/">PMID 35438660</a> · <a href="https://doi.org/10.1519/JSC.0000000000004258">DOI 10.1519/JSC.0000000000004258</a></li><li>Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM, 2020. <em>Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise.</em> International Journal of Environmental Research and Public Health 17(19):7339. <a href="https://pubmed.ncbi.nlm.nih.gov/33049982/">PMID 33049982</a> · <a href="https://doi.org/10.3390/ijerph17197339">DOI 10.3390/ijerph17197339</a></li><li>Dell'Avanzi FG, et al. <em>Dumbbell bench press and dumbbell fly elicit similar pectoralis major muscle hypertrophy in recreationally-trained individuals.</em> Acceptée par le Journal of Strength and Conditioning Research ; au 20 octobre 2026 ni publiée ni indexée sur PubMed. Protocole et résultats rapportés tels que déclarés par les auteurs.</li></ol>
+<p>Références récupérées via PubMed. Point de départ : le carrousel de <strong>Dorian Varović</strong> (<a href="https://www.instagram.com/varovicdorian/">@varovicdorian</a>) du 9 septembre 2026, <a href="https://www.instagram.com/p/DdFF9e8HIOQ/">post original</a>. Aucun texte ni image du post n'a été reproduit.</p>
+<hr>
+<p><strong>Giammaria Loi</strong> est le fondateur de Nurvan. Il s'entraîne avec les poids depuis 2012, travaille comme coach et préparateur certifié FIPE depuis 2013 et compète en powerlifting au niveau national depuis 2018.</p>
+<p class="cap" style="border-inline-start:3px solid var(--gold-dark);padding-inline-start:14px">Note : contenu informatif, qui ne remplace pas l'avis d'un médecin ou d'un professionnel qualifié. Si la poussée fait mal à l'épaule, fais-la évaluer avant d'insister.</p>
+</main>
+<footer class="site" style="position:static;border-top:1px solid var(--line);border-bottom:none"><div class="in"><span class="cap">Nurvan · contenu informatif, ne remplace pas un avis médical.</span></div></footer>
+</body>
+</html>

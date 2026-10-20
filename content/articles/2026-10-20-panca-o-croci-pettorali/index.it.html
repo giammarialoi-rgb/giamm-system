@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="it" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panca o croci: cosa fa crescere di più il petto? | Nurvan</title>
+<meta name="description" content="Un nuovo studio dice che panca con manubri e croci fanno crescere il petto allo stesso modo. Ho letto sei studi: cosa regge, cosa manca e come scegliere.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in">
+<a class="logo" href="#">NUR<b>VAN</b></a>
+<nav><a href="#">Allenamento</a><a href="#">Nutrizione</a><a href="#">Integrazione</a><a href="#">Coaching</a></nav>
+<a class="cta" href="https://nurvan.app">Prova Nurvan</a>
+</div></header>
+<main class="wrap">
+<p class="crumb">Allenamento</p>
+<h1>Panca o croci: cosa fa crescere di più il petto?</h1>
+<div class="meta">
+<span>Di <b><a href="/autore/giammaria-loi">Giammaria Loi</a></b></span>
+<span>aggiornato il <b>2026-10-20</b></span>
+<span>Fonti: <b>6</b></span>
+</div>
+<figure><img src="images/cover.jpg" alt="Panca o croci: cosa fa crescere di più il petto?"><figcaption class="cap">U.S. Navy, foto di Mass Communication Specialist 3rd Class Eric J. Cutright, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:US_Navy_071017-N-0995C-008_Chief_Mineman_Kevin_Sperling,_an_officer_recruiter_at_Navy_Recruiting_Processing_Station_Honolulu,_presses_two_105-pound_dumbbells.jpg), pubblico dominio</figcaption></figure>
+<p>Un carosello molto condiviso racconta uno studio appena uscito: dieci settimane, panca con manubri contro croci con manubri, e alla fine il petto cresce uguale. La conclusione è comoda — scegli quello che preferisci — e in gran parte regge. Ma ho letto sei studi indicizzati per controllarla, e sono saltate fuori tre cose che nel post non ci sono: lo studio in questione non è ancora pubblicato, la zona del petto dove la scelta conta davvero non è stata misurata, e i due esercizi non costano lo stesso tempo a parità di muscoli allenati.</p>
+<div class="box"><h2>In breve</h2>
+<ul><li><strong>Panca con manubri e croci fanno crescere il pettorale in modo simile</strong>, secondo uno studio di 10 settimane. Ma lo studio è stato <em>accettato</em> da una rivista, non ancora pubblicato: al 20 ottobre 2026 non è verificabile su PubMed.</li><li><strong>Sono rimaste 13 persone per gruppo</strong> su 46 partenti. Con numeri così, "nessuna differenza significativa" non significa "i due esercizi sono equivalenti".</li><li><strong>L'idea che le croci crescano di più perché allungano di più il muscolo era già stata smontata</strong> — dalla meta-analisi dello stesso ricercatore che ha pubblicato il post: effetti trivial, SMD da 0,05 a 0,09 (Varović et al., 2025).</li><li><strong>La panca ti dà anche deltoide anteriore e tricipite</strong>: da +8% a +81% di attività elettrica in più rispetto alle croci (Solstad et al., 2020). Le croci no.</li><li><strong>Per il petto alto la scelta conta</strong>, e lì il nuovo studio non guarda: l'unica differenza misurata in letteratura è +0,62 cm di spessore con la panca inclinata (Chaves et al., 2020).</li></ul></div>
+<h2>Cosa confronta davvero il nuovo studio</h2>
+<p>Il disegno, così come lo descrivono gli autori: persone allenate da almeno sei mesi (in media tre o quattro anni di esperienza), due sedute a settimana per dieci settimane, <strong>un solo esercizio per seduta</strong> — o panca con manubri, o croci con manubri — e divieto di fare altro lavoro per pettorali e deltoide anteriore. Il volume non era imposto: ognuno continuava con il numero di serie a cui era abituato, in media circa 14 serie a settimana nel gruppo panca e 13 nel gruppo croci. Otto-dodici ripetizioni a circa 2 ripetizioni dal cedimento, con l'ultima serie portata a cedimento concentrico. Spessore del pettorale misurato con l'ecografo in tre punti, dal centro del torace verso l'esterno.</p>
+<p>Risultato dichiarato: entrambi i gruppi crescono in tutti e tre i punti, nessuna differenza fra i due gruppi.</p>
+<p>Prima cosa che il post non dice: <strong>questo studio non è ancora pubblicato</strong>. L'ho cercato su PubMed per autore, per titolo e per coautori, e non c'è. L'unica fonte primaria rintracciabile è un annuncio dell'ultimo autore, Brad Schoenfeld, che scrive che il lavoro è stato appena accettato dal <em>Journal of Strength and Conditioning Research</em>. Nessun DOI pubblico, nessun preprint. Non è un'accusa: è normale che passino settimane fra accettazione e pubblicazione. Ma significa che nessuno — me compreso — può ancora leggere i numeri, i margini di errore e le tabelle. Per questo in tutto l'articolo che segue <strong>non uso un solo numero preso da quello studio</strong>: i valori che leggi vengono tutti da lavori pubblicati e verificati.</p>
+<h2>"Nessuna differenza" non vuol dire "sono uguali"</h2>
+<p>Dei 46 partecipanti partiti, <strong>26 hanno finito</strong>: tredici per gruppo. Gli autori stessi definiscono l'abbandono insolitamente alto. È il 43% delle persone che sparisce per strada.</p>
+<p>Qui serve una distinzione che vale per metà dei contenuti fitness che leggi. "Nessuna differenza statisticamente significativa" vuol dire che i dati raccolti non bastano a dimostrare una differenza. Non vuol dire che la differenza non c'è. Con tredici persone per gruppo, uno studio riesce a vedere solo differenze grandi: se la panca facesse crescere il petto, poniamo, il 15% in più delle croci, probabilmente nemmeno se ne accorgerebbe. Per dire "sono equivalenti" servirebbe un disegno costruito apposta, con una soglia di equivalenza dichiarata in anticipo.</p>
+<p>Quindi la lettura onesta è: <strong>non abbiamo prove che uno dei due sia meglio</strong>. Che è già un'informazione utile, ed è diversa da "sono la stessa cosa".</p>
+<p>È lo stesso errore di lettura che ho raccontato parlando di <a href="/blog/esercizi-glutei-hip-thrust-squat">hip thrust e squat per i glutei</a>: anche lì le stime pendevano da una parte, ma con intervalli di confidenza che contenevano comodamente lo zero.</p>
+<h2>L'ipotesi di partenza era già stata messa alla prova</h2>
+<p>Il motivo per cui questo studio è stato fatto è interessante: i ricercatori si aspettavano che le <strong>croci</strong> facessero crescere di più. Il ragionamento è quello diventato popolare negli ultimi anni — le croci caricano il pettorale quando è più allungato, e allenare a lunghezze muscolari maggiori dovrebbe dare più crescita.</p>
+<p>Solo che quell'ipotesi ha già una risposta, e arriva dalla stessa persona che ha pubblicato il carosello. Dorian Varović ha firmato nel 2025 una meta-analisi bayesiana su dodici studi che hanno manipolato la lunghezza del muscolo — con l'ampiezza di movimento o con la scelta dell'esercizio — e misurato la crescita in zone diverse dello stesso muscolo. I risultati sono <strong>trivial</strong>, cioè praticamente nulli: differenza standardizzata 0,05 nella parte prossimale, 0,07 al centro, 0,09 nella parte distale, con intervalli che contengono tutti lo zero. Tradotto in percentuali di crescita: fra 0,6% e 1,9%.</p>
+<figure><div class="chart" role="img" aria-label="Grafico a tre punti: la differenza di crescita regionale fra allenarsi a lunghezze muscolari maggiori o minori è vicina a zero in tutte e tre le zone del muscolo, con intervalli di credibilità che attraversano lo zero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 430" width="960" height="430" role="img">
+<rect width="960" height="430" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700">Lunghezze muscolari maggiori: quanto cambia la crescita</text>
+<text x="40" y="82" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15">Differenza standardizzata (SMD) · intervallo al 95%</text>
+<line x1="375.6" y1="118" x2="375.6" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="375.6" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">-0,1</text>
+<line x1="526.9" y1="118" x2="526.9" y2="340" stroke="#aa8a2e" stroke-width="2"/>
+<text x="526.9" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">0</text>
+<line x1="678.1" y1="118" x2="678.1" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="678.1" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">+0,1</text>
+<line x1="829.4" y1="118" x2="829.4" y2="340" stroke="#242424" stroke-width="1"/>
+<text x="829.4" y="365" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">+0,2</text>
+<text x="526.9" y="110" fill="#aa8a2e" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="middle">nessuna differenza</text>
+<text x="285" y="170" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Prossimale (25%)</text>
+<line x1="421.0" y1="165" x2="768.9" y2="165" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="421.0" y1="156" x2="421.0" y2="174" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="768.9" y1="156" x2="768.9" y2="174" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="602.5" cy="165" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="149" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,05  (-0,07 / +0,16)</text>
+<text x="285" y="240" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Centro (50%)</text>
+<line x1="496.6" y1="235" x2="753.8" y2="235" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="496.6" y1="226" x2="496.6" y2="244" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="753.8" y1="226" x2="753.8" y2="244" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="632.8" cy="235" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="219" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,07  (-0,02 / +0,15)</text>
+<text x="285" y="310" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" text-anchor="end">Distale (75%)</text>
+<line x1="511.7" y1="305" x2="814.2" y2="305" stroke="#d4af37" stroke-width="4" stroke-linecap="round" opacity="0.55"/>
+<line x1="511.7" y1="296" x2="511.7" y2="314" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<line x1="814.2" y1="296" x2="814.2" y2="314" stroke="#d4af37" stroke-width="3" opacity="0.8"/>
+<circle cx="663.0" cy="305" r="8" fill="#f3e5ab"/>
+<text x="905.0" y="289" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,09  (-0,01 / +0,19)</text>
+<text x="40" y="408" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14">Varović et al., 2025 · meta-analisi di 12 studi · PMID 40570881</text>
+</svg></div><figcaption class="cap">Differenza standardizzata di crescita fra lunghezze muscolari maggiori e minori, per zona del muscolo. Valori positivi favoriscono le lunghezze maggiori. Tutti e tre gli intervalli al 95% attraversano lo zero. Fonte: Varović et al., 2025, meta-analisi bayesiana su 12 studi (PMID 40570881).</figcaption></figure>
+<p>C'è una tendenza in crescita dal prossimale al distale, e gli autori stessi la segnalano. Ma segnalano anche il limite più onesto: fra le condizioni confrontate la differenza media di lunghezza muscolare era solo del 21,8%. Cioè gli studi disponibili confrontano cose più simili di quanto suggerisca il dibattito online.</p>
+<p>Detto in palestra: se scegli le croci sperando nel bonus "stretch", è probabile che quel bonus non arrivi.</p>
+<h2>Quello che la panca ti dà e le croci no</h2>
+<p>Qui c'è il dato pratico che nel post manca del tutto, ed è quello che risponde a una domanda rimasta senza risposta nei commenti al post stesso: <em>posso allenare il petto come con la panca, ma senza coinvolgere tricipiti e deltoidi?</em></p>
+<p>Nel 2020 un gruppo norvegese ha misurato l'attività elettrica di quattro muscoli in diciassette uomini allenati (quasi cinque anni di esperienza) durante panca con bilanciere e croci con manubri, con carichi da sei ripetizioni massime, scomponendo la ripetizione in sei fasi. La panca produce più segnale su <strong>grande pettorale, deltoide anteriore e tricipite</strong>, con differenze che vanno <strong>da +8% a +81%</strong> a seconda del muscolo e della fase. Le croci vincono su un muscolo solo: il <strong>bicipite</strong>, da +57% a +86%, ma come antagonista, cioè come stabilizzatore del gomito, non come muscolo allenato.</p>
+<figure><div class="chart" role="img" aria-label="Grafico a barre: la panca con bilanciere produce da +8% a +81% di attività elettrica in più su pettorale, deltoide anteriore e tricipite; le croci producono da +57% a +86% in più sul bicipite come antagonista"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img">
+<rect width="960" height="400" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700">Panca con bilanciere contro croci: quanto segnale in più</text>
+<text x="40" y="82" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15">Attività elettrica in più (%)</text>
+<line x1="60.0" y1="110" x2="60.0" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="60.0" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">0%</text>
+<line x1="237.9" y1="110" x2="237.9" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="237.9" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">20%</text>
+<line x1="415.8" y1="110" x2="415.8" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="415.8" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">40%</text>
+<line x1="593.7" y1="110" x2="593.7" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="593.7" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">60%</text>
+<line x1="771.6" y1="110" x2="771.6" y2="325" stroke="#242424" stroke-width="1"/>
+<text x="771.6" y="348" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" text-anchor="middle">80%</text>
+<text x="60" y="154" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17">Panca &gt; croci — pettorale, deltoide anteriore, tricipite</text>
+<rect x="131.2" y="164" width="649.3" height="32" rx="6" fill="#d4af37" opacity="0.9"/>
+<text x="141.2" y="186" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700">+8%</text>
+<text x="770.5" y="186" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="end">+81%</text>
+<text x="60" y="259" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17">Croci &gt; panca — bicipite (antagonista)</text>
+<rect x="567.0" y="269" width="257.9" height="32" rx="6" fill="#aa8a2e" opacity="0.9"/>
+<text x="577.0" y="291" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700">+57%</text>
+<text x="814.9" y="291" fill="#0c0c0c" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="end">+86%</text>
+<text x="40" y="382" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14">Solstad et al., 2020 · 17 uomini allenati, carichi da 6RM · PMID 33239937</text>
+</svg></div><figcaption class="cap">Quanto segnale elettrico in più produce ciascun esercizio, intervallo riportato dagli autori attraverso muscoli e fasi del movimento. Fonte: Solstad et al., 2020, 17 uomini allenati, carichi da 6RM (PMID 33239937).</figcaption></figure>
+<p>Attenzione a non ribaltare il ragionamento: l'attivazione elettrica <strong>non predice</strong> la crescita, e questo blog lo ha già mostrato con i dati alla mano parlando di <a href="/blog/leg-extension-o-leg-press-retto-femorale">leg extension e leg press</a>. Il punto qui è diverso e più banale: la panca mette sotto carico tre muscoli, le croci sostanzialmente uno. Se il tuo tempo in palestra è limitato — e lo è per quasi tutti — questo è un criterio di scelta più concreto di qualunque discorso sulle lunghezze muscolari.</p>
+<p>Il rovescio della medaglia è altrettanto utile: se la panca ti dà fastidio alla spalla, le croci ti permettono di allenare il petto senza rinunciare alla crescita, e ti costeranno solo il lavoro sui tricipiti, che puoi recuperare altrove.</p>
+<h2>Dove la scelta conta davvero: il petto alto</h2>
+<p>Il limite più importante del nuovo studio è dichiarato dagli autori stessi: lo spessore è stato misurato in tre punti che vanno dal centro del torace verso l'esterno, e <strong>la regione clavicolare — il petto alto — non è stata misurata direttamente</strong>.</p>
+<p>È un problema, perché quella è l'unica zona in cui, negli studi pubblicati, la scelta dell'esercizio ha davvero cambiato qualcosa.</p>
+<p>Nel 2020 Chaves e colleghi hanno diviso 47 uomini non allenati in tre gruppi — solo panca piana, solo panca inclinata, o entrambe — per otto settimane, con lo stesso numero di serie. La forza è cresciuta uguale in tutti e tre i gruppi (circa 10-11 kg, nessuna differenza significativa). Lo spessore muscolare è cambiato in modo diverso in <strong>un solo punto su tre</strong>: il secondo spazio intercostale, cioè il petto alto, dove la panca inclinata ha superato la piana di <strong>0,62 cm (intervallo 0,23-1,00; p = 0,003)</strong> e la combinazione delle due di <strong>0,50 cm (0,14-0,86; p = 0,008)</strong>.</p>
+<p>Due dettagli che vale la pena notare. Primo: il gruppo che faceva <strong>entrambi</strong> gli esercizi non ha battuto nessuno dei due; fare "un po' di tutto" ha diviso lo stimolo. Secondo: parliamo di persone non allenate, quindi il risultato va preso come indicazione, non come legge.</p>
+<p>Il meccanismo è coerente con quanto si misura in acuto. Nel 2022 un gruppo italo-brasiliano ha registrato l'attività dei due capi del pettorale durante panca piana e panca a 45°: sull'inclinata il capo clavicolare lavora più dello sternocostale, sulla piana succede l'opposto, e la risposta immediata della sezione muscolare segue la stessa direzione. Quanto all'angolo preciso, trenta adulti allenati testati a cinque inclinazioni diverse mostrano il picco del petto alto a <strong>30°</strong>, mentre la porzione media e bassa rendono di più a <strong>0°</strong>; oltre i 45° il lavoro passa sempre di più al deltoide anteriore e la prestazione del pettorale cala.</p>
+<h2>Cosa dice davvero la ricerca</h2>
+<ul><li><strong>Confermato</strong> — Il grande pettorale ha due regioni, clavicolare e sternocostale, con innervazione e risposta separate: non si comporta come un muscolo unico (Albarello et al., 2022).</li><li><strong>Confermato</strong> — Esercizi diversi producono crescita simile quando il muscolo agonista è sollecitato a sufficienza su ampiezze di movimento paragonabili (Chaves et al., 2020; Kassiano et al., 2022).</li><li><strong>Da precisare</strong> — "Nessuna differenza significativa" fra panca e croci, con 13 persone per gruppo dopo il 43% di abbandoni, non autorizza a dire che i due esercizi sono equivalenti.</li><li><strong>Da precisare</strong> — Variare gli esercizi aiuta, ma solo se la variazione è sistematica: ruotare a caso esercizi che danno lo stesso stimolo può peggiorare i risultati (Kassiano et al., 2022).</li><li><strong>Smentito</strong> — L'aspettativa che le croci facciano crescere di più perché caricano il muscolo allungato: gli effetti sulla crescita regionale sono trivial (Varović et al., 2025).</li><li><strong>Non verificabile</strong> — I numeri dello studio Dell'Avanzi: accettato dal <em>Journal of Strength and Conditioning Research</em>, non ancora pubblicato né indicizzato al 20 ottobre 2026.</li></ul>
+<h2>Come applicarlo</h2>
+<ol class="steps"><li><strong>Scegli l'esercizio di spinta che puoi caricare e progredire nel tempo.</strong> Panca con bilanciere, con manubri o alla macchina: a parità di serie e di vicinanza al cedimento, il petto cresce. Il criterio non è quale "attiva di più", ma su quale riesci ad aggiungere carico o ripetizioni mese dopo mese.</li><li><strong>Tieni le croci come secondo esercizio, non come sostituto obbligatorio.</strong> Sono utili se la spinta ti dà fastidio alla spalla, se vuoi aggiungere volume per il petto senza affaticare ulteriormente i tricipiti, o semplicemente se ti piacciono e le fai con più costanza.</li><li><strong>Se il petto alto è il tuo punto debole, metti la panca a 30°.</strong> È lì che la porzione clavicolare rende di più. Sopra i 45° stai allenando soprattutto le spalle.</li><li><strong>Non mescolare a caso.</strong> Due o tre esercizi stabili per il petto, tenuti per sei-dodici settimane, battono una rotazione nuova ogni settimana.</li><li><strong>Porta le serie abbastanza vicino al cedimento.</strong> Nel protocollo dello studio si lavorava a circa due ripetizioni dal cedimento, con l'ultima serie a cedimento: è una buona cornice di riferimento. Se vuoi il quadro completo su serie, ripetizioni e recuperi, l'ho riassunto <a href="/blog/ripetizioni-serie-recupero-ipertrofia">qui</a>.</li></ol>
+<h3>Prova Nurvan — il tuo petto cresce se il carico sale</h3>
+<p>Il dato che decide non è quale esercizio "senti" di più, ma se quell'esercizio sta progredendo. Su Nurvan ogni serie viene registrata con carico, ripetizioni e RIR (quante ripetizioni ti restavano nel serbatoio), e l'app ti mostra l'andamento esercizio per esercizio: così vedi nero su bianco se la tua panca con manubri sta salendo o è ferma da due mesi, e decidi in base ai tuoi numeri invece che all'ultimo studio virale. <strong><a href="https://nurvan.app">Prova Nurvan</a></strong></p>
+<h2>Domande frequenti</h2>
+<p><strong>Meglio panca o croci per far crescere il petto?</strong> Per il grande pettorale nel suo insieme, le prove disponibili non mostrano un vincitore: entrambi funzionano se le serie sono abbastanza vicine al cedimento. La panca però allena anche deltoide anteriore e tricipite nella stessa serie, quindi a parità di tempo rende di più. Le croci restano un'ottima scelta se la spinta ti dà fastidio.</p>
+<p><strong>Le croci servono per "l'interno" del petto?</strong> No. Il grande pettorale è diviso in porzione clavicolare e sternocostale, non in una parte "interna" e una "esterna": non esiste un esercizio che faccia crescere solo la zona centrale. Le differenze regionali documentate riguardano alto contro basso, e dipendono soprattutto dall'inclinazione della panca.</p>
+<p><strong>A che inclinazione va messa la panca per il petto alto?</strong> Trenta gradi è l'inclinazione a cui la porzione alta del pettorale mostra la massima attività. A zero gradi rendono di più la porzione media e bassa. Oltre i 45° il deltoide anteriore prende il sopravvento e il pettorale lavora meno.</p>
+<p><strong>Devo fare per forza entrambi gli esercizi?</strong> Non è obbligatorio. Nell'unico studio che ha confrontato un gruppo "entrambi" con i gruppi singoli, fare le due varianti non ha dato risultati migliori di farne una sola. Scegli in base a tempo, attrezzatura disponibile e comfort articolare.</p>
+<h2>Leggi anche</h2>
+<ul><li><a href="/blog/leg-extension-o-leg-press-retto-femorale">Leg extension o leg press: cosa cresce davvero</a> — perché "attiva di più" non vuol dire "cresce di più".</li><li><a href="/blog/esercizi-glutei-hip-thrust-squat">Esercizi per i glutei: hip thrust o squat?</a> — lo stesso errore di lettura, su un altro muscolo.</li><li><a href="/blog/ripetizioni-serie-recupero-ipertrofia">Ripetizioni, serie e recupero per l'ipertrofia</a> — le variabili che contano più della scelta dell'esercizio.</li></ul>
+<h2>Fonti</h2>
+<ol class="steps"><li>Solstad TE, Andersen V, Shaw M, Hoel EM, Vonheim A, Saeterbakken AH, 2020. <em>A Comparison of Muscle Activation between Barbell Bench Press and Dumbbell Flyes in Resistance-Trained Males.</em> Journal of Sports Science &amp; Medicine 19(4):645-651. <a href="https://pubmed.ncbi.nlm.nih.gov/33239937/">PMID 33239937</a></li><li>Chaves SFN, Rocha-Júnior VA, Encarnação IGA, Martins-Costa HC, Freitas EDS, Coelho DB, Franco FSC, Loenneke JP, Bottaro M, Ferreira-Júnior JB, 2020. <em>Effects of Horizontal and Incline Bench Press on Neuromuscular Adaptations in Untrained Young Men.</em> International Journal of Exercise Science 13(6):859-872. <a href="https://pubmed.ncbi.nlm.nih.gov/32922646/">PMID 32922646</a> · <a href="https://doi.org/10.70252/FDNB1158">DOI 10.70252/FDNB1158</a></li><li>Albarello JCS, Cabral HV, Leitão BFM, Halmenschlager GH, Lulic-Kuryllo T, Matta TT, 2022. <em>Non-uniform excitation of pectoralis major induced by changes in bench press inclination leads to uneven variations in the cross-sectional area measured by panoramic ultrasonography.</em> Journal of Electromyography and Kinesiology 67:102722. <a href="https://pubmed.ncbi.nlm.nih.gov/36334406/">PMID 36334406</a> · <a href="https://doi.org/10.1016/j.jelekin.2022.102722">DOI 10.1016/j.jelekin.2022.102722</a></li><li>Varović D, Wolf M, Schoenfeld BJ, Steele J, Grgic J, Mikulic P, 2025. <em>Does Muscle Length Influence Regional Hypertrophy? A Systematic Review and Meta-Analysis.</em> International Journal of Sports Medicine 46(14):1027-1036. <a href="https://pubmed.ncbi.nlm.nih.gov/40570881/">PMID 40570881</a> · <a href="https://doi.org/10.1055/a-2615-4935">DOI 10.1055/a-2615-4935</a></li><li>Kassiano W, Nunes JP, Costa B, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2022. <em>Does Varying Resistance Exercises Promote Superior Muscle Hypertrophy and Strength Gains? A Systematic Review.</em> Journal of Strength and Conditioning Research 36(6):1753-1762. <a href="https://pubmed.ncbi.nlm.nih.gov/35438660/">PMID 35438660</a> · <a href="https://doi.org/10.1519/JSC.0000000000004258">DOI 10.1519/JSC.0000000000004258</a></li><li>Rodríguez-Ridao D, Antequera-Vique JA, Martín-Fuentes I, Muyor JM, 2020. <em>Effect of Five Bench Inclinations on the Electromyographic Activity of the Pectoralis Major, Anterior Deltoid, and Triceps Brachii during the Bench Press Exercise.</em> International Journal of Environmental Research and Public Health 17(19):7339. <a href="https://pubmed.ncbi.nlm.nih.gov/33049982/">PMID 33049982</a> · <a href="https://doi.org/10.3390/ijerph17197339">DOI 10.3390/ijerph17197339</a></li><li>Dell'Avanzi FG, Enes A, Alves-Marques F, Costa-Rodrigues J, Bello G, Seima G, Nass G, Moreira NF, Santana C, Mohan AE, Piñero A, Schoenfeld BJ, Souza-Junior TP. <em>Dumbbell bench press and dumbbell fly elicit similar pectoralis major muscle hypertrophy in recreationally-trained individuals.</em> Accettato dal Journal of Strength and Conditioning Research; al 20 ottobre 2026 non ancora pubblicato né indicizzato su PubMed. Disegno e risultati riportati come dichiarati dagli autori.</li></ol>
+<p>Riferimenti bibliografici recuperati tramite PubMed. Spunto iniziale: il carosello di <strong>Dorian Varović</strong> (<a href="https://www.instagram.com/varovicdorian/">@varovicdorian</a>) del 9 settembre 2026, <a href="https://www.instagram.com/p/DdFF9e8HIOQ/">post originale</a>. Nessun testo e nessuna immagine del post sono stati riprodotti: il tema è stato riscritto da zero a partire dalle fonti primarie.</p>
+<hr>
+<p><strong>Giammaria Loi</strong> è il fondatore di Nurvan. Si allena con i pesi dal 2012, lavora come personal trainer e coach certificato FIPE dal 2013 e gareggia nel powerlifting a livello nazionale dal 2018. Ogni articolo che firma parte dagli studi scientifici e arriva a ciò che funziona davvero in palestra.</p>
+<p class="cap" style="border-inline-start:3px solid var(--gold-dark);padding-inline-start:14px">Nota: contenuto informativo, non sostituisce il parere di un medico o di un professionista qualificato. Se hai dolore alla spalla durante le spinte, fallo valutare prima di insistere.</p>
+</main>
+<footer class="site" style="position:static;border-top:1px solid var(--line);border-bottom:none"><div class="in"><span class="cap">Nurvan · contenuti informativi, non sostituiscono il parere di un medico.</span></div></footer>
+</body>
+</html>
