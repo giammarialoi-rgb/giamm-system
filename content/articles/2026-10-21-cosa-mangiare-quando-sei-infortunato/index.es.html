@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="es" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qué comer cuando estás lesionado | Nurvan</title>
+<meta name="description" content="Lesionado y parado: cuánta proteína necesitas de verdad, cuántas calorías recortar y qué dicen los estudios sobre creatina, omega-3 y colágeno.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entrenamiento</a><a href="#" class="on">Nutrición</a><a href="#">Suplementos</a><a href="#">Blog</a></nav><a class="cta" href="https://nurvan.app">Descargar la app</a></div></header>
+<main class="wrap" lang="es">
+<div class="crumb">Blog · Nutrición · Lesiones</div>
+<h1>Qué comer cuando estás lesionado</h1>
+<p class="lede">Te lesionas y la primera reacción casi siempre es la misma: "ya no entreno, así que tengo que comer menos o engordaré". Es la decisión que más retrasa la curación. He leído ocho fuentes para entender qué cambia de verdad en tus necesidades cuando te paras, cuánta proteína hace falta y qué suplementos tienen datos reales detrás.</p>
+<div class="meta"><span>21 de octubre de 2026</span><span><b>14</b> min de lectura</span><span><b>8</b> estudios citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · actualizado el 21 de octubre de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Qué comer cuando estás lesionado"><figcaption class="cap">U.S. Navy, foto de Mass Communication Specialist 2nd Class Karolina A. Oseguera, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Lt._Matthew_Bush_assists_a_patient_as_he_does_walking_exercises._(14311440329).jpg), dominio público</figcaption></figure>
+<div class="box"><h2>En resumen</h2><ul><li><strong>La fuerza se va mucho más rápido que el músculo.</strong> Cinco días de escayola cuestan un 3,5% de sección del cuádriceps pero un 9% de fuerza; a los catorce días son el 8,4% y el 22,9% (Wall et al., 2013).</li><li><strong>Recortar demasiado las calorías es el error real.</strong> Un déficit incluso moderado baja un 20-30% la síntesis proteica, justo el proceso con el que reconstruyes (Tipton, 2015).</li><li><strong>La proteína se mantiene alta en gramos absolutos</strong>, en torno a 2-2,5 g por kg, sobre todo si bajan las calorías. Pero la recomendación es indirecta: pocos estudios la han probado de frente.</li><li><strong>La leucina sola no funciona.</strong> 7,5 g al día durante una semana de inmovilización no cambiaron ni la sección ni la fuerza (Backx et al., 2018).</li><li><strong>Creatina y omega-3 sí tienen datos</strong>, pero no hacen lo mismo: la creatina en la rehabilitación, los omega-3 durante el parón.</li></ul></div>
+<h2>Cuánto músculo pierdes de verdad, y a qué velocidad</h2>
+<p>El dato que falta en casi todo lo que se escribe sobre esto es la velocidad. Un grupo de Maastricht escayoló una pierna a 24 chicos sanos, durante cinco o catorce días, midiendo la sección del cuádriceps con TAC y la fuerza máxima antes y después.</p>
+<p>A los <strong>cinco días</strong>: sección -3,5%, fuerza -9,0%. A los <strong>catorce días</strong>: sección -8,4%, fuerza -22,9%.</p>
+<figure><div class="chart"><svg role="img" aria-label="Pérdida de sección muscular y de fuerza tras 5 y 14 días de inmovilización" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 510" width="960" height="510">
+<rect width="960" height="510" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700" text-anchor="start">Cuánto pierdes con la escayola</text>
+<text x="40" y="80" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15" font-weight="400" text-anchor="start">Descenso porcentual tras 5 y 14 días de inmovilización</text>
+<line x1="150" y1="390.0" x2="900" y2="390.0" stroke="#242424" stroke-width="1"/>
+<text x="138" y="395.0" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="end">0</text>
+<line x1="150" y1="336.0" x2="900" y2="336.0" stroke="#242424" stroke-width="1"/>
+<text x="138" y="341.0" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="end">-5%</text>
+<line x1="150" y1="282.0" x2="900" y2="282.0" stroke="#242424" stroke-width="1"/>
+<text x="138" y="287.0" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="end">-10%</text>
+<line x1="150" y1="228.0" x2="900" y2="228.0" stroke="#242424" stroke-width="1"/>
+<text x="138" y="233.0" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="end">-15%</text>
+<line x1="150" y1="174.0" x2="900" y2="174.0" stroke="#242424" stroke-width="1"/>
+<text x="138" y="179.0" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="end">-20%</text>
+<line x1="150" y1="120.0" x2="900" y2="120.0" stroke="#242424" stroke-width="1"/>
+<text x="138" y="125.0" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="end">-25%</text>
+<rect x="250" y="352.2" width="85" height="37.8" fill="#d4af37" rx="3"/>
+<text x="292" y="342.2" fill="#d4af37" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">-3,5%</text>
+<rect x="345" y="292.8" width="85" height="97.2" fill="#f3e5ab" rx="3"/>
+<text x="387" y="282.8" fill="#f3e5ab" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">-9,0%</text>
+<rect x="590" y="299.3" width="85" height="90.7" fill="#d4af37" rx="3"/>
+<text x="632" y="289.28" fill="#d4af37" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">-8,4%</text>
+<rect x="685" y="142.7" width="85" height="247.3" fill="#f3e5ab" rx="3"/>
+<text x="727" y="132.68" fill="#f3e5ab" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">-22,9%</text>
+<line x1="150" y1="390" x2="900" y2="390" stroke="#aa8a2e" stroke-width="2"/>
+<text x="340" y="420" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">5 días</text>
+<text x="680" y="420" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">14 días</text>
+<rect x="150" y="448" width="16" height="16" fill="#d4af37" rx="3"/>
+<text x="174" y="461" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15" font-weight="400" text-anchor="start">Sección del músculo</text>
+<rect x="430" y="448" width="16" height="16" fill="#f3e5ab" rx="3"/>
+<text x="454" y="461" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15" font-weight="400" text-anchor="start">Fuerza máxima</text>
+<text x="40" y="492" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="start">Fuente: Wall et al., 2013 (PMID 24168489)</text>
+</svg></div><figcaption class="cap">Valores de Wall et al., 2013 (PMID 24168489). Sección del cuádriceps por TAC, fuerza como máximo de una repetición.</figcaption></figure>
+<p>Dos cosas. La primera: el músculo baja, pero <strong>la fuerza cae casi tres veces más rápido</strong>. Al volver te sentirás mucho más débil de lo que realmente has perdido en músculo, y es normal: buena parte de esa fuerza es nerviosa y vuelve deprisa. La segunda: el reloj empieza ya. No hay una semana de cortesía.</p>
+<p>El motivo metabólico es doble. La síntesis proteica en reposo baja, y el músculo se vuelve <strong>resistente al estímulo anabólico</strong>: la misma dosis de proteína que antes la elevaba bien, ahora la eleva menos. Eso es la resistencia anabólica, y es el nudo de todo lo demás.</p>
+<h2>Las calorías: el primer error es recortar demasiado</h2>
+<p>Aquí circula una cifra que conviene desmontar con calma. Se lee a menudo que una lesión aumenta el gasto energético un 10-15%. La estimación publicada es más amplia — <strong>de +15% hasta +50%</strong> — pero se refiere al coste de la curación, no a la necesidad total. Y la necesidad total casi siempre <strong>baja</strong>, porque desaparece el entrenamiento y te mueves menos.</p>
+<p>La pregunta es cuánto baja, y la respuesta es: menos de lo que crees. Además del coste de la reparación, si andas con <strong>muletas</strong> el coste energético de desplazarte aumenta <strong>dos o tres veces</strong>. Sumando las dos cosas, el agujero en el balance es mucho más pequeño de lo que parece cuando decides partir los platos por la mitad.</p>
+<p>Y recortar demasiado se paga. Solo la síntesis proteica consume unas <strong>500 kcal al día</strong> en un hombre bien musculado, antes de contar la actividad. Con un déficit incluso moderado, síntesis proteica y señalización anabólica bajan un <strong>20-30%</strong>. Estás quitándole energía justo al proceso que debe reconstruir el tejido. Un balance negativo retrasa la cicatrización y <strong>acelera</strong> la pérdida de músculo.</p>
+<p>El error contrario también existe. En un estudio de reposo en cama, el balance energético <strong>positivo</strong> aceleró la pérdida de músculo, probablemente por inflamación sistémica. Nada de "ya que estoy parado, hago volumen". El objetivo durante el parón es el equilibrio.</p>
+<h2>La proteína: cuánta, y por qué importa ahora más</h2>
+<p>La recomendación publicada es de <strong>2-2,5 g por kg de peso al día</strong> durante la inmovilización, o como mínimo no reducir la cantidad absoluta de proteína cuando reduces calorías. El carrusel del que parte este artículo lo cuenta casi bien (1,8-2,5 g/kg).</p>
+<p>Pero hay que decir cómo está la evidencia, porque nadie lo hace. El mismo autor de esa recomendación escribía en 2011 que había "poco fundamento" para subir la proteína durante la inmovilización; en 2015 cambió de posición. Y en un estudio de reposo en cama, pasar de 1,0 a 1,6 g/kg <strong>no</strong> redujo la pérdida de músculo. Es decir: mantener la proteína alta es lo más sensato y no cuesta nada, pero no es un seguro.</p>
+<p>El problema práctico es aritmético. Si comes 500 kcal menos al día y mantienes la proteína "en proporción", en realidad la estás recortando en gramos. Hacen falta alimentos que den mucha proteína por poca energía. He leído las fichas oficiales del CREA una a una:</p>
+<table><thead><tr><th>Alimento (100 g)</th><th>Proteína</th><th>Calorías</th><th>Proteína por 100 kcal</th></tr></thead><tbody><tr><td>Clara de huevo</td><td>10,7 g</td><td>43 kcal</td><td><strong>24,9 g</strong></td></tr><tr><td>Merluza o bacalao fresco</td><td>17,0 g</td><td>71 kcal</td><td><strong>23,9 g</strong></td></tr><tr><td>Pechuga de pollo</td><td>23,3 g</td><td>100 kcal</td><td><strong>23,3 g</strong></td></tr><tr><td>Bresaola (cecina de vacuno)</td><td>33,1 g</td><td>152 kcal</td><td><strong>21,8 g</strong></td></tr><tr><td>Yogur griego 0%</td><td>9,0 g</td><td>51 kcal</td><td><strong>17,6 g</strong></td></tr><tr><td>Salmón</td><td>18,4 g</td><td>185 kcal</td><td>9,9 g</td></tr><tr><td>Huevo entero</td><td>12,4 g</td><td>128 kcal</td><td>9,7 g</td></tr><tr><td>Queso Grana Padano</td><td>33,9 g</td><td>392 kcal</td><td>8,6 g</td></tr><tr><td>Lentejas secas, cocidas</td><td>6,9 g</td><td>109 kcal</td><td>6,3 g</td></tr><tr><td>Requesón de vaca</td><td>8,8 g</td><td>146 kcal</td><td>6,0 g</td></tr></tbody></table>
+<p><em>Elaboración de Nurvan sobre las tablas de composición de alimentos del CREA, actualización de 2019.</em></p>
+<p>El queso curado parece la opción obvia con 33,9 g de proteína por 100 g: por 100 kcal da 8,6 g, menos de un tercio que la pechuga de pollo. Cuando las calorías son el límite, decide la columna de la derecha. El mismo razonamiento vale en cualquier déficit, como expliqué al hablar de <a href="/es/blog/recomposicion-corporal-perder-grasa-ganar-musculo">recomposición corporal</a>.</p>
+<p>Sobre el <strong>timing</strong>, el post original es muy concreto: cada 3-4 horas, en la primera hora tras despertar, 30-40 g de caseína antes de dormir. Son cifras razonables tomadas de la literatura en personas que entrenan, pero el efecto de la distribución de las comidas <strong>durante la inactividad forzada nunca se ha estudiado</strong>. Repartir bien la proteína es prudente, no demostrado.</p>
+<h2>Qué dice realmente la investigación</h2>
+<p><strong>Confirmado — las tres fases de la curación.</strong> Inflamación, proliferación, remodelación: la secuencia es correcta y las fases se solapan. Vale la pena añadir dos cosas que el post no dice: la recuperación completa puede llevar años, y <strong>aplastar la inflamación puede retrasar la curación</strong>, porque la respuesta inflamatoria es la que pone en marcha la reparación.</p>
+<p><strong>Matizado — "+10-15% de gasto".</strong> La estimación publicada es de +15% hasta +50% y se refiere a la curación, no a la necesidad total, que suele bajar.</p>
+<p><strong>Desmentido — la leucina que "supera la resistencia anabólica".</strong> Es la única afirmación del post probada directamente en el contexto adecuado, y la prueba es negativa. Treinta chicos, siete días de escayola en la pierna, 2,5 g de leucina en cada comida principal (7,5 g al día) frente a ningún suplemento. Sección del cuádriceps: bajó igual en los dos grupos (p = 0,61). Fuerza: bajó igual (p = 0,052).</p>
+<p><strong>No verificable — el protocolo de timing.</strong> Ningún estudio ha comparado patrones de comidas en personas inmovilizadas.</p>
+<p><strong>Matizado — el umbral de RED-S.</strong> La diapositiva usa "&lt;20 kcal/kg de masa magra" como marcador de baja disponibilidad energética. El consenso del Comité Olímpico Internacional de 2023 abandonó el umbral único: el síndrome se valora por <strong>gravedad acumulada y estratificación del riesgo</strong>, con una herramienta clínica propia. Es un diagnóstico médico, no un número que se calcula en casa.</p>
+<h2>Suplementos con datos reales</h2>
+<p><strong>Creatina.</strong> Hace una cosa concreta, y no es la obvia: durante dos semanas de escayola no redujo la pérdida de sección ni de potencia, igual que el placebo. Pero en las diez semanas de rehabilitación posteriores, sección del cuádriceps y potencia máxima <strong>volvieron más rápido</strong> en el grupo de creatina. Es un suplemento para la vuelta, no para el parón.</p>
+<p><strong>Omega-3.</strong> Veinte mujeres, 5 g al día empezados cuatro semanas antes, luego dos semanas de inmovilización: el volumen muscular bajó un <strong>8% frente al 14%</strong> del grupo control, y tras dos semanas de vuelta a la normalidad solo el grupo omega-3 había recuperado los valores de partida.</p>
+<figure><div class="chart"><svg role="img" aria-label="Pérdida de volumen muscular en dos semanas de inmovilización: 14% en el grupo control, 8% con omega-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400">
+<rect width="960" height="400" fill="#0c0c0c"/>
+<text x="40" y="52" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="26" font-weight="700" text-anchor="start">Omega-3 durante dos semanas de escayola</text>
+<text x="40" y="80" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15" font-weight="400" text-anchor="start">Pérdida de volumen muscular en mujeres jóvenes sanas</text>
+<line x1="576.9" y1="130" x2="576.9" y2="310" stroke="#242424" stroke-width="1"/>
+<text x="576.875" y="336" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="middle">-5%</text>
+<line x1="723.8" y1="130" x2="723.8" y2="310" stroke="#242424" stroke-width="1"/>
+<text x="723.75" y="336" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="middle">-10%</text>
+<line x1="870.6" y1="130" x2="870.6" y2="310" stroke="#242424" stroke-width="1"/>
+<text x="870.625" y="336" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="middle">-15%</text>
+<text x="410" y="180" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15" font-weight="400" text-anchor="end">Control (aceite de girasol)</text>
+<rect x="430" y="150" width="411.2" height="44" fill="#f3e5ab" rx="4"/>
+<text x="855.25" y="181" fill="#f3e5ab" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="20" font-weight="700" text-anchor="start">-14%</text>
+<text x="410" y="270" fill="#f0f0f0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="15" font-weight="400" text-anchor="end">Omega-3, 5 g al día</text>
+<rect x="430" y="240" width="235.0" height="44" fill="#d4af37" rx="4"/>
+<text x="679.0" y="271" fill="#d4af37" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="20" font-weight="700" text-anchor="start">-8%</text>
+<line x1="430" y1="130" x2="430" y2="310" stroke="#aa8a2e" stroke-width="2"/>
+<text x="430" y="336" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="14" font-weight="400" text-anchor="middle">0</text>
+<text x="40" y="388" fill="#a0a0a0" font-family="'Noto Sans','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="start">Fuente: McGlory et al., 2019 (PMID 30629458)</text>
+</svg></div><figcaption class="cap">Valores de McGlory et al., 2019 (PMID 30629458). Veinte mujeres sanas, 5 g al día de omega-3 empezados cuatro semanas antes de la inmovilización.</figcaption></figure>
+<p>Ojo al reverso: el exceso de omega-3 deprime la inflamación, y la inflamación sirve para curar. La dosis adecuada en una persona lesionada no está establecida.</p>
+<p><strong>Gelatina y vitamina C.</strong> Ocho hombres, 15 g de gelatina enriquecida con vitamina C una hora antes de seis minutos de comba: el marcador de síntesis de colágeno en sangre se duplicó. Prometedor, pero son ocho personas y un marcador, no un tendón curado.</p>
+<p><strong>Micronutrientes.</strong> La regla es simple: evitar las carencias marca la diferencia, añadir dosis extra por encima de la suficiencia no. Calcio y vitamina D adecuados cuentan en las fracturas; las megadosis de antioxidantes no han mostrado beneficio.</p>
+<p><strong>El alcohol</strong>, que en el post no aparece nunca, es la única entrada con un efecto negativo documentado: empeora la respuesta de la síntesis proteica y retrasa la cicatrización. Quitarlo es gratis y tiene más pruebas detrás que la mitad de los suplementos.</p>
+<h2>Cómo aplicarlo</h2>
+<ol class="steps"><li><strong>No recortes a ciegas.</strong> Estima la caída real de actividad: sin entrenamientos eres más sedentario, pero la curación cuesta y las muletas cuestan. Apunta al equilibrio.</li><li><strong>Fija la proteína en gramos, no en porcentaje.</strong> Mantén el objetivo en g/kg aunque bajen las calorías, eligiendo alimentos de alta densidad proteica.</li><li><strong>Repártela en 4-5 tomas.</strong> Prudente, no demostrado en este contexto, y gratis.</li><li><strong>Mantén estímulo mecánico donde puedas.</strong> Lo que no está inmovilizado se entrena: hace falta muy poco para conservar lo que tienes, como conté en <a href="/es/blog/entrenar-fuerza-musculo-y-cardio-a-la-vez">entrenar fuerza, músculo y cardio a la vez</a>.</li><li><strong>Creatina a la vuelta, no durante el parón.</strong></li><li><strong>Alcohol fuera.</strong></li><li><strong>Cargas, plazos y vuelta a la actividad los decide quien te trata.</strong> La nutrición es el acompañamiento, no el plan de tratamiento.</li></ol>
+<div class="app"><div><h3>Mantén los números bajo control mientras estás parado</h3><p>Nurvan calcula tu objetivo de proteína en gramos y lo mantiene fijo aunque bajes las calorías, con la base de alimentos CREA para ver al momento cuánta proteína tomas por caloría. A la vuelta, las cargas y el RIR registrados antes del parón son el punto de partida para reconstruir sin pasarte.</p></div><a class="cta" href="https://nurvan.app">Prueba Nurvan</a></div>
+<h2>Preguntas frecuentes</h2>
+<details><summary>¿Cuánta proteína debo tomar si estoy lesionado?</summary><p>La literatura indica unos 2-2,5 g por kg de peso al día durante la inmovilización, y en todo caso no reducir la cantidad absoluta de proteína al bajar calorías. Es una recomendación prudencial: los estudios directos son pocos y no todos positivos.</p></details>
+<details><summary>¿Tengo que comer menos ahora que no entreno?</summary><p>Un poco menos sí, mucho menos no. La necesidad baja porque te mueves menos, pero la curación consume energía y andar con muletas cuesta dos o tres veces más. Un déficit marcado baja la síntesis proteica un 20-30%.</p></details>
+<details><summary>¿Pierdo toda la masa muscular enseguida?</summary><p>No, pero más rápido de lo que se cree: en torno al 3,5% de sección del cuádriceps en cinco días y el 8,4% en dos semanas. La fuerza cae mucho más, hasta el 23% en dos semanas, y en gran parte es nerviosa: vuelve antes que la masa.</p></details>
+<details><summary>¿Sirve la creatina mientras llevo escayola?</summary><p>Los datos dicen que no durante la inmovilización, pero sí en la rehabilitación posterior: frente a placebo, sección y potencia volvieron más rápido en el grupo que la tomaba.</p></details>
+<h2>Lee también</h2>
+<ul><li><a href="/es/blog/recomposicion-corporal-perder-grasa-ganar-musculo">Recomposición corporal: perder grasa y ganar músculo</a> — qué hace de verdad un déficit con proteína alta.</li><li><a href="/es/blog/entrenar-fuerza-musculo-y-cardio-a-la-vez">Entrenar fuerza, músculo y cardio a la vez</a> — incluye la dosis mínima que mantiene fuerza y masa.</li><li><a href="/es/blog/cuando-tomar-los-suplementos-horario">Cuándo tomar los suplementos</a> — qué cambia de verdad el horario.</li></ul>
+<h2>Fuentes</h2>
+<ol class="refs"><li>Tipton KD, 2015. <em>Nutritional Support for Exercise-Induced Injuries.</em> Sports Medicine 45(Suppl 1):S93-104. <a href="https://pubmed.ncbi.nlm.nih.gov/26553492/">PMID 26553492</a> · <a href="https://doi.org/10.1007/s40279-015-0398-4">DOI 10.1007/s40279-015-0398-4</a></li><li>Tipton KD, 2011. <em>Nutrition for acute exercise-induced injuries.</em> Annals of Nutrition and Metabolism 57(Suppl 2):43-53. <a href="https://pubmed.ncbi.nlm.nih.gov/21346336/">PMID 21346336</a> · <a href="https://doi.org/10.1159/000322703">DOI 10.1159/000322703</a></li><li>Wall BT, Dirks ML, Snijders T, Senden JMG, Dolmans J, van Loon LJC, 2013. <em>Substantial skeletal muscle loss occurs during only 5 days of disuse.</em> Acta Physiologica 210(3):600-11. <a href="https://pubmed.ncbi.nlm.nih.gov/24168489/">PMID 24168489</a> · <a href="https://doi.org/10.1111/apha.12190">DOI 10.1111/apha.12190</a></li><li>Backx EMP, Horstman AMH, Marzuca-Nassr GN, van Kranenburg J, Smeets JS, Fuchs CJ, Janssen AAW, de Groot LCPGM, Snijders T, Verdijk LB, van Loon LJC, 2018. <em>Leucine Supplementation Does Not Attenuate Skeletal Muscle Loss during Leg Immobilization in Healthy, Young Men.</em> Nutrients 10(5):635. <a href="https://pubmed.ncbi.nlm.nih.gov/29772844/">PMID 29772844</a> · <a href="https://doi.org/10.3390/nu10050635">DOI 10.3390/nu10050635</a></li><li>McGlory C, Gorissen SHM, Kamal M, Bahniwal R, Hector AJ, Baker SK, Chabowski A, Phillips SM, 2019. <em>Omega-3 fatty acid supplementation attenuates skeletal muscle disuse atrophy during two weeks of unilateral leg immobilization in healthy young women.</em> The FASEB Journal 33(3):4586-4597. <a href="https://pubmed.ncbi.nlm.nih.gov/30629458/">PMID 30629458</a> · <a href="https://doi.org/10.1096/fj.201801857RRR">DOI 10.1096/fj.201801857RRR</a></li><li>Hespel P, Op't Eijnde B, Van Leemputte M, Ursø B, Greenhaff PL, Labarque V, Dymarkowski S, Van Hecke P, Richter EA, 2001. <em>Oral creatine supplementation facilitates the rehabilitation of disuse atrophy and alters the expression of muscle myogenic factors in humans.</em> The Journal of Physiology 536(Pt 2):625-33. <a href="https://pubmed.ncbi.nlm.nih.gov/11600695/">PMID 11600695</a> · <a href="https://doi.org/10.1111/j.1469-7793.2001.0625c.xd">DOI 10.1111/j.1469-7793.2001.0625c.xd</a></li><li>Shaw G, Lee-Barthel A, Ross MLR, Wang B, Baar K, 2017. <em>Vitamin C-enriched gelatin supplementation before intermittent activity augments collagen synthesis.</em> The American Journal of Clinical Nutrition 105(1):136-143. <a href="https://pubmed.ncbi.nlm.nih.gov/27852613/">PMID 27852613</a> · <a href="https://doi.org/10.3945/ajcn.116.138594">DOI 10.3945/ajcn.116.138594</a></li><li>Mountjoy M, Ackerman KE, Bailey DM, et al., 2023. <em>2023 International Olympic Committee's (IOC) consensus statement on Relative Energy Deficiency in Sport (REDs).</em> British Journal of Sports Medicine 57(17):1073-1097. <a href="https://pubmed.ncbi.nlm.nih.gov/37752011/">PMID 37752011</a> · <a href="https://doi.org/10.1136/bjsports-2023-106994">DOI 10.1136/bjsports-2023-106994</a></li></ol>
+<p>Valores nutricionales: CREA — Centro de Investigación en Alimentos y Nutrición (Italia), tablas de composición de alimentos, actualización de 2019.</p>
+<p>Referencias obtenidas a través de PubMed. Punto de partida: un carrusel de <strong>Science for Sport</strong> (<a href="https://www.instagram.com/scienceforsport/">@scienceforsport</a>) con James Morehen, <a href="https://www.instagram.com/p/Dd3SC-iF3d7/">publicación original</a>. No se ha reproducido ningún texto ni imagen de la publicación.</p>
+<p><strong>Giammaria Loi</strong> es el fundador de Nurvan. Entrena con pesas desde 2012, trabaja como entrenador personal y coach certificado FIPE desde 2013 y compite en powerlifting a nivel nacional desde 2018. Cada artículo que firma parte de los estudios científicos y llega a lo que funciona de verdad en el gimnasio.</p>
+<p class="note">Nota: contenido informativo, no sustituye la opinión de un médico o un fisioterapeuta. El diagnóstico, las cargas y los plazos de vuelta tras una lesión los decide quien te trata.</p>
+</main>
+<footer>NURVAN · nurvan.app · 21 de octubre de 2026</footer>
+</body>
+</html>
