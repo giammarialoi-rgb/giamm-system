@@ -1,0 +1,15 @@
+# Crediti immagini
+
+| File | Descrizione / alt | Autore | Fonte | Licenza |
+|---|---|---|---|---|
+| cover.jpg | IT: Donna sdraiata su un tappetino che usa un foam roller sotto la parte alta della schiena, all'aperto · EN: Woman lying on a mat using a foam roller under her upper back, outdoors | PTPioneer | https://commons.wikimedia.org/wiki/File:Foam_rolling_on_back.jpg (originale su Flickr: https://www.flickr.com/photos/182613284@N02/48317534001/) | CC BY 2.0 (verificata sul wikitesto della pagina Commons il 22/10/2026: template `{{cc-by-2.0}}` più revisione automatica FlickreviewR con esito `passed`) |
+| chart-effetti-foam-roller.&lt;lang&gt;.svg (10 lingue) | Dimensione dell'effetto del foam roller prima e dopo l'allenamento: sprint 0,28 e 0,34; salto 0,09 e 0,06; forza 0,12 e 0,21; flessibilità 0,34 (solo prima); dolore muscolare 0,47 (solo dopo) | Nurvan | Wiewelhove et al., 2019, Front Physiol (PMID 31024339) | Grafico originale Nurvan |
+| chart-mobilita-foam-roller.&lt;lang&gt;.svg (10 lingue) | Effetto sulla mobilità articolare: acuto contro niente 0,74 (0,42-1,01) e 0,76 (0,55-0,98); acuto contro stretching -0,02 (-0,73-0,69); allenamento oltre 4 settimane 0,82 (0,33-1,32) | Nurvan | Wilke et al., 2020 (PMID 31628662); Skinner et al., 2020 (PMID 32825976); Konrad et al., 2022 (PMID 35616852) | Grafico originale Nurvan |
+
+## Note sulle licenze
+
+- La copertina è pubblicata su Wikimedia Commons con licenza **CC BY 2.0**, verificata leggendo il wikitesto della pagina di descrizione del file (`?action=raw`): riporta il template `{{cc-by-2.0}}` e la revisione automatica `FlickreviewR` con esito `passed`, che conferma la licenza sulla fonte Flickr. La descrizione del file chiede l'attribuzione con link a `www.ptpioneer.com`: l'attribuzione completa è riportata nel campo `cover_credit` del frontmatter in tutte e dieci le lingue.
+- La foto è stata scaricata dall'endpoint ufficiale Wikimedia `Special:FilePath` a 1920 px, poi ritagliata in 16:9 e ridimensionata a 1280x720 da Nurvan. Nessun'altra modifica.
+- Scartate due alternative: una foto U.S. Air Force in pubblico dominio (il foam roller era troppo piccolo nell'inquadratura) e una foto CC BY-SA 2.0 di Roger Mommaerts. I file scartati non sono stati tenuti nella cartella dell'articolo.
+- **Nessuna slide del post di Built With Science è stata scaricata, usata o ripubblicata.** Del post sono stati letti solo didascalia, autore e data, che sono dati e non contenuto creativo riprodotto. Le slide non erano leggibili (nessun login Instagram attivo sul browser): l'analisi parte quindi dalla sola didascalia, che però elenca per esteso tutte le affermazioni del post.
+- I due grafici sono interamente originali. Tutti i valori provengono dagli abstract pubblicati: dimensioni dell'effetto d riportate testualmente da Wiewelhove et al. (2019); SMD e intervalli di confidenza al 95% riportati testualmente da Wilke et al. (2020), Skinner et al. (2020) e Konrad et al. (2022). Nessun valore è stato letto approssimativamente da una figura altrui.
