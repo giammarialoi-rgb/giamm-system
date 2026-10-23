@@ -1,0 +1,16 @@
+# Crediti immagini
+
+| File | Descrizione / alt | Autore | Fonte | Licenza |
+|---|---|---|---|---|
+| cover.jpg | IT: Tecnica di laboratorio al banco mentre esegue un'analisi del sangue · EN: Laboratory technician at the bench running a blood test | Ja muzalevskaya | https://commons.wikimedia.org/wiki/File:Human_Blood_Test.jpg | CC0 / pubblico dominio (verificata sul wikitesto della pagina Commons il 23/10/2026: template `{{self|cc-zero}}`, opera propria dell'autrice, caricata per la Russian Science Photo Competition 2022) |
+| chart-lipidi-testosterone.&lt;lang&gt;.svg (10 lingue) | Variazione media dei lipidi: HDL −0,5 mg/dL con dosi da terapia; HDL −15,5, LDL +17,4 e apoB +18,2 mg/dL durante un ciclo di steroidi | Nurvan | Fernández-Balsells et al., 2010 (PMID 20525906); Smit et al., 2022 (PMID 35014715) | Grafico originale Nurvan |
+| chart-orale-iniettabile.&lt;lang&gt;.svg (10 lingue) | Variazione percentuale dei lipidi con steroide orale contro testosterone iniettabile: HDL −33% / −9%, ApoA-I −40% / −8%, LDL +29% / −16% | Nurvan | Thompson et al., 1989, JAMA (PMID 2915439) | Grafico originale Nurvan |
+
+## Note sulle licenze
+
+- La copertina è pubblicata su Wikimedia Commons con licenza **CC0** (rinuncia a tutti i diritti, equivalente al pubblico dominio), verificata leggendo il wikitesto della pagina di descrizione del file (`?action=raw`): riporta il template `{{self|cc-zero}}` e `source={{own}}` con autrice `Ja muzalevskaya`. La licenza CC0 non impone l'attribuzione, ma il credito è comunque riportato nel campo `cover_credit` del frontmatter in tutte e dieci le lingue.
+- La foto è stata scaricata dall'endpoint ufficiale Wikimedia `Special:FilePath` a 1920 px (originale 1920x1280), poi ritagliata in 16:9 e ridimensionata a 1280x720 da Nurvan. Nessun'altra modifica.
+- Scartate le alternative con licenza non verificabile trovate nella ricerca (foto di repertorio a pagamento su banche immagini commerciali). Nessun file scartato è stato tenuto nella cartella dell'articolo.
+- **Nessuna slide del post di Dwayne N. Jackson è stata scaricata, usata o ripubblicata.** Del post sono stati letti didascalia, autore e data, che sono dati e non contenuto creativo riprodotto. La didascalia elencava per esteso le affermazioni e una lista di riferimenti: ogni riferimento usato è stato ricontrollato su PubMed e i dati riportati nell'articolo provengono dagli abstract pubblicati, non dal testo del post.
+- I due grafici sono interamente originali. Tutti i valori provengono dagli abstract pubblicati: differenze medie pesate riportate testualmente da Fernández-Balsells et al. (2010); variazioni medie e intervalli di confidenza riportati testualmente da Smit et al. (2022); variazioni percentuali riportate testualmente da Thompson et al. (1989). Nessun valore è stato letto approssimativamente da una figura altrui.
+- **Conversione di unità dichiarata:** Smit et al. riportano LDL e HDL in mmol/L (LDL +0,45; HDL −0,40). Per rendere il grafico omogeneo con i valori in mg/dL delle altre fonti, Nurvan ha applicato il fattore di conversione standard per il colesterolo ×38,67, ottenendo +17,4 e −15,5 mg/dL. La conversione è segnalata nella didascalia del grafico in tutte le lingue.
