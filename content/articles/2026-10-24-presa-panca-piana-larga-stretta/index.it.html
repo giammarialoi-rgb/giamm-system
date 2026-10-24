@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="it" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Presa in panca piana: larga, media o stretta? | Nurvan</title>
+<meta name="description" content="Larga per la forza, media per il petto, stretta per i tricipiti? Negli studi il pettorale non cambia con nessuna delle tre prese. I numeri, uno per uno.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Allenamento</a><a href="#">Nutrizione</a><a href="#">Integrazione</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Scarica l’app</a></div></header>
+<main class="wrap" lang="it">
+<div class="crumb">Blog · Allenamento</div>
+<h1>Presa in panca piana: larga, media o stretta?</h1>
+<p class="lede">Lo schema gira da anni: presa larga per la forza, presa media per il petto, presa stretta per i tricipiti. È ordinato, è facile da ricordare ed è quello che quasi tutti seguono senza averlo mai testato. Ho letto otto lavori indicizzati che hanno misurato carichi, attivazione muscolare e momenti articolari con prese diverse. Due pezzi dello schema reggono. Uno, quello centrale, non ha nemmeno uno studio che lo sostenga.</p>
+<div class="meta"><span>24 ottobre 2026</span><span><b>13</b> min di lettura</span><span><b>8</b> studi citati</span><span>Di <a href="/autore/giammaria-loi">Giammaria Loi</a> · aggiornato il 24 ottobre 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Presa in panca piana: larga, media o stretta?"><figcaption class="cap">U.S. Army, Staff Sgt. Alexander Henninger, via Wikimedia Commons, pubblico dominio (PD-USGov-Military-Army)</figcaption></figure>
+<figure><div class="chart"><svg role="img" aria-label="Grafico a barre: il carico 6RM in panca con presa stretta è 93 contro 100 della presa media e 100 della presa larga" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="t1 d1">
+<title id="t1">Carico sollevato in panca piana per larghezza di presa</title>
+<desc id="d1">Indice del carico 6RM con media uguale a 100: presa stretta 93, presa media 100, presa larga 100 in uomini allenati.</desc>
+<rect width="800" height="480" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Quanto cambia il carico in panca</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Carico 6RM, uomini allenati · indice: presa media = 100</text>
+
+<line x1="150" y1="400" x2="760" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="150" y1="130" x2="150" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+
+<line x1="150" y1="130" x2="760" y2="130" stroke="#222" stroke-width="1"/>
+<line x1="150" y1="265" x2="760" y2="265" stroke="#222" stroke-width="1"/>
+<text x="140" y="135" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">100</text>
+<text x="140" y="270" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">50</text>
+<text x="140" y="405" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">0</text>
+
+<rect x="205" y="149" width="120" height="251" fill="#aa8a2e"/>
+<text x="265" y="139" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">93</text>
+<text x="265" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">stretta</text>
+<text x="265" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(ascelle)</text>
+
+<rect x="395" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="455" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="455" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">media</text>
+
+<rect x="585" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="645" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="645" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">larga</text>
+<text x="645" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(81 cm)</text>
+
+<line x1="395" y1="100" x2="705" y2="100" stroke="#a0a0a0" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="550" y="94" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">nessuna differenza (p = 1,000)</text>
+
+<text x="40" y="470" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Calcolato dai cali riportati: presa stretta −7,0% sulla media e −7,1% sulla larga. Fonte: Saeterbakken et al., 2021 (PMID 34198674).</text>
+</svg>
+</div></figure>
+<div class="box"><h2>In breve</h2><ul><li><strong>La presa larga non è "la più pesante".</strong> Lo è solo rispetto alla stretta, di circa il <strong>7%</strong>. Contro la presa media la differenza non esiste: p = 1,000 (Saeterbakken et al., 2021), e in un altro laboratorio <strong>109,8 kg contro 108,9 kg</strong> di massimale (Larsen et al., 2021).</li><li><strong>Il pettorale non cambia con la larghezza della presa.</strong> Porzione sternale, porzione clavicolare, gran dorsale, deltoide medio e posteriore: nessuna differenza fra stretta, media e larga, né negli allenati né nei principianti (Saeterbakken et al., 2021).</li><li><strong>I muscoli che si spostano davvero sono altri due.</strong> Con presa larga il bicipite lavora <strong>il 115,6% in più</strong> rispetto alla stretta, e il tricipite <strong>il 10,6% in meno</strong> rispetto alla media. Il tricipite è l'unico "muscolo spinto" che la presa sposta.</li><li><strong>Il range di ripetizioni non dipende dalla presa.</strong> Al 75% del massimale il numero di ripetizioni che riesci a fare prima del cedimento è lo stesso con presa stretta, media, larga o libera (p = 0,545; Pérez-Castilla et al., 2021).</li><li><strong>La presa con cui sollevi di più è quella che usi già.</strong> Con presa e velocità libere il massimale è significativamente più alto che con presa imposta — e nessuno dei soggetti ha giudicato scomoda la condizione libera, contro l'80% di quella controllata (Lee et al., 2020).</li></ul></div>
+<h2>Il carico: la presa larga vince solo contro la stretta</h2>
+<p>Lo studio più utile su questo punto ha fatto una cosa semplice: ha preso 28 uomini, 15 allenati (panca ad almeno il 125% del peso corporeo) e 13 principianti, e ha testato il massimale per 6 ripetizioni con tre prese definite sul corpo di ciascuno. Presa stretta = la distanza fra le ascelle. Presa larga = il massimo consentito in gara, <strong>81 cm</strong>. Presa media = esattamente a metà (Saeterbakken et al., 2021).</p>
+<p>Risultato negli allenati: la presa stretta fa sollevare il <strong>7,0%</strong> in meno della media e il <strong>7,1%</strong> in meno della larga. Fra media e larga, invece, p = 1,000 — cioè le due prese sono indistinguibili. Nei principianti lo scarto è simile: −8,4% e −6,6%, di nuovo senza differenze fra media e larga.</p>
+<p>Un secondo gruppo è arrivato allo stesso punto misurando il massimale vero su 14 uomini allenati: <strong>109,8 kg</strong> con presa larga, <strong>108,9 kg</strong> con presa media, <strong>103,7 kg</strong> con presa stretta. Gli autori concludono che per alzare più carico possibile "una presa larga <strong>o media</strong>" può andare bene (Larsen et al., 2021).</p>
+<p>C'è anche un prezzo meccanico che il grafico a barre di un carosello non può mostrare. Con presa larga il <strong>13,1-15,7%</strong> della forza che applichi al bilanciere va lateralmente, verso l'esterno; con presa stretta l'<strong>8,5-10,1%</strong> va verso l'interno; con presa media è quasi tutto verticale, <strong>0,4-1,8%</strong> (Larsen et al., 2021). Spingere in fuori non alza il bilanciere: serve a tenere stabile la traiettoria, ma è forza che non vedi sul carico.</p>
+<figure><div class="chart"><svg role="img" aria-label="Grafico: passando alla presa larga il bicipite aumenta del 115,6% e il tricipite cala del 10,6%, mentre pettorale, deltoidi e gran dorsale non cambiano" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-labelledby="t2 d2">
+<title id="t2">Quali muscoli cambiano davvero cambiando presa in panca</title>
+<desc id="d2">Differenze di attivazione elettromiografica passando alla presa larga in uomini allenati: bicipite +115,6% rispetto alla stretta e +44,9% rispetto alla media, tricipite −10,6% rispetto alla media, mentre pettorale sternale, pettorale clavicolare, deltoide anteriore e gran dorsale non mostrano differenze.</desc>
+<rect width="800" height="560" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Cosa cambia passando alla presa larga</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Attivazione muscolare a 6RM, uomini allenati · differenza percentuale</text>
+
+<line x1="394" y1="100" x2="394" y2="480" stroke="#666" stroke-width="1.5"/>
+<text x="394" y="118" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+
+<text x="288" y="156" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Bicipite (vs stretta)</text>
+<rect x="394" y="136" width="362" height="26" fill="#d4af37"/>
+<text x="748" y="155" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#0c0c0c">+115,6%</text>
+
+<text x="288" y="200" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Bicipite (vs media)</text>
+<rect x="394" y="180" width="141" height="26" fill="#d4af37"/>
+<text x="545" y="199" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">+44,9%</text>
+
+<text x="288" y="244" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Tricipite (vs media)</text>
+<rect x="361" y="224" width="33" height="26" fill="#aa8a2e"/>
+<text x="351" y="243" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">−10,6%</text>
+
+<text x="288" y="288" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Pettorale, porzione sternale</text>
+<circle cx="394" cy="280" r="6" fill="#5a5a5a"/>
+<text x="412" y="285" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">nessuna differenza</text>
+
+<text x="288" y="332" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Pettorale, porzione clavicolare</text>
+<circle cx="394" cy="324" r="6" fill="#5a5a5a"/>
+<text x="412" y="329" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">nessuna differenza</text>
+
+<text x="288" y="376" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Deltoide anteriore</text>
+<circle cx="394" cy="368" r="6" fill="#5a5a5a"/>
+<text x="412" y="373" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">nessuna differenza</text>
+
+<text x="288" y="420" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Gran dorsale</text>
+<circle cx="394" cy="412" r="6" fill="#5a5a5a"/>
+<text x="412" y="417" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">nessuna differenza</text>
+
+<text x="288" y="464" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Deltoide medio e posteriore</text>
+<circle cx="394" cy="456" r="6" fill="#5a5a5a"/>
+<text x="412" y="461" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">nessuna differenza</text>
+
+<text x="40" y="518" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">I due muscoli che la presa sposta davvero sono bicipite e tricipite. Il pettorale resta uguale con tutte e tre le prese.</text>
+<text x="40" y="540" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Fonte: Saeterbakken et al., 2021 (PMID 34198674), gruppo allenato, n = 15.</text>
+</svg>
+</div></figure>
+<h2>Il petto non cambia. Cambiano bicipite e tricipite</h2>
+<p>Qui casca lo schema. Nello stesso studio, con elettrodi su sette muscoli, la larghezza della presa ha cambiato l'attivazione di <strong>due</strong> muscoli soli:</p>
+<ul><li><strong>bicipite brachiale</strong>: con presa larga +115,6% rispetto alla stretta e +44,9% rispetto alla media (p &lt; 0,001). Lavora da antagonista, per stabilizzare il gomito;</li><li><strong>tricipite brachiale</strong>: con presa larga <strong>−10,6%</strong> rispetto alla media (p = 0,032) e −24,1% rispetto alla stretta, quest'ultima differenza al limite della significatività (p = 0,058).</li></ul>
+<p>Pettorale sternale, pettorale clavicolare, gran dorsale, deltoide medio e posteriore: nessuna differenza, in nessuno dei due gruppi. Il deltoide anteriore si muove solo nei principianti, e di poco.</p>
+<p>Questo rovescia un pezzo del luogo comune: la presa larga non "distribuisce il lavoro in modo uniforme" sui muscoli che spingono. Fa esattamente il contrario — è la presa che <strong>toglie</strong> lavoro al tricipite. Un terzo gruppo lo conferma in direzione opposta: al 50% della distanza fra le spalle il tricipite sta al 16% della contrazione massima, al 150% scende al 12%, e il deltoide anteriore non cambia in nessuna condizione (Muyor et al., 2023). Gli autori di quello studio chiudono con una frase che vale per tutto l'articolo: la scelta dell'esercizio non dovrebbe basarsi solo sull'attivazione.</p>
+<p>Attenzione a un dettaglio che il carosello salta: <strong>la differenza sul tricipite compare solo nel gruppo allenato</strong>. Nei principianti il tricipite non cambia con nessuna presa. Lo stesso consiglio non produce lo stesso effetto in due persone diverse.</p>
+<h2>Non è "petto contro tricipiti": è quale porzione di petto</h2>
+<p>Il dato più interessante non riguarda quanto petto lavora, ma <strong>quale</strong> parte. Misurando i momenti articolari di 35 adulti allenati con carichi 6-8RM, la presa più stretta aumenta il momento al gomito e l'attività del tricipite laterale, del deltoide anteriore <strong>e del capo clavicolare del pettorale</strong> — il petto alto. La presa più larga aumenta il momento alla spalla e l'attività del capo addominale, cioè la parte bassa (Mausehund et al., 2022).</p>
+<p>È lo stesso principio che avevo trovato confrontando <a href="/blog/panca-o-croci-pettorali">panca e croci per la crescita del petto</a>: la scelta non cambia quanto cresce il pettorale nel suo insieme, cambia dove.</p>
+<p>Il risvolto pratico riguarda la spalla. Più la presa è larga, più alto è il carico che la spalla deve reggere, in termini sia assoluti sia relativi alla tua capacità massima. È il motivo meccanico per cui chi ha la spalla irritata spesso sta meglio stringendo. Ma attenzione: <strong>nessuno studio ha testato la presa stretta come trattamento riabilitativo</strong>. È una scelta sensata di gestione del carico, non una terapia: se hai dolore alla spalla, la strada è il medico o il fisioterapista, non una slide.</p>
+<h2>Il ROM parziale per il petto: il dato che non esiste</h2>
+<p>"Mezzo movimento in allungamento per far crescere il petto" è forse la parte più ripetuta e meno verificata dello schema. La revisione sistematica dedicata al range di movimento ha trovato che il parziale nella parte iniziale (muscolo allungato) e il movimento completo battono il parziale nella parte finale — ma i dati vengono da <strong>retto femorale, vasto laterale, bicipite, brachiale, grande gluteo e adduttori</strong>. Il pettorale non è fra questi (Kassiano et al., 2023). Per il tricipite, curiosamente, il parziale che ha funzionato meglio è quello nella parte <strong>centrale</strong> del movimento.</p>
+<p>E nell'unico studio acuto che ha confrontato i range di movimento proprio in panca, la metà <strong>alta</strong> — cioè quella accorciata, l'opposto del "lengthened bias" — ha prodotto l'eccitazione di picco maggiore nella porzione sternocostale del pettorale e nei capi lungo e laterale del tricipite (Fischer et al., 2025). Resta un dato acuto su 19 uomini, non una prova di crescita. Ma nemmeno la direzione del consiglio è dimostrata.</p>
+<h2>Cosa dice davvero la ricerca</h2>
+<table><thead><tr><th>Affermazione</th><th>Esito</th><th>Numero</th></tr></thead><tbody><tr><td>Presa larga = carichi più pesanti</td><td><strong>Da precisare</strong></td><td>Vero contro la stretta (+7%), falso contro la media (p = 1,000)</td></tr><tr><td>Presa larga = lavoro uniforme sui muscoli spinti</td><td><strong>Smentito</strong></td><td>Il tricipite lavora il 10,6% in meno</td></tr><tr><td>Presa media = la migliore per il petto</td><td><strong>Non verificabile</strong></td><td>Nessuna differenza di attivazione del pettorale; zero studi di crescita</td></tr><tr><td>Presa stretta = più tricipiti</td><td><strong>Confermato</strong></td><td>16% contro 12% della contrazione massima</td></tr><tr><td>Presa stretta = carichi più leggeri</td><td><strong>Confermato</strong></td><td>Circa il 7% in meno</td></tr><tr><td>Presa stretta per riabilitare spalla e petto</td><td><strong>Da precisare</strong></td><td>Meccanicamente sensato, mai testato come riabilitazione</td></tr><tr><td>Ogni presa ha il suo range di ripetizioni</td><td><strong>Smentito</strong></td><td>Le ripetizioni al cedimento non cambiano (p = 0,545)</td></tr></tbody></table>
+<h2>Come applicarlo</h2>
+<ol class="steps"><li><strong>Misura la tua presa, non copiare i centimetri di un altro.</strong> Negli studi la presa stretta è la distanza fra le ascelle e la larga è il massimo di gara, 81 cm: per chi ha spalle strette quegli 81 cm sono molto più "larghi" che per chi le ha ampie.</li><li><strong>Scegli la presa per il carico e per la spalla, non per il muscolo.</strong> Il pettorale lavora uguale in tutti e tre i casi. Quello che cambia davvero è quanto puoi caricare e quanto chiedi alla spalla.</li><li><strong>Testa il tuo massimale per 5-6 ripetizioni con due prese diverse, a una settimana di distanza.</strong> Se la differenza supera il 5%, hai la tua risposta — e probabilmente non è quella dello schema.</li><li><strong>Non cambiare presa e range di ripetizioni insieme.</strong> Il range lo scegli in base all'obiettivo, non in base a dove tieni le mani.</li><li><strong>Usa la presa stretta per il tricipite, non per il petto.</strong> È l'unico effetto sui muscoli che spingono dimostrato in modo coerente in più laboratori.</li></ol>
+<div class="app"><div><h3>Con Nurvan</h3><p>Il consiglio giusto su questo tema è "misura", ma misurare richiede che i numeri restino. In Nurvan la panca con presa larga, media e stretta sono varianti distinte dello stesso esercizio: ogni serie registra carico, ripetizioni e RIR (le ripetizioni che avresti ancora in serbatoio), e il grafico dello storico ti mostra in settimane quale presa sta progredendo davvero sul tuo corpo. È il test del punto 3, fatto senza foglio di calcolo. ****</p></div><a class="cta" href="https://nurvan.app">Prova Nurvan</a></div>
+<h2>Domande frequenti</h2>
+<details><summary>Qual è la presa migliore in panca piana?</summary><p>Quella con cui sollevi di più e non hai fastidio alla spalla. Negli studi presa media e larga sono equivalenti per carico, e il pettorale non cambia fra le tre. Con presa e velocità libere il massimale è più alto che con presa imposta (Lee et al., 2020): la presa che ti sei costruito allenandoti è un vantaggio reale, non un'abitudine da correggere.</p></details>
+<details><summary>La presa stretta allena meno il petto?</summary><p>No. In sette muscoli misurati, l'attivazione del pettorale non è risultata diversa fra presa stretta, media e larga (Saeterbakken et al., 2021). Cambia la porzione sollecitata — più alta con presa stretta, più bassa con presa larga (Mausehund et al., 2022) — e cambia molto il tricipite.</p></details>
+<details><summary>Devo usare la presa larga se voglio diventare forte?</summary><p>Non necessariamente. La presa larga batte solo la stretta, di circa il 7%, e pareggia con la media. Se la presa larga ti dà fastidio alla spalla, la media costa zero chili.</p></details>
+<details><summary>Quante ripetizioni per ogni presa?</summary><p>Il numero di ripetizioni che riesci a fare a una data percentuale del massimale non cambia con la presa (Pérez-Castilla et al., 2021). Il range lo decidi dall'obiettivo: per orientarti, ho raccolto i dati in <a href="/blog/ripetizioni-serie-recupero-ipertrofia">quante ripetizioni servono davvero per crescere</a>.</p></details>
+<h2>Leggi anche</h2>
+<ul><li><a href="/blog/panca-o-croci-pettorali">Panca o croci: cosa fa crescere di più il petto?</a> — la stessa logica applicata alla scelta dell'esercizio, non della presa.</li><li><a href="/blog/ripetizioni-serie-recupero-ipertrofia">Quante ripetizioni, serie e recupero servono per l'ipertrofia</a> — perché il range di ripetizioni è una variabile a sé.</li><li><a href="/blog/leg-extension-o-leg-press-retto-femorale">Leg extension o leg press: cosa dicono gli studi</a> — la crescita regionale, misurata sulle gambe.</li></ul>
+<h2>Fonti</h2>
+<ol class="refs"><li>Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V, 2021. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34198674/">34198674</a> · <a href="https://doi.org/10.3390/ijerph18126444">DOI</a></li><li>Larsen S, Gomo O, van den Tillaar R, 2021. A Biomechanical Analysis of Wide, Medium, and Narrow Grip Width Effects on Kinematics, Horizontal Kinetics, and Muscle Activity on the Sticking Region in Recreationally Trained Males During 1-RM Bench Pressing. <em>Front Sports Act Living</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33554113/">33554113</a> · <a href="https://doi.org/10.3389/fspor.2020.637066">DOI</a></li><li>Mausehund L, Werkhausen A, Bartsch J, Krosshaug T, 2022. Understanding Bench Press Biomechanics—The Necessity of Measuring Lateral Barbell Forces. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33555823/">33555823</a> · <a href="https://doi.org/10.1519/JSC.0000000000003948">DOI</a></li><li>Muyor JM, Rodríguez-Ridao D, Oliva-Lozano JM, 2023. Comparison of Muscle Activity between the Horizontal Bench Press and the Seated Chest Press Exercises Using Several Grips. <em>J Hum Kinet</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/37229415/">37229415</a> · <a href="https://doi.org/10.5114/jhk/161468">DOI</a></li><li>Pérez-Castilla A, Jukic I, Haff GG, García-Ramos A, 2021. The Bench Press Grip Width Does Not Affect the Number of Repetitions Performed at Different Velocity Loss Thresholds. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33504038/">33504038</a> · <a href="https://doi.org/10.3390/ijerph18031057">DOI</a></li><li>Lee S, Cone SM, Kim S, 2020. A biomechanical comparison of self-selected and experimentally controlled speeds and grip widths during the bench press exercise. <em>Sports Biomech</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32564677/">32564677</a> · <a href="https://doi.org/10.1080/14763141.2020.1772357">DOI</a></li><li>Kassiano W, Costa B, Nunes JP, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2023. Which ROMs Lead to Rome? A Systematic Review of the Effects of Range of Motion on Muscle Hypertrophy. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/36662126/">36662126</a> · <a href="https://doi.org/10.1519/JSC.0000000000004415">DOI</a></li><li>Fischer J, Burger C, Manieu Seguel JA, Rodoplu C, Paternoster FK, Tilp M, Konrad A, 2025. Acute muscle excitation response across various bench press ranges of motion. <em>Sci Rep</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/40269203/">40269203</a> · <a href="https://doi.org/10.1038/s41598-025-98354-9">DOI</a></li></ol>
+<p>Dati bibliografici verificati su PubMed. Spunto iniziale: il carosello "Bench press cheat sheet" di Sebastian Oreb (<a href="https://www.instagram.com/p/Dd8lCqIkfEh/">@australianstrengthcoach</a>, 1 ottobre 2026). Testo, struttura, dati e grafici di questo articolo sono originali.</p>
+<p><em>Giammaria Loi è il fondatore di Nurvan. Si allena con i pesi dal 2012, lavora come personal trainer e coach certificato FIPE dal 2013 e gareggia nel powerlifting a livello nazionale dal 2018. Ogni articolo che firma parte dagli studi scientifici e arriva a ciò che funziona davvero in palestra.</em></p>
+<p class="note">Nota: contenuto informativo, non sostituisce il parere di un medico o professionista. In caso di dolore alla spalla o al petto, rivolgiti a un medico o a un fisioterapista prima di modificare l'allenamento.</p>
+</main>
+<footer>NURVAN · nurvan.app · 24 ottobre 2026</footer>
+</body>
+</html>

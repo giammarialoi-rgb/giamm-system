@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agarre en press de banca: ¿ancho, medio o cerrado? | Nurvan</title>
+<meta name="description" content="¿Ancho para la fuerza, medio para el pecho, cerrado para el tríceps? En los estudios el pectoral no cambia con ninguno de los tres agarres. Los números.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entrenamiento</a><a href="#">Nutrición</a><a href="#">Suplementos</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descargar la app</a></div></header>
+<main class="wrap" lang="es">
+<div class="crumb">Blog · Entrenamiento</div>
+<h1>Agarre en press de banca: ¿ancho, medio o cerrado?</h1>
+<p class="lede">El esquema circula desde hace años: agarre ancho para la fuerza, agarre medio para el pecho, agarre cerrado para el tríceps. Es ordenado, es fácil de recordar y es lo que casi todo el mundo sigue sin haberlo probado nunca. He leído ocho trabajos indexados que midieron cargas, activación muscular y momentos articulares con distintos agarres. Dos partes del esquema se sostienen. La del medio no tiene ni un solo estudio detrás.</p>
+<div class="meta"><span>24 de octubre de 2026</span><span><b>13</b> min de lectura</span><span><b>8</b> estudios citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · actualizado el 24 de octubre de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Agarre en press de banca: ¿ancho, medio o cerrado?"><figcaption class="cap">U.S. Army, Staff Sgt. Alexander Henninger, vía Wikimedia Commons, dominio público (PD-USGov-Military-Army)</figcaption></figure>
+<figure><div class="chart"><svg role="img" aria-label="Gráfico de barras: la carga 6RM en press de banca con agarre cerrado es 93 frente a 100 del agarre medio y 100 del agarre ancho" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="t1-es d1-es">
+<title id="t1-es">Carga levantada en press de banca según la anchura del agarre</title>
+<desc id="d1-es">Índice de la carga 6RM con el agarre medio igual a 100: agarre cerrado 93, medio 100, ancho 100 en hombres entrenados.</desc>
+<rect width="800" height="480" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Cuánto cambia la carga en press de banca</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Carga 6RM, hombres entrenados · índice: agarre medio = 100</text>
+
+<line x1="150" y1="400" x2="760" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="150" y1="130" x2="150" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+
+<line x1="150" y1="130" x2="760" y2="130" stroke="#222" stroke-width="1"/>
+<line x1="150" y1="265" x2="760" y2="265" stroke="#222" stroke-width="1"/>
+<text x="140" y="135" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">100</text>
+<text x="140" y="270" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">50</text>
+<text x="140" y="405" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">0</text>
+
+<rect x="205" y="149" width="120" height="251" fill="#aa8a2e"/>
+<text x="265" y="139" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">93</text>
+<text x="265" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">cerrado</text>
+<text x="265" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(axilas)</text>
+
+<rect x="395" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="455" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="455" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">medio</text>
+
+<rect x="585" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="645" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="645" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">ancho</text>
+<text x="645" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(81 cm)</text>
+
+<line x1="395" y1="100" x2="705" y2="100" stroke="#a0a0a0" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="550" y="94" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">sin diferencia (p = 1,000)</text>
+
+<text x="40" y="470" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Calculado a partir de las caídas publicadas: agarre cerrado −7,0% frente al medio y −7,1% frente al ancho. Fuente: Saeterbakken et al., 2021 (PMID 34198674).</text>
+</svg>
+</div></figure>
+<div class="box"><h2>En resumen</h2><ul><li><strong>El agarre ancho no es "el más pesado".</strong> Solo lo es frente al cerrado, en torno a un <strong>7%</strong>. Frente al agarre medio la diferencia no existe: p = 1,000 (Saeterbakken et al., 2021), y en otro laboratorio <strong>109,8 kg frente a 108,9 kg</strong> de máximo (Larsen et al., 2021).</li><li><strong>El pectoral no cambia con la anchura del agarre.</strong> Porción esternal, porción clavicular, dorsal ancho, deltoides medio y posterior: ninguna diferencia entre cerrado, medio y ancho, ni en entrenados ni en principiantes (Saeterbakken et al., 2021).</li><li><strong>Los músculos que de verdad se mueven son otros dos.</strong> Con agarre ancho el bíceps trabaja un <strong>115,6% más</strong> que con el cerrado, y el tríceps un <strong>10,6% menos</strong> que con el medio. El tríceps es el único "músculo que empuja" que el agarre mueve.</li><li><strong>El rango de repeticiones no depende del agarre.</strong> Al 75% del máximo, el número de repeticiones que consigues hacer antes del fallo es el mismo con agarre cerrado, medio, ancho o libre (p = 0,545; Pérez-Castilla et al., 2021).</li><li><strong>El agarre con el que más levantas es el que ya usas.</strong> Con agarre y velocidad libres el máximo es significativamente más alto que con agarre impuesto, y ninguno de los sujetos consideró incómoda la condición libre, frente al 80% de la controlada (Lee et al., 2020).</li></ul></div>
+<h2>La carga: el agarre ancho solo gana al cerrado</h2>
+<p>El estudio más útil en este punto hizo algo sencillo: tomó a 28 hombres, 15 entrenados (press de banca con al menos el 125% del peso corporal) y 13 principiantes, y midió el máximo para 6 repeticiones con tres agarres definidos sobre el cuerpo de cada uno. Agarre cerrado = la distancia entre las axilas. Agarre ancho = el máximo permitido en competición, <strong>81 cm</strong>. Agarre medio = exactamente a mitad de camino (Saeterbakken et al., 2021).</p>
+<p>Resultado en los entrenados: el agarre cerrado permite levantar un <strong>7,0%</strong> menos que el medio y un <strong>7,1%</strong> menos que el ancho. Entre medio y ancho, en cambio, p = 1,000, es decir, los dos agarres son indistinguibles. En los principiantes la diferencia es parecida: −8,4% y −6,6%, otra vez sin diferencias entre medio y ancho.</p>
+<p>Un segundo grupo llegó al mismo sitio midiendo el máximo real en 14 hombres entrenados: <strong>109,8 kg</strong> con agarre ancho, <strong>108,9 kg</strong> con agarre medio, <strong>103,7 kg</strong> con agarre cerrado. Los autores concluyen que para levantar la mayor carga posible "un agarre ancho <strong>o medio</strong>" puede servir igual (Larsen et al., 2021).</p>
+<p>Hay además un precio mecánico que el gráfico de barras de un carrusel no puede mostrar. Con agarre ancho, el <strong>13,1-15,7%</strong> de la fuerza que aplicas a la barra se va hacia los lados, hacia fuera; con agarre cerrado el <strong>8,5-10,1%</strong> se va hacia dentro; con agarre medio casi todo es vertical, el <strong>0,4-1,8%</strong> (Larsen et al., 2021). Empujar hacia fuera no sube la barra: sirve para mantener estable la trayectoria, pero es fuerza que no ves en la carga.</p>
+<figure><div class="chart"><svg role="img" aria-label="Gráfico: al pasar al agarre ancho el bíceps aumenta un 115,6% y el tríceps baja un 10,6%, mientras que pectoral, deltoides y dorsal ancho no cambian" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-labelledby="t2-es d2-es">
+<title id="t2-es">Qué músculos cambian de verdad al cambiar el agarre</title>
+<desc id="d2-es">Diferencias de activación al pasar al agarre ancho en hombres entrenados: bíceps +115,6% frente al cerrado y +44,9% frente al medio, tríceps −10,6% frente al medio, mientras que pectoral esternal, pectoral clavicular, deltoides anterior y dorsal ancho no muestran diferencias.</desc>
+<rect width="800" height="560" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Qué cambia al pasar al agarre ancho</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Activación muscular a 6RM, hombres entrenados · diferencia porcentual</text>
+
+<line x1="394" y1="100" x2="394" y2="480" stroke="#666" stroke-width="1.5"/>
+<text x="394" y="118" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+
+<text x="288" y="156" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Bíceps (vs cerrado)</text>
+<rect x="394" y="136" width="362" height="26" fill="#d4af37"/>
+<text x="748" y="155" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#0c0c0c">+115,6%</text>
+
+<text x="288" y="200" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Bíceps (vs medio)</text>
+<rect x="394" y="180" width="141" height="26" fill="#d4af37"/>
+<text x="545" y="199" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">+44,9%</text>
+
+<text x="288" y="244" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Tríceps (vs medio)</text>
+<rect x="361" y="224" width="33" height="26" fill="#aa8a2e"/>
+<text x="351" y="243" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">−10,6%</text>
+
+<text x="288" y="288" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Pectoral, porción esternal</text>
+<circle cx="394" cy="280" r="6" fill="#5a5a5a"/>
+<text x="412" y="285" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">sin diferencia</text>
+
+<text x="288" y="332" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Pectoral, porción clavicular</text>
+<circle cx="394" cy="324" r="6" fill="#5a5a5a"/>
+<text x="412" y="329" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">sin diferencia</text>
+
+<text x="288" y="376" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Deltoides anterior</text>
+<circle cx="394" cy="368" r="6" fill="#5a5a5a"/>
+<text x="412" y="373" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">sin diferencia</text>
+
+<text x="288" y="420" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Dorsal ancho</text>
+<circle cx="394" cy="412" r="6" fill="#5a5a5a"/>
+<text x="412" y="417" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">sin diferencia</text>
+
+<text x="288" y="464" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Deltoides medio y posterior</text>
+<circle cx="394" cy="456" r="6" fill="#5a5a5a"/>
+<text x="412" y="461" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">sin diferencia</text>
+
+<text x="40" y="518" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Los dos músculos que el agarre mueve de verdad son el bíceps y el tríceps. El pectoral se queda igual con los tres agarres.</text>
+<text x="40" y="540" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Fuente: Saeterbakken et al., 2021 (PMID 34198674), grupo entrenado, n = 15.</text>
+</svg>
+</div></figure>
+<h2>El pecho no cambia. Cambian el bíceps y el tríceps</h2>
+<p>Aquí se cae el esquema. En ese mismo estudio, con electrodos en siete músculos, la anchura del agarre cambió la activación de <strong>dos</strong> músculos solamente:</p>
+<ul><li><strong>bíceps braquial</strong>: con agarre ancho, +115,6% frente al cerrado y +44,9% frente al medio (p &lt; 0,001). Trabaja como antagonista, para estabilizar el codo;</li><li><strong>tríceps braquial</strong>: con agarre ancho, <strong>−10,6%</strong> frente al medio (p = 0,032) y −24,1% frente al cerrado, esta última diferencia al límite de la significación (p = 0,058).</li></ul>
+<p>Pectoral esternal, pectoral clavicular, dorsal ancho, deltoides medio y posterior: ninguna diferencia, en ninguno de los dos grupos. El deltoides anterior se mueve solo en los principiantes, y poco.</p>
+<p>Esto da la vuelta a una parte del tópico: el agarre ancho no "reparte el trabajo de forma uniforme" entre los músculos que empujan. Hace exactamente lo contrario: es el agarre que le <strong>quita</strong> trabajo al tríceps. Un tercer grupo lo confirma en dirección opuesta: al 50% de la distancia entre los hombros el tríceps está al 16% de la contracción máxima, al 150% baja al 12%, y el deltoides anterior no cambia en ninguna condición (Muyor et al., 2023). Los autores de ese estudio cierran con una frase que vale para todo el artículo: la elección del ejercicio no debería basarse solo en la activación.</p>
+<p>Y un detalle que el carrusel se salta: <strong>la diferencia en el tríceps aparece solo en el grupo entrenado</strong>. En los principiantes el tríceps no cambia con ningún agarre. El mismo consejo no produce el mismo efecto en dos personas distintas.</p>
+<h2>No es "pecho contra tríceps": es qué porción de pecho</h2>
+<p>El dato más interesante no es cuánto pecho trabaja, sino <strong>qué</strong> parte. Midiendo los momentos articulares de 35 adultos entrenados con cargas de 6-8RM, el agarre más cerrado aumenta el momento en el codo y la actividad del tríceps lateral, del deltoides anterior <strong>y del haz clavicular del pectoral</strong>: el pecho alto. El agarre más ancho aumenta el momento en el hombro y la actividad del haz abdominal, o sea la parte baja (Mausehund et al., 2022).</p>
+<p>Es el mismo principio que había encontrado comparando <a href="/es/blog/press-con-mancuernas-o-aperturas-pecho">el press con mancuernas y las aperturas para el crecimiento del pecho</a>: la elección no cambia cuánto crece el pectoral en su conjunto, cambia dónde.</p>
+<p>La consecuencia práctica afecta al hombro. Cuanto más ancho es el agarre, mayor es la carga que el hombro tiene que soportar, tanto en términos absolutos como en relación con tu capacidad máxima. Es el motivo mecánico por el que quien tiene el hombro irritado suele estar mejor cerrando las manos. Pero cuidado: <strong>ningún estudio ha probado el agarre cerrado como tratamiento de rehabilitación</strong>. Es una decisión sensata de gestión de la carga, no una terapia: si te duele el hombro, el camino es el médico o el fisioterapeuta, no una diapositiva.</p>
+<h2>El ROM parcial para el pecho: el dato que no existe</h2>
+<p>"Medio movimiento en estiramiento para hacer crecer el pecho" es quizá la parte más repetida y menos verificada del esquema. La revisión sistemática dedicada al rango de movimiento encontró que el parcial en la parte inicial (músculo estirado) y el movimiento completo superan al parcial en la parte final, pero los datos vienen del <strong>recto femoral, el vasto lateral, el bíceps, el braquial, el glúteo mayor y los aductores</strong>. El pectoral no está entre ellos (Kassiano et al., 2023). Para el tríceps, curiosamente, el parcial que funcionó mejor fue el de la parte <strong>central</strong> del movimiento.</p>
+<p>Y en el único estudio agudo que comparó los rangos de movimiento justamente en press de banca, la mitad <strong>alta</strong>, es decir la acortada, lo contrario del "lengthened bias", produjo la mayor excitación de pico en la porción esternocostal del pectoral y en los haces largo y lateral del tríceps (Fischer et al., 2025). Sigue siendo un dato agudo en 19 hombres, no una prueba de crecimiento. Pero tampoco está demostrada la dirección del consejo.</p>
+<h2>Qué dice de verdad la investigación</h2>
+<table><thead><tr><th>Afirmación</th><th>Resultado</th><th>Número</th></tr></thead><tbody><tr><td>Agarre ancho = cargas más altas</td><td><strong>Matizado</strong></td><td>Cierto frente al cerrado (+7%), falso frente al medio (p = 1,000)</td></tr><tr><td>Agarre ancho = trabajo uniforme en los músculos que empujan</td><td><strong>Desmentido</strong></td><td>El tríceps trabaja un 10,6% menos</td></tr><tr><td>Agarre medio = el mejor para el pecho</td><td><strong>No verificable</strong></td><td>Ninguna diferencia de activación del pectoral; cero estudios de crecimiento</td></tr><tr><td>Agarre cerrado = más tríceps</td><td><strong>Confirmado</strong></td><td>16% frente al 12% de la contracción máxima</td></tr><tr><td>Agarre cerrado = cargas más ligeras</td><td><strong>Confirmado</strong></td><td>Alrededor de un 7% menos</td></tr><tr><td>Agarre cerrado para rehabilitar hombro y pecho</td><td><strong>Matizado</strong></td><td>Mecánicamente sensato, nunca probado como rehabilitación</td></tr><tr><td>Cada agarre tiene su rango de repeticiones</td><td><strong>Desmentido</strong></td><td>Las repeticiones hasta el fallo no cambian (p = 0,545)</td></tr></tbody></table>
+<h2>Cómo aplicarlo</h2>
+<ol class="steps"><li><strong>Mide tu agarre, no copies los centímetros de otro.</strong> En los estudios el agarre cerrado es la distancia entre las axilas y el ancho es el máximo de competición, 81 cm: para quien tiene los hombros estrechos esos 81 cm son mucho más "anchos" que para quien los tiene amplios.</li><li><strong>Elige el agarre por la carga y por el hombro, no por el músculo.</strong> El pectoral trabaja igual en los tres casos. Lo que cambia de verdad es cuánto puedes cargar y cuánto le pides al hombro.</li><li><strong>Mide tu máximo para 5-6 repeticiones con dos agarres distintos, con una semana de diferencia.</strong> Si la diferencia supera el 5%, ya tienes tu respuesta, y probablemente no sea la del esquema.</li><li><strong>No cambies agarre y rango de repeticiones a la vez.</strong> El rango lo eliges según el objetivo, no según dónde pones las manos.</li><li><strong>Usa el agarre cerrado para el tríceps, no para el pecho.</strong> Es el único efecto sobre los músculos que empujan demostrado de forma coherente en más de un laboratorio.</li></ol>
+<div class="app"><div><h3>Con Nurvan</h3><p>El consejo correcto en este tema es "mide", pero medir exige que los números se queden. En Nurvan el press de banca con agarre ancho, medio y cerrado son variantes distintas del mismo ejercicio: cada serie registra carga, repeticiones y RIR (las repeticiones que te habrían quedado en el depósito), y el gráfico del historial te muestra, semana a semana, qué agarre está progresando de verdad en tu cuerpo. Es la prueba del punto 3, hecha sin hoja de cálculo. ****</p></div><a class="cta" href="https://nurvan.app">Prueba Nurvan</a></div>
+<h2>Preguntas frecuentes</h2>
+<details><summary>¿Cuál es el mejor agarre en press de banca?</summary><p>Aquel con el que más levantas y con el que no te molesta el hombro. En los estudios, agarre medio y ancho son equivalentes en carga, y el pectoral no cambia entre los tres. Con agarre y velocidad libres el máximo es más alto que con agarre impuesto (Lee et al., 2020): el agarre que te has construido entrenando es una ventaja real, no una costumbre que corregir.</p></details>
+<details><summary>¿El agarre cerrado trabaja menos el pecho?</summary><p>No. En los siete músculos medidos, la activación del pectoral no resultó distinta entre agarre cerrado, medio y ancho (Saeterbakken et al., 2021). Cambia la porción solicitada, más alta con agarre cerrado y más baja con agarre ancho (Mausehund et al., 2022), y cambia mucho el tríceps.</p></details>
+<details><summary>¿Tengo que usar agarre ancho si quiero ser fuerte?</summary><p>No necesariamente. El agarre ancho solo supera al cerrado, en torno a un 7%, y empata con el medio. Si el agarre ancho te molesta el hombro, el medio no te cuesta ni un kilo.</p></details>
+<details><summary>¿Cuántas repeticiones con cada agarre?</summary><p>El número de repeticiones que consigues hacer a un porcentaje dado del máximo no cambia con el agarre (Pérez-Castilla et al., 2021). El rango lo decides por el objetivo: para orientarte, reuní los datos en <a href="/es/blog/cuantas-repeticiones-masa-muscular">cuántas repeticiones hacen falta de verdad para crecer</a>.</p></details>
+<h2>Lee también</h2>
+<ul><li><a href="/es/blog/press-con-mancuernas-o-aperturas-pecho">¿Press con mancuernas o aperturas: qué hace crecer más el pecho?</a> — la misma lógica aplicada a la elección del ejercicio, no del agarre.</li><li><a href="/es/blog/cuantas-repeticiones-masa-muscular">Cuántas repeticiones, series y descanso hacen falta para la hipertrofia</a> — por qué el rango de repeticiones es una variable aparte.</li><li><a href="/es/blog/extension-de-piernas-o-prensa-recto-femoral">Extensión de piernas o prensa: qué dicen los estudios</a> — el crecimiento regional, medido en las piernas.</li></ul>
+<h2>Fuentes</h2>
+<ol class="refs"><li>Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V, 2021. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34198674/">34198674</a> · <a href="https://doi.org/10.3390/ijerph18126444">DOI</a></li><li>Larsen S, Gomo O, van den Tillaar R, 2021. A Biomechanical Analysis of Wide, Medium, and Narrow Grip Width Effects on Kinematics, Horizontal Kinetics, and Muscle Activity on the Sticking Region in Recreationally Trained Males During 1-RM Bench Pressing. <em>Front Sports Act Living</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33554113/">33554113</a> · <a href="https://doi.org/10.3389/fspor.2020.637066">DOI</a></li><li>Mausehund L, Werkhausen A, Bartsch J, Krosshaug T, 2022. Understanding Bench Press Biomechanics—The Necessity of Measuring Lateral Barbell Forces. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33555823/">33555823</a> · <a href="https://doi.org/10.1519/JSC.0000000000003948">DOI</a></li><li>Muyor JM, Rodríguez-Ridao D, Oliva-Lozano JM, 2023. Comparison of Muscle Activity between the Horizontal Bench Press and the Seated Chest Press Exercises Using Several Grips. <em>J Hum Kinet</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/37229415/">37229415</a> · <a href="https://doi.org/10.5114/jhk/161468">DOI</a></li><li>Pérez-Castilla A, Jukic I, Haff GG, García-Ramos A, 2021. The Bench Press Grip Width Does Not Affect the Number of Repetitions Performed at Different Velocity Loss Thresholds. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33504038/">33504038</a> · <a href="https://doi.org/10.3390/ijerph18031057">DOI</a></li><li>Lee S, Cone SM, Kim S, 2020. A biomechanical comparison of self-selected and experimentally controlled speeds and grip widths during the bench press exercise. <em>Sports Biomech</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32564677/">32564677</a> · <a href="https://doi.org/10.1080/14763141.2020.1772357">DOI</a></li><li>Kassiano W, Costa B, Nunes JP, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2023. Which ROMs Lead to Rome? A Systematic Review of the Effects of Range of Motion on Muscle Hypertrophy. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/36662126/">36662126</a> · <a href="https://doi.org/10.1519/JSC.0000000000004415">DOI</a></li><li>Fischer J, Burger C, Manieu Seguel JA, Rodoplu C, Paternoster FK, Tilp M, Konrad A, 2025. Acute muscle excitation response across various bench press ranges of motion. <em>Sci Rep</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/40269203/">40269203</a> · <a href="https://doi.org/10.1038/s41598-025-98354-9">DOI</a></li></ol>
+<p>Datos bibliográficos verificados en PubMed. Punto de partida: el carrusel "Bench press cheat sheet" de Sebastian Oreb (<a href="https://www.instagram.com/p/Dd8lCqIkfEh/">@australianstrengthcoach</a>, 1 de octubre de 2026). El texto, la estructura, los datos y los gráficos de este artículo son originales.</p>
+<p><em>Giammaria Loi es el fundador de Nurvan. Entrena con pesas desde 2012, trabaja como entrenador personal y coach certificado por la FIPE desde 2013 y compite en powerlifting a nivel nacional desde 2018. Cada artículo que firma parte de los estudios científicos y llega a lo que funciona de verdad en el gimnasio.</em></p>
+<p class="note">Nota: contenido informativo, no sustituye la opinión de un médico o de un profesional. Si tienes dolor en el hombro o en el pecho, consulta a un médico o a un fisioterapeuta antes de modificar tu entrenamiento.</p>
+</main>
+<footer>NURVAN · nurvan.app · 24 de octubre de 2026</footer>
+</body>
+</html>

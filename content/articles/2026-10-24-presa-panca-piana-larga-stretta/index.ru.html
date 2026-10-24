@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ширина хвата в жиме лёжа: широкий или узкий? | Nurvan</title>
+<meta name="description" content="Широкий — для силы, средний — для груди, узкий — для трицепса? В исследованиях грудь не меняется ни при одном хвате. Разбираем цифры по порядку.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Тренировки</div>
+<h1>Ширина хвата в жиме лёжа: широкий или узкий?</h1>
+<p class="lede">Эта схема ходит по залам годами: широкий хват — для силы, средний — для груди, узкий — для трицепса. Она аккуратная, её легко запомнить, и почти все следуют ей, ни разу не проверив. Я прочитал восемь индексированных работ, в которых измеряли вес на штанге, активацию мышц и моменты в суставах при разных хватах. Две части схемы держатся. Одна, центральная, не опирается ни на одно исследование.</p>
+<div class="meta"><span>24 октября 2026</span><span><b>11</b> мин чтения</span><span><b>8</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 24 октября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Ширина хвата в жиме лёжа: широкий или узкий?"><figcaption class="cap">U.S. Army, Staff Sgt. Alexander Henninger, через Wikimedia Commons, общественное достояние (PD-USGov-Military-Army)</figcaption></figure>
+<figure><div class="chart"><svg role="img" aria-label="Столбчатая диаграмма: вес на 6 повторений в жиме лёжа узким хватом равен 93 против 100 при среднем и 100 при широком хвате" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="t1-ru d1-ru">
+<title id="t1-ru">Поднятый вес в жиме лёжа в зависимости от ширины хвата</title>
+<desc id="d1-ru">Индекс веса 6ПМ при среднем хвате, равном 100: узкий хват 93, средний 100, широкий 100 у тренированных мужчин.</desc>
+<rect width="800" height="480" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Насколько меняется вес в жиме</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Вес 6ПМ, тренированные мужчины · индекс: средний хват = 100</text>
+
+<line x1="150" y1="400" x2="760" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="150" y1="130" x2="150" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+
+<line x1="150" y1="130" x2="760" y2="130" stroke="#222" stroke-width="1"/>
+<line x1="150" y1="265" x2="760" y2="265" stroke="#222" stroke-width="1"/>
+<text x="140" y="135" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">100</text>
+<text x="140" y="270" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">50</text>
+<text x="140" y="405" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">0</text>
+
+<rect x="205" y="149" width="120" height="251" fill="#aa8a2e"/>
+<text x="265" y="139" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">93</text>
+<text x="265" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">узкий</text>
+<text x="265" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(подмышки)</text>
+
+<rect x="395" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="455" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="455" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">средний</text>
+
+<rect x="585" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="645" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="645" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">широкий</text>
+<text x="645" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(81 см)</text>
+
+<line x1="395" y1="100" x2="705" y2="100" stroke="#a0a0a0" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="550" y="94" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">нет разницы (p = 1,000)</text>
+
+<text x="40" y="470" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Рассчитано по опубликованным снижениям: узкий хват −7,0% к среднему и −7,1% к широкому. Источник: Saeterbakken et al., 2021 (PMID 34198674).</text>
+</svg>
+</div></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Широкий хват — не «самый сильный».</strong> Он сильнее только узкого, примерно на <strong>7%</strong>. По сравнению со средним разницы просто нет: p = 1,000 (Saeterbakken et al., 2021), а в другой лаборатории — <strong>109,8 кг против 108,9 кг</strong> в разовом максимуме (Larsen et al., 2021).</li><li><strong>Грудь не меняется от ширины хвата.</strong> Грудинная часть, ключичная часть, широчайшая, средний и задний пучки дельты: ни одной разницы между узким, средним и широким хватом — ни у тренированных, ни у новичков (Saeterbakken et al., 2021).</li><li><strong>Реально смещаются две другие мышцы.</strong> При широком хвате бицепс работает <strong>на 115,6% больше</strong>, чем при узком, а трицепс — <strong>на 10,6% меньше</strong>, чем при среднем. Трицепс — единственная «жимовая» мышца, которую хват действительно смещает.</li><li><strong>Диапазон повторений от хвата не зависит.</strong> На 75% от максимума число повторений до отказа одинаково при узком, среднем, широком и свободном хвате (p = 0,545; Pérez-Castilla et al., 2021).</li><li><strong>Хват, с которым ты жмёшь больше, — тот, которым ты уже жмёшь.</strong> При свободном хвате и свободной скорости максимум значимо выше, чем при заданном хвате, — и ни один участник не назвал свободный вариант неудобным, против 80% в контролируемом (Lee et al., 2020).</li></ul></div>
+<h2>Вес на штанге: широкий хват выигрывает только у узкого</h2>
+<p>Самая полезная работа по этому вопросу сделала простую вещь: взяла 28 мужчин — 15 тренированных (жим минимум 125% от собственного веса) и 13 новичков — и проверила максимум на 6 повторений с тремя хватами, отмеренными по телу каждого. Узкий хват = расстояние между подмышками. Широкий хват = максимум, разрешённый на соревнованиях, <strong>81 см</strong>. Средний хват = ровно посередине (Saeterbakken et al., 2021).</p>
+<p>Результат у тренированных: с узким хватом поднимают на <strong>7,0%</strong> меньше, чем со средним, и на <strong>7,1%</strong> меньше, чем с широким. А между средним и широким — p = 1,000, то есть два хвата неразличимы. У новичков разрыв похожий: −8,4% и −6,6%, и снова без разницы между средним и широким.</p>
+<p>Вторая группа пришла к тому же, измерив настоящий разовый максимум у 14 тренированных мужчин: <strong>109,8 кг</strong> широким хватом, <strong>108,9 кг</strong> средним, <strong>103,7 кг</strong> узким. Авторы заключают, что для максимального веса подойдёт «широкий <strong>или средний</strong>» хват (Larsen et al., 2021).</p>
+<p>Есть и механическая плата, которую столбики в карусели показать не могут. При широком хвате <strong>13,1-15,7%</strong> силы, которую ты прикладываешь к штанге, уходит в стороны, наружу; при узком <strong>8,5-10,1%</strong> уходит внутрь; при среднем почти всё вертикально — <strong>0,4-1,8%</strong> (Larsen et al., 2021). Давить наружу штангу не поднимает: это держит траекторию стабильной, но это сила, которой ты не видишь на весе.</p>
+<figure><div class="chart"><svg role="img" aria-label="Диаграмма: при переходе на широкий хват бицепс прибавляет 115,6%, трицепс теряет 10,6%, а грудная, дельты и широчайшая не меняются" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-labelledby="t2-ru d2-ru">
+<title id="t2-ru">Какие мышцы действительно меняются при смене хвата</title>
+<desc id="d2-ru">Различия активации при переходе на широкий хват у тренированных мужчин: бицепс +115,6% к узкому и +44,9% к среднему, трицепс −10,6% к среднему, тогда как грудинная и ключичная части грудной мышцы, передняя дельта и широчайшая не показывают различий.</desc>
+<rect width="800" height="560" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Что меняется при переходе на широкий хват</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Активация мышц при 6ПМ, тренированные мужчины · разница в процентах</text>
+
+<line x1="394" y1="100" x2="394" y2="480" stroke="#666" stroke-width="1.5"/>
+<text x="394" y="118" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+
+<text x="288" y="156" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Бицепс (к узкому)</text>
+<rect x="394" y="136" width="362" height="26" fill="#d4af37"/>
+<text x="748" y="155" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#0c0c0c">+115,6%</text>
+
+<text x="288" y="200" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Бицепс (к среднему)</text>
+<rect x="394" y="180" width="141" height="26" fill="#d4af37"/>
+<text x="545" y="199" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">+44,9%</text>
+
+<text x="288" y="244" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Трицепс (к среднему)</text>
+<rect x="361" y="224" width="33" height="26" fill="#aa8a2e"/>
+<text x="351" y="243" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">−10,6%</text>
+
+<text x="288" y="288" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Грудная, грудинная часть</text>
+<circle cx="394" cy="280" r="6" fill="#5a5a5a"/>
+<text x="412" y="285" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">нет разницы</text>
+
+<text x="288" y="332" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Грудная, ключичная часть</text>
+<circle cx="394" cy="324" r="6" fill="#5a5a5a"/>
+<text x="412" y="329" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">нет разницы</text>
+
+<text x="288" y="376" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Передняя дельта</text>
+<circle cx="394" cy="368" r="6" fill="#5a5a5a"/>
+<text x="412" y="373" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">нет разницы</text>
+
+<text x="288" y="420" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Широчайшая мышца спины</text>
+<circle cx="394" cy="412" r="6" fill="#5a5a5a"/>
+<text x="412" y="417" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">нет разницы</text>
+
+<text x="288" y="464" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Средняя и задняя дельта</text>
+<circle cx="394" cy="456" r="6" fill="#5a5a5a"/>
+<text x="412" y="461" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">нет разницы</text>
+
+<text x="40" y="518" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Хват реально сдвигает только две мышцы: бицепс и трицепс. Грудная остаётся одинаковой при всех трёх хватах.</text>
+<text x="40" y="540" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Источник: Saeterbakken et al., 2021 (PMID 34198674), тренированная группа, n = 15.</text>
+</svg>
+</div></figure>
+<h2>Грудь не меняется. Меняются бицепс и трицепс</h2>
+<p>Вот здесь схема и ломается. В том же исследовании, с электродами на семи мышцах, ширина хвата изменила активацию всего <strong>двух</strong> мышц:</p>
+<ul><li><strong>двуглавая мышца плеча (бицепс)</strong>: при широком хвате +115,6% к узкому и +44,9% к среднему (p &lt; 0,001). Он работает как антагонист, стабилизируя локоть;</li><li><strong>трёхглавая мышца плеча (трицепс)</strong>: при широком хвате <strong>−10,6%</strong> к среднему (p = 0,032) и −24,1% к узкому, причём последняя разница на границе значимости (p = 0,058).</li></ul>
+<p>Грудинная часть грудной, ключичная часть грудной, широчайшая, средний и задний пучки дельты: разницы нет ни в одной из двух групп. Передний пучок дельты сдвигается только у новичков, и совсем немного.</p>
+<p>Это переворачивает часть общепринятого: широкий хват не «распределяет работу равномерно» между жимовыми мышцами. Он делает ровно обратное — именно он <strong>забирает</strong> работу у трицепса. Третья группа подтверждает это с другой стороны: на 50% от расстояния между плечами трицепс держится на 16% от максимального произвольного сокращения, на 150% падает до 12%, а передний пучок дельты не меняется ни в одном варианте (Muyor et al., 2023). Авторы этой работы заканчивают фразой, которая подходит всей статье: выбирать упражнение не стоит только по активации.</p>
+<p>Обрати внимание на деталь, которую карусель пропускает: <strong>разница в трицепсе появляется только в тренированной группе</strong>. У новичков трицепс не меняется ни при одном хвате. Один и тот же совет не даёт одинакового эффекта двум разным людям.</p>
+<h2>Это не «грудь против трицепса»: это какая часть груди</h2>
+<p>Самое интересное здесь не то, сколько работает грудь, а <strong>какая</strong> её часть. При измерении моментов в суставах у 35 тренированных взрослых с весами на 6-8 повторений более узкий хват увеличивает момент в локте и активность латеральной головки трицепса, переднего пучка дельты <strong>и ключичной части грудной мышцы</strong> — то есть верха груди. Более широкий хват увеличивает момент в плече и активность брюшной части, то есть низа (Mausehund et al., 2022).</p>
+<p>Это тот же принцип, который я нашёл, сравнивая <a href="/ru/blog/zhim-gantelyami-ili-razvedeniya-grud">жим и разведения для роста груди</a>: выбор меняет не то, насколько вырастет грудная мышца в целом, а то, где.</p>
+<p>Практический вывод касается плеча. Чем шире хват, тем выше нагрузка, которую приходится держать плечу, — и в абсолютных значениях, и относительно твоего максимума. Это механическая причина, по которой при раздражённом плече многим легче жать уже. Но важно: <strong>ни одно исследование не проверяло узкий хват как реабилитацию</strong>. Это разумное управление нагрузкой, а не лечение: если плечо болит, идти нужно к врачу или физиотерапевту, а не к слайду.</p>
+<h2>Частичная амплитуда для груди: цифры, которой нет</h2>
+<p>«Половина движения в растяжении, чтобы росла грудь» — пожалуй, самая повторяемая и меньше всего проверенная часть схемы. Систематический обзор по амплитуде движения показал, что частичные повторения в начальной части (мышца в растяжении) и полное движение обходят частичные в конечной части — но данные получены на <strong>прямой мышце бедра, латеральной широкой мышце бедра, бицепсе, плечевой мышце, большой ягодичной и приводящих</strong> (Kassiano et al., 2023). Грудной мышцы среди них нет. Для трицепса, что любопытно, лучше всего сработали частичные повторения в <strong>средней</strong> части движения.</p>
+<p>А в единственном остром исследовании, где амплитуды сравнивали именно в жиме лёжа, <strong>верхняя</strong> половина — то есть укороченная, противоположность «lengthened bias» — дала самое высокое пиковое возбуждение в грудинно-реберной части грудной мышцы и в длинной и латеральной головках трицепса (Fischer et al., 2025). Это остаётся острым измерением на 19 мужчинах, а не доказательством роста. Но и направление совета не доказано.</p>
+<h2>Что на самом деле говорят исследования</h2>
+<table><thead><tr><th>Утверждение</th><th>Итог</th><th>Цифры</th></tr></thead><tbody><tr><td>Широкий хват = больше вес</td><td><strong>Требует уточнения</strong></td><td>Верно против узкого (+7%), неверно против среднего (p = 1,000)</td></tr><tr><td>Широкий хват = равномерная работа жимовых мышц</td><td><strong>Опровергнуто</strong></td><td>Трицепс работает на 10,6% меньше</td></tr><tr><td>Средний хват = лучший для груди</td><td><strong>Проверить невозможно</strong></td><td>Разницы в активации грудной нет; исследований роста ноль</td></tr><tr><td>Узкий хват = больше трицепса</td><td><strong>Подтверждено</strong></td><td>16% против 12% от максимального сокращения</td></tr><tr><td>Узкий хват = меньше вес</td><td><strong>Подтверждено</strong></td><td>Примерно на 7% меньше</td></tr><tr><td>Узкий хват для реабилитации плеча и груди</td><td><strong>Требует уточнения</strong></td><td>Механически логично, как реабилитация не проверялось</td></tr><tr><td>У каждого хвата свой диапазон повторений</td><td><strong>Опровергнуто</strong></td><td>Число повторений до отказа не меняется (p = 0,545)</td></tr></tbody></table>
+<h2>Как это применить</h2>
+<ol class="steps"><li><strong>Измерь свой хват, а не копируй чужие сантиметры.</strong> В исследованиях узкий хват — это расстояние между подмышками, а широкий — соревновательный максимум, 81 см: для узких плеч эти 81 см гораздо «шире», чем для широких.</li><li><strong>Выбирай хват по весу и по плечу, а не по мышце.</strong> Грудь работает одинаково во всех трёх вариантах. Реально меняется то, сколько ты можешь поднять и сколько требуешь от плеча.</li><li><strong>Проверь свой максимум на 5-6 повторений с двумя разными хватами, с интервалом в неделю.</strong> Если разница больше 5%, ответ у тебя есть — и, скорее всего, он не совпадёт со схемой.</li><li><strong>Не меняй хват и диапазон повторений одновременно.</strong> Диапазон выбирают под цель, а не под то, где стоят руки.</li><li><strong>Используй узкий хват для трицепса, а не для груди.</strong> Это единственный эффект на жимовые мышцы, который воспроизвели в нескольких лабораториях.</li></ol>
+<div class="app"><div><h3>С Nurvan</h3><p>Правильный совет по этой теме — «измеряй», но измерение требует, чтобы цифры сохранялись. В Nurvan жим широким, средним и узким хватом — это отдельные варианты одного упражнения: каждый подход записывает вес, повторения и RIR (сколько повторений осталось бы в запасе), а график истории показывает за недели, какой хват действительно прогрессирует на твоём теле. Это тест из пункта 3, только без таблицы в экселе. ****</p></div><a class="cta" href="https://nurvan.app">Попробуйте Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Какой хват в жиме лёжа лучше?</summary><p>Тот, с которым ты поднимаешь больше и не чувствуешь дискомфорта в плече. В исследованиях средний и широкий хват равны по весу, а грудь не отличается между всеми тремя. При свободном хвате и свободной скорости максимум выше, чем при заданном хвате (Lee et al., 2020): хват, который ты наработал тренировками, — реальное преимущество, а не привычка, которую надо исправлять.</p></details>
+<details><summary>Узкий хват меньше нагружает грудь?</summary><p>Нет. Из семи измеренных мышц активация грудной не отличалась между узким, средним и широким хватом (Saeterbakken et al., 2021). Меняется задействованная часть — выше при узком, ниже при широком (Mausehund et al., 2022) — и сильно меняется трицепс.</p></details>
+<details><summary>Нужен ли широкий хват, чтобы стать сильнее?</summary><p>Не обязательно. Широкий хват выигрывает только у узкого, примерно на 7%, и идёт вровень со средним. Если от широкого хвата болит плечо, средний не стоит ни одного килограмма.</p></details>
+<details><summary>Сколько повторений для каждого хвата?</summary><p>Число повторений, которое ты сделаешь на заданном проценте от максимума, от хвата не меняется (Pérez-Castilla et al., 2021). Диапазон выбирают под цель: для ориентира я собрал данные в материале <a href="/ru/blog/skolko-povtoreniy-dlya-massy">сколько повторений действительно нужно для роста</a>.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/zhim-gantelyami-ili-razvedeniya-grud">Жим или разведения: от чего грудь растёт больше?</a> — та же логика, но применённая к выбору упражнения, а не хвата.</li><li><a href="/ru/blog/skolko-povtoreniy-dlya-massy">Сколько повторений, подходов и отдыха нужно для гипертрофии</a> — почему диапазон повторений — отдельная переменная.</li><li><a href="/ru/blog/razgibaniya-nog-ili-zhim-nogami-pryamaya-myshtsa-bedra">Разгибания ног или жим ногами: что говорят исследования</a> — региональный рост, измеренный на ногах.</li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V, 2021. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34198674/">34198674</a> · <a href="https://doi.org/10.3390/ijerph18126444">DOI</a></li><li>Larsen S, Gomo O, van den Tillaar R, 2021. A Biomechanical Analysis of Wide, Medium, and Narrow Grip Width Effects on Kinematics, Horizontal Kinetics, and Muscle Activity on the Sticking Region in Recreationally Trained Males During 1-RM Bench Pressing. <em>Front Sports Act Living</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33554113/">33554113</a> · <a href="https://doi.org/10.3389/fspor.2020.637066">DOI</a></li><li>Mausehund L, Werkhausen A, Bartsch J, Krosshaug T, 2022. Understanding Bench Press Biomechanics—The Necessity of Measuring Lateral Barbell Forces. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33555823/">33555823</a> · <a href="https://doi.org/10.1519/JSC.0000000000003948">DOI</a></li><li>Muyor JM, Rodríguez-Ridao D, Oliva-Lozano JM, 2023. Comparison of Muscle Activity between the Horizontal Bench Press and the Seated Chest Press Exercises Using Several Grips. <em>J Hum Kinet</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/37229415/">37229415</a> · <a href="https://doi.org/10.5114/jhk/161468">DOI</a></li><li>Pérez-Castilla A, Jukic I, Haff GG, García-Ramos A, 2021. The Bench Press Grip Width Does Not Affect the Number of Repetitions Performed at Different Velocity Loss Thresholds. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33504038/">33504038</a> · <a href="https://doi.org/10.3390/ijerph18031057">DOI</a></li><li>Lee S, Cone SM, Kim S, 2020. A biomechanical comparison of self-selected and experimentally controlled speeds and grip widths during the bench press exercise. <em>Sports Biomech</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32564677/">32564677</a> · <a href="https://doi.org/10.1080/14763141.2020.1772357">DOI</a></li><li>Kassiano W, Costa B, Nunes JP, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2023. Which ROMs Lead to Rome? A Systematic Review of the Effects of Range of Motion on Muscle Hypertrophy. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/36662126/">36662126</a> · <a href="https://doi.org/10.1519/JSC.0000000000004415">DOI</a></li><li>Fischer J, Burger C, Manieu Seguel JA, Rodoplu C, Paternoster FK, Tilp M, Konrad A, 2025. Acute muscle excitation response across various bench press ranges of motion. <em>Sci Rep</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/40269203/">40269203</a> · <a href="https://doi.org/10.1038/s41598-025-98354-9">DOI</a></li></ol>
+<p>Библиографические данные проверены в PubMed. Отправная точка: карусель «Bench press cheat sheet» Себастьяна Ореба (<a href="https://www.instagram.com/p/Dd8lCqIkfEh/">@australianstrengthcoach</a>, 1 октября 2026). Текст, структура, данные и графики этой статьи оригинальны.</p>
+<p><em>Giammaria Loi — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и сертифицированным тренером FIPE с 2013 года и выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных исследований и заканчивается тем, что действительно работает в зале.</em></p>
+<p class="note">Примечание: информационный материал, он не заменяет консультацию врача или специалиста. При боли в плече или груди обратись к врачу или физиотерапевту, прежде чем менять тренировки.</p>
+</main>
+<footer>NURVAN · nurvan.app · 24 октября 2026</footer>
+</body>
+</html>

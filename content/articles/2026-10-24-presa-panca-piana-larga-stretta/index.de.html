@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bankdrücken Griffbreite: weit, mittel oder eng? | Nurvan</title>
+<meta name="description" content="Weit für Kraft, mittel für die Brust, eng für den Trizeps? In den Studien ändert sich die Brust bei keinem der drei Griffe. Die Zahlen, eine nach der anderen.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Ernährung</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">App laden</a></div></header>
+<main class="wrap" lang="de">
+<div class="crumb">Blog · Training</div>
+<h1>Bankdrücken Griffbreite: weit, mittel oder eng?</h1>
+<p class="lede">Das Schema kursiert seit Jahren: weiter Griff für die Kraft, mittlerer Griff für die Brust, enger Griff für den Trizeps. Es ist ordentlich, leicht zu behalten, und fast alle folgen ihm, ohne es je überprüft zu haben. Ich habe acht indexierte Arbeiten gelesen, die Lasten, Muskelaktivierung und Gelenkmomente bei unterschiedlichen Griffbreiten gemessen haben. Zwei Teile des Schemas halten. Einer, der mittlere, hat nicht eine einzige Studie hinter sich.</p>
+<div class="meta"><span>24. Oktober 2026</span><span><b>13</b> Min. Lesezeit</span><span><b>8</b> zitierte Studien</span><span>Von <a href="/autore/giammaria-loi">Giammaria Loi</a> · aktualisiert am 24. Oktober 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Bankdrücken Griffbreite: weit, mittel oder eng?"><figcaption class="cap">U.S. Army, Staff Sgt. Alexander Henninger, über Wikimedia Commons, gemeinfrei (PD-USGov-Military-Army)</figcaption></figure>
+<figure><div class="chart"><svg role="img" aria-label="Balkendiagramm: Die 6RM-Last beim Bankdrücken liegt mit engem Griff bei 93 gegenüber 100 mit mittlerem und 100 mit weitem Griff" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="t1-de d1-de">
+<title id="t1-de">Bewegte Last beim Bankdrücken nach Griffbreite</title>
+<desc id="d1-de">Index der 6RM-Last mit mittlerem Griff gleich 100: enger Griff 93, mittlerer 100, weiter 100 bei trainierten Männern.</desc>
+<rect width="800" height="480" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Wie stark sich die Last wirklich ändert</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">6RM-Last, trainierte Männer · Index: mittlerer Griff = 100</text>
+
+<line x1="150" y1="400" x2="760" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="150" y1="130" x2="150" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+
+<line x1="150" y1="130" x2="760" y2="130" stroke="#222" stroke-width="1"/>
+<line x1="150" y1="265" x2="760" y2="265" stroke="#222" stroke-width="1"/>
+<text x="140" y="135" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">100</text>
+<text x="140" y="270" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">50</text>
+<text x="140" y="405" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">0</text>
+
+<rect x="205" y="149" width="120" height="251" fill="#aa8a2e"/>
+<text x="265" y="139" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">93</text>
+<text x="265" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">eng</text>
+<text x="265" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(Achseln)</text>
+
+<rect x="395" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="455" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="455" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">mittel</text>
+
+<rect x="585" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="645" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="645" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">weit</text>
+<text x="645" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(81 cm)</text>
+
+<line x1="395" y1="100" x2="705" y2="100" stroke="#a0a0a0" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="550" y="94" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">kein Unterschied (p = 1,000)</text>
+
+<text x="40" y="470" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Aus den berichteten Rückgängen berechnet: enger Griff −7,0% gegenüber mittel und −7,1% gegenüber weit. Quelle: Saeterbakken et al., 2021 (PMID 34198674).</text>
+</svg>
+</div></figure>
+<div class="box"><h2>Kurz gefasst</h2><ul><li><strong>Der weite Griff ist nicht „der schwerste".</strong> Er ist es nur gegenüber dem engen, um rund <strong>7 %</strong>. Gegenüber dem mittleren Griff gibt es den Unterschied gar nicht: p = 1,000 (Saeterbakken et al., 2021), und in einem anderen Labor <strong>109,8 kg gegenüber 108,9 kg</strong> im Maximalversuch (Larsen et al., 2021).</li><li><strong>Die Brust ändert sich mit der Griffbreite nicht.</strong> Sternaler Anteil, klavikulärer Anteil, breiter Rückenmuskel, mittlerer und hinterer Deltamuskel: kein Unterschied zwischen eng, mittel und weit, weder bei Trainierten noch bei Anfängern (Saeterbakken et al., 2021).</li><li><strong>Wirklich verschieben sich zwei andere Muskeln.</strong> Mit weitem Griff arbeitet der Bizeps <strong>115,6 % mehr</strong> als mit engem, und der Trizeps <strong>10,6 % weniger</strong> als mit mittlerem. Der Trizeps ist der einzige „drückende" Muskel, den der Griff verschiebt.</li><li><strong>Der Wiederholungsbereich hängt nicht vom Griff ab.</strong> Bei 75 % des Maximums ist die Zahl der Wiederholungen bis zum Muskelversagen mit engem, mittlerem, weitem und frei gewähltem Griff dieselbe (p = 0,545; Pérez-Castilla et al., 2021).</li><li><strong>Der Griff, mit dem du am meisten hebst, ist der, den du schon benutzt.</strong> Mit frei gewähltem Griff und frei gewählter Geschwindigkeit liegt das Maximum signifikant höher als mit vorgegebenem Griff — und keiner der Probanden empfand die freie Bedingung als unangenehm, gegenüber 80 % in der kontrollierten (Lee et al., 2020).</li></ul></div>
+<h2>Die Last: der weite Griff gewinnt nur gegen den engen</h2>
+<p>Die nützlichste Arbeit zu diesem Punkt hat etwas Einfaches getan: 28 Männer, davon 15 Trainierte (Bankdrücken mit mindestens 125 % des Körpergewichts) und 13 Anfänger, wurden auf ihr Maximum für 6 Wiederholungen mit drei Griffen getestet, die am Körper jedes Einzelnen definiert wurden. Enger Griff = der Abstand zwischen den Achseln. Weiter Griff = das im Wettkampf erlaubte Maximum, <strong>81 cm</strong>. Mittlerer Griff = genau dazwischen (Saeterbakken et al., 2021).</p>
+<p>Ergebnis bei den Trainierten: Mit engem Griff heben sie <strong>7,0 %</strong> weniger als mit mittlerem und <strong>7,1 %</strong> weniger als mit weitem. Zwischen mittel und weit dagegen p = 1,000 — die beiden Griffe sind also nicht unterscheidbar. Bei den Anfängern ist der Abstand ähnlich: −8,4 % und −6,6 %, wieder ohne Unterschied zwischen mittel und weit.</p>
+<p>Eine zweite Gruppe kam am echten Maximum von 14 trainierten Männern zum selben Punkt: <strong>109,8 kg</strong> mit weitem Griff, <strong>108,9 kg</strong> mit mittlerem, <strong>103,7 kg</strong> mit engem. Die Autoren schließen, dass für maximale Last „ein weiter <strong>oder mittlerer</strong> Griff" in Ordnung ist (Larsen et al., 2021).</p>
+<p>Es gibt noch einen mechanischen Preis, den das Balkendiagramm eines Karussells nicht zeigen kann. Mit weitem Griff gehen <strong>13,1-15,7 %</strong> der Kraft, die du auf die Stange bringst, seitlich nach außen; mit engem Griff gehen <strong>8,5-10,1 %</strong> nach innen; mit mittlerem Griff ist fast alles vertikal, <strong>0,4-1,8 %</strong> (Larsen et al., 2021). Nach außen zu drücken hebt die Stange nicht: Es hält die Bahn stabil, ist aber Kraft, die du auf der Last nicht siehst.</p>
+<figure><div class="chart"><svg role="img" aria-label="Diagramm: Beim Wechsel zum weiten Griff steigt der Bizeps um 115,6 % und der Trizeps sinkt um 10,6 %, während Brustmuskel, Deltamuskeln und breiter Rückenmuskel unverändert bleiben" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-labelledby="t2-de d2-de">
+<title id="t2-de">Welche Muskeln sich beim Griffwechsel wirklich ändern</title>
+<desc id="d2-de">Aktivierungsunterschiede beim Wechsel zum weiten Griff bei trainierten Männern: Bizeps +115,6% gegenüber eng und +44,9% gegenüber mittel, Trizeps −10,6% gegenüber mittel, während sternaler und klavikulärer Brustanteil, vorderer Deltamuskel und breiter Rückenmuskel keinen Unterschied zeigen.</desc>
+<rect width="800" height="560" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Was sich mit dem weiten Griff ändert</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Muskelaktivierung bei 6RM, trainierte Männer · prozentuale Differenz</text>
+
+<line x1="394" y1="100" x2="394" y2="480" stroke="#666" stroke-width="1.5"/>
+<text x="394" y="118" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+
+<text x="288" y="156" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Bizeps (vs. eng)</text>
+<rect x="394" y="136" width="362" height="26" fill="#d4af37"/>
+<text x="748" y="155" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#0c0c0c">+115,6%</text>
+
+<text x="288" y="200" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Bizeps (vs. mittel)</text>
+<rect x="394" y="180" width="141" height="26" fill="#d4af37"/>
+<text x="545" y="199" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">+44,9%</text>
+
+<text x="288" y="244" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Trizeps (vs. mittel)</text>
+<rect x="361" y="224" width="33" height="26" fill="#aa8a2e"/>
+<text x="351" y="243" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">−10,6%</text>
+
+<text x="288" y="288" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Brust, Sternalanteil</text>
+<circle cx="394" cy="280" r="6" fill="#5a5a5a"/>
+<text x="412" y="285" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">kein Unterschied</text>
+
+<text x="288" y="332" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Brust, Klavikularanteil</text>
+<circle cx="394" cy="324" r="6" fill="#5a5a5a"/>
+<text x="412" y="329" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">kein Unterschied</text>
+
+<text x="288" y="376" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Vorderer Deltamuskel</text>
+<circle cx="394" cy="368" r="6" fill="#5a5a5a"/>
+<text x="412" y="373" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">kein Unterschied</text>
+
+<text x="288" y="420" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Breiter Rückenmuskel</text>
+<circle cx="394" cy="412" r="6" fill="#5a5a5a"/>
+<text x="412" y="417" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">kein Unterschied</text>
+
+<text x="288" y="464" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Mittlerer und hinterer Delta</text>
+<circle cx="394" cy="456" r="6" fill="#5a5a5a"/>
+<text x="412" y="461" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">kein Unterschied</text>
+
+<text x="40" y="518" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Die beiden Muskeln, die der Griff wirklich verschiebt, sind Bizeps und Trizeps. Die Brust bleibt bei allen drei Griffen gleich.</text>
+<text x="40" y="540" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Quelle: Saeterbakken et al., 2021 (PMID 34198674), trainierte Gruppe, n = 15.</text>
+</svg>
+</div></figure>
+<h2>Die Brust ändert sich nicht. Bizeps und Trizeps schon</h2>
+<p>Hier fällt das Schema. In derselben Studie, mit Elektroden auf sieben Muskeln, veränderte die Griffbreite die Aktivierung von genau <strong>zwei</strong> Muskeln:</p>
+<ul><li><strong>Bizeps brachii</strong>: mit weitem Griff +115,6 % gegenüber dem engen und +44,9 % gegenüber dem mittleren (p &lt; 0,001). Er arbeitet als Gegenspieler, um das Ellenbogengelenk zu stabilisieren;</li><li><strong>Trizeps brachii</strong>: mit weitem Griff <strong>−10,6 %</strong> gegenüber dem mittleren (p = 0,032) und −24,1 % gegenüber dem engen, wobei dieser zweite Unterschied an der Grenze zur Signifikanz liegt (p = 0,058).</li></ul>
+<p>Sternaler Brustmuskel, klavikulärer Brustmuskel, breiter Rückenmuskel, mittlerer und hinterer Deltamuskel: kein Unterschied, in keiner der beiden Gruppen. Der vordere Deltamuskel bewegt sich nur bei den Anfängern, und das kaum.</p>
+<p>Das kehrt einen Teil des Allgemeinwissens um: Der weite Griff „verteilt die Arbeit" nicht gleichmäßig auf die drückenden Muskeln. Er macht genau das Gegenteil — er ist der Griff, der dem Trizeps Arbeit <strong>wegnimmt</strong>. Eine dritte Gruppe bestätigt das aus der anderen Richtung: bei 50 % des Schulterabstands liegt der Trizeps bei 16 % der maximalen Kontraktion, bei 150 % sinkt er auf 12 %, und der vordere Deltamuskel ändert sich in keiner Bedingung (Muyor et al., 2023). Die Autoren dieser Arbeit schließen mit einem Satz, der für den ganzen Artikel gilt: Die Übungswahl sollte nicht allein auf der Aktivierung beruhen.</p>
+<p>Achte auf ein Detail, das das Karussell überspringt: <strong>Der Unterschied am Trizeps zeigt sich nur in der trainierten Gruppe.</strong> Bei den Anfängern ändert sich der Trizeps mit keinem Griff. Derselbe Ratschlag erzeugt bei zwei verschiedenen Menschen nicht denselben Effekt.</p>
+<h2>Es geht nicht um „Brust gegen Trizeps": es geht darum, welcher Teil der Brust</h2>
+<p>Die interessanteste Zahl betrifft nicht, wie viel Brust arbeitet, sondern <strong>welcher</strong> Teil. In einer Messung der Gelenkmomente von 35 trainierten Erwachsenen mit 6-8RM-Lasten erhöht der engere Griff das Moment am Ellenbogen und die Aktivität des lateralen Trizepskopfs, des vorderen Deltamuskels <strong>und des klavikulären Anteils des Brustmuskels</strong> — also der oberen Brust. Der weitere Griff erhöht das Moment an der Schulter und die Aktivität des abdominalen Anteils, also des unteren Teils (Mausehund et al., 2022).</p>
+<p>Es ist dasselbe Prinzip, das ich beim Vergleich von <a href="/de/blog/kurzhantel-bankdruecken-oder-fliegende-brust">Bankdrücken und Fliegenden für das Brustwachstum</a> gefunden habe: Die Wahl ändert nicht, wie viel die Brust insgesamt wächst, sie ändert wo.</p>
+<p>Praktisch relevant ist das für die Schulter. Je weiter der Griff, desto höher die Last, die die Schulter tragen muss — absolut und relativ zu ihrer maximalen Kapazität. Das ist der mechanische Grund, warum es Menschen mit gereizter Schulter oft besser geht, wenn sie enger greifen. Aber Achtung: <strong>Keine Studie hat den engen Griff als Reha-Maßnahme getestet.</strong> Er ist eine sinnvolle Entscheidung im Lastmanagement, keine Therapie: Wenn du Schulterschmerzen hast, führt der Weg zur Ärztin, zum Arzt oder zur Physiotherapie, nicht zu einer Slide.</p>
+<h2>Teil-ROM für die Brust: die Zahl, die nicht existiert</h2>
+<p>„Halbe Bewegung in der Dehnung, damit die Brust wächst" ist vielleicht der am häufigsten wiederholte und am wenigsten überprüfte Teil des Schemas. Die systematische Übersichtsarbeit zum Bewegungsumfang fand, dass die Teilwiederholung im Anfangsbereich (gedehnter Muskel) und die vollständige Bewegung die Teilwiederholung im Endbereich schlagen — aber die Daten kommen von <strong>Rectus femoris, Vastus lateralis, Bizeps, Brachialis, großem Gesäßmuskel und Adduktoren</strong>. Der Brustmuskel ist nicht dabei (Kassiano et al., 2023). Beim Trizeps hat merkwürdigerweise die Teilwiederholung im <strong>mittleren</strong> Bereich der Bewegung am besten funktioniert.</p>
+<p>Und in der einzigen akuten Studie, die Bewegungsumfänge direkt beim Bankdrücken verglichen hat, erzeugte die <strong>obere</strong> Hälfte — also die verkürzte, das Gegenteil des „lengthened bias" — die höchste Spitzenerregung im sternokostalen Anteil des Brustmuskels und im langen und lateralen Trizepskopf (Fischer et al., 2025). Das bleibt ein akuter Wert an 19 Männern, kein Wachstumsnachweis. Aber nicht einmal die Richtung des Ratschlags ist belegt.</p>
+<h2>Was die Forschung wirklich sagt</h2>
+<table><thead><tr><th>Aussage</th><th>Ergebnis</th><th>Zahl</th></tr></thead><tbody><tr><td>Weiter Griff = schwerere Lasten</td><td><strong>Zu präzisieren</strong></td><td>Wahr gegenüber dem engen (+7 %), falsch gegenüber dem mittleren (p = 1,000)</td></tr><tr><td>Weiter Griff = gleichmäßige Arbeit für die drückenden Muskeln</td><td><strong>Widerlegt</strong></td><td>Der Trizeps arbeitet 10,6 % weniger</td></tr><tr><td>Mittlerer Griff = der beste für die Brust</td><td><strong>Nicht überprüfbar</strong></td><td>Kein Unterschied in der Brustaktivierung; null Wachstumsstudien</td></tr><tr><td>Enger Griff = mehr Trizeps</td><td><strong>Bestätigt</strong></td><td>16 % gegenüber 12 % der maximalen Kontraktion</td></tr><tr><td>Enger Griff = leichtere Lasten</td><td><strong>Bestätigt</strong></td><td>Rund 7 % weniger</td></tr><tr><td>Enger Griff zur Reha von Schulter und Brust</td><td><strong>Zu präzisieren</strong></td><td>Mechanisch sinnvoll, nie als Reha getestet</td></tr><tr><td>Jeder Griff hat seinen Wiederholungsbereich</td><td><strong>Widerlegt</strong></td><td>Die Wiederholungen bis zum Versagen ändern sich nicht (p = 0,545)</td></tr></tbody></table>
+<h2>So setzt du es um</h2>
+<ol class="steps"><li><strong>Miss deinen Griff, kopiere nicht die Zentimeter von jemand anderem.</strong> In den Studien ist der enge Griff der Abstand zwischen den Achseln und der weite das Wettkampfmaximum, 81 cm: Für schmale Schultern sind diese 81 cm viel „weiter" als für breite.</li><li><strong>Wähle den Griff nach Last und Schulter, nicht nach Muskel.</strong> Die Brust arbeitet in allen drei Fällen gleich. Was sich wirklich ändert, ist, wie viel du auflegen kannst und wie viel du der Schulter abverlangst.</li><li><strong>Teste dein Maximum für 5-6 Wiederholungen mit zwei verschiedenen Griffen, im Abstand von einer Woche.</strong> Liegt der Unterschied über 5 %, hast du deine Antwort — und wahrscheinlich ist es nicht die des Schemas.</li><li><strong>Ändere Griff und Wiederholungsbereich nicht gleichzeitig.</strong> Den Bereich wählst du nach dem Ziel, nicht danach, wo du die Hände hältst.</li><li><strong>Nutze den engen Griff für den Trizeps, nicht für die Brust.</strong> Das ist der einzige Effekt auf die drückenden Muskeln, der in mehreren Labors konsistent gezeigt wurde.</li></ol>
+<div class="app"><div><h3>Mit Nurvan</h3><p>Der richtige Rat zu diesem Thema heißt „messen", und Messen setzt voraus, dass die Zahlen bleiben. In Nurvan sind Bankdrücken mit weitem, mittlerem und engem Griff eigene Varianten derselben Übung: Jeder Satz hält Last, Wiederholungen und RIR fest (die Wiederholungen, die du noch im Tank gehabt hättest), und der Verlaufsgraph zeigt dir über Wochen, welcher Griff an deinem Körper wirklich vorankommt. Das ist der Test aus Punkt 3, ohne Tabellenkalkulation. ****</p></div><a class="cta" href="https://nurvan.app">Nurvan testen</a></div>
+<h2>Häufige Fragen</h2>
+<details><summary>Welcher Griff ist beim Bankdrücken der beste?</summary><p>Der, mit dem du am meisten hebst und keine Beschwerden in der Schulter hast. In den Studien sind mittlerer und weiter Griff bei der Last gleichwertig, und die Brust ändert sich zwischen den drei nicht. Mit frei gewähltem Griff und frei gewählter Geschwindigkeit liegt das Maximum höher als mit vorgegebenem Griff (Lee et al., 2020): Der Griff, den du dir im Training aufgebaut hast, ist ein echter Vorteil und keine Angewohnheit, die man korrigieren muss.</p></details>
+<details><summary>Trainiert der enge Griff die Brust weniger?</summary><p>Nein. Von sieben gemessenen Muskeln zeigte die Aktivierung des Brustmuskels keinen Unterschied zwischen engem, mittlerem und weitem Griff (Saeterbakken et al., 2021). Es ändert sich der beanspruchte Anteil — höher mit engem, tiefer mit weitem Griff (Mausehund et al., 2022) — und es ändert sich deutlich der Trizeps.</p></details>
+<details><summary>Muss ich weit greifen, wenn ich stark werden will?</summary><p>Nicht zwingend. Der weite Griff schlägt nur den engen, um rund 7 %, und liegt mit dem mittleren gleich. Wenn der weite Griff deiner Schulter Beschwerden macht, kostet der mittlere null Kilo.</p></details>
+<details><summary>Wie viele Wiederholungen pro Griff?</summary><p>Die Zahl der Wiederholungen, die du bei einem bestimmten Prozentsatz des Maximums schaffst, ändert sich mit dem Griff nicht (Pérez-Castilla et al., 2021). Den Bereich entscheidest du nach dem Ziel: zur Orientierung habe ich die Daten in <a href="/de/blog/wie-viele-wiederholungen-muskelaufbau">wie viele Wiederholungen es wirklich für Muskelaufbau braucht</a> gesammelt.</p></details>
+<h2>Auch interessant</h2>
+<ul><li><a href="/de/blog/kurzhantel-bankdruecken-oder-fliegende-brust">Bankdrücken oder Fliegende: was die Brust mehr wachsen lässt?</a> — dieselbe Logik, angewandt auf die Wahl der Übung statt des Griffs.</li><li><a href="/de/blog/wie-viele-wiederholungen-muskelaufbau">Wie viele Wiederholungen, Sätze und wie viel Pause es für Hypertrophie braucht</a> — warum der Wiederholungsbereich eine eigene Variable ist.</li><li><a href="/de/blog/beinstrecker-oder-beinpresse-rectus-femoris">Beinstrecker oder Beinpresse: was die Studien sagen</a> — regionales Wachstum, an den Beinen gemessen.</li></ul>
+<h2>Quellen</h2>
+<ol class="refs"><li>Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V, 2021. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34198674/">34198674</a> · <a href="https://doi.org/10.3390/ijerph18126444">DOI</a></li><li>Larsen S, Gomo O, van den Tillaar R, 2021. A Biomechanical Analysis of Wide, Medium, and Narrow Grip Width Effects on Kinematics, Horizontal Kinetics, and Muscle Activity on the Sticking Region in Recreationally Trained Males During 1-RM Bench Pressing. <em>Front Sports Act Living</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33554113/">33554113</a> · <a href="https://doi.org/10.3389/fspor.2020.637066">DOI</a></li><li>Mausehund L, Werkhausen A, Bartsch J, Krosshaug T, 2022. Understanding Bench Press Biomechanics—The Necessity of Measuring Lateral Barbell Forces. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33555823/">33555823</a> · <a href="https://doi.org/10.1519/JSC.0000000000003948">DOI</a></li><li>Muyor JM, Rodríguez-Ridao D, Oliva-Lozano JM, 2023. Comparison of Muscle Activity between the Horizontal Bench Press and the Seated Chest Press Exercises Using Several Grips. <em>J Hum Kinet</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/37229415/">37229415</a> · <a href="https://doi.org/10.5114/jhk/161468">DOI</a></li><li>Pérez-Castilla A, Jukic I, Haff GG, García-Ramos A, 2021. The Bench Press Grip Width Does Not Affect the Number of Repetitions Performed at Different Velocity Loss Thresholds. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33504038/">33504038</a> · <a href="https://doi.org/10.3390/ijerph18031057">DOI</a></li><li>Lee S, Cone SM, Kim S, 2020. A biomechanical comparison of self-selected and experimentally controlled speeds and grip widths during the bench press exercise. <em>Sports Biomech</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32564677/">32564677</a> · <a href="https://doi.org/10.1080/14763141.2020.1772357">DOI</a></li><li>Kassiano W, Costa B, Nunes JP, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2023. Which ROMs Lead to Rome? A Systematic Review of the Effects of Range of Motion on Muscle Hypertrophy. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/36662126/">36662126</a> · <a href="https://doi.org/10.1519/JSC.0000000000004415">DOI</a></li><li>Fischer J, Burger C, Manieu Seguel JA, Rodoplu C, Paternoster FK, Tilp M, Konrad A, 2025. Acute muscle excitation response across various bench press ranges of motion. <em>Sci Rep</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/40269203/">40269203</a> · <a href="https://doi.org/10.1038/s41598-025-98354-9">DOI</a></li></ol>
+<p>Bibliografische Daten auf PubMed überprüft. Ausgangspunkt: das Karussell „Bench press cheat sheet" von Sebastian Oreb (<a href="https://www.instagram.com/p/Dd8lCqIkfEh/">@australianstrengthcoach</a>, 1. Oktober 2026). Text, Struktur, Daten und Grafiken dieses Artikels sind original.</p>
+<p><em>Giammaria Loi ist der Gründer von Nurvan. Er trainiert seit 2012 mit Gewichten, arbeitet seit 2013 als Personal Trainer und FIPE-zertifizierter Coach und tritt seit 2018 im Powerlifting auf nationalem Niveau an. Jeder Artikel, den er zeichnet, beginnt bei den Studien und endet bei dem, was im Studio wirklich funktioniert.</em></p>
+<p class="note">Hinweis: informativer Inhalt, ersetzt nicht die Beratung durch eine Ärztin, einen Arzt oder eine qualifizierte Fachperson. Bei Schmerzen in Schulter oder Brust wende dich an eine Ärztin, einen Arzt oder eine Physiotherapie, bevor du dein Training änderst.</p>
+</main>
+<footer>NURVAN · nurvan.app · 24. Oktober 2026</footer>
+</body>
+</html>

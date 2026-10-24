@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prise au développé couché : large, moyenne ou serrée ? | Nurvan</title>
+<meta name="description" content="Large pour la force, moyenne pour les pectoraux, serrée pour les triceps ? Dans les études, le pectoral ne change avec aucune des trois prises. Les chiffres.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entraînement</a><a href="#">Nutrition</a><a href="#">Compléments</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Télécharger l’app</a></div></header>
+<main class="wrap" lang="fr">
+<div class="crumb">Blog · Entraînement</div>
+<h1>Prise au développé couché : large, moyenne ou serrée ?</h1>
+<p class="lede">Le schéma circule depuis des années : prise large pour la force, prise moyenne pour les pectoraux, prise serrée pour les triceps. C'est propre, c'est facile à retenir et presque tout le monde l'applique sans l'avoir jamais testé. J'ai lu huit travaux indexés qui ont mesuré les charges, l'activation musculaire et les moments articulaires avec différentes prises. Deux morceaux du schéma tiennent. Celui du milieu n'a pas une seule étude derrière lui.</p>
+<div class="meta"><span>24 octobre 2026</span><span><b>14</b> min de lecture</span><span><b>8</b> études citées</span><span>Par <a href="/autore/giammaria-loi">Giammaria Loi</a> · mis à jour le 24 octobre 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Prise au développé couché : large, moyenne ou serrée ?"><figcaption class="cap">U.S. Army, Staff Sgt. Alexander Henninger, via Wikimedia Commons, domaine public (PD-USGov-Military-Army)</figcaption></figure>
+<figure><div class="chart"><svg role="img" aria-label="Graphique en barres : la charge 6RM au développé couché en prise serrée est de 93 contre 100 pour la prise moyenne et 100 pour la prise large" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="t1-fr d1-fr">
+<title id="t1-fr">Charge soulevée au développé couché selon la largeur de prise</title>
+<desc id="d1-fr">Indice de la charge 6RM avec la prise moyenne à 100 : prise serrée 93, moyenne 100, large 100 chez des hommes entraînés.</desc>
+<rect width="800" height="480" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Ce que la largeur de prise change vraiment</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Charge 6RM, hommes entraînés · indice : prise moyenne = 100</text>
+
+<line x1="150" y1="400" x2="760" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="150" y1="130" x2="150" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+
+<line x1="150" y1="130" x2="760" y2="130" stroke="#222" stroke-width="1"/>
+<line x1="150" y1="265" x2="760" y2="265" stroke="#222" stroke-width="1"/>
+<text x="140" y="135" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">100</text>
+<text x="140" y="270" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">50</text>
+<text x="140" y="405" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">0</text>
+
+<rect x="205" y="149" width="120" height="251" fill="#aa8a2e"/>
+<text x="265" y="139" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">93</text>
+<text x="265" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">serrée</text>
+<text x="265" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(aisselles)</text>
+
+<rect x="395" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="455" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="455" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">moyenne</text>
+
+<rect x="585" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="645" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="645" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">large</text>
+<text x="645" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(81 cm)</text>
+
+<line x1="395" y1="100" x2="705" y2="100" stroke="#a0a0a0" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="550" y="94" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">aucune différence (p = 1,000)</text>
+
+<text x="40" y="470" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Calculé à partir des baisses publiées : prise serrée −7,0% face à la moyenne et −7,1% face à la large. Source : Saeterbakken et al., 2021 (PMID 34198674).</text>
+</svg>
+</div></figure>
+<div class="box"><h2>L'essentiel</h2><ul><li><strong>La prise large n'est pas « la plus lourde ».</strong> Elle ne l'est que face à la prise serrée, d'environ <strong>7 %</strong>. Face à la prise moyenne, la différence n'existe pas : p = 1,000 (Saeterbakken et al., 2021), et dans un autre laboratoire <strong>109,8 kg contre 108,9 kg</strong> de charge maximale (Larsen et al., 2021).</li><li><strong>Le pectoral ne change pas avec la largeur de prise.</strong> Portion sternale, portion claviculaire, grand dorsal, deltoïde moyen et postérieur : aucune différence entre prise serrée, moyenne et large, ni chez les entraînés ni chez les débutants (Saeterbakken et al., 2021).</li><li><strong>Les muscles qui bougent vraiment sont deux autres.</strong> Avec une prise large, le biceps travaille <strong>115,6 % de plus</strong> qu'avec une prise serrée, et le triceps <strong>10,6 % de moins</strong> qu'avec une prise moyenne. Le triceps est le seul « muscle qui pousse » que la prise déplace.</li><li><strong>La plage de répétitions ne dépend pas de la prise.</strong> À 75 % de la charge maximale, le nombre de répétitions que tu arrives à faire avant l'échec est le même avec une prise serrée, moyenne, large ou libre (p = 0,545 ; Pérez-Castilla et al., 2021).</li><li><strong>La prise avec laquelle tu soulèves le plus est celle que tu utilises déjà.</strong> Avec prise et vitesse libres, la charge maximale est significativement plus élevée qu'avec une prise imposée, et aucun sujet n'a jugé la condition libre inconfortable, contre 80 % pour la condition contrôlée (Lee et al., 2020).</li></ul></div>
+<h2>La charge : la prise large ne gagne que face à la prise serrée</h2>
+<p>L'étude la plus utile sur ce point a fait quelque chose de simple : elle a pris 28 hommes, 15 entraînés (développé couché à au moins 125 % du poids de corps) et 13 débutants, et a testé la charge maximale sur 6 répétitions avec trois prises définies sur le corps de chacun. Prise serrée = la distance entre les aisselles. Prise large = le maximum autorisé en compétition, <strong>81 cm</strong>. Prise moyenne = exactement à mi-chemin (Saeterbakken et al., 2021).</p>
+<p>Résultat chez les entraînés : la prise serrée fait soulever <strong>7,0 %</strong> de moins que la moyenne et <strong>7,1 %</strong> de moins que la large. Entre moyenne et large, en revanche, p = 1,000 : les deux prises sont indiscernables. Chez les débutants, l'écart est comparable, −8,4 % et −6,6 %, là encore sans différence entre moyenne et large.</p>
+<p>Une deuxième équipe est arrivée au même endroit en mesurant la charge maximale réelle chez 14 hommes entraînés : <strong>109,8 kg</strong> en prise large, <strong>108,9 kg</strong> en prise moyenne, <strong>103,7 kg</strong> en prise serrée. Les auteurs concluent que, pour soulever le plus lourd possible, « une prise large <strong>ou moyenne</strong> » peut convenir (Larsen et al., 2021).</p>
+<p>Il y a aussi un prix mécanique que le graphique en barres d'un carrousel ne peut pas montrer. En prise large, <strong>13,1-15,7 %</strong> de la force que tu appliques à la barre part latéralement, vers l'extérieur ; en prise serrée, <strong>8,5-10,1 %</strong> part vers l'intérieur ; en prise moyenne, presque tout est vertical, <strong>0,4-1,8 %</strong> (Larsen et al., 2021). Pousser vers l'extérieur ne fait pas monter la barre : cela sert à stabiliser la trajectoire, mais c'est de la force que tu ne vois pas sur la charge.</p>
+<figure><div class="chart"><svg role="img" aria-label="Graphique : en passant à la prise large, le biceps augmente de 115,6 % et le triceps baisse de 10,6 %, tandis que pectoral, deltoïdes et grand dorsal ne changent pas" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-labelledby="t2-fr d2-fr">
+<title id="t2-fr">Quels muscles changent vraiment quand on change de prise</title>
+<desc id="d2-fr">Différences d'activation en passant à la prise large chez des hommes entraînés : biceps +115,6% face à la serrée et +44,9% face à la moyenne, triceps −10,6% face à la moyenne, tandis que pectoral sternal, pectoral claviculaire, deltoïde antérieur et grand dorsal ne montrent aucune différence.</desc>
+<rect width="800" height="560" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Ce qui change avec la prise large</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">Activation musculaire à 6RM, hommes entraînés · différence en pourcentage</text>
+
+<line x1="394" y1="100" x2="394" y2="480" stroke="#666" stroke-width="1.5"/>
+<text x="394" y="118" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+
+<text x="288" y="156" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Biceps (vs serrée)</text>
+<rect x="394" y="136" width="362" height="26" fill="#d4af37"/>
+<text x="748" y="155" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#0c0c0c">+115,6%</text>
+
+<text x="288" y="200" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Biceps (vs moyenne)</text>
+<rect x="394" y="180" width="141" height="26" fill="#d4af37"/>
+<text x="545" y="199" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">+44,9%</text>
+
+<text x="288" y="244" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Triceps (vs moyenne)</text>
+<rect x="361" y="224" width="33" height="26" fill="#aa8a2e"/>
+<text x="351" y="243" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">−10,6%</text>
+
+<text x="288" y="288" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Pectoral, portion sternale</text>
+<circle cx="394" cy="280" r="6" fill="#5a5a5a"/>
+<text x="412" y="285" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">aucune différence</text>
+
+<text x="288" y="332" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Pectoral, portion claviculaire</text>
+<circle cx="394" cy="324" r="6" fill="#5a5a5a"/>
+<text x="412" y="329" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">aucune différence</text>
+
+<text x="288" y="376" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Deltoïde antérieur</text>
+<circle cx="394" cy="368" r="6" fill="#5a5a5a"/>
+<text x="412" y="373" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">aucune différence</text>
+
+<text x="288" y="420" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Grand dorsal</text>
+<circle cx="394" cy="412" r="6" fill="#5a5a5a"/>
+<text x="412" y="417" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">aucune différence</text>
+
+<text x="288" y="464" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">Deltoïde moyen et postérieur</text>
+<circle cx="394" cy="456" r="6" fill="#5a5a5a"/>
+<text x="412" y="461" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">aucune différence</text>
+
+<text x="40" y="518" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Les deux muscles que la prise déplace vraiment sont le biceps et le triceps. Le pectoral reste identique avec les trois prises.</text>
+<text x="40" y="540" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">Source : Saeterbakken et al., 2021 (PMID 34198674), groupe entraîné, n = 15.</text>
+</svg>
+</div></figure>
+<h2>Les pectoraux ne changent pas. Le biceps et le triceps, oui</h2>
+<p>C'est là que le schéma s'écroule. Dans cette même étude, avec des électrodes sur sept muscles, la largeur de prise n'a modifié l'activation que de <strong>deux</strong> muscles :</p>
+<ul><li><strong>biceps brachial</strong> : en prise large, +115,6 % par rapport à la prise serrée et +44,9 % par rapport à la moyenne (p &lt; 0,001). Il travaille en antagoniste, pour stabiliser le coude ;</li><li><strong>triceps brachial</strong> : en prise large, <strong>−10,6 %</strong> par rapport à la moyenne (p = 0,032) et −24,1 % par rapport à la serrée, cette dernière différence étant à la limite de la significativité (p = 0,058).</li></ul>
+<p>Pectoral sternal, pectoral claviculaire, grand dorsal, deltoïde moyen et postérieur : aucune différence, dans aucun des deux groupes. Le deltoïde antérieur ne bouge que chez les débutants, et peu.</p>
+<p>Cela renverse une partie de l'idée reçue : la prise large ne « répartit pas le travail de façon uniforme » sur les muscles qui poussent. Elle fait exactement l'inverse : c'est la prise qui <strong>enlève</strong> du travail au triceps. Une troisième équipe le confirme dans l'autre sens : à 50 % de la distance entre les épaules, le triceps est à 16 % de la contraction maximale, à 150 % il descend à 12 %, et le deltoïde antérieur ne change dans aucune condition (Muyor et al., 2023). Les auteurs de cette étude terminent par une phrase qui vaut pour tout l'article : le choix d'un exercice ne devrait pas reposer uniquement sur l'activation.</p>
+<p>Attention à un détail que le carrousel saute : <strong>la différence sur le triceps n'apparaît que dans le groupe entraîné</strong>. Chez les débutants, le triceps ne change avec aucune prise. Le même conseil ne produit pas le même effet chez deux personnes différentes.</p>
+<h2>Ce n'est pas « pectoraux contre triceps » : c'est quelle portion de pectoral</h2>
+<p>La donnée la plus intéressante ne concerne pas la quantité de pectoral qui travaille, mais <strong>quelle</strong> partie. En mesurant les moments articulaires de 35 adultes entraînés avec des charges de 6-8RM, la prise la plus serrée augmente le moment au coude et l'activité du triceps latéral, du deltoïde antérieur <strong>et du chef claviculaire du pectoral</strong>, soit le haut des pectoraux. La prise la plus large augmente le moment à l'épaule et l'activité du chef abdominal, c'est-à-dire la partie basse (Mausehund et al., 2022).</p>
+<p>C'est le même principe que celui trouvé en comparant <a href="/fr/blog/developpe-halteres-ou-ecartes-pectoraux">le développé avec haltères et les écartés pour la croissance des pectoraux</a> : le choix ne change pas la croissance du pectoral dans son ensemble, il change l'endroit.</p>
+<p>La conséquence pratique concerne l'épaule. Plus la prise est large, plus la charge que l'épaule doit encaisser est élevée, en valeur absolue comme par rapport à ta capacité maximale. C'est la raison mécanique pour laquelle les personnes qui ont l'épaule irritée se sentent souvent mieux en resserrant. Mais attention : <strong>aucune étude n'a testé la prise serrée comme traitement de rééducation</strong>. C'est un choix sensé de gestion de la charge, pas une thérapie : si tu as mal à l'épaule, la voie est le médecin ou le kinésithérapeute, pas une slide.</p>
+<h2>L'amplitude partielle pour les pectoraux : la donnée qui n'existe pas</h2>
+<p>« Un demi-mouvement en position allongée pour faire grossir les pectoraux » est peut-être la partie la plus répétée et la moins vérifiée du schéma. La revue systématique consacrée à l'amplitude de mouvement a trouvé que le partiel dans la partie initiale (muscle allongé) et le mouvement complet battent le partiel dans la partie finale, mais les données viennent du <strong>droit fémoral, du vaste latéral, du biceps, du brachial, du grand fessier et des adducteurs</strong>. Le pectoral n'en fait pas partie (Kassiano et al., 2023). Pour le triceps, curieusement, le partiel qui a le mieux fonctionné est celui de la partie <strong>centrale</strong> du mouvement.</p>
+<p>Et dans la seule étude aiguë qui a comparé les amplitudes de mouvement précisément au développé couché, la moitié <strong>haute</strong>, c'est-à-dire la position raccourcie, l'inverse du « lengthened bias », a produit la plus forte excitation de pic dans la portion sternocostale du pectoral et dans les chefs long et latéral du triceps (Fischer et al., 2025). Cela reste une mesure aiguë sur 19 hommes, pas une preuve de croissance. Mais la direction du conseil n'est pas démontrée non plus.</p>
+<h2>Ce que dit vraiment la recherche</h2>
+<table><thead><tr><th>Affirmation</th><th>Verdict</th><th>Chiffre</th></tr></thead><tbody><tr><td>Prise large = charges plus lourdes</td><td><strong>À nuancer</strong></td><td>Vrai face à la serrée (+7 %), faux face à la moyenne (p = 1,000)</td></tr><tr><td>Prise large = travail uniforme sur les muscles qui poussent</td><td><strong>Démenti</strong></td><td>Le triceps travaille 10,6 % de moins</td></tr><tr><td>Prise moyenne = la meilleure pour les pectoraux</td><td><strong>Invérifiable</strong></td><td>Aucune différence d'activation du pectoral ; zéro étude de croissance</td></tr><tr><td>Prise serrée = plus de triceps</td><td><strong>Confirmé</strong></td><td>16 % contre 12 % de la contraction maximale</td></tr><tr><td>Prise serrée = charges plus légères</td><td><strong>Confirmé</strong></td><td>Environ 7 % de moins</td></tr><tr><td>Prise serrée pour rééduquer l'épaule et les pectoraux</td><td><strong>À nuancer</strong></td><td>Mécaniquement sensé, jamais testé en rééducation</td></tr><tr><td>Chaque prise a sa plage de répétitions</td><td><strong>Démenti</strong></td><td>Les répétitions jusqu'à l'échec ne changent pas (p = 0,545)</td></tr></tbody></table>
+<h2>Comment l'appliquer</h2>
+<ol class="steps"><li><strong>Mesure ta prise, ne copie pas les centimètres de quelqu'un d'autre.</strong> Dans les études, la prise serrée correspond à la distance entre les aisselles et la large au maximum autorisé en compétition, 81 cm : pour qui a les épaules étroites, ces 81 cm sont bien plus « larges » que pour qui les a amples.</li><li><strong>Choisis la prise pour la charge et pour l'épaule, pas pour le muscle.</strong> Le pectoral travaille pareil dans les trois cas. Ce qui change vraiment, c'est ce que tu peux charger et ce que tu demandes à l'épaule.</li><li><strong>Teste ta charge maximale sur 5-6 répétitions avec deux prises différentes, à une semaine d'intervalle.</strong> Si l'écart dépasse 5 %, tu as ta réponse, et ce n'est probablement pas celle du schéma.</li><li><strong>Ne change pas la prise et la plage de répétitions en même temps.</strong> La plage se choisit selon l'objectif, pas selon l'endroit où tu poses les mains.</li><li><strong>Utilise la prise serrée pour le triceps, pas pour les pectoraux.</strong> C'est le seul effet sur les muscles qui poussent démontré de façon cohérente dans plusieurs laboratoires.</li></ol>
+<div class="app"><div><h3>Avec Nurvan</h3><p>Le bon conseil sur ce sujet, c'est « mesure », mais mesurer suppose que les chiffres restent. Dans Nurvan, le développé couché en prise large, moyenne et serrée sont des variantes distinctes du même exercice : chaque série enregistre la charge, les répétitions et le RIR (les répétitions qu'il te restait en réserve), et le graphique de l'historique te montre, semaine après semaine, quelle prise progresse vraiment sur ton corps. C'est le test du point 3, sans tableur. ****</p></div><a class="cta" href="https://nurvan.app">Essayez Nurvan</a></div>
+<h2>Questions fréquentes</h2>
+<details><summary>Quelle est la meilleure prise au développé couché ?</summary><p>Celle avec laquelle tu soulèves le plus et qui ne gêne pas ton épaule. Dans les études, prise moyenne et prise large sont équivalentes pour la charge, et le pectoral ne change pas entre les trois. Avec prise et vitesse libres, la charge maximale est plus élevée qu'avec une prise imposée (Lee et al., 2020) : la prise que tu t'es construite à l'entraînement est un avantage réel, pas une habitude à corriger.</p></details>
+<details><summary>La prise serrée travaille-t-elle moins les pectoraux ?</summary><p>Non. Sur sept muscles mesurés, l'activation du pectoral ne s'est pas révélée différente entre prise serrée, moyenne et large (Saeterbakken et al., 2021). Ce qui change, c'est la portion sollicitée, plus haute en prise serrée, plus basse en prise large (Mausehund et al., 2022), et le triceps change beaucoup.</p></details>
+<details><summary>Faut-il une prise large pour devenir fort ?</summary><p>Pas forcément. La prise large ne bat que la prise serrée, d'environ 7 %, et égalise avec la moyenne. Si la prise large gêne ton épaule, la moyenne ne te coûte aucun kilo.</p></details>
+<details><summary>Combien de répétitions pour chaque prise ?</summary><p>Le nombre de répétitions que tu arrives à faire à un pourcentage donné de ta charge maximale ne change pas avec la prise (Pérez-Castilla et al., 2021). La plage, tu la décides selon l'objectif : pour t'orienter, j'ai rassemblé les données dans <a href="/fr/blog/combien-de-repetitions-masse-musculaire">combien de répétitions il faut vraiment pour prendre du muscle</a>.</p></details>
+<h2>À lire aussi</h2>
+<ul><li><a href="/fr/blog/developpe-halteres-ou-ecartes-pectoraux">Développé avec haltères ou écartés : qu'est-ce qui fait le plus grossir les pectoraux ?</a> — la même logique appliquée au choix de l'exercice, pas de la prise.</li><li><a href="/fr/blog/combien-de-repetitions-masse-musculaire">Combien de répétitions, de séries et de récupération pour l'hypertrophie</a> — pourquoi la plage de répétitions est une variable à part.</li><li><a href="/fr/blog/leg-extension-ou-presse-a-cuisses-droit-femoral">Leg extension ou presse à cuisses : ce que disent les études</a> — la croissance régionale, mesurée sur les jambes.</li></ul>
+<h2>Sources</h2>
+<ol class="refs"><li>Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V, 2021. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34198674/">34198674</a> · <a href="https://doi.org/10.3390/ijerph18126444">DOI</a></li><li>Larsen S, Gomo O, van den Tillaar R, 2021. A Biomechanical Analysis of Wide, Medium, and Narrow Grip Width Effects on Kinematics, Horizontal Kinetics, and Muscle Activity on the Sticking Region in Recreationally Trained Males During 1-RM Bench Pressing. <em>Front Sports Act Living</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33554113/">33554113</a> · <a href="https://doi.org/10.3389/fspor.2020.637066">DOI</a></li><li>Mausehund L, Werkhausen A, Bartsch J, Krosshaug T, 2022. Understanding Bench Press Biomechanics—The Necessity of Measuring Lateral Barbell Forces. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33555823/">33555823</a> · <a href="https://doi.org/10.1519/JSC.0000000000003948">DOI</a></li><li>Muyor JM, Rodríguez-Ridao D, Oliva-Lozano JM, 2023. Comparison of Muscle Activity between the Horizontal Bench Press and the Seated Chest Press Exercises Using Several Grips. <em>J Hum Kinet</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/37229415/">37229415</a> · <a href="https://doi.org/10.5114/jhk/161468">DOI</a></li><li>Pérez-Castilla A, Jukic I, Haff GG, García-Ramos A, 2021. The Bench Press Grip Width Does Not Affect the Number of Repetitions Performed at Different Velocity Loss Thresholds. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33504038/">33504038</a> · <a href="https://doi.org/10.3390/ijerph18031057">DOI</a></li><li>Lee S, Cone SM, Kim S, 2020. A biomechanical comparison of self-selected and experimentally controlled speeds and grip widths during the bench press exercise. <em>Sports Biomech</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32564677/">32564677</a> · <a href="https://doi.org/10.1080/14763141.2020.1772357">DOI</a></li><li>Kassiano W, Costa B, Nunes JP, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2023. Which ROMs Lead to Rome? A Systematic Review of the Effects of Range of Motion on Muscle Hypertrophy. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/36662126/">36662126</a> · <a href="https://doi.org/10.1519/JSC.0000000000004415">DOI</a></li><li>Fischer J, Burger C, Manieu Seguel JA, Rodoplu C, Paternoster FK, Tilp M, Konrad A, 2025. Acute muscle excitation response across various bench press ranges of motion. <em>Sci Rep</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/40269203/">40269203</a> · <a href="https://doi.org/10.1038/s41598-025-98354-9">DOI</a></li></ol>
+<p>Données bibliographiques vérifiées sur PubMed. Point de départ : le carrousel « Bench press cheat sheet » de Sebastian Oreb (<a href="https://www.instagram.com/p/Dd8lCqIkfEh/">@australianstrengthcoach</a>, 1er octobre 2026). Le texte, la structure, les données et les graphiques de cet article sont originaux.</p>
+<p><em>Giammaria Loi est le fondateur de Nurvan. Il s'entraîne avec des poids depuis 2012, travaille comme entraîneur personnel et coach certifié FIPE depuis 2013 et participe à des compétitions de powerlifting au niveau national depuis 2018. Chaque article qu'il signe part des études scientifiques et aboutit à ce qui fonctionne vraiment en salle.</em></p>
+<p class="note">Note : contenu informatif, qui ne remplace pas l'avis d'un médecin ou d'un professionnel. En cas de douleur à l'épaule ou aux pectoraux, consulte un médecin ou un kinésithérapeute avant de modifier ton entraînement.</p>
+</main>
+<footer>NURVAN · nurvan.app · 24 octobre 2026</footer>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="hi" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>बेंच प्रेस ग्रिप: चौड़ी, मीडियम या क्लोज़? | Nurvan</title>
+<meta name="description" content="चौड़ी ग्रिप ताक़त के लिए, मीडियम चेस्ट के लिए, क्लोज़ ट्राइसेप्स के लिए? स्टडी में तीनों ग्रिप पर चेस्ट बराबर रहता है। आठ इंडेक्स्ड पेपर के आंकड़े, एक-एक कर।">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">ट्रेनिंग</a><a href="#">न्यूट्रिशन</a><a href="#">सप्लीमेंट</a><a href="#" class="on">ब्लॉग</a></nav><a class="cta" href="https://nurvan.app">ऐप डाउनलोड करें</a></div></header>
+<main class="wrap" lang="hi">
+<div class="crumb">ब्लॉग · ट्रेनिंग</div>
+<h1>बेंच प्रेस ग्रिप: चौड़ी, मीडियम या क्लोज़?</h1>
+<p class="lede">यह फ़ॉर्मूला सालों से जिम में घूम रहा है: ताक़त के लिए चौड़ी ग्रिप, चेस्ट के लिए मीडियम, ट्राइसेप्स के लिए क्लोज़। साफ़-सुथरा है, याद रखना आसान है, और लगभग सब इसी पर चल रहे हैं — कभी जाँचे बिना। मैंने आठ इंडेक्स्ड पेपर पढ़े, जिनमें अलग-अलग ग्रिप पर वज़न, मसल एक्टिवेशन और जॉइंट मोमेंट नापे गए हैं। फ़ॉर्मूले के दो हिस्से टिकते हैं। बीच वाले हिस्से के पक्ष में एक भी स्टडी नहीं है।</p>
+<div class="meta"><span>24 अक्तूबर 2026</span><span><b>13</b> मिनट पढ़ाई</span><span><b>8</b> अध्ययन उद्धृत</span><span>लेखक: <a href="/autore/giammaria-loi">Giammaria Loi</a> · 24 अक्तूबर 2026 को अपडेट</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="बेंच प्रेस ग्रिप: चौड़ी, मीडियम या क्लोज़?"><figcaption class="cap">U.S. Army, Staff Sgt. Alexander Henninger, Wikimedia Commons के ज़रिए, पब्लिक डोमेन (PD-USGov-Military-Army)</figcaption></figure>
+<figure><div class="chart"><svg role="img" aria-label="बार चार्ट: बेंच प्रेस में क्लोज़ ग्रिप पर 6RM लोड 93, मीडियम ग्रिप पर 100 और चौड़ी ग्रिप पर 100" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-labelledby="t1-hi d1-hi">
+<title id="t1-hi">ग्रिप की चौड़ाई के हिसाब से बेंच प्रेस में उठाया गया वज़न</title>
+<desc id="d1-hi">मीडियम ग्रिप को 100 मानकर 6RM लोड का सूचकांक: क्लोज़ ग्रिप 93, मीडियम 100, वाइड 100 (ट्रेंड पुरुष)।</desc>
+<rect width="800" height="480" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">बेंच में वज़न असल में कितना बदलता है</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">6RM लोड, ट्रेंड पुरुष · सूचकांक: मीडियम ग्रिप = 100</text>
+
+<line x1="150" y1="400" x2="760" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="150" y1="130" x2="150" y2="400" stroke="#3a3a3a" stroke-width="1.5"/>
+
+<line x1="150" y1="130" x2="760" y2="130" stroke="#222" stroke-width="1"/>
+<line x1="150" y1="265" x2="760" y2="265" stroke="#222" stroke-width="1"/>
+<text x="140" y="135" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">100</text>
+<text x="140" y="270" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">50</text>
+<text x="140" y="405" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">0</text>
+
+<rect x="205" y="149" width="120" height="251" fill="#aa8a2e"/>
+<text x="265" y="139" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">93</text>
+<text x="265" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">क्लोज़</text>
+<text x="265" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(बगल जितनी)</text>
+
+<rect x="395" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="455" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="455" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">मीडियम</text>
+
+<rect x="585" y="130" width="120" height="270" fill="#d4af37"/>
+<text x="645" y="120" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">100</text>
+<text x="645" y="428" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#f0f0f0">वाइड</text>
+<text x="645" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">(81 cm)</text>
+
+<line x1="395" y1="100" x2="705" y2="100" stroke="#a0a0a0" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="550" y="94" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">कोई अंतर नहीं (p = 1.000)</text>
+
+<text x="40" y="470" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">प्रकाशित गिरावट से गणना: क्लोज़ ग्रिप मीडियम से −7.0% और वाइड से −7.1%। स्रोत: Saeterbakken et al., 2021 (PMID 34198674)।</text>
+</svg>
+</div></figure>
+<div class="box"><h2>संक्षेप में</h2><ul><li><strong>चौड़ी ग्रिप "सबसे भारी" ग्रिप नहीं है।</strong> वह सिर्फ़ क्लोज़ ग्रिप से भारी है, करीब <strong>7%</strong>। मीडियम ग्रिप के मुक़ाबले फ़र्क़ ही नहीं है: p = 1.000 (Saeterbakken वग़ैरह, 2021), और दूसरी लैब में मैक्स <strong>109.8 kg बनाम 108.9 kg</strong> निकला (Larsen वग़ैरह, 2021)।</li><li><strong>ग्रिप की चौड़ाई से चेस्ट नहीं बदलता।</strong> स्टर्नल हिस्सा, क्लैविक्युलर हिस्सा, लैट्स, मिडल और रियर डेल्ट: क्लोज़, मीडियम और चौड़ी ग्रिप के बीच कोई फ़र्क़ नहीं — न ट्रेंड लोगों में, न शुरुआती लोगों में (Saeterbakken वग़ैरह, 2021)।</li><li><strong>असल में हिलने वाली मसल दो और हैं।</strong> चौड़ी ग्रिप पर बाइसेप्स क्लोज़ ग्रिप से <strong>115.6% ज़्यादा</strong> काम करता है, और ट्राइसेप्स मीडियम ग्रिप से <strong>10.6% कम</strong>। ट्राइसेप्स ही वह एकमात्र "धक्का लगाने वाली" मसल है जिसे ग्रिप हिलाती है।</li><li><strong>रेप रेंज ग्रिप पर निर्भर नहीं है।</strong> मैक्स के 75% पर फ़ेल्योर तक जितने रेप्स आप लगा सकते हैं, वे क्लोज़, मीडियम, चौड़ी और अपनी पसंद की ग्रिप पर एक जैसे रहते हैं (p = 0.545; Pérez-Castilla वग़ैरह, 2021)।</li><li><strong>जिस ग्रिप पर आप सबसे ज़्यादा उठाते हैं, वह वही है जो आप पहले से लगा रहे हैं।</strong> ग्रिप और स्पीड अपनी पसंद से चुनने पर मैक्स, थोपी गई ग्रिप से साफ़ तौर पर ज़्यादा निकलता है — और अपनी पसंद वाली स्थिति को किसी भी वॉलंटियर ने असहज नहीं बताया, जबकि कंट्रोल वाली स्थिति में यह आंकड़ा 80% था (Lee वग़ैरह, 2020)।</li></ul></div>
+<h2>वज़न: चौड़ी ग्रिप सिर्फ़ क्लोज़ ग्रिप से जीतती है</h2>
+<p>इस सवाल पर सबसे काम की स्टडी ने एक सीधा काम किया: 28 पुरुष लिए — 15 ट्रेंड (बेंच प्रेस बॉडी वेट के कम से कम <strong>125%</strong> पर) और 13 शुरुआती — और हर एक के शरीर के हिसाब से तय तीन ग्रिप पर 6 रेप्स का मैक्स नापा। क्लोज़ ग्रिप = दोनों बग़लों के बीच की दूरी। चौड़ी ग्रिप = कॉम्पिटिशन में अनुमत अधिकतम, <strong>81 cm</strong>। मीडियम ग्रिप = ठीक इन दोनों के बीच (Saeterbakken वग़ैरह, 2021)।</p>
+<p>ट्रेंड ग्रुप का नतीजा: क्लोज़ ग्रिप पर मीडियम से <strong>7.0%</strong> कम और चौड़ी से <strong>7.1%</strong> कम वज़न उठा। लेकिन मीडियम और चौड़ी के बीच p = 1.000 — यानी दोनों ग्रिप में कोई अंतर पकड़ में नहीं आया। शुरुआती लोगों में फ़ासला ऐसा ही रहा: −8.4% और −6.6%, और यहाँ भी मीडियम और चौड़ी में फ़र्क़ नहीं।</p>
+<p>दूसरी टीम 14 ट्रेंड पुरुषों पर असली मैक्स नापकर उसी नतीजे पर पहुँची: चौड़ी ग्रिप पर <strong>109.8 kg</strong>, मीडियम पर <strong>108.9 kg</strong>, क्लोज़ पर <strong>103.7 kg</strong>। लेखक लिखते हैं कि ज़्यादा से ज़्यादा वज़न उठाने के लिए "चौड़ी <strong>या मीडियम</strong>" ग्रिप, दोनों चल जाती हैं (Larsen वग़ैरह, 2021)।</p>
+<p>एक मैकेनिकल क़ीमत भी है, जो किसी कैरोसेल के बार चार्ट में नहीं दिखती। चौड़ी ग्रिप पर आप बार पर जो ज़ोर लगाते हैं उसका <strong>13.1-15.7%</strong> बग़ल की तरफ़, बाहर की ओर जाता है; क्लोज़ ग्रिप पर <strong>8.5-10.1%</strong> अंदर की ओर; और मीडियम ग्रिप पर लगभग सब कुछ सीधा ऊपर, सिर्फ़ <strong>0.4-1.8%</strong> इधर-उधर (Larsen वग़ैरह, 2021)। बाहर की तरफ़ धक्का बार को ऊपर नहीं उठाता: उसका काम रास्ता स्थिर रखना है, पर यह वह ज़ोर है जो आपको वज़न में दिखता नहीं।</p>
+<figure><div class="chart"><svg role="img" aria-label="ग्राफ़: चौड़ी ग्रिप पर जाने से बाइसेप्स 115.6% बढ़ता है और ट्राइसेप्स 10.6% घटता है, जबकि चेस्ट, डेल्टॉइड और लैट्स नहीं बदलते" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560" role="img" aria-labelledby="t2-hi d2-hi">
+<title id="t2-hi">ग्रिप बदलने पर असल में कौन सी मांसपेशियाँ बदलती हैं</title>
+<desc id="d2-hi">ट्रेंड पुरुषों में वाइड ग्रिप पर जाने से सक्रियता का अंतर: बाइसेप्स क्लोज़ से +115.6% और मीडियम से +44.9%, ट्राइसेप्स मीडियम से −10.6%, जबकि चेस्ट के स्टर्नल और क्लैविक्युलर हिस्से, फ्रंट डेल्ट और लैट्स में कोई अंतर नहीं।</desc>
+<rect width="800" height="560" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">वाइड ग्रिप पर जाने से क्या बदलता है</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="15" fill="#a0a0a0">6RM पर मांसपेशीय सक्रियता, ट्रेंड पुरुष · प्रतिशत अंतर</text>
+
+<line x1="394" y1="100" x2="394" y2="480" stroke="#666" stroke-width="1.5"/>
+<text x="394" y="118" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+
+<text x="288" y="156" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">बाइसेप्स (क्लोज़ से)</text>
+<rect x="394" y="136" width="362" height="26" fill="#d4af37"/>
+<text x="748" y="155" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#0c0c0c">+115.6%</text>
+
+<text x="288" y="200" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">बाइसेप्स (मीडियम से)</text>
+<rect x="394" y="180" width="141" height="26" fill="#d4af37"/>
+<text x="545" y="199" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">+44.9%</text>
+
+<text x="288" y="244" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">ट्राइसेप्स (मीडियम से)</text>
+<rect x="361" y="224" width="33" height="26" fill="#aa8a2e"/>
+<text x="351" y="243" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" font-weight="700" fill="#f3e5ab">−10.6%</text>
+
+<text x="288" y="288" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">चेस्ट, स्टर्नल हिस्सा</text>
+<circle cx="394" cy="280" r="6" fill="#5a5a5a"/>
+<text x="412" y="285" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">कोई अंतर नहीं</text>
+
+<text x="288" y="332" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">चेस्ट, क्लैविक्युलर हिस्सा</text>
+<circle cx="394" cy="324" r="6" fill="#5a5a5a"/>
+<text x="412" y="329" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">कोई अंतर नहीं</text>
+
+<text x="288" y="376" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">फ्रंट डेल्ट</text>
+<circle cx="394" cy="368" r="6" fill="#5a5a5a"/>
+<text x="412" y="373" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">कोई अंतर नहीं</text>
+
+<text x="288" y="420" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">लैट्स</text>
+<circle cx="394" cy="412" r="6" fill="#5a5a5a"/>
+<text x="412" y="417" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">कोई अंतर नहीं</text>
+
+<text x="288" y="464" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#f0f0f0">मिड और रियर डेल्ट</text>
+<circle cx="394" cy="456" r="6" fill="#5a5a5a"/>
+<text x="412" y="461" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#a0a0a0">कोई अंतर नहीं</text>
+
+<text x="40" y="518" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">ग्रिप असल में सिर्फ़ दो मांसपेशियाँ बदलती है: बाइसेप्स और ट्राइसेप्स। तीनों ग्रिप में चेस्ट एक जैसा रहता है।</text>
+<text x="40" y="540" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">स्रोत: Saeterbakken et al., 2021 (PMID 34198674), ट्रेंड ग्रुप, n = 15।</text>
+</svg>
+</div></figure>
+<h2>चेस्ट नहीं बदलता। बाइसेप्स और ट्राइसेप्स बदलते हैं</h2>
+<p>फ़ॉर्मूला यहीं गिरता है। उसी स्टडी में, सात मसल पर इलेक्ट्रोड लगाकर देखा गया तो ग्रिप की चौड़ाई ने सिर्फ़ <strong>दो</strong> मसल का एक्टिवेशन बदला:</p>
+<ul><li><strong>बाइसेप्स ब्रैकी</strong>: चौड़ी ग्रिप पर क्लोज़ से +115.6% और मीडियम से +44.9% (p &lt; 0.001)। यह यहाँ एंटागोनिस्ट की तरह काम करता है, कोहनी को स्थिर रखने के लिए;</li><li><strong>ट्राइसेप्स ब्रैकी</strong>: चौड़ी ग्रिप पर मीडियम से <strong>−10.6%</strong> (p = 0.032) और क्लोज़ से −24.1%, जिसमें आख़िरी फ़र्क़ सार्थकता की सीमा पर है (p = 0.058)।</li></ul>
+<p>स्टर्नल चेस्ट, क्लैविक्युलर चेस्ट, लैट्स, मिडल और रियर डेल्ट: किसी भी ग्रुप में कोई फ़र्क़ नहीं। फ़्रंट डेल्ट सिर्फ़ शुरुआती लोगों में हिलता है, और वह भी थोड़ा।</p>
+<p>इससे आम धारणा का आधा हिस्सा पलट जाता है: चौड़ी ग्रिप धक्का लगाने वाली मसल में काम "बराबर नहीं बाँटती"। वह ठीक उलटा करती है — यही वह ग्रिप है जो ट्राइसेप्स से काम <strong>छीनती</strong> है। एक तीसरी टीम इसे उलटी दिशा से पक्का करती है: कंधों के बीच की दूरी के 50% पर ट्राइसेप्स मैक्सिमम कॉन्ट्रैक्शन के 16% पर रहता है, 150% पर गिरकर 12% हो जाता है, और फ़्रंट डेल्ट किसी भी स्थिति में नहीं बदलता (Muyor वग़ैरह, 2023)। उस स्टडी के लेखक आख़िर में एक बात लिखते हैं जो पूरे लेख पर लागू होती है: एक्सरसाइज़ का चुनाव सिर्फ़ एक्टिवेशन पर नहीं टिकना चाहिए।</p>
+<p>एक बारीकी पर ध्यान दीजिए जिसे कैरोसेल छोड़ देता है: <strong>ट्राइसेप्स वाला यह फ़र्क़ सिर्फ़ ट्रेंड ग्रुप में दिखता है।</strong> शुरुआती लोगों में ट्राइसेप्स किसी भी ग्रिप पर नहीं बदला। एक ही सलाह दो अलग लोगों पर एक ही असर नहीं देती।</p>
+<h2>सवाल "चेस्ट बनाम ट्राइसेप्स" नहीं है: सवाल है चेस्ट का कौन सा हिस्सा</h2>
+<p>सबसे दिलचस्प आंकड़ा यह नहीं है कि चेस्ट कितना काम करता है, बल्कि यह कि <strong>कौन सा हिस्सा</strong> करता है। 35 ट्रेंड वयस्कों पर 6-8RM वज़न के साथ जॉइंट मोमेंट नापे गए: ज़्यादा क्लोज़ ग्रिप कोहनी का मोमेंट और ट्राइसेप्स के लेटरल हेड, फ़्रंट डेल्ट <strong>तथा चेस्ट के क्लैविक्युलर हेड</strong> की एक्टिविटी बढ़ाती है — यानी अपर चेस्ट। ज़्यादा चौड़ी ग्रिप कंधे का मोमेंट और एब्डोमिनल हेड, यानी निचले हिस्से की एक्टिविटी बढ़ाती है (Mausehund वग़ैरह, 2022)।</p>
+<p>यही सिद्धांत मुझे <a href="/hi/blog/dumbbell-bench-press-ya-fly-chest-growth">डंबल बेंच प्रेस और फ़्लाई की तुलना</a> में भी मिला था: चुनाव यह नहीं बदलता कि पूरा चेस्ट कितना बढ़ेगा, यह बदलता है कि कहाँ बढ़ेगा।</p>
+<p>व्यावहारिक पहलू कंधे से जुड़ा है। ग्रिप जितनी चौड़ी, कंधे को उतना ज़्यादा लोड उठाना पड़ता है — निरपेक्ष रूप से भी और आपकी अधिकतम क्षमता के अनुपात में भी। यही वह मैकेनिकल वजह है जिसकी वजह से जिनका कंधा चिढ़ा हुआ है, उन्हें ग्रिप सँकरी करने पर अक्सर आराम मिलता है। लेकिन ध्यान रहे: <strong>किसी स्टडी ने क्लोज़ ग्रिप को रिहैब के इलाज की तरह नहीं जाँचा है।</strong> यह लोड मैनेज करने का समझदार फ़ैसला है, थेरेपी नहीं: कंधे में दर्द हो तो रास्ता डॉक्टर या फ़िज़ियोथेरेपिस्ट है, कोई स्लाइड नहीं।</p>
+<h2>चेस्ट के लिए "लेंथेंड हाफ़ रेप": यह आंकड़ा मौजूद ही नहीं है</h2>
+<p>"चेस्ट बढ़ाने के लिए स्ट्रेच वाले हिस्से में आधा मूवमेंट" पूरे फ़ॉर्मूले का सबसे दोहराया और सबसे कम जाँचा हिस्सा है। रेंज ऑफ़ मोशन पर हुई सिस्टेमैटिक रिव्यू ने पाया कि शुरुआती हिस्से (मसल खिंची हुई) का पार्शियल और पूरा मूवमेंट, आख़िरी हिस्से के पार्शियल से बेहतर हैं — लेकिन वे आंकड़े <strong>रेक्टस फ़ेमोरिस, वास्टस लेटरालिस, बाइसेप्स, ब्रैकिअलिस, ग्लूटियस मैक्सिमस और एडक्टर्स</strong> से आते हैं। चेस्ट उनमें नहीं है (Kassiano वग़ैरह, 2023)। और ट्राइसेप्स में, मज़े की बात, सबसे अच्छा चलने वाला पार्शियल मूवमेंट के <strong>बीच</strong> वाले हिस्से का निकला।</p>
+<p>और जिस एक एक्यूट स्टडी ने रेंज ऑफ़ मोशन की तुलना सीधे बेंच प्रेस पर की, उसमें <strong>ऊपरी</strong> आधा हिस्सा — यानी सिकुड़ा हुआ, "लेंथेंड बायस" का ठीक उलटा — चेस्ट के स्टर्नोकॉस्टल हिस्से और ट्राइसेप्स के लॉन्ग व लेटरल हेड में सबसे ऊँची पीक एक्साइटेशन लाया (Fischer वग़ैरह, 2025)। यह 19 पुरुषों का एक्यूट डेटा है, ग्रोथ का सबूत नहीं। लेकिन उस सलाह की दिशा भी साबित नहीं है।</p>
+<h2>रिसर्च असल में क्या कहती है</h2>
+<table><thead><tr><th>दावा</th><th>नतीजा</th><th>आंकड़ा</th></tr></thead><tbody><tr><td>चौड़ी ग्रिप = ज़्यादा भारी वज़न</td><td><strong>स्पष्टीकरण ज़रूरी</strong></td><td>क्लोज़ के मुक़ाबले सही (+7%), मीडियम के मुक़ाबले ग़लत (p = 1.000)</td></tr><tr><td>चौड़ी ग्रिप = धक्का देने वाली मसल में बराबर काम</td><td><strong>ग़लत</strong></td><td>ट्राइसेप्स 10.6% कम काम करता है</td></tr><tr><td>मीडियम ग्रिप = चेस्ट के लिए सबसे अच्छी</td><td><strong>जाँचा नहीं जा सकता</strong></td><td>चेस्ट एक्टिवेशन में कोई फ़र्क़ नहीं; ग्रोथ स्टडी शून्य</td></tr><tr><td>क्लोज़ ग्रिप = ट्राइसेप्स ज़्यादा</td><td><strong>पुष्ट</strong></td><td>मैक्सिमम कॉन्ट्रैक्शन का 16% बनाम 12%</td></tr><tr><td>क्लोज़ ग्रिप = हल्का वज़न</td><td><strong>पुष्ट</strong></td><td>करीब 7% कम</td></tr><tr><td>कंधे और चेस्ट के रिहैब के लिए क्लोज़ ग्रिप</td><td><strong>स्पष्टीकरण ज़रूरी</strong></td><td>मैकेनिकली समझदार, रिहैब के तौर पर कभी जाँची नहीं गई</td></tr><tr><td>हर ग्रिप की अपनी रेप रेंज होती है</td><td><strong>ग़लत</strong></td><td>फ़ेल्योर तक रेप्स नहीं बदलते (p = 0.545)</td></tr></tbody></table>
+<h2>इसे कैसे इस्तेमाल करें</h2>
+<ol class="steps"><li><strong>अपनी ग्रिप नापिए, किसी और के सेंटीमीटर मत कॉपी कीजिए।</strong> स्टडी में क्लोज़ ग्रिप दोनों बग़लों के बीच की दूरी है और चौड़ी ग्रिप कॉम्पिटिशन की अधिकतम सीमा, 81 cm: सँकरे कंधों वाले के लिए वही 81 cm, चौड़े कंधों वाले से कहीं ज़्यादा "चौड़े" पड़ते हैं।</li><li><strong>ग्रिप वज़न और कंधे के हिसाब से चुनिए, मसल के हिसाब से नहीं।</strong> तीनों हालात में चेस्ट बराबर काम करता है। असल में यह बदलता है कि आप कितना लोड कर सकते हैं और कंधे से कितना माँग रहे हैं।</li><li><strong>दो अलग ग्रिप पर 5-6 रेप्स का अपना मैक्स जाँचिए, एक हफ़्ते के अंतर पर।</strong> फ़र्क़ 5% से ऊपर निकला तो जवाब आपके पास है — और शायद वह फ़ॉर्मूले वाला जवाब नहीं होगा।</li><li><strong>ग्रिप और रेप रेंज एक साथ मत बदलिए।</strong> रेंज लक्ष्य से तय होती है, इससे नहीं कि हाथ कहाँ रखे हैं।</li><li><strong>क्लोज़ ग्रिप ट्राइसेप्स के लिए इस्तेमाल कीजिए, चेस्ट के लिए नहीं।</strong> धक्का देने वाली मसल पर यही एक असर है जो कई लैब में एक जैसा दिखा है।</li></ol>
+<div class="app"><div><h3>Nurvan के साथ</h3><p>इस विषय पर सही सलाह है "नापिए", और नापने के लिए ज़रूरी है कि आंकड़े बचे रहें। Nurvan में चौड़ी, मीडियम और क्लोज़ ग्रिप बेंच प्रेस एक ही एक्सरसाइज़ के तीन अलग वेरिएंट हैं: हर सेट में वज़न, रेप्स और RIR (वे रेप्स जो टैंक में बचे थे) दर्ज होते हैं, और हिस्ट्री का ग्राफ़ कुछ हफ़्तों में दिखा देता है कि आपके शरीर पर कौन सी ग्रिप सचमुच आगे बढ़ रही है। यह पॉइंट 3 का वही टेस्ट है, स्प्रेडशीट के बिना। ****</p></div><a class="cta" href="https://nurvan.app">Nurvan आज़माएँ</a></div>
+<h2>अक्सर पूछे जाने वाले सवाल</h2>
+<details><summary>बेंच प्रेस में सबसे अच्छी ग्रिप कौन सी है?</summary><p>वही जिस पर आप सबसे ज़्यादा उठाते हैं और कंधे में तकलीफ़ न हो। स्टडी में मीडियम और चौड़ी ग्रिप वज़न के लिहाज़ से बराबर हैं, और तीनों के बीच चेस्ट नहीं बदलता। ग्रिप और स्पीड अपनी पसंद से चुनने पर मैक्स, थोपी गई ग्रिप से ज़्यादा निकलता है (Lee वग़ैरह, 2020): ट्रेनिंग से बनी आपकी ग्रिप एक असली फ़ायदा है, सुधारने वाली आदत नहीं।</p></details>
+<details><summary>क्या क्लोज़ ग्रिप से चेस्ट कम लगता है?</summary><p>नहीं। नापी गई सात मसल में चेस्ट का एक्टिवेशन क्लोज़, मीडियम और चौड़ी ग्रिप के बीच अलग नहीं निकला (Saeterbakken वग़ैरह, 2021)। जो बदलता है वह है ज़ोर पड़ने वाला हिस्सा — क्लोज़ ग्रिप पर ऊपरी, चौड़ी ग्रिप पर निचला (Mausehund वग़ैरह, 2022) — और ट्राइसेप्स, जो काफ़ी बदलता है।</p></details>
+<details><summary>ताक़त चाहिए तो चौड़ी ग्रिप ज़रूरी है?</summary><p>ज़रूरी नहीं। चौड़ी ग्रिप सिर्फ़ क्लोज़ से जीतती है, करीब 7%, और मीडियम से बराबरी पर रहती है। अगर चौड़ी ग्रिप पर कंधा तकलीफ़ देता है, तो मीडियम ग्रिप एक किलो भी नहीं लेती।</p></details>
+<details><summary>हर ग्रिप पर कितने रेप्स करें?</summary><p>मैक्स के किसी तय प्रतिशत पर आप जितने रेप्स लगा पाते हैं, वे ग्रिप से नहीं बदलते (Pérez-Castilla वग़ैरह, 2021)। रेंज लक्ष्य से तय कीजिए: दिशा के लिए आंकड़े मैंने <a href="/hi/blog/kitne-reps-muscle-ke-liye">मसल बढ़ाने के लिए सचमुच कितने रेप्स चाहिए</a> में इकट्ठे किए हैं।</p></details>
+<h2>यह भी पढ़ें</h2>
+<ul><li><a href="/hi/blog/dumbbell-bench-press-ya-fly-chest-growth">डंबल बेंच प्रेस या फ़्लाई: चेस्ट किससे ज़्यादा बढ़ता है?</a> — वही तर्क, ग्रिप के बजाय एक्सरसाइज़ के चुनाव पर।</li><li><a href="/hi/blog/kitne-reps-muscle-ke-liye">हाइपरट्रॉफ़ी के लिए कितने रेप्स, सेट और रेस्ट</a> — रेप रेंज एक अलग वेरिएबल क्यों है।</li><li><a href="/hi/blog/leg-extension-vs-leg-press-rectus-femoris-hindi">लेग एक्सटेंशन या लेग प्रेस: स्टडी क्या कहती हैं</a> — रीजनल ग्रोथ, टाँगों पर नापी हुई।</li></ul>
+<h2>स्रोत</h2>
+<ol class="refs"><li>Saeterbakken AH, Stien N, Pedersen H, Solstad TEJ, Cumming KT, Andersen V, 2021. The Effect of Grip Width on Muscle Strength and Electromyographic Activity in Bench Press among Novice- and Resistance-Trained Men. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34198674/">34198674</a> · <a href="https://doi.org/10.3390/ijerph18126444">DOI</a></li><li>Larsen S, Gomo O, van den Tillaar R, 2021. A Biomechanical Analysis of Wide, Medium, and Narrow Grip Width Effects on Kinematics, Horizontal Kinetics, and Muscle Activity on the Sticking Region in Recreationally Trained Males During 1-RM Bench Pressing. <em>Front Sports Act Living</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33554113/">33554113</a> · <a href="https://doi.org/10.3389/fspor.2020.637066">DOI</a></li><li>Mausehund L, Werkhausen A, Bartsch J, Krosshaug T, 2022. Understanding Bench Press Biomechanics—The Necessity of Measuring Lateral Barbell Forces. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33555823/">33555823</a> · <a href="https://doi.org/10.1519/JSC.0000000000003948">DOI</a></li><li>Muyor JM, Rodríguez-Ridao D, Oliva-Lozano JM, 2023. Comparison of Muscle Activity between the Horizontal Bench Press and the Seated Chest Press Exercises Using Several Grips. <em>J Hum Kinet</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/37229415/">37229415</a> · <a href="https://doi.org/10.5114/jhk/161468">DOI</a></li><li>Pérez-Castilla A, Jukic I, Haff GG, García-Ramos A, 2021. The Bench Press Grip Width Does Not Affect the Number of Repetitions Performed at Different Velocity Loss Thresholds. <em>Int J Environ Res Public Health</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/33504038/">33504038</a> · <a href="https://doi.org/10.3390/ijerph18031057">DOI</a></li><li>Lee S, Cone SM, Kim S, 2020. A biomechanical comparison of self-selected and experimentally controlled speeds and grip widths during the bench press exercise. <em>Sports Biomech</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32564677/">32564677</a> · <a href="https://doi.org/10.1080/14763141.2020.1772357">DOI</a></li><li>Kassiano W, Costa B, Nunes JP, Ribeiro AS, Schoenfeld BJ, Cyrino ES, 2023. Which ROMs Lead to Rome? A Systematic Review of the Effects of Range of Motion on Muscle Hypertrophy. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/36662126/">36662126</a> · <a href="https://doi.org/10.1519/JSC.0000000000004415">DOI</a></li><li>Fischer J, Burger C, Manieu Seguel JA, Rodoplu C, Paternoster FK, Tilp M, Konrad A, 2025. Acute muscle excitation response across various bench press ranges of motion. <em>Sci Rep</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/40269203/">40269203</a> · <a href="https://doi.org/10.1038/s41598-025-98354-9">DOI</a></li></ol>
+<p>संदर्भ के आंकड़े PubMed पर जाँचे गए। शुरुआती प्रेरणा: Sebastian Oreb का "Bench press cheat sheet" कैरोसेल (<a href="https://www.instagram.com/p/Dd8lCqIkfEh/">@australianstrengthcoach</a>, 1 अक्तूबर 2026)। इस लेख का टेक्स्ट, ढाँचा, आंकड़े और ग्राफ़ मौलिक हैं।</p>
+<p><em>Giammaria Loi Nurvan के संस्थापक हैं। वे 2012 से वेट ट्रेनिंग करते हैं, 2013 से FIPE प्रमाणित पर्सनल ट्रेनर और कोच के रूप में काम करते हैं और 2018 से राष्ट्रीय स्तर पर पावरलिफ़्टिंग में भाग लेते हैं।</em></p>
+<p class="note">नोट: यह जानकारीपरक सामग्री है, डॉक्टर या पेशेवर की राय का विकल्प नहीं। कंधे या चेस्ट में दर्द हो तो ट्रेनिंग बदलने से पहले डॉक्टर या फ़िज़ियोथेरेपिस्ट से बात कीजिए।</p>
+</main>
+<footer>NURVAN · nurvan.app · 24 अक्तूबर 2026</footer>
+</body>
+</html>
