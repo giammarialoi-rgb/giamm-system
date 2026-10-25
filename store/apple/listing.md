@@ -16,6 +16,8 @@ URL da inserire:
 
 Limiti Apple: nome 30, sottotitolo 30, testo promozionale 170, parole chiave 100 (separate da virgola, senza spazi dopo la virgola), descrizione 4000.
 
+**Dal 25/10/2026 (versione 1.5.36) sottotitolo, parole chiave e descrizione stanno in `metadata/it/` e `metadata/en-US/`** (riscritti per «app personal trainer», come la scheda Play) e li scrive il workflow «iOS App Review» con `-f metadata=yes`. I testi qui sotto sono quelli della 1.0, tenuti come storia.
+
 ---
 
 ## Italiano (lingua principale)

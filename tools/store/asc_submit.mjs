@@ -44,6 +44,38 @@ export function signToken({ keyId, issuerId, privateKey, now = Date.now() }) {
 
 const stateOf = (v) => (v && v.attributes && (v.attributes.appVersionState || v.attributes.appStoreState)) || '';
 
+// The listing texts in store/apple/metadata/<locale>/ (subtitle.txt, keywords.txt, description.txt), written
+// with METADATA=yes. The locale folders are App Store Connect's codes ("it", "en-US").
+export const METADATA_DIR = 'store/apple/metadata';
+export const METADATA_LIMITS = { subtitle: 30, keywords: 100, description: 4000 };
+export function readAppStoreMetadata(root = '.', dir = METADATA_DIR) {
+  const base = root + '/' + dir;
+  if (!fs.existsSync(base)) return {};
+  const out = {};
+  for (const locale of fs.readdirSync(base).sort()) {
+    if (!fs.statSync(base + '/' + locale).isDirectory()) continue;
+    out[locale] = {};
+    for (const key of Object.keys(METADATA_LIMITS)) {
+      const file = base + '/' + locale + '/' + key + '.txt';
+      if (fs.existsSync(file)) out[locale][key] = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '');
+    }
+  }
+  return out;
+}
+export function metadataProblems(locale, m) {
+  const p = [];
+  for (const [k, max] of Object.entries(METADATA_LIMITS)) {
+    if (m[k] != null && [...m[k]].length > max) p.push(locale + ': ' + k + ' is ' + [...m[k]].length + ' characters, the limit is ' + max);
+  }
+  if (m.keywords && /,\s|\s,/.test(m.keywords)) p.push(locale + ': keywords have spaces around the commas (they count against the 100)');
+  if (m.keywords && m.subtitle) {
+    const sub = new Set(m.subtitle.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean));
+    const twice = m.keywords.toLowerCase().split(',').filter((k) => sub.has(k));
+    if (twice.length) p.push(locale + ': keywords repeat words of the subtitle (' + twice.join(', ') + '): Apple already indexes them');
+  }
+  return p;
+}
+
 async function main() {
   const keyId = process.env.ASC_KEY_ID, issuerId = process.env.ASC_ISSUER_ID;
   const pem = process.env.ASC_KEY_P8_PATH ? fs.readFileSync(process.env.ASC_KEY_P8_PATH, 'utf8') : Buffer.from(String(process.env.ASC_KEY_P8_BASE64 || ''), 'base64').toString('utf8');
@@ -111,6 +143,12 @@ async function main() {
   if (!whatsNewIt) throw new Error('Scrivi le novità (WHATS_NEW): per un aggiornamento Apple le chiede.');
   console.log('Novità (it):', whatsNewIt);
   if (whatsNewEn !== whatsNewIt) console.log('Novità (altre lingue):', whatsNewEn);
+  const meta = process.env.METADATA === 'yes' ? readAppStoreMetadata() : null;
+  if (meta) {
+    const problems = Object.entries(meta).flatMap(([loc, m]) => metadataProblems(loc, m));
+    if (problems.length) throw new Error('Testi della scheda non validi:\n- ' + problems.join('\n- '));
+    for (const [loc, m] of Object.entries(meta)) console.log('Scheda (' + loc + '): sottotitolo «' + (m.subtitle || '—') + '» · parole chiave «' + (m.keywords || '—') + '» · descrizione ' + (m.description ? [...m.description].length + ' caratteri' : '—'));
+  }
 
   if (MODE !== 'submit') {
     console.log('\nVERIFICA OK: chiave, app, build e versione sono a posto. Niente è stato cambiato (MODE=check).');
@@ -135,6 +173,29 @@ async function main() {
     await call('PATCH', '/v1/appStoreVersionLocalizations/' + l.id, { data: { type: 'appStoreVersionLocalizations', id: l.id, attributes: { whatsNew: text.slice(0, 4000) } } });
   }
   console.log('Novità scritte in', locs.length, 'lingue:', locs.map((l) => l.attributes.locale).join(', '));
+  if (meta) {
+    // keywords and description belong to the version; the subtitle to the app information being prepared
+    for (const l of locs) {
+      const m = meta[l.attributes.locale];
+      if (!m) continue;
+      const attributes = {};
+      if (m.keywords) attributes.keywords = m.keywords;
+      if (m.description) attributes.description = m.description;
+      if (Object.keys(attributes).length) await call('PATCH', '/v1/appStoreVersionLocalizations/' + l.id, { data: { type: 'appStoreVersionLocalizations', id: l.id, attributes } });
+    }
+    const infos = (await call('GET', '/v1/apps/' + app.id + '/appInfos')).data || [];
+    const info = infos.find((i) => !LIVE.includes(i.attributes.state || i.attributes.appStoreState || '')) || null;
+    if (info) {
+      const infoLocs = (await call('GET', '/v1/appInfos/' + info.id + '/appInfoLocalizations?limit=50')).data || [];
+      for (const l of infoLocs) {
+        const m = meta[l.attributes.locale];
+        if (m && m.subtitle) await call('PATCH', '/v1/appInfoLocalizations/' + l.id, { data: { type: 'appInfoLocalizations', id: l.id, attributes: { subtitle: m.subtitle } } });
+      }
+    } else {
+      console.log('Sottotitolo non cambiato: nessuna scheda informazioni in preparazione.');
+    }
+    console.log('Scheda scritta per:', Object.keys(meta).filter((loc) => locs.some((l) => l.attributes.locale === loc)).join(', '));
+  }
 
   // 4. send it to App Review: the open draft submission, or a new one
   let sub = ((await call('GET', '/v1/reviewSubmissions?filter[app]=' + app.id + '&filter[platform]=IOS&filter[state]=READY_FOR_REVIEW&limit=5')).data || [])[0];

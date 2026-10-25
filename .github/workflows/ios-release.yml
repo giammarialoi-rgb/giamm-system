@@ -2,8 +2,8 @@
 # the build already uses. Started by hand: Actions > "iOS App Review" > Run workflow, or
 #   gh workflow run ios-release.yml -f mode=submit -f whats_new="Correzioni e miglioramenti"
 # mode=check only verifies key, app, build and version and changes nothing.
-# Screenshots, description, review notes and demo accounts are copied by App Store Connect from the
-# version before. The script is tools/store/asc_submit.mjs.
+# Screenshots, review notes and demo accounts are copied by App Store Connect from the version before;
+# with metadata=yes subtitle, keywords and description are written from store/apple/metadata/<locale>/. The script is tools/store/asc_submit.mjs.
 name: iOS App Review
 
 on:
@@ -35,6 +35,11 @@ on:
         type: choice
         options: [auto, manual]
         default: auto
+      metadata:
+        description: 'yes = scrive sottotitolo, parole chiave e descrizione da store/apple/metadata'
+        type: choice
+        options: ['no', 'yes']
+        default: 'no'
 
 concurrency:
   group: ios-app-review
@@ -60,4 +65,5 @@ jobs:
           VERSION: ${{ inputs.version }}
           BUILD: ${{ inputs.build }}
           RELEASE: ${{ inputs.release }}
+          METADATA: ${{ inputs.metadata }}
         run: node tools/store/asc_submit.mjs
