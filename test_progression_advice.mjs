@@ -191,7 +191,7 @@ function world(opts = {}) {
 {
   // the page wires it in: loaded after the models, asked after the deload question, shown on the stats page
   ok(/<script src="progression-models\.js"><\/script>\s*<script src="progression-advisor\.js"><\/script>/.test(html), '8a. il modulo è caricato dopo le progressioni');
-  ok(/maybeSuggestDeloadWeek\(\)\) return;\s*if \(typeof maybeSuggestProgressionChange === 'function'\) maybeSuggestProgressionChange\(false\)/.test(html), '8b. alla fine di una seduta prima si chiede dello scarico, poi (solo se non c’era) della progressione');
+  ok(/maybeSuggestDeloadWeek\(\)\) return;\s*if \(typeof maybeSuggestProgressionChange === 'function' && maybeSuggestProgressionChange\(false\)\) return;/.test(html), '8b. alla fine di una seduta prima si chiede dello scarico, poi (solo se non c’era) della progressione');
   ok(/renderProgressionAdviceCardHtml\(\)/.test(html) && /progression-advisor\.js/.test(fs.readFileSync(path.join(root, 'sync_web_assets.mjs'), 'utf8')) && /progression-advisor\.js/.test(fs.readFileSync(path.join(root, 'web/sw.js'), 'utf8')), '8c. scheda nelle statistiche, file copiato nell’app e tra quelli in cache');
 }
 

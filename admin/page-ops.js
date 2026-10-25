@@ -10,8 +10,8 @@ export async function pageOperations(which) {
   else if (window.__adminSub) { tab = window.__adminSub; }
   window.__adminSub = null;
   loading();
-  const bar = tabs([['errors', 'Errori'], ['planlog', 'Log piani'], ['reports', 'Segnalazioni chat'], ['content', 'Segnalazioni contenuti'], ['audit', 'Registro accessi'], ['sessions', 'Sessioni admin'], ['lists', 'Liste del sito'], ['storage', 'Spazio']], tab, (t) => pageOperations(t));
-  const body = await ({ errors: errorsBlock, planlog: planLogBlock, reports: reportsTab, content: contentTab, audit: auditTab, sessions: sessionsTab, lists: listsTab, storage: storageTab }[tab] || errorsBlock)();
+  const bar = tabs([['errors', 'Errori'], ['planlog', 'Log piani'], ['reports', 'Segnalazioni chat'], ['content', 'Segnalazioni contenuti'], ['feedback', 'Suggerimenti app'], ['audit', 'Registro accessi'], ['sessions', 'Sessioni admin'], ['lists', 'Liste del sito'], ['storage', 'Spazio']], tab, (t) => pageOperations(t));
+  const body = await ({ errors: errorsBlock, planlog: planLogBlock, reports: reportsTab, content: contentTab, feedback: feedbackTab, audit: auditTab, sessions: sessionsTab, lists: listsTab, storage: storageTab }[tab] || errorsBlock)();
   view([el('h2', null, 'Operazioni'), bar].concat(body));
 }
 
@@ -59,6 +59,25 @@ async function contentTab() {
   ]));
   return [el('p', { class: 'muted' }, 'Segnalazioni di contenuti illegali inviate da chiunque dalla pagina /segnala-contenuto (Digital Services Act). Per rimuovere un contenuto o sospendere un account usa Profili. Chi segnala riceve la tua decisione per email.'),
     out.reports.length ? table(['Quando', 'Contenuto', 'Chi segnala', ''], rows) : el('p', { class: 'muted' }, 'Nessuna segnalazione.')];
+}
+
+// Suggestions and problems sent from the app (Impostazioni › Suggerimenti e problemi). The answer goes by
+// email from your own inbox: the address is here when the person left one.
+async function feedbackTab() {
+  const out = await api('/api/admin/feedback');
+  const info = (d) => d ? Object.entries(d).map(([k, v]) => k + ': ' + v).join(' · ') : 'dati tecnici non allegati';
+  const rows = out.items.map((f) => el('tr', null, [
+    el('td', null, [badge(f.status === 'open' ? 'da leggere' : 'chiuso', f.status === 'open' ? 'warn' : 'ok'), ' n. ' + f.id + ' · ' + dateTime(f.at)]),
+    el('td', { class: 'wrap' }, [el('strong', null, f.kindLabel), el('div', { style: 'white-space:pre-wrap' }, f.message),
+      el('div', { class: 'muted' }, info(f.device)), f.note ? el('div', { class: 'muted' }, 'Nota: ' + f.note) : null]),
+    el('td', null, [f.email ? el('a', { href: 'mailto:' + f.email + '?subject=' + encodeURIComponent('Il tuo messaggio a Nurvan (n. ' + f.id + ')') }, f.email) : el('span', { class: 'muted' }, 'nessuna email'),
+      f.accountEmail && f.accountEmail !== f.email ? el('div', { class: 'muted' }, 'account: ' + f.accountEmail) : null]),
+    el('td', null, f.status === 'open'
+      ? el('button', { class: 'btn small primary', type: 'button', onclick: async () => { const note = prompt('Cosa hai fatto (facoltativo, resta qui):', ''); if (note === null) return; await api('/api/admin/feedback/' + f.id, { method: 'POST', body: { note } }); toast('Messaggio chiuso', 'ok'); pageOperations('feedback'); } }, 'Chiudi')
+      : el('button', { class: 'btn small', type: 'button', onclick: async () => { await api('/api/admin/feedback/' + f.id, { method: 'POST', body: { reopen: true } }); pageOperations('feedback'); } }, 'Riapri'))
+  ]));
+  return [el('p', { class: 'muted' }, 'Suggerimenti e problemi inviati dall’app (Impostazioni › Suggerimenti e problemi). Arrivano anche per email. Per rispondere tocca l’indirizzo. I messaggi chiusi si cancellano dopo 12 mesi.'),
+    out.items.length ? table(['Quando', 'Messaggio', 'Rispondere a', ''], rows) : el('p', { class: 'muted' }, 'Nessun messaggio.')];
 }
 
 async function auditTab() {

@@ -33,6 +33,17 @@
     if (!token) { if ($('reset-nolink')) $('reset-nolink').hidden = false; return; }
     var form = $('reset-form');
     form.hidden = false;
+    // "Show password" as a box to tick, the way the label says it: no icon to read the wrong way round.
+    // The translated pages load i18n-runtime.js, which translates the label like the other messages.
+    var show = document.createElement('label');
+    show.className = 'acct-show';
+    show.innerHTML = '<input type="checkbox" id="reset-show"> <span>Mostra password</span>';
+    $('reset-pw2').insertAdjacentElement('afterend', show);
+    $('reset-show').addEventListener('change', function () {
+      var type = this.checked ? 'text' : 'password';
+      $('reset-pw').type = type;
+      $('reset-pw2').type = type;
+    });
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
       var pw = $('reset-pw').value;

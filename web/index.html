@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Nurvan">
 <meta name="application-name" content="Nurvan">
 <meta name="description" content="Train. Fuel. Recover. Track. Evolve.">
+<!-- Before anything is drawn: the light theme, when chosen in Impostazioni › Aspetto (web/theme.js). -->
+<script src="theme.js"></script>
 <script>
 (function () {
   try {
@@ -86,6 +88,7 @@
 <script src="wellbeing-care.js"></script>
 <script src="wellbeing-refs.js"></script>
 <script src="health-sources-refs.js"></script>
+<script src="app-community.js"></script>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -2276,8 +2279,8 @@ body.focus-mode [data-rewards-only] {
       <input id="account-email" type="email" placeholder="Email" autocomplete="email" required style="margin-bottom:8px;">
       <div id="account-password-wrap" class="pw-field">
         <input id="account-password" type="password" placeholder="Password (minimo 8 caratteri)" autocomplete="current-password" minlength="8" required>
-        <button type="button" class="pw-toggle" onclick="togglePasswordVisibility('account-password', this)" aria-label="Mostra password" title="Mostra / nascondi password">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+        <button type="button" class="pw-toggle" onclick="togglePasswordVisibility('account-password', this)" aria-label="Mostra password" aria-pressed="false" title="Mostra / nascondi password">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>
         </button>
       </div>
       <div id="account-consents" style="display:none;margin:6px 0 10px;">
@@ -2289,8 +2292,8 @@ body.focus-mode [data-rewards-only] {
         <input id="account-reset-code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Codice a 6 cifre" maxlength="6" style="margin-bottom:8px;width:100%;">
         <div class="pw-field">
           <input id="account-reset-password" type="password" autocomplete="new-password" placeholder="Nuova password (min. 8)" minlength="8">
-          <button type="button" class="pw-toggle" onclick="togglePasswordVisibility('account-reset-password', this)" aria-label="Mostra password" title="Mostra / nascondi password">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+          <button type="button" class="pw-toggle" onclick="togglePasswordVisibility('account-reset-password', this)" aria-label="Mostra password" aria-pressed="false" title="Mostra / nascondi password">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>
           </button>
         </div>
       </div>
@@ -3216,10 +3219,10 @@ body.coach-os-v2 .nav-item svg {
       // LAYER 0 & 1: CENTRAL CONFIG & RUNTIME RESOLUTION
       // ====================================================
       const CONFIG = {
-        appVersion: "1.5.35",
+        appVersion: "1.5.36",
         androidVersionCode: 41,
         build: "MEAL-PHOTO-V1",
-        schemaTarget: "0036",
+        schemaTarget: "0037",
         coachApiUrl: "https://coach-api-gemini.onrender.com",
         googleClientId: "846449169573-laa0kbkvq7mv9ufqb858dar8hvomco02.apps.googleusercontent.com",
         appleClientId: "com.giammaria.system.auth",
@@ -40738,6 +40741,7 @@ function openAccount(){
     splash.style.opacity = '0';
   }
   const modal = $('account-modal'); if(!modal) return;
+  hidePasswordFields(modal);
   modal.style.display = 'flex';
   const logged = !!store.accountToken && !!store.accountUser;
   $('account-form').style.display = logged ? 'none' : 'block';
@@ -40854,7 +40858,7 @@ window.personalStoreKeyFor = personalStoreKeyFor;
 window.activeGsStoreKey = activeGsStoreKey;
 window.loginGateRequired = loginGateRequired;
 
-function closeAccount(){ if (loginGateRequired()) return; const modal = $('account-modal'); if(modal) modal.style.display = 'none'; }
+function closeAccount(){ if (loginGateRequired()) return; const modal = $('account-modal'); if(modal) { modal.style.display = 'none'; hidePasswordFields(modal); } }
 function logoutAccount(){
   const wasClient = typeof isClientStorageContext === 'function' && isClientStorageContext();
   clearTimeout(accountSyncTimer);
@@ -41132,8 +41136,9 @@ function openChangePassword() {
   const oauth = store.accountUser && (store.accountUser.provider === 'google' || store.accountUser.provider === 'apple');
   sheet = document.createElement('div');
   sheet.id = 'change-password-sheet';
+  sheet.setAttribute('data-back-close', '');
   sheet.style.cssText = 'position:fixed;inset:0;z-index:10250;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;padding:16px;box-sizing:border-box;';
-  const field = (id, ph, ac) => '<div class="pw-field" style="margin-bottom:8px;"><input id="' + id + '" type="password" autocomplete="' + ac + '" placeholder="' + ph + '"></div>';
+  const field = (id, ph, ac) => '<div class="pw-field" style="margin-bottom:8px;"><input id="' + id + '" type="password" autocomplete="' + ac + '" placeholder="' + ph + '">' + pwToggleHtml(id) + '</div>';
   sheet.innerHTML = '<form onsubmit="submitChangePassword(event)" style="width:100%;max-width:440px;background:#0d0d0d;border:1px solid var(--gold);border-radius:16px;padding:16px;color:#eee;box-sizing:border-box;">' +
     '<h2 style="color:var(--gold);font-size:18px;margin:0 0 8px;">Cambia password</h2>' +
     '<p style="font-size:12px;color:#aaa;line-height:1.45;margin:0 0 12px;">Gli altri dispositivi verranno disconnessi e riceverai un’email di conferma.' +
@@ -41234,17 +41239,36 @@ async function finishOAuthLogin(payload){
     console.warn('ACCOUNT_SYNC_BG', err);
   });
 }
+// The eye shows the state of the field, as Android and iOS do: crossed out while the password is
+// hidden, open while it can be read. The other convention (the eye as the action to take) read to the
+// Play testers as a toggle working in reverse.
+const PW_EYE_OFF_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>';
+const PW_EYE_OPEN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>';
+function syncPasswordToggle(input, btn) {
+  if (!input || !btn) return;
+  const visible = input.type === 'text';
+  btn.innerHTML = visible ? PW_EYE_OPEN_SVG : PW_EYE_OFF_SVG;
+  btn.setAttribute('aria-pressed', visible ? 'true' : 'false');
+  btn.setAttribute('aria-label', visible ? 'Nascondi password' : 'Mostra password');
+}
 function togglePasswordVisibility(inputId, btn) {
   const el = $(inputId);
   if (!el) return;
-  const show = el.type === 'password';
-  el.type = show ? 'text' : 'password';
-  if (btn) {
-    btn.setAttribute('aria-label', show ? 'Nascondi password' : 'Mostra password');
-    btn.innerHTML = show
-      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z"/></svg>'
-      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>';
-  }
+  el.type = el.type === 'password' ? 'text' : 'password';
+  syncPasswordToggle(el, btn);
+}
+// Every password field of a form back to hidden, so a form opened again never starts with the
+// password readable.
+function hidePasswordFields(root) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('.pw-field').forEach(function (field) {
+    const input = field.querySelector('input');
+    if (input && input.type === 'text') input.type = 'password';
+    syncPasswordToggle(input, field.querySelector('.pw-toggle'));
+  });
+}
+function pwToggleHtml(inputId) {
+  return '<button type="button" class="pw-toggle" onclick="togglePasswordVisibility(\'' + inputId + '\', this)" aria-label="Mostra password" aria-pressed="false" title="Mostra / nascondi password">' + PW_EYE_OFF_SVG + '</button>';
 }
 function isAndroidWebViewNative() {
   const ua = String(navigator.userAgent || '');
@@ -42153,6 +42177,119 @@ function renderPrivacySettingsCard() {
     (cfg.privacyEmail ? '<div style="font-size:10px;color:#888;margin-top:10px;">Contatto privacy: <a href="mailto:' + esc(cfg.privacyEmail) + '" style="color:var(--gold);">' + esc(cfg.privacyEmail) + '</a></div>' : '') +
     '<div style="font-size:10px;color:#777;line-height:1.4;margin-top:8px;">' + esc(NOT_MEDICAL_TEXT) + '</div>' +
     '</div>';
+}
+
+// Impostazioni › Aspetto: dark (the app as it was drawn), light, or as the phone is set (web/theme.js).
+function renderAppearanceCard() {
+  const T = window.NurvanTheme;
+  if (!T) return '';
+  const cur = T.get();
+  const opt = (v, label) => '<button type="button" class="pill-tab' + (cur === v ? ' active' : '') + '" aria-pressed="' + (cur === v ? 'true' : 'false') + '" style="text-align:center;padding:10px 6px;font-size:12px;" onclick="setAppTheme(\'' + v + '\')">' + label + '</button>';
+  return '<div class="card" id="appearance-card" style="border:1px solid var(--border);margin-bottom:14px;">' +
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">🎨 Aspetto</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;">' + opt('dark', 'Scuro') + opt('light', 'Chiaro') + opt('system', 'Automatico') + '</div>' +
+    '<div style="font-size:10px;color:#666;line-height:1.4;margin-top:8px;">Automatico segue il tema chiaro o scuro del telefono. Vale su questo dispositivo.</div>' +
+    '</div>';
+}
+function setAppTheme(value) {
+  if (!window.NurvanTheme) return;
+  window.NurvanTheme.set(value);
+  render();
+}
+
+// Impostazioni › Nurvan ti piace?: share the app, rate it in the store, write to us, the page guides
+// (web/app-community.js has the native parts).
+function renderCommunityCard() {
+  const C = window.NurvanCommunity;
+  if (!C) return '';
+  const btn = (onclick, label, primary) => '<button type="button" class="btn ' + (primary ? 'btn-primary' : 'btn-outline') + '" style="flex:1;min-width:140px;font-size:10px;padding:10px 8px;" onclick="' + onclick + '">' + label + '</button>';
+  return '<div class="card" id="community-card" style="border:1px solid var(--border);margin-bottom:14px;">' +
+    '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:6px;">💛 Nurvan ti piace?</div>' +
+    '<p style="font-size:11px;color:#aaa;margin:0 0 10px;line-height:1.4;">Nurvan è appena nata: consigliarla a un amico o lasciare una recensione la aiuta a crescere. Se qualcosa non va, o ti manca una funzione, scrivici.</p>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+    btn('shareNurvanApp()', 'CONDIVIDI NURVAN', true) +
+    (C.canRate() ? btn('rateNurvanApp()', 'VALUTA NURVAN') : '') +
+    btn('openAppFeedback()', 'SUGGERIMENTI E PROBLEMI') +
+    btn('openTutorialIndex()', 'GUIDA ALLE PAGINE') +
+    '</div></div>';
+}
+async function shareNurvanApp() {
+  const C = window.NurvanCommunity;
+  if (!C) return;
+  const how = await C.share();
+  if (how === 'copied') showToast('Messaggio copiato: incollalo dove vuoi.', 'ok');
+  else if (how === 'manual') showToast(C.shareMessage(), 'info');
+}
+function rateNurvanApp() {
+  const C = window.NurvanCommunity;
+  if (C && !C.rate()) showToast('Puoi lasciare una recensione dall’app Nurvan sul telefono.', 'info');
+}
+
+const APP_FEEDBACK_HINTS = {
+  bug: 'Cosa è successo? Cosa stavi facendo e cosa ti aspettavi?',
+  idea: 'Cosa vorresti trovare in Nurvan?',
+  other: 'Scrivi qui il tuo messaggio.'
+};
+let appFeedbackKind = 'bug';
+function openAppFeedback(kind) {
+  appFeedbackKind = APP_FEEDBACK_HINTS[kind] ? kind : 'bug';
+  closeAppFeedback();
+  const email = (store.accountUser && store.accountUser.email) || '';
+  const chip = (k, label) => '<button type="button" class="pill-tab' + (k === appFeedbackKind ? ' active' : '') + '" data-kind="' + k + '" style="flex:1;padding:9px 6px;font-size:12px;" onclick="setAppFeedbackKind(\'' + k + '\')">' + label + '</button>';
+  const sheet = document.createElement('div');
+  sheet.id = 'app-feedback-sheet';
+  sheet.className = 'nurvan-sheet is-open';
+  sheet.setAttribute('data-back-close', '');
+  sheet.style.zIndex = '10200';
+  sheet.innerHTML = '<div class="nurvan-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="app-feedback-title">' +
+    '<div class="nurvan-sheet-head"><div id="app-feedback-title" style="font-size:12px;color:var(--gold);font-weight:900;letter-spacing:1px;">SUGGERIMENTI E PROBLEMI</div></div>' +
+    '<div class="nurvan-sheet-body" style="font-size:13px;color:#ccc;line-height:1.5;">' +
+    '<div id="app-feedback-kinds" style="display:flex;gap:8px;margin-bottom:10px;">' + chip('bug', 'Problema') + chip('idea', 'Suggerimento') + chip('other', 'Altro') + '</div>' +
+    '<textarea id="app-feedback-text" rows="6" maxlength="4000" aria-label="Messaggio" placeholder="' + esc(APP_FEEDBACK_HINTS[appFeedbackKind]) + '" style="width:100%;box-sizing:border-box;background:#111;border:1px solid #333;color:#fff;border-radius:10px;padding:10px;font:inherit;font-size:14px;resize:vertical;"></textarea>' +
+    '<input id="app-feedback-email" type="email" autocomplete="email" aria-label="Email" value="' + esc(email) + '" placeholder="Email per risponderti (facoltativa)" style="width:100%;box-sizing:border-box;margin-top:8px;">' +
+    '<label style="display:flex;gap:10px;align-items:flex-start;font-size:12px;color:#ccc;line-height:1.45;margin-top:10px;"><input type="checkbox" id="app-feedback-device" checked style="width:18px;height:18px;flex:0 0 auto;margin:2px 0 0;"><span>Allega i dati tecnici: versione dell’app, sistema, modello del telefono, schermo, lingua e pagina. Ci aiutano a capire un problema.</span></label>' +
+    '<div id="app-feedback-status" role="status" style="font-size:12px;color:#ff8888;min-height:16px;margin-top:8px;"></div>' +
+    '<p style="font-size:10px;color:#777;margin:4px 0 0;">Leggiamo ogni messaggio. Come trattiamo questi dati: ' + legalLinkHtml('privacy', 'informativa privacy') + '.</p>' +
+    '</div>' +
+    '<div class="nurvan-sheet-foot" style="display:flex;gap:8px;">' +
+    '<button type="button" class="btn btn-outline" style="flex:1;font-size:12px;padding:12px;" onclick="closeAppFeedback()">ANNULLA</button>' +
+    '<button type="button" id="app-feedback-send" class="btn btn-primary" style="flex:1;font-size:12px;padding:12px;" onclick="sendAppFeedback()">INVIA</button>' +
+    '</div></div>';
+  document.body.appendChild(sheet);
+}
+function setAppFeedbackKind(kind) {
+  if (!APP_FEEDBACK_HINTS[kind]) return;
+  appFeedbackKind = kind;
+  document.querySelectorAll('#app-feedback-kinds [data-kind]').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-kind') === kind); });
+  const text = $('app-feedback-text');
+  if (text) text.placeholder = trText(APP_FEEDBACK_HINTS[kind]);
+}
+function closeAppFeedback() {
+  const sheet = document.getElementById('app-feedback-sheet');
+  if (sheet) sheet.remove();
+}
+async function sendAppFeedback() {
+  const st = $('app-feedback-status');
+  const btn = $('app-feedback-send');
+  const C = window.NurvanCommunity;
+  const message = (($('app-feedback-text') || {}).value || '').trim();
+  if (message.length < 5) { if (st) st.textContent = 'Scrivi qualche parola in più: cosa è successo o cosa vorresti.'; return; }
+  const body = C ? C.feedbackBody(appFeedbackKind, message, ($('app-feedback-email') || {}).value, !!($('app-feedback-device') || {}).checked, currentView)
+    : { kind: appFeedbackKind, message: message, email: ($('app-feedback-email') || {}).value || '' };
+  if (btn) btn.disabled = true;
+  if (st) st.textContent = '';
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (store.accountToken) headers.Authorization = 'Bearer ' + store.accountToken;
+    const res = await fetch(coachEndpoint('/api/feedback'), { method: 'POST', headers: headers, body: JSON.stringify(body) });
+    const out = await res.json().catch(function () { return {}; });
+    if (!res.ok || !out.ok) throw new Error(out.error || 'Invio non riuscito. Riprova più tardi.');
+    closeAppFeedback();
+    showToast(body.email ? 'Grazie! Abbiamo ricevuto il messaggio e ti risponderemo per email.' : 'Grazie! Abbiamo ricevuto il messaggio.', 'ok');
+  } catch (err) {
+    if (st) st.textContent = (err && err.message && !/fetch|network/i.test(err.message)) ? err.message : 'Nessuna connessione: riprova quando sei online.';
+    if (btn) btn.disabled = false;
+  }
 }
 
 // Deleting the account: on the server first (everything of the account goes,
@@ -50915,6 +51052,8 @@ function finishInit() {
       }
 
       reportAppUse();
+      // From today the "few days of use" before the store's rating card is counted (web/app-community.js).
+      try { if (window.NurvanCommunity) window.NurvanCommunity.noteFirstUse(); } catch (_) {}
       if (typeof bootCoachPractice === 'function') {
         Promise.race([
           Promise.resolve(bootCoachPractice()),
@@ -52117,6 +52256,13 @@ function closeTopUiOverlay() {
 function handleNativeBack() {
   try {
     if (closeTopUiOverlay()) return true;
+    // A sheet that only asks something optional (change password, write to us) closes with back, as in
+    // any Android app, instead of the page behind it moving.
+    const backSheets = document.querySelectorAll('[data-back-close]');
+    if (backSheets.length) {
+      backSheets[backSheets.length - 1].remove();
+      return true;
+    }
     const menu = $('menu-hub-modal');
     if (menu && menu.style.display === 'flex') {
       menu.style.display = 'none';
@@ -58098,6 +58244,8 @@ function renderSettings(c) {
       </div>
     </div>
 
+    ${renderAppearanceCard()}
+
     ${(typeof isAthleteRole === 'function' && isAthleteRole()) ? '' : `
     <!-- Active Plan & Upgrade Card -->
     <div class="card" style="border:1px solid var(--border);background:linear-gradient(135deg, #18150c 0%, #0d0d0d 100%);margin-bottom:14px;">
@@ -58113,6 +58261,8 @@ function renderSettings(c) {
       </div>
     </div>
     `}
+
+    ${renderCommunityCard()}
 
     ${renderPrivacySettingsCard()}
 
@@ -68293,6 +68443,7 @@ function closeWorkoutCompleteOverlay(goto) {
   if (!fromFinalize) return;
   // The session is closed: back home, not to the finished workout.
   if (goto !== 'stats') navigate('home');
+  const coachQuestion = !!window.__pendingCoachAnalyze;
   maybeAskCoachAfterComplete();
   // Asked here rather than during the session: the effort is measured over
   // the last sessions, and the moment to decide about next week is when this
@@ -68301,7 +68452,13 @@ function closeWorkoutCompleteOverlay(goto) {
   setTimeout(function () {
     if (typeof maybeAskTestResults === 'function' && maybeAskTestResults()) return;
     if (typeof maybeSuggestDeloadWeek === 'function' && maybeSuggestDeloadWeek()) return;
-    if (typeof maybeSuggestProgressionChange === 'function') maybeSuggestProgressionChange(false);
+    if (typeof maybeSuggestProgressionChange === 'function' && maybeSuggestProgressionChange(false)) return;
+    // Nothing else to decide, and the coach is not being asked: the moment for the store's rating card,
+    // which the store may or may not show (web/app-community.js decides when it is asked at all).
+    if (coachQuestion) return;
+    setTimeout(function () {
+      try { if (window.NurvanCommunity) window.NurvanCommunity.afterWorkout((store.logs || []).length); } catch (_) {}
+    }, 1200);
   }, 400);
 }
 
@@ -80924,6 +81081,14 @@ if (typeof window !== 'undefined') {
   window.changeAppLanguage = changeAppLanguage;
   window.applyChromeI18n = applyChromeI18n;
   window.togglePasswordVisibility = togglePasswordVisibility;
+  window.pwToggleHtml = pwToggleHtml;
+  window.setAppTheme = setAppTheme;
+  window.shareNurvanApp = shareNurvanApp;
+  window.rateNurvanApp = rateNurvanApp;
+  window.openAppFeedback = openAppFeedback;
+  window.setAppFeedbackKind = setAppFeedbackKind;
+  window.sendAppFeedback = sendAppFeedback;
+  window.closeAppFeedback = closeAppFeedback;
   window.setStatsBodyView = setStatsBodyView;
   window.selectStatsMuscle = selectStatsMuscle;
   window.startGoogleAuth = startGoogleAuth;
@@ -82215,8 +82380,6 @@ function ensurePracticeStyle() {
     '@keyframes cpSendBar{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}',
     '.cp-icon-btn.cp-send-pressed{transform:scale(0.88);filter:brightness(1.25);transition:transform .12s ease,filter .12s ease;}',
     '.cp-icon-btn.cp-sending{opacity:.55;pointer-events:none;}',
-    '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
-    '.cp-pw-row input{flex:1;}',
     '.cp-cal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}',
     '.cp-cal-grid select{width:100%;padding:12px 8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;font-weight:700;}',
     '.cp-exam-cat{margin:10px 0;border:1px solid #222;border-radius:10px;padding:8px;}',
@@ -83333,8 +83496,9 @@ function renderInvitePanel(info) {
     (info && info.error ? '<p class="cp-help" style="color:#f88;">' + esc(info.error) + '</p>' : '') +
     (inApp ? '<p class="cp-help">Puoi già accedere da qui. Per installare Nurvan sulla Home, apri il link in Safari o Chrome.</p>' : '') +
     '<div class="cp-field"><label>Nome utente</label><input id="cp-login-user" type="text" autocomplete="username" value="' + esc((info && info.username) || '') + '"></div>' +
-    '<div class="cp-field"><label>Password</label><div class="cp-pw-row"><input id="cp-login-pass" type="password" autocomplete="current-password">' +
-    '<button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="toggleClientLoginPassword()">MOSTRA</button></div></div>' +
+    // The same eye as the app's login (the old text button said MOSTRA in both states).
+    '<div class="cp-field"><label>Password</label><div class="pw-field"><input id="cp-login-pass" type="password" autocomplete="current-password">' +
+    (typeof window.pwToggleHtml === 'function' ? window.pwToggleHtml('cp-login-pass') : '') + '</div></div>' +
     '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#ccc;margin:8px 0;width:100%;box-sizing:border-box;"><input id="cp-login-stay" type="checkbox" checked style="margin-top:2px;flex-shrink:0;width:18px;height:18px;"><span style="flex:1;min-width:0;">Resta connesso</span></label>' +
     '<div id="cp-invite-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="submitClientInviteLogin()">ACCEDI</button>' +
@@ -87787,12 +87951,6 @@ async function newChatThread(clientId, role) {
   } catch (err) { practiceToast((err && err.message) || 'Nuova chat non riuscita', 'danger'); }
 }
 
-function toggleClientLoginPassword() {
-  const el = document.getElementById('cp-login-pass');
-  if (!el) return;
-  el.type = el.type === 'password' ? 'text' : 'password';
-}
-
 async function requestClientPasswordHelp() {
   const status = document.getElementById('cp-invite-status');
   const username = (document.getElementById('cp-login-user') && document.getElementById('cp-login-user').value || '').trim();
@@ -89684,7 +89842,6 @@ window.startChatDictation = startChatDictation;
 window.pickChatAttachment = pickChatAttachment;
 window.clearChatForMe = clearChatForMe;
 window.newChatThread = newChatThread;
-window.toggleClientLoginPassword = toggleClientLoginPassword;
 window.requestClientPasswordHelp = requestClientPasswordHelp;
 window.askRealCoachForDomain = askRealCoachForDomain;
 window.requestAthleteGenerateFreedom = requestAthleteGenerateFreedom;

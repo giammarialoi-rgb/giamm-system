@@ -13,11 +13,11 @@ function ok(value, message) {
 }
 
 const release = JSON.parse(fs.readFileSync(path.join(root, "release.json"), "utf8"));
-ok(release.versionName === "1.5.35", "release baseline is 1.5.35 (1.5.34 is the train approved on the App Store, closed to new builds)");
-ok(release.schemaTarget === "0036", "schema target includes all Coach OS migrations");
+ok(release.versionName === "1.5.36", "release baseline is 1.5.36 (1.5.35 is the train live on the App Store, closed to new builds)");
+ok(release.schemaTarget === "0037", "schema target includes all Coach OS migrations");
 
 const migrations = await loadMigrationFiles();
-ok(migrations.map((row) => row.version).join(",") === "0001,0002,0003,0004,0005,0006,0007,0008,0009,0010,0011,0012,0013,0014,0015,0016,0017,0018,0019,0020,0021,0022,0023,0024,0025,0026,0027,0028,0029,0030,0031,0032,0033,0034,0035,0036", "migrations are additive and ordered");
+ok(migrations.map((row) => row.version).join(",") === "0001,0002,0003,0004,0005,0006,0007,0008,0009,0010,0011,0012,0013,0014,0015,0016,0017,0018,0019,0020,0021,0022,0023,0024,0025,0026,0027,0028,0029,0030,0031,0032,0033,0034,0035,0036,0037", "migrations are additive and ordered");
 
 const flags = resolveCoachOsFeatureFlags({ env: {} });
 for (const name of [

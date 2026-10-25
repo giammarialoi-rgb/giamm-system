@@ -30,6 +30,7 @@ import { mountHyrox } from "./server/site/hyrox.mjs";
 import { mountSamples, sampleCardsHtml } from "./server/site/samples.mjs";
 import { mountWaitlist, waitlistPath } from "./server/site/waitlist.mjs";
 import { mountSitemap } from "./server/site/sitemap.mjs";
+import { mountDownloadLink } from "./server/site/download-link.mjs";
 import { mountIndexNowKey, startIndexNowJob, keyOf as indexNowKey } from "./server/site/indexnow.mjs";
 import { canonicalUrls } from "./server/site/urls.mjs";
 import { mountWellbeing, wellbeingPath } from "./server/site/wellbeing.mjs";
@@ -43,6 +44,7 @@ import { mountGoogleAppAuth } from "./server/account/google-app.mjs";
 import { loadLegal, validMainConsent, recordMainConsent, readConsentRow, aiConsentWithdrawn, aiConsentActive, mountConsentRoutes } from "./server/account/consent.mjs";
 import { mountAdminDashboard } from "./server/admin/index.mjs";
 import { mountContentReports } from "./server/admin/content-reports.mjs";
+import { mountAppFeedback } from "./server/admin/app-feedback.mjs";
 import { createAnalytics } from "./server/admin/analytics.mjs";
 import { adminSlug } from "./server/admin/link.mjs";
 import { startIntegrationsJob } from "./server/admin/integrations.mjs";
@@ -2596,6 +2598,8 @@ app.post("/api/app/ping", analytics.appPing);
 mountAdminDashboard(app, { pool, initDb, sendEmail, secret: JWT_SECRET, analytics, siteHosts: SITE_HOSTS });
 // Notices of illegal content (DSA art. 16), from /segnala-contenuto: open to anyone, with or without an account.
 mountContentReports(app, { pool, initDb, sendEmail, secret: JWT_SECRET, notifyTo: process.env.CONTENT_REPORT_EMAIL || "info@nurvan.app" });
+// Suggestions and problems from the app (Impostazioni › Suggerimenti e problemi): with or without an account.
+mountAppFeedback(app, { pool, initDb, accountFromBearer, sendEmail, secret: JWT_SECRET, notifyTo: process.env.FEEDBACK_EMAIL || "info@nurvan.app" });
 if (isProduction(process.env)) startIntegrationsJob({ pool, initDb, env: process.env, secret: JWT_SECRET });
 const siteEsc = (v) => String(v == null ? "" : v).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 async function siteShell(req, page) {
@@ -2750,6 +2754,9 @@ for (const prefix of SITE_LANGS.map(langPrefix)) {
   app.get("/sito" + prefix, sitePage);
   app.get(prefix || "/", (req, res, next) => (isSiteHost(req) ? sitePage(req, res) : next()));
 }
+
+// The link the app shares: each phone to its store (server/site/download-link.mjs).
+mountDownloadLink(app);
 
 const LEGAL_PAGES = {
   "/privacy": "privacy.html",

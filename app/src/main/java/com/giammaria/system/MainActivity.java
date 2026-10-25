@@ -74,6 +74,9 @@ import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
+import com.google.android.play.core.review.ReviewInfo;
+import com.google.android.play.core.review.ReviewManager;
+import com.google.android.play.core.review.ReviewManagerFactory;
 
 public class MainActivity extends Activity {
     private WebView web;
@@ -374,6 +377,15 @@ public class MainActivity extends Activity {
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         if (web != null) applyReadableViewport(web.getSettings());
+        // The phone switched between light and dark: the page follows it when its theme is "Automatico".
+        if (web != null) {
+            final String mode = systemIsDark(newConfig) ? "dark" : "light";
+            web.post(() -> web.evaluateJavascript("window.nurvanSystemTheme && window.nurvanSystemTheme('" + mode + "');", null));
+        }
+    }
+
+    private static boolean systemIsDark(Configuration config) {
+        return config != null && (config.uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     }
 
     private void dispatchNurvanRoute(Intent intent) {
@@ -1279,6 +1291,64 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** Whether the phone is set to dark mode. The web view cannot tell: it reports the app's own (light) theme. */
+        @JavascriptInterface
+        public boolean isSystemDark() {
+            return systemIsDark(getResources().getConfiguration());
+        }
+
+        /** Share a text with its link (Impostazioni › Condividi Nurvan) through the Android share sheet. */
+        @JavascriptInterface
+        public void shareText(String text, String title) {
+            runOnUiThread(() -> {
+                try {
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("text/plain");
+                    send.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
+                    send.putExtra(Intent.EXTRA_SUBJECT, "Nurvan");
+                    startActivity(Intent.createChooser(send, title == null || title.isEmpty() ? "Condividi" : title));
+                } catch (Exception e) {
+                    Log.e("GiammariaWebView", "shareText failed", e);
+                }
+            });
+        }
+
+        /** The app's page on Google Play, where a review is written: the Play Store app, the browser without it. */
+        @JavascriptInterface
+        public void openStorePage() {
+            runOnUiThread(() -> {
+                String id = getPackageName();
+                try {
+                    Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + id));
+                    open.setPackage("com.android.vending");
+                    open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(open);
+                } catch (Exception e) {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + id)));
+                    } catch (Exception ignored) {}
+                }
+            });
+        }
+
+        /** Google Play's in-app review card. Play decides whether it really appears (it has a quota), so the
+         *  page asks for it only after a milestone, never from a button. */
+        @JavascriptInterface
+        public void requestInAppReview() {
+            runOnUiThread(() -> {
+                try {
+                    ReviewManager manager = ReviewManagerFactory.create(MainActivity.this);
+                    manager.requestReviewFlow().addOnCompleteListener(task -> {
+                        if (!task.isSuccessful() || isFinishing()) return;
+                        ReviewInfo info = task.getResult();
+                        manager.launchReviewFlow(MainActivity.this, info);
+                    });
+                } catch (Exception e) {
+                    Log.w("GiammariaWebView", "in-app review not available", e);
+                }
+            });
+        }
+
         void release() {
             if (recognizer != null) {
                 recognizer.destroy();
@@ -1572,25 +1642,20 @@ public class MainActivity extends Activity {
                 value -> {
                     boolean handled = value != null && value.contains("1");
                     if (handled) return;
-                    showExitDialog();
+                    leaveApp();
                 }
             );
             return;
         }
-        showExitDialog();
+        leaveApp();
     }
 
-    private void showExitDialog() {
-        new AlertDialog.Builder(this)
-            .setTitle("USCITA")
-            .setMessage("Vuoi salvare i progressi prima di uscire da Nurvan?")
-            .setPositiveButton("SALVA ED ESCI", (dialog, which) -> {
-                if (web != null) web.evaluateJavascript("persist();", null);
-                finish();
-            })
-            .setNegativeButton("ESCI", (dialog, which) -> finish())
-            .setNeutralButton("ANNULLA", null)
-            .show();
+    // Back on the first screen leaves the app the way other Android apps do: to the background, its data
+    // saved, ready to come back where it was. It used to ask "save before leaving?" in a dialog, but the
+    // app saves by itself, and the question was one of the web-page details the Play testers noticed.
+    private void leaveApp() {
+        if (web != null) web.evaluateJavascript("try{persist();}catch(e){}", null);
+        moveTaskToBack(true);
     }
 
     @Override

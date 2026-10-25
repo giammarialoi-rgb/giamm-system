@@ -38,6 +38,8 @@ const PRECACHE = [
   './wellbeing-care.js',
   './wellbeing-refs.js',
   './health-sources-refs.js',
+  './app-community.js',
+  './theme.js',
   './icons.js',
   './food-search.js',
   './nutrition-targets.js',

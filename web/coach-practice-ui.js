@@ -965,8 +965,6 @@ function ensurePracticeStyle() {
     '@keyframes cpSendBar{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}',
     '.cp-icon-btn.cp-send-pressed{transform:scale(0.88);filter:brightness(1.25);transition:transform .12s ease,filter .12s ease;}',
     '.cp-icon-btn.cp-sending{opacity:.55;pointer-events:none;}',
-    '.cp-pw-row{display:flex;gap:6px;align-items:center;}',
-    '.cp-pw-row input{flex:1;}',
     '.cp-cal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}',
     '.cp-cal-grid select{width:100%;padding:12px 8px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:14px;font-weight:700;}',
     '.cp-exam-cat{margin:10px 0;border:1px solid #222;border-radius:10px;padding:8px;}',
@@ -2083,8 +2081,9 @@ function renderInvitePanel(info) {
     (info && info.error ? '<p class="cp-help" style="color:#f88;">' + esc(info.error) + '</p>' : '') +
     (inApp ? '<p class="cp-help">Puoi già accedere da qui. Per installare Nurvan sulla Home, apri il link in Safari o Chrome.</p>' : '') +
     '<div class="cp-field"><label>Nome utente</label><input id="cp-login-user" type="text" autocomplete="username" value="' + esc((info && info.username) || '') + '"></div>' +
-    '<div class="cp-field"><label>Password</label><div class="cp-pw-row"><input id="cp-login-pass" type="password" autocomplete="current-password">' +
-    '<button class="btn btn-outline" type="button" style="font-size:10px;padding:8px 10px;" onclick="toggleClientLoginPassword()">MOSTRA</button></div></div>' +
+    // The same eye as the app's login (the old text button said MOSTRA in both states).
+    '<div class="cp-field"><label>Password</label><div class="pw-field"><input id="cp-login-pass" type="password" autocomplete="current-password">' +
+    (typeof window.pwToggleHtml === 'function' ? window.pwToggleHtml('cp-login-pass') : '') + '</div></div>' +
     '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:#ccc;margin:8px 0;width:100%;box-sizing:border-box;"><input id="cp-login-stay" type="checkbox" checked style="margin-top:2px;flex-shrink:0;width:18px;height:18px;"><span style="flex:1;min-width:0;">Resta connesso</span></label>' +
     '<div id="cp-invite-status" class="cp-help"></div>' +
     '<button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="submitClientInviteLogin()">ACCEDI</button>' +
@@ -6537,12 +6536,6 @@ async function newChatThread(clientId, role) {
   } catch (err) { practiceToast((err && err.message) || 'Nuova chat non riuscita', 'danger'); }
 }
 
-function toggleClientLoginPassword() {
-  const el = document.getElementById('cp-login-pass');
-  if (!el) return;
-  el.type = el.type === 'password' ? 'text' : 'password';
-}
-
 async function requestClientPasswordHelp() {
   const status = document.getElementById('cp-invite-status');
   const username = (document.getElementById('cp-login-user') && document.getElementById('cp-login-user').value || '').trim();
@@ -8434,7 +8427,6 @@ window.startChatDictation = startChatDictation;
 window.pickChatAttachment = pickChatAttachment;
 window.clearChatForMe = clearChatForMe;
 window.newChatThread = newChatThread;
-window.toggleClientLoginPassword = toggleClientLoginPassword;
 window.requestClientPasswordHelp = requestClientPasswordHelp;
 window.askRealCoachForDomain = askRealCoachForDomain;
 window.requestAthleteGenerateFreedom = requestAthleteGenerateFreedom;
