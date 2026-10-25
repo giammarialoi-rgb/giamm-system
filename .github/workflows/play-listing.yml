@@ -1,0 +1,30 @@
+# Google Play store listing: title, short and full description from store/google-play/listing/<locale>/,
+# sent with the Play Developer API (tools/store/play_listing.mjs). Started by hand from the Actions tab:
+#   gh workflow run play-listing.yml -f mode=check     shows what would change, changes nothing
+#   gh workflow run play-listing.yml -f mode=publish   writes the texts and sends them to Google's review
+# Secret: PLAY_SERVICE_ACCOUNT_JSON (the same as the Android workflow).
+name: Play Listing
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check (changes nothing) or publish'
+        type: choice
+        default: check
+        options: [check, publish]
+
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Store listing
+        env:
+          MODE: ${{ inputs.mode }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node tools/store/play_listing.mjs
