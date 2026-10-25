@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rodillas hacia fuera en sentadilla: ¿regla o cue? | Nurvan</title>
+<meta name="description" content="Sacar las rodillas es un cue, no una regla universal. Girar los pies 20° solo mueve dos músculos, y solo al bajar: esto es lo que dicen ocho estudios.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entrenamiento</a><a href="#">Nutrición</a><a href="#">Suplementación</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descargar la app</a></div></header>
+<main class="wrap" lang="es">
+<div class="crumb">Blog · Entrenamiento</div>
+<h1>Rodillas hacia fuera en sentadilla: ¿regla o cue?</h1>
+<p class="lede">"Saca las rodillas" es probablemente la frase más repetida bajo una barra cargada. Funciona tan bien en algunas personas que acabó convertida en regla para todas, y a quien no la cumple se le dice que está haciendo mal la sentadilla. He leído ocho trabajos indexados que midieron ángulos, activación muscular y momentos articulares en la sentadilla. El cue sirve. Casi todo lo que se ha construido a su alrededor, no.</p>
+<div class="meta"><span>25 de octubre de 2026</span><span><b>14</b> min de lectura</span><span><b>8</b> estudios citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · actualizado el 25 de octubre de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Rodillas hacia fuera en sentadilla: ¿regla o cue?"><figcaption class="cap">U.S. Marine Corps, Lance Cpl. Christian Salazar, vía Wikimedia Commons, dominio público (PD-USGov-Military-USMC)</figcaption></figure>
+<div class="box"><h2>En resumen</h2><ul><li><strong>Girar los pies cambia muy poco.</strong> Con 20° de rotación externa frente a pies paralelos, al 80% del máximo, solo se mueven dos músculos: bíceps femoral <strong>+35%</strong> y gastrocnemio medial <strong>+70%</strong>, y únicamente en la bajada. El resto queda igual (Rolli et al., 2021).</li><li><strong>Más rotación externa no significa más glúteo.</strong> Una revisión de 18 estudios de EMG concluye que las variantes habituales —anchura de pies, rotación de cadera, sentadilla frontal— no cambian de forma significativa la activación muscular (Clark et al., 2012).</li><li><strong>La rodilla que se mete hacia dentro no se corrige hablando.</strong> Quien muestra ese colapso tiene ratios de coactivación glúteo:aductores más bajos (<strong>p = 0,007</strong> para el glúteo mayor) y menos dorsiflexión de tobillo: el cue no toca ninguna de las dos causas (Mauntel et al., 2013).</li><li><strong>El famoso riesgo de ligamento cruzado viene de otro gesto.</strong> El estudio prospectivo más citado midió aterrizajes de salto en 205 deportistas, no sentadillas con barra (Hewett et al., 2005).</li><li><strong>"Que la rodilla nunca pase la punta" es el error contrario.</strong> Bloquearlas baja el momento en la rodilla de 150 a 117 N·m, pero sube el de la cadera de 28 a <strong>303 N·m</strong>: más de diez veces (Fry et al., 2003).</li></ul></div>
+<figure><div class="chart"><svg aria-label="Gráfico de barras: con 20° de rotación externa del pie el bíceps femoral sube un 35% y el gastrocnemio medial un 70% en la bajada, mientras el resto no cambia" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="c1t c1d">
+<title id="c1t">Girar los pies 20°: qué cambia de verdad</title><desc id="c1d">Cambio de EMG con 20 grados de rotación externa del pie frente a pies paralelos: bíceps femoral más 35 por ciento, gastrocnemio medial más 70 por ciento, sin diferencias significativas en los otros seis músculos.</desc>
+<rect width="800" height="500" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Girar los pies 20°: qué cambia de verdad</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#a0a0a0">Cambio de la activación EMG frente a pies paralelos · solo fase de bajada · 80% 1RM</text>
+<line x1="250" y1="420" x2="760" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="250" y1="140" x2="250" y2="450" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="250" y1="350" x2="760" y2="350" stroke="#222" stroke-width="1"/>
+<text x="240" y="354" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">+20%</text>
+<line x1="250" y1="280" x2="760" y2="280" stroke="#222" stroke-width="1"/>
+<text x="240" y="284" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">+40%</text>
+<line x1="250" y1="210" x2="760" y2="210" stroke="#222" stroke-width="1"/>
+<text x="240" y="214" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">+60%</text>
+<line x1="250" y1="140" x2="760" y2="140" stroke="#222" stroke-width="1"/>
+<text x="240" y="144" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">+80%</text>
+<text x="240" y="424" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+<rect x="300" y="298" width="110" height="122" fill="#aa8a2e"/>
+<text x="355" y="286" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700" fill="#f3e5ab">+35%</text>
+<text x="355" y="444" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#f0f0f0">Bíceps femoral</text>
+<rect x="470" y="175" width="110" height="245" fill="#d4af37"/>
+<text x="525" y="163" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700" fill="#f3e5ab">+70%</text>
+<text x="525" y="444" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#f0f0f0">Gastrocnemio medial</text>
+<rect x="640" y="417" width="110" height="3" fill="#4a4a4a"/>
+<text x="695" y="406" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="15" font-weight="700" fill="#a0a0a0">0</text>
+<text x="695" y="444" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#f0f0f0">Otros 6 músculos medidos</text>
+<text x="695" y="462" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#a0a0a0">sin diferencia significativa</text>
+<text x="40" y="482" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#a0a0a0">Datos: Rolli et al., 2021, J Sports Med Phys Fitness (PMID 34498821), 8 hombres activos</text>
+</svg></div><figcaption class="cap">Gráfico de barras: con 20° de rotación externa del pie el bíceps femoral sube un 35% y el gastrocnemio medial un 70% en la bajada, mientras el resto no cambia</figcaption></figure>
+<h2>De dónde viene el cue y por qué funciona igualmente</h2>
+<p>Al bajar, la cadera no solo flexiona: combina flexión, abducción y rotación. Dentro de esa combinación la rodilla puede desplazarse hacia fuera durante la bajada y meterse algo al salir del punto bajo. Ninguna de las dos direcciones es correcta o incorrecta por sí misma: son el resultado de la forma de tu cadera y de cómo empujas.</p>
+<p>"Rodillas hacia fuera" nació como corrección para quien pierde la posición: la rodilla colapsa hacia dentro, el pie se aplana y el empuje se escapa. Ahí sirve, y por eso dio la vuelta al mundo. El problema es el paso siguiente: convertirlo en regla también para quien nunca tuvo ese problema.</p>
+<h2>Girar los pies cambia dos músculos, no toda la sentadilla</h2>
+<p>El estudio más directo sobre el tema hizo algo sencillo: ocho hombres activos ejecutaron sentadilla trasera al 80% del máximo con tres ángulos de pie —paralelos, +10° y +20° de rotación externa— midiendo ocho músculos de la pierna dominante (Rolli et al., 2021).</p>
+<p>Con 20° frente a paralelos cambian dos cosas: el bíceps femoral trabaja un <strong>35% más</strong> (p = 0,027) y el gastrocnemio medial un <strong>70% más</strong> (p = 0,040). Ambas diferencias aparecen solo en la fase de bajada. En el resto de músculos medidos y en el resto de condiciones no apareció ninguna diferencia significativa.</p>
+<p>Es un resultado más pequeño de lo que promete el cue, y encaja con la revisión de referencia: en 18 estudios que midieron EMG en sentadilla con barra libre, las variaciones habituales de técnica no afectan significativamente a la activación muscular (Clark et al., 2012). Lo que sí la cambia es la carga en la barra.</p>
+<p>Hay una excepción, pero afecta al reparto entre articulaciones, no entre músculos: con barra baja y pies anchos la cadera aporta más al momento total, mientras que con barra alta y pies estrechos aporta más la rodilla, con más vasto lateral y menos glúteo mayor (Larsen et al., 2021). Si quieres llevar trabajo a la cadera, lo haces con la posición de la barra y la anchura de los pies, no rotando unos grados más las rodillas.</p>
+<h2>Si la rodilla se mete, el cue no toca la causa</h2>
+<p>Esta es la parte más útil para quien entrena. Un estudio comparó a 40 adultos activos: 20 que muestran un claro colapso de la rodilla hacia dentro en sentadilla a una pierna y 20 que no (Mauntel et al., 2013).</p>
+<p>El grupo que colapsa tiene dos rasgos medibles. Primero, ratios de coactivación más bajos entre glúteos y aductores: glúteo medio sobre aductores p = 0,028, glúteo mayor sobre aductores p = 0,007. Segundo, menos dorsiflexión pasiva de tobillo, tanto con la rodilla extendida (p = 0,047) como flexionada (p = 0,034).</p>
+<p>Traducido: la rodilla se mete porque el tobillo no deja avanzar la tibia y porque el reparto de fuerza alrededor de la cadera está desequilibrado. Una frase gritada bajo la barra no cambia la movilidad del tobillo ni fortalece el glúteo. Puede tapar el problema durante una serie; no lo resuelve.</p>
+<h2>Cuánto peligro hay realmente</h2>
+<p>El "saca las rodillas o te rompes el cruzado" viene de una investigación real, pero sobre otro gesto. El estudio prospectivo más citado siguió a 205 deportistas de fútbol, baloncesto y voleibol midiendo un aterrizaje de salto. Las nueve que después se rompieron el ligamento cruzado anterior aterrizaban con un ángulo de abducción de rodilla <strong>8° mayor</strong>, un momento de abducción <strong>2,5 veces</strong> más alto y una fuerza de reacción del suelo un 20% superior, con un tiempo de apoyo un 16% más corto (Hewett et al., 2005).</p>
+<p>Los números son sólidos y el modelo predecía la lesión con un 78% de sensibilidad y un 73% de especificidad. Pero describen un aterrizaje: impacto en fracciones de segundo, sobre una pierna, sin control voluntario. Una sentadilla al 90% con unos grados de entrada al salir del punto bajo es un gesto lento, bilateral y consciente. Hoy no existe ningún estudio prospectivo que relacione ese movimiento con más riesgo de lesión en quien levanta. Tratar los dos casos como si fueran lo mismo es el salto lógico más común en este tema.</p>
+<figure><div class="chart"><svg aria-label="Gráfico de barras: con rodillas libres el momento en la rodilla es 150 N·m y en la cadera 28 N·m; bloqueándolas detrás de las puntas la rodilla baja a 117 N·m y la cadera sube a 303 N·m" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="c2t c2d">
+<title id="c2t">Mantener las rodillas detrás de las puntas</title><desc id="c2d">Momento en la rodilla 150 frente a 117 newton metro y momento en la cadera 28 frente a 303 newton metro, rodillas libres frente a rodillas bloqueadas detrás de las puntas.</desc>
+<rect width="800" height="500" fill="#0c0c0c"/>
+<text x="40" y="46" font-family="Helvetica,Arial,sans-serif" font-size="23" font-weight="700" fill="#f0f0f0">Mantener las rodillas detrás de las puntas</text>
+<text x="40" y="74" font-family="Helvetica,Arial,sans-serif" font-size="14" fill="#a0a0a0">Momento articular estático en la sentadilla al paralelo · carga igual al peso corporal</text>
+<rect x="40" y="96" width="14" height="14" fill="#aa8a2e"/><text x="62" y="108" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#f0f0f0">Rodillas libres</text>
+<rect x="330" y="96" width="14" height="14" fill="#d4af37"/><text x="352" y="108" font-family="Helvetica,Arial,sans-serif" font-size="13" fill="#f0f0f0">Rodillas bloqueadas</text>
+<line x1="130" y1="420" x2="760" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="130" y1="145" x2="130" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="130" y1="340" x2="760" y2="340" stroke="#222" stroke-width="1"/>
+<text x="120" y="344" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">100</text>
+<line x1="130" y1="261" x2="760" y2="261" stroke="#222" stroke-width="1"/>
+<text x="120" y="265" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">200</text>
+<line x1="130" y1="181" x2="760" y2="181" stroke="#222" stroke-width="1"/>
+<text x="120" y="185" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">300</text>
+<text x="120" y="424" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">0</text>
+<text x="120" y="135" text-anchor="end" font-family="Helvetica,Arial,sans-serif" font-size="12" fill="#a0a0a0">N·m</text>
+<rect x="220" y="300" width="105" height="120" fill="#aa8a2e"/>
+<text x="272" y="290" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">150</text>
+<rect x="340" y="327" width="105" height="93" fill="#d4af37"/>
+<text x="392" y="317" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">117</text>
+<text x="332" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="16" fill="#f0f0f0">Rodilla</text>
+<rect x="530" y="398" width="105" height="22" fill="#aa8a2e"/>
+<text x="582" y="388" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">28</text>
+<rect x="650" y="179" width="105" height="241" fill="#d4af37"/>
+<text x="702" y="169" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="19" font-weight="700" fill="#f3e5ab">303</text>
+<text x="642" y="448" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="16" fill="#f0f0f0">Cadera</text>
+<text x="40" y="482" font-family="Helvetica,Arial,sans-serif" font-size="11" fill="#a0a0a0">Datos: Fry et al., 2003, J Strength Cond Res (PMID 14636100), 7 hombres entrenados</text>
+</svg></div><figcaption class="cap">Gráfico de barras: con rodillas libres el momento en la rodilla es 150 N·m y en la cadera 28 N·m; bloqueándolas detrás de las puntas la rodilla baja a 117 N·m y la cadera sube a 303 N·m</figcaption></figure>
+<h2>El error gemelo: &quot;la rodilla nunca debe pasar la punta del pie&quot;</h2>
+<p>Es la regla opuesta y nace de la misma idea: que la rodilla hay que protegerla por principio. Siete hombres entrenados hicieron sentadillas al paralelo con una carga igual a su peso corporal en dos condiciones: rodillas libres para avanzar más allá de las puntas, o bloqueadas por una barrera de madera (Fry et al., 2003).</p>
+<p>Con las rodillas libres, el momento en la rodilla fue de 150,1 N·m y en la cadera de 28,2 N·m. Bloqueándolas, la rodilla bajó a 117,3 N·m —un 22% menos— pero la cadera subió a <strong>302,7 N·m</strong>: más de diez veces el valor de partida. La carga no desaparece, se muda a la cadera y la zona lumbar. Los autores concluyen que un reparto razonable de fuerzas probablemente exige que las rodillas pasen ligeramente las puntas.</p>
+<h2>Tu cadera decide más que el cue</h2>
+<p>La última pieza es anatómica. La forma de la cabeza y el cuello del fémur varía entre personas, y con ella el ángulo al que el hueso choca con el borde del acetábulo. En un modelo de elementos finitos, el estrés medio en el acetábulo durante la sentadilla pasó de 9,64 MPa en una cadera de referencia a 11,36 MPa con morfología cam moderada y a 28,43 MPa con una cam amplia; los sujetos con pinzamiento femoroacetabular alcanzaban 106,3° de flexión de cadera frente a 112,6°, y 8,9° de rotación interna frente a 14,8° (Bagwell y Powers, 2017).</p>
+<p>Aquí el cue se gana su sitio, pero por un motivo distinto del que se cuenta: los autores observan que hacer sentadilla con la cadera en posición neutra o en rotación externa puede reducir el choque óseo a grados altos de flexión. No para activar más un músculo: para dar espacio a la articulación. Dos personas con fémures distintos tendrán, por tanto, sentadillas que <em>deben</em> verse distintas, y esa es la razón principal por la que no existe un ángulo universal (Schoenfeld, 2010).</p>
+<h2>Qué dice realmente la investigación</h2>
+<table><thead><tr><th>Afirmación</th><th>Veredicto</th><th>El dato</th></tr></thead><tbody><tr><td>"Rodillas hacia fuera" es un cue, no una regla para todos</td><td><strong>Confirmado</strong></td><td>Ningún estudio identifica un ángulo óptimo; las revisiones no hallan diferencias relevantes entre variantes de rotación de cadera (Clark et al., 2012)</td></tr><tr><td>Más rotación externa = más glúteo</td><td><strong>Desmentido</strong></td><td>Con 20° solo cambian bíceps femoral (+35%) y gastrocnemio medial (+70%), y solo al bajar (Rolli et al., 2021)</td></tr><tr><td>La rotación externa impuesta aumenta el trabajo de los aductores en profundidad</td><td><strong>No verificado</strong></td><td>Afirmación repetida sin estudio citado; no la encontramos en PubMed con las búsquedas del 25 de octubre de 2026</td></tr><tr><td>La rodilla que se mete siempre es peligrosa</td><td><strong>Matizable</strong></td><td>Los datos prospectivos describen aterrizajes de salto en deportistas, no sentadillas con barra (Hewett et al., 2005)</td></tr><tr><td>Basta con sacar las rodillas para corregir el valgo</td><td><strong>Matizable</strong></td><td>El colapso se asocia a menos dorsiflexión de tobillo y menor coactivación glúteo:aductores (Mauntel et al., 2013)</td></tr><tr><td>Las rodillas no deben pasar las puntas</td><td><strong>Desmentido</strong></td><td>Bloquearlas traslada el momento a la cadera: 28 → 303 N·m (Fry et al., 2003)</td></tr><tr><td>La anatomía individual cambia la sentadilla ideal</td><td><strong>Confirmado</strong></td><td>La morfología cam y el pinzamiento cambian el estrés y los grados disponibles (Bagwell y Powers, 2017)</td></tr></tbody></table>
+<h2>Cómo aplicarlo</h2>
+<ol class="steps"><li><strong>Usa el cue solo si tienes el problema que resuelve.</strong> Si tu rodilla no colapsa hacia dentro, añadir rotación externa no te aporta nada medible: estás cambiando una técnica que funciona.</li><li><strong>Encuentra tu ángulo de pie probándolo, no copiándolo.</strong> Haz una serie ligera a 0°, otra a +10° y otra a +20°, y quédate con el ángulo en el que bajas más sin que el pie se despegue del suelo.</li><li><strong>Si la rodilla se mete, prueba el tobillo antes de hablar.</strong> Ponte en zancada con el pie a 10 cm de la pared: si la rodilla no toca la pared sin levantar el talón, tu problema está ahí.</li><li><strong>Añade trabajo para abductores y extensores de cadera.</strong> Es la única forma de cambiar el ratio de coactivación que separa a quien colapsa de quien no. Una hora de cues no sustituye ocho semanas de <a href="/es/blog/ejercicios-de-gluteos-hip-thrust-o-sentadilla">trabajo específico de glúteo</a>.</li><li><strong>Deja avanzar las rodillas.</strong> Pararlas detrás de las puntas no protege la rodilla: carga la cadera y la zona lumbar diez veces más.</li><li><strong>Juzga la técnica por su repetibilidad, no por su estética.</strong> Si tres series de cinco comparten trayectoria y profundidad, tu posición es válida aunque no se parezca a la del vídeo.</li></ol>
+<div class="app"><div><h3>Con Nurvan</h3><p>El punto 2 es un test, y un test solo sirve si los números se quedan en algún sitio. En Nurvan puedes guardar la sentadilla con distintos ángulos de pie o anchuras como variantes separadas del mismo ejercicio: cada serie registra carga, repeticiones y RIR (las repeticiones que te habrían sobrado), y el histórico te muestra en pocas semanas qué configuración progresa de verdad en tu cuerpo. Las series de calentamiento propuestas automáticamente te dan las repeticiones ligeras para probar un ángulo nuevo sin quemar una serie efectiva.</p></div><a class="cta" href="https://nurvan.app">Prueba Nurvan</a></div>
+<h2>Preguntas frecuentes</h2>
+<details><summary>¿Cuánto debo girar los pies en la sentadilla?</summary><p>No hay un valor válido para todos. En los estudios se usan 0°, 10° y 20° de rotación externa y las diferencias de activación son pequeñas y limitadas a la bajada. En la práctica, elige el ángulo con el que alcanzas la profundidad que necesitas con el pie bien apoyado y la misma trayectoria serie tras serie.</p></details>
+<details><summary>¿Es malo que las rodillas se metan hacia dentro?</summary><p>No hay estudios prospectivos que lo demuestren en quien levanta. Los datos de riesgo de cruzado vienen de aterrizajes de salto en deportistas. Un colapso amplio y repentino con carga casi máxima sigue siendo una señal que no conviene ignorar, pero es un problema de estabilidad y técnica antes que un diagnóstico. Si aparece dolor, consulta con un médico o fisioterapeuta.</p></details>
+<details><summary>¿Sacar las rodillas activa más el glúteo?</summary><p>No de forma medible. La revisión de los trabajos de EMG no encuentra diferencias significativas entre variantes de rotación de cadera y de anchura. Para llevar trabajo a la cadera funcionan mucho mejor la posición de la barra y la anchura de los pies.</p></details>
+<details><summary>¿Puedo dejar que las rodillas pasen las puntas?</summary><p>Sí, y probablemente es preferible. Bloquearlas reduce el momento en la rodilla alrededor de un 22% pero multiplica por más de diez el de la cadera, y además obliga a inclinar más el tronco.</p></details>
+<h2>Lee también</h2>
+<ul><li><a href="/es/blog/ejercicios-de-gluteos-hip-thrust-o-sentadilla">Ejercicios de glúteos: ¿hip thrust o sentadilla?</a> — cuál construye realmente el glúteo, con los números</li><li><a href="/es/blog/extension-de-piernas-o-prensa-recto-femoral">Extensión de piernas o prensa: qué crece de verdad</a> — qué cambia entre dos ejercicios que parecen intercambiables</li><li><a href="/es/blog/agarre-press-banca-ancho-cerrado">Agarre en press de banca: ¿ancho, medio o cerrado?</a> — el mismo tipo de regla técnica, desmontada en el banco</li></ul>
+<h2>Fuentes</h2>
+<ol class="refs"><li>Clark DR, Lambert MI, Hunter AM, 2012. Muscle activation in the loaded free barbell squat: a brief review. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/22373894/">22373894</a> · <a href="https://doi.org/10.1519/JSC.0b013e31822d533d">DOI</a></li><li>Rolli F, Vitale JA, Pugliese L, Boccia G, La Torre A, Pollitt L, 2021. The impact of foot angle on lower limb muscles activity during the back squat and counter movement jump. <em>J Sports Med Phys Fitness</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34498821/">34498821</a> · <a href="https://doi.org/10.23736/S0022-4707.21.12588-5">DOI</a></li><li>Larsen S, Kristiansen E, Helms E, van den Tillaar R, 2021. Effects of Stance Width and Barbell Placement on Kinematics, Kinetics, and Myoelectric Activity in Back Squats. <em>Front Sports Act Living</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/34541522/">34541522</a> · <a href="https://doi.org/10.3389/fspor.2021.719013">DOI</a></li><li>Mauntel TC, Begalle RL, Cram TR, Frank BS, Hirth CJ, Blackburn T, Padua DA, 2013. The effects of lower extremity muscle activation and passive range of motion on single leg squat performance. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/23096063/">23096063</a> · <a href="https://doi.org/10.1519/JSC.0b013e318276b886">DOI</a></li><li>Hewett TE, Myer GD, Ford KR, Heidt RS, Colosimo AJ, McLean SG, van den Bogert AJ, Paterno MV, Succop P, 2005. Biomechanical measures of neuromuscular control and valgus loading of the knee predict anterior cruciate ligament injury risk in female athletes: a prospective study. <em>Am J Sports Med</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/15722287/">15722287</a> · <a href="https://doi.org/10.1177/0363546504269591">DOI</a></li><li>Fry AC, Smith JC, Schilling BK, 2003. Effect of knee position on hip and knee torques during the barbell squat. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/14636100/">14636100</a> · <a href="https://doi.org/10.1519/1533-4287(2003">DOI</a>017%3C0629:EOKPOH%3E2.0.CO;2)</li><li>Bagwell JJ, Powers CM, 2017. The Influence of Squat Kinematics and Cam Morphology on Acetabular Stress. <em>Arthroscopy</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/28969815/">28969815</a> · <a href="https://doi.org/10.1016/j.arthro.2017.03.018">DOI</a></li><li>Schoenfeld BJ, 2010. Squatting kinematics and kinetics and their application to exercise performance. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/20182386/">20182386</a> · <a href="https://doi.org/10.1519/JSC.0b013e3181bac2d7">DOI</a></li></ol>
+<p>Punto de partida: una publicación de Alfred Jong (<a href="https://www.instagram.com/p/Ddbl4IKmyqw/">@alfred.reformance</a>) sobre el cue "knees out". El texto, la estructura y las verificaciones de este artículo son propios.</p>
+<p class="bio"><strong>Giammaria Loi</strong> es el fundador de Nurvan. Entrena con pesas desde 2012, trabaja como entrenador personal y coach certificado FIPE desde 2013 y compite en powerlifting a nivel nacional desde 2018.</p>
+<p class="note">Nota: contenido informativo, no sustituye la opinión de un médico o profesional. Si tienes dolor de rodilla, cadera o espalda, consulta con un médico o fisioterapeuta antes de cambiar tu entrenamiento.</p>
+</main>
+<footer>NURVAN · nurvan.app · 25 de octubre de 2026</footer>
+</body>
+</html>

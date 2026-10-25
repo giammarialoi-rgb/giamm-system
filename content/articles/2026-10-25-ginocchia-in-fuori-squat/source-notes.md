@@ -1,0 +1,36 @@
+# Appunti grezzi (uso interno) — ginocchia in fuori nello squat
+
+## Post di origine
+- URL: https://www.instagram.com/p/Ddbl4IKmyqw/
+- Autore: Alfred Jong (@alfred.reformance), Reformance Training
+- Data del post: 18 settembre 2026 (letto il 2026-10-25 con Claude in Chrome, tab dedicata, chiusa a fine lettura)
+- Accesso: profilo pubblico, visibile solo la didascalia (nessun login Instagram attivo nel browser). Le slide/il video NON sono stati visti né scaricati. Nessuna immagine del post è stata usata.
+- Riga di inbox: sezione ALLENAMENTO, prima riga libera. PRIORITÀ vuota.
+
+### Sintesi della didascalia (parafrasi, nessuna frase copiata)
+Il post sostiene che "knees out" è uno dei cue più diffusi nel powerlifting ma va trattato come soluzione a un problema specifico, non come regola universale. Scendendo nello squat l'anca combina flessione, abduzione e rotazione; le ginocchia possono andare verso l'esterno in discesa e rientrare un po' vicino al punto basso, e nessuna delle due direzioni è di per sé "giusta" o "sbagliata". Più extrarotazione non è automaticamente meglio. Cita una ricerca in cui 30° e 50° di extrarotazione d'anca imposta aumentavano l'EMG degli adduttori nella porzione più profonda rispetto alla posizione neutra, precisando che questo non rende 30° la posizione ottimale. Ricorda che l'adduttore magno contribuisce all'estensione d'anca ad angoli di flessione elevati. Conclude che non esiste un target universale: anatomia dell'anca, morfologia del femore, larghezza della stance, angolo dei piedi e strategia individuale cambiano il quadro; l'obiettivo è una tecnica stabile e ripetibile che permetta di raggiungere la profondità di gara.
+
+### Affermazioni estratte e classificate
+1. "Knees out" è un cue, non una regola universale → CONFERMATA (nessuno studio identifica un angolo ottimale; le revisioni non trovano differenze rilevanti di attivazione fra varianti di rotazione d'anca)
+2. Più extrarotazione = più glutei/più forza → SMENTITA (Clark 2012; Rolli 2021: a 20° di extrarotazione del piede cambiano solo bicipite femorale e gastrocnemio mediale, e solo in discesa)
+3. 30° e 50° di extrarotazione imposta aumentano l'EMG degli adduttori nel tratto più profondo → NON VERIFICATA: il post non cita lo studio e non siamo riusciti a individuarlo su PubMed con le ricerche fatte il 2026-10-25 (stringhe: "squat hip external rotation knee valgus EMG adductor", "hip external rotation angle squat adductor longus activation", "prescribed hip external rotation squat adductor electromyography"). Riportata nell'articolo come non verificata, senza numeri.
+4. Le ginocchia che rientrano sono di per sé pericolose → DA PRECISARE (Hewett 2005 riguarda l'atterraggio da salto in atlete, non lo squat con bilanciere; nessun dato prospettico su valgo nello squat e infortuni nei sollevatori)
+5. L'anatomia individuale conta → CONFERMATA (Bagwell & Powers 2017; Alrashdi 2021; Kumar 2014)
+6. Bonus non presente nel post ma diffusissimo online: "le ginocchia non devono mai superare le punte" → SMENTITA (Fry 2003)
+
+## Fonti usate (tutte verificate su PubMed il 2026-10-25)
+1. Clark DR, Lambert MI, Hunter AM, 2012. Muscle activation in the loaded free barbell squat: a brief review. J Strength Cond Res 26(4):1169-78. PMID 22373894. DOI 10.1519/JSC.0b013e31822d533d — Revisione di 18 studi EMG: "common variations such as stance width, hip rotation, and front squat do not significantly affect muscle activation".
+2. Rolli F, Vitale JA, Pugliese L, Boccia G, La Torre A, Pollitt L, 2021. The impact of foot angle on lower limb muscles activity during the back squat and counter movement jump. J Sports Med Phys Fitness 62(7):890-897. PMID 34498821. DOI 10.23736/S0022-4707.21.12588-5 — 8 uomini attivi, back squat all'80% 1RM, piedi a 0°, +10°, +20° di extrarotazione. A 20°: bicipite femorale +35% (p=0,027) e gastrocnemio mediale +70% (p=0,040) SOLO nella fase di discesa; nessuna differenza significativa negli altri muscoli e nelle altre condizioni.
+3. Larsen S, Kristiansen E, Helms E, van den Tillaar R, 2021. Effects of Stance Width and Barbell Placement on Kinematics, Kinetics, and Myoelectric Activity in Back Squats. Front Sports Act Living 3:719013. PMID 34541522. DOI 10.3389/fspor.2021.719013 — 9 uomini e 9 donne, 3RM. Low bar + stance larga: contributo dell'anca al momento totale più alto. High bar + stance stretta: contributo del ginocchio più alto, più vasto laterale e meno grande gluteo.
+4. Mauntel TC, Begalle RL, Cram TR, Frank BS, Hirth CJ, Blackburn T, Padua DA, 2013. The effects of lower extremity muscle activation and passive range of motion on single leg squat performance. J Strength Cond Res 27(7):1813-23. PMID 23096063. DOI 10.1519/JSC.0b013e318276b886 — 40 adulti attivi (20 con medial knee displacement, 20 controlli). Chi mostra MKD ha rapporti di coattivazione gluteo medio:adduttori (p=0,028) e grande gluteo:adduttori (p=0,007) più bassi e meno dorsiflessione di caviglia (p=0,047 a ginocchio esteso; p=0,034 a ginocchio flesso).
+5. Hewett TE et al., 2005. Biomechanical measures of neuromuscular control and valgus loading of the knee predict anterior cruciate ligament injury risk in female athletes: a prospective study. Am J Sports Med 33(4):492-501. PMID 15722287. DOI 10.1177/0363546504269591 — 205 atlete, compito di atterraggio da salto. 9 rotture di LCA: angolo di abduzione del ginocchio 8° maggiore, momento di abduzione 2,5 volte maggiore, forza di reazione al suolo +20%, tempo di appoggio −16%. Sensibilità 78%, specificità 73%. NON è uno studio sullo squat.
+6. Fry AC, Smith JC, Schilling BK, 2003. Effect of knee position on hip and knee torques during the barbell squat. J Strength Cond Res 17(4):629-33. PMID 14636100. DOI 10.1519/1533-4287(2003)017<0629:EOKPOH>2.0.CO;2 — 7 uomini allenati, squat al parallelo con carico pari al peso corporeo. Ginocchia libere: momento al ginocchio 150,1 N·m, all'anca 28,2 N·m. Ginocchia bloccate dietro le punte: ginocchio 117,3 N·m, anca 302,7 N·m.
+7. Bagwell JJ, Powers CM, 2017. The Influence of Squat Kinematics and Cam Morphology on Acetabular Stress. Arthroscopy 33(10):1797-1803. PMID 28969815. DOI 10.1016/j.arthro.2017.03.018 — Modello a elementi finiti su un soggetto. Stress di von Mises medio: 9,64 MPa (controllo), 9,27 (cam minima), 11,36 (cam moderata), 28,43 (cam ampia). Cinematica: flessione d'anca 112,6° nei sani contro 106,3° con FAI; rotazione interna 14,8° contro 8,9°. Gli autori suggeriscono che una posizione neutra o in extrarotazione dell'anca può limitare il conflitto osseo in chi ha morfologia cam.
+8. Schoenfeld BJ, 2010. Squatting kinematics and kinetics and their application to exercise performance. J Strength Cond Res 24(12):3497-506. PMID 20182386. DOI 10.1519/JSC.0b013e3181bac2d7 — Revisione di riferimento sulla biomeccanica dello squat.
+
+## Elementi originali
+- grafico-angolo-piede.<lang>.svg — variazione EMG a 20° di extrarotazione del piede rispetto ai piedi paralleli, fase di discesa (Rolli 2021)
+- grafico-momenti-ginocchia.<lang>.svg — momento al ginocchio e all'anca con ginocchia libere contro ginocchia bloccate dietro le punte (Fry 2003)
+
+## Immagini
+- cover.jpg: Wikimedia Commons, PD-USGov-Military-USMC verificato nel wikitesto il 2026-10-25.
