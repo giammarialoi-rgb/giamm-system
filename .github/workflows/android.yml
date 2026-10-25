@@ -1,5 +1,7 @@
 # Android build for Google Play on a GitHub machine: builds the web app, the
-# signed App Bundle (.aab) and uploads it to the Play internal testing track.
+# signed App Bundle (.aab) and uploads it to Google Play: the internal testing track by default,
+# closed testing (alpha) or the public release (production) when chosen. The release notes are
+# store/google-play/whatsnew/whatsnew-<locale> (500 characters at most each).
 # Started by hand from the Actions tab, or together with iOS by pushing a
 # tag v* (git tag v1.5.35 && git push origin v1.5.35).
 #
@@ -16,10 +18,10 @@ on:
   workflow_dispatch:
     inputs:
       track:
-        description: 'Play track: internal (default) or alpha = Closed testing'
+        description: 'Play track: internal (default), alpha = Closed testing, production = public release'
         type: choice
         default: internal
-        options: [internal, alpha]
+        options: [internal, alpha, production]
   push:
     tags: ['v*']
 
@@ -68,7 +70,7 @@ jobs:
           name: nurvan-aab
           path: app/build/outputs/bundle/release/*.aab
 
-      - name: Upload to Play (internal testing, or closed testing when chosen)
+      - name: Upload to Play (internal testing, closed testing or production, as chosen)
         if: ${{ env.PLAY_JSON != '' }}
         uses: r0adkll/upload-google-play@v1
         with:
@@ -77,3 +79,4 @@ jobs:
           releaseFiles: app/build/outputs/bundle/release/*.aab
           track: ${{ inputs.track || 'internal' }}
           status: completed
+          whatsNewDirectory: store/google-play/whatsnew

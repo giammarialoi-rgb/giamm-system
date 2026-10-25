@@ -28,6 +28,8 @@ Il dettaglio per ogni tipo di dato è in `../../docs/store/PRIVACY_STORE.md`.
 | **Informazioni finanziarie** | **Altre informazioni finanziarie** | Facoltativo | Funzionalità dell'app (registro del coach: importi e scadenze che i clienti pagano al coach FUORI dall'app; il cliente vede solo il proprio stato pagato/scaduto. I pagamenti non passano da Nurvan) |
 | Informazioni e prestazioni dell'app | Log di arresto anomalo / Diagnostica | Obbligatorio | Analisi (solo errori, per stabilità) |
 
+Dalla 1.5.36 (25/10/2026), Impostazioni › Suggerimenti e problemi: il testo del messaggio rientra in «Altri messaggi in-app» (facoltativo); l'email per la risposta in «Indirizzo email»; versione dell'app, sistema, modello del telefono, schermo, lingua e pagina (solo con la casella spuntata) in «Diagnostica». Nessuna categoria nuova da dichiarare: se vuoi, aggiungi a «Altri messaggi in-app» la finalità «Comunicazioni dello sviluppatore».
+
 Novità rispetto alla versione precedente di questo modulo: **Altre informazioni finanziarie** (registro e promemoria di pagamento del coach, inseriti a mano) e **Cronologia degli acquisti** (gli abbonamenti passano da Google Play Billing e RevenueCat; Nurvan riceve solo prodotto, store e data di scadenza, mai dati di carta).
 
 Per «Informazioni sulla salute», «Foto» e i file inviati all'AI: dichiara che una parte del trattamento avviene tramite fornitore di servizi e che l'invio è facoltativo (consenso AI separato).
