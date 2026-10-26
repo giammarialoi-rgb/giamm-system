@@ -11,22 +11,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const SOURCE_DATE = '2026-10-19';
+const SOURCE_DATE = '2026-10-26';
 const SEASON = '2026/27';
 const BASE = 'https://hyrox.com/event/';
 
 const LINES = `
-Bordeaux | FR | 2026-09-30 | 2026-10-04 | hyrox-bordeaux-s26-27
-Karlsruhe | DE | 2026-10-01 | 2026-10-04 | hyrox-karlsruhe
-Toronto | CA | 2026-10-01 | 2026-10-04 | goodlife-hyrox-toronto-26-27
-Boston | US | 2026-10-08 | 2026-10-11 | hwpo-hyrox-boston-26-27
-Ginevra | CH | 2026-10-09 | 2026-10-11 | hyrox-geneva
-Danzica | PL | 2026-10-10 | 2026-10-11 | hyrox-gdansk
-Valencia | ES | 2026-10-15 | 2026-10-18 | hyrox-valencia
-San Paolo | BR | 2026-10-17 | 2026-10-18 | hyrox-sao-paulo-2
-Budapest | HU | 2026-10-17 | 2026-10-17 | hyrox-budapest
 Tampa | US | 2026-10-22 | 2026-10-25 | hyrox-tampa
-Abu Dhabi | AE | 2026-10-23 | 2026-10-25 | hyrox-abu-dhabi
 Birmingham | GB | 2026-10-27 | 2026-11-01 | hyrox-birmingham
 Amburgo | DE | 2026-10-28 | 2026-11-01 | intersport-hyrox-hamburg
 Nizza | FR | 2026-10-29 | 2026-11-01 | hyrox-nice-s26-27
@@ -94,7 +84,7 @@ Bari | IT | 2027-04-02 | 2027-04-04 | hyrox-bari
 Varsavia | PL | 2027-04-07 | 2027-04-11 | hyrox-warsaw-26-27
 Parigi Grand Palais | FR | 2027-04-08 | 2027-04-12 | hyrox-paris-grand-palais-s26-27
 Colonia | DE | 2027-04-08 | 2027-04-11 | all-inclusive-fitness-hyrox-cologne
-Malaga | ES | 2027-04-14 | 2027-04-18 | hyrox-malaga
+Malaga | ES | 2027-04-15 | 2027-04-18 | hyrox-malaga
 Nagoya | JP | 2027-04-16 | 2027-04-18 | hyrox-nagoya
 Helsinki (primavera) | FI | 2027-04-16 | 2027-04-18 | hyrox-helsinki
 Monterrey | MX | 2027-04-16 | 2027-04-18 | hyrox-monterrey
