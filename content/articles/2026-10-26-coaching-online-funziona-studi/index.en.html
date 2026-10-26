@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Does online coaching work? What the studies say | Nurvan</title>
+<meta name="description" content="Same program, different results: closely supervised lifters added 15.9% to their bench vs 10.2%. Here is what a remote coach needs to match that.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Nutrition</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Get the app</a></div></header>
+<main class="wrap" lang="en">
+<div class="crumb">Blog · Coaching</div>
+<h1>Does online coaching work? What the studies say</h1>
+<p class="lede">&quot;You are paying someone who never actually watches you lift.&quot; It is the first objection to online coaching, and it has real support: there are studies where two groups run the exact same program and the one with a trainer standing next to them ends up stronger. I read seven indexed papers on supervision, training intensity and remotely guided exercise. The gap is real — but it does not come from where most people assume, and that changes what you should demand from an online coach.</p>
+<div class="meta"><span><b>13</b> min read</span><span><b>7</b> studies cited</span><span>By <a href="/autore/giammaria-loi">Giammaria Loi</a> · updated 26 October 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Does online coaching work? What the studies say"><figcaption class="cap">PTPioneer (ptpioneer.com), via Wikimedia Commons / Flickr, CC BY 2.0</figcaption></figure>
+<div class="box"><h2>The short version</h2><ul><li><strong>Same program, different results.</strong> Twelve weeks on an identical periodized plan: the group training under a personal trainer raised their loads faster and finished with higher maximal squat and bench press than the unsupervised group (Mazzetti et al., 2000).</li><li><strong>How closely you are watched matters.</strong> With one trainer per 5 people, bench press 1RM rose <strong>15.9%</strong>, against <strong>10.2%</strong> with one trainer per 25; knee extensor strength improved (<strong>+11.8%</strong>) only in the closely supervised group (Gentil &amp; Bottaro, 2010).</li><li><strong>It is not motivation. It is intensity.</strong> In that same study, attendance and training volume were identical between groups. What differed was the share of people actually training at maximal intensity.</li><li><strong>On your own you push less than you think.</strong> 160 trained men loaded the bench with the weight they normally use &quot;for 10 reps&quot;: they performed <strong>16 ± 5</strong> reps (median 15), and only 22% stopped between 10 and 12 (Barbosa-Netto et al., 2021).</li><li><strong>Remote holds up — but not on everything.</strong> Sixteen weeks of the same program delivered by videoconference was not inferior to face-to-face for body weight, fat mass, aerobic power and knee extension strength; for grip, trunk extension and knee flexion the comparison failed (Langeard et al., 2022).</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="c1t c1d">
+<title id="c1t">Same program, different supervision</title><desc id="c1d">With one coach per 5 people, bench press 1RM rose 15.9 per cent and knee extensor strength 11.8 per cent; with one coach per 25 people, bench press rose 10.2 per cent and knee extensors showed no significant gain.</desc>
+<rect width="800" height="500" fill="#0c0c0c"/>
+<text x="40" y="44" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="23" fill="#f0f0f0" font-weight="700">Same program, different supervision</text>
+<text x="40" y="72" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Gain after 11 weeks, identical training in both groups</text>
+<rect x="40" y="92" width="14" height="14" fill="#d4af37" rx="3"/>
+<text x="62" y="104" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#f0f0f0">1 coach per 5 people</text>
+<rect x="330" y="92" width="14" height="14" fill="#aa8a2e" opacity="0.55" rx="3"/>
+<text x="352" y="104" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#f0f0f0">1 coach per 25 people</text>
+<line x1="70" y1="420.0" x2="770" y2="420.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="424" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">0%</text>
+<line x1="70" y1="352.5" x2="770" y2="352.5" stroke="#222" stroke-width="1"/>
+<text x="60" y="356" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">5%</text>
+<line x1="70" y1="285.0" x2="770" y2="285.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="289" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">10%</text>
+<line x1="70" y1="217.5" x2="770" y2="217.5" stroke="#222" stroke-width="1"/>
+<text x="60" y="222" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">15%</text>
+<line x1="70" y1="150.0" x2="770" y2="150.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="154" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">20%</text>
+<line x1="70" y1="420" x2="770" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="70" y1="150" x2="70" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<rect x="121" y="205.3" width="110" height="214.7" fill="#d4af37" rx="4"/>
+<text x="176" y="193" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#d4af37" text-anchor="middle">+15.9%</text>
+<rect x="259" y="282.3" width="110" height="137.7" fill="#aa8a2e" opacity="0.55" rx="4"/>
+<text x="314" y="270" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#f0f0f0" text-anchor="middle">+10.2%</text>
+<text x="245" y="448" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" fill="#f0f0f0" text-anchor="middle">Bench press (1RM)</text>
+<rect x="471" y="260.7" width="110" height="159.3" fill="#d4af37" rx="4"/>
+<text x="526" y="249" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#d4af37" text-anchor="middle">+11.8%</text>
+<rect x="609" y="410" width="110" height="10" fill="#aa8a2e" opacity="0.35" rx="3"/>
+<text x="664" y="398" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" font-weight="700" fill="#a0a0a0" text-anchor="middle">n.s.</text>
+<text x="595" y="448" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" fill="#f0f0f0" text-anchor="middle">Knee extensors</text>
+<text x="40" y="478" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0">Data: Gentil &amp; Bottaro, 2010 · 124 untrained men, 11 weeks, identical program · n.s. = no significant gain</text>
+</svg></div><figcaption class="cap">Bar chart: with one trainer per 5 people bench press 1RM rises 15.9 per cent and knee extensor strength 11.8 per cent; with one trainer per 25 people bench press rises 10.2 per cent and knee extensors show no significant gain</figcaption></figure>
+<h2>A coach does not give you a better program. He makes you run the one you have</h2>
+<p>The study that started this line of research is from 2000 and its design is almost crude. Twenty moderately trained men were split into two groups: one trained under the direct supervision of a personal trainer, the other trained alone. The program was identical — twelve weeks, linear periodization through preparatory (10-12RM), hypertrophy (8-10RM), strength (5-8RM) and peaking (3-6RM) phases, free weights and machines (Mazzetti et al., 2000).</p>
+<p>The interesting result is not &quot;the supervised group did better&quot;. It is <em>where</em> it did better. Mean training load per set became significantly higher in the supervised group from week seven onward in the squat, and as early as week three in the bench press. The rate at which load climbed week after week was higher too. At twelve weeks, maximal squat and bench press were significantly greater with supervision. Both groups improved — but one of them had actually run the program the other had half-run.</p>
+<p>Put differently: in that trial the value of the coach was not in the programming, which was the same for everyone. It was in someone looking at the bar and saying &quot;add five kilos&quot;.</p>
+<h2>What changes is intensity, not physical presence</h2>
+<p>The follow-up study explains the mechanism, and for anyone judging an online coaching service it is the most important of the seven. One hundred and twenty-four untrained young men trained for eleven weeks on the same program, split into two groups that differed in one thing only: the coach-to-trainee ratio on the gym floor, 1 to 5 or 1 to 25 (Gentil &amp; Bottaro, 2010).</p>
+<p>With the high ratio, bench press 1RM rose <strong>15.9%</strong> against <strong>10.2%</strong> with the low ratio, and knee extensor strength improved significantly (<strong>+11.8%</strong>) only in the closely supervised group. Between-group differences were statistically significant for both measures.</p>
+<p>Then comes the number that kills the usual explanation. There was <strong>no</strong> difference between groups in training attendance, nor in work volume on bench press and leg press. The only thing that differed was the proportion of subjects training at maximal intensity, which was higher in the closely supervised group. The coach did not work by keeping people consistent — they already were. He worked by pushing them closer to their limit on every set.</p>
+<p>A third paper pushes the same logic further: older women trained for sixteen weeks at a 1:2 ratio showed larger effect sizes on 1RM tests than at 1:5, and only the more closely supervised group reduced body fat (Vieira et al., 2020). Small sample, no declared between-group differences, so treat it as a hint rather than proof — but it points the same way.</p>
+<h2>The blind spot: how hard you are actually pushing</h2>
+<p>If intensity is the mechanism, the next question is how far off a person left alone really is. One study measured it in the bluntest way possible.</p>
+<p>160 trained men were asked a single question: &quot;what weight do you usually lift for 10 reps on the free-weight bench press?&quot; After a short warm-up they were told to perform as many reps as possible with it. The average was <strong>16 ± 5 reps</strong>, median 15 — a huge and statistically robust gap from the 10 they had just declared (p &lt; 0.001). The most common range was 13-15 reps (31% of the sample) and only 22% stopped between 10 and 12 (Barbosa-Netto et al., 2021).</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" role="img" aria-labelledby="c2t c2d">
+<title id="c2t">The &#x27;10-rep&#x27; load actually allows 16</title><desc id="c2d">The load 160 trained men say they use for 10 bench press reps allowed 16 reps on average, with a standard deviation of 5 and a median of 15.</desc>
+<rect width="800" height="420" fill="#0c0c0c"/>
+<text x="40" y="44" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="23" fill="#f0f0f0" font-weight="700">The &#x27;10-rep&#x27; load actually allows 16</text>
+<text x="40" y="72" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Maximum reps performed with the weight lifters normally use for 10</text>
+<text x="40" y="120" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Reps the load was meant for</text>
+<rect x="40" y="130" width="300" height="54" fill="#aa8a2e" opacity="0.55" rx="6"/>
+<text x="780" y="167" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="26" font-weight="700" fill="#f0f0f0" text-anchor="end">10</text>
+<text x="40" y="240" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Reps actually performed (mean)</text>
+<rect x="40" y="250" width="480" height="54" fill="#d4af37" opacity="1.0" rx="6"/>
+<line x1="370" y1="277" x2="670" y2="277" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="370" y1="265" x2="370" y2="289" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="670" y1="265" x2="670" y2="289" stroke="#f0f0f0" stroke-width="2"/>
+<text x="780" y="287" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="26" font-weight="700" fill="#f0f0f0" text-anchor="end">16 ± 5</text>
+<line x1="40" y1="324" x2="640" y2="324" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="40" y1="324" x2="40" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="40" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">0</text>
+<line x1="190" y1="324" x2="190" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="190" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">5</text>
+<line x1="340" y1="324" x2="340" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="340" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">10</text>
+<line x1="490" y1="324" x2="490" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="490" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">15</text>
+<line x1="640" y1="324" x2="640" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="640" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">20</text>
+<text x="40" y="382" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#d4af37">Median 15 · only 22% stopped between 10 and 12 reps</text>
+<text x="40" y="406" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0">Data: Barbosa-Netto et al., 2021 · 160 trained men, free-weight bench press</text>
+</svg></div><figcaption class="cap">Horizontal bar chart: the load chosen for 10 reps allowed 16 reps on average, standard deviation 5 and median 15; only 22 per cent of the 160 trained men stopped between 10 and 12 reps</figcaption></figure>
+<p>The authors state it plainly: those training routines were not compatible with maximal effort. These were not beginners. They were trained men, convinced they were using their 10-rep load. It is also why the rep number matters less than how close you get to failure, a point I worked through in <a href="/en/blog/how-many-reps-build-muscle">how many reps actually build muscle</a>.</p>
+<p>A coach on the gym floor fixes this in real time. The real question about online coaching is whether anything else can.</p>
+<h2>So does remote coaching work? It depends on what it has to control</h2>
+<p>The cleanest head-to-head comes from a non-inferiority trial in healthy older adults. Three groups: no training, home training guided face-to-face, home training guided by videoconference. Identical program for the two active groups, combined training, sixteen weeks, one hour twice a week (Langeard et al., 2022).</p>
+<p>Videoconference was <strong>non-inferior</strong> to face-to-face for body weight, fat mass, maximal aerobic power, maximal heart rate, maximal oxygen uptake, knee extension strength and lower-limb power. It was <strong>not</strong> non-inferior for muscle mass, handgrip strength, trunk extension and knee flexion. The authors are explicit: for those isometric strength measures, face-to-face still wins.</p>
+<p>A second randomized trial shows that remote work is possible even with people in pain: 130 eldercare workers added twelve weeks of resistance exercise supervised by real-time videoconference, and the experimental group reduced average low back pain intensity compared with controls (p = 0.034), with improvements in hand and wrist pain and in upper-limb muscle performance. In the per-protocol analysis, those who completed at least 50% of the sessions gained further benefits in mood, quality of life and medication use (Espin et al., 2024).</p>
+<p>One honest caveat, because it changes how these numbers should be read: participants in both trials were healthy older adults and care workers, not strength athletes. They show that remote guidance produces real adaptations. They do not tell you how close an advanced powerlifter gets to his in-person coach. That comparison does not exist in the literature yet.</p>
+<h2>What a remote coach has to measure to be worth as much as one in the gym</h2>
+<p>From here the practical conclusion writes itself. The in-person coach has one demonstrated advantage: he can see how far you are from failure and make you add weight. An online coach is on equal footing if he has a reliable way of knowing the same thing.</p>
+<p>That tool exists and has been studied. A review of 31 studies on RIR scales — reps in reserve, how many reps you could still have done at the end of a set — concludes that they are feasible and useful both for prescribing intensity and for adjusting load, with one caveat: the estimate is more accurate when made close to failure, not ten reps out (Bastos et al., 2024).</p>
+<p>Translated: a coach who only receives &quot;done, felt good&quot; is exactly as blind as the 1:25 trainer in Gentil&#x27;s study. A coach who receives load, reps and RIR set by set, plus video of the last set on the main lifts, has the two data points he needs to do the only thing that matters — tell you when to go up.</p>
+<h2>What the research actually says</h2>
+<table><thead><tr><th>Claim</th><th>Verdict</th><th>The data</th></tr></thead><tbody><tr><td>A coach watching you makes you progress more</td><td><strong>Confirmed</strong></td><td>Same program for 12 weeks: higher loads per set and higher maxes with direct supervision (Mazzetti et al., 2000)</td></tr><tr><td>He is mostly there to motivate you and get you to show up</td><td><strong>Busted</strong></td><td>Between 1:5 and 1:25, attendance and volume were equal; what changed was the share training at maximal intensity (Gentil &amp; Bottaro, 2010)</td></tr><tr><td>&quot;I know when to push on my own&quot;</td><td><strong>Busted</strong></td><td>The load used &quot;for 10&quot; allowed 16 ± 5; only 22% stopped between 10 and 12 (Barbosa-Netto et al., 2021)</td></tr><tr><td>Online coaching gives the same results as in person</td><td><strong>Needs nuance</strong></td><td>Non-inferior for body weight, fat mass, VO2max, knee extension strength and lower-limb power; not for grip, trunk and knee flexion (Langeard et al., 2022)</td></tr><tr><td>You cannot coach someone in pain remotely</td><td><strong>Busted</strong></td><td>12 weeks of videoconference-supervised exercise reduced low back pain in 130 eldercare workers (Espin et al., 2024)</td></tr><tr><td>Without seeing the set you cannot control intensity</td><td><strong>Needs nuance</strong></td><td>RIR scales work for prescribing and adjusting load, but the estimate is only accurate close to failure (Bastos et al., 2024)</td></tr><tr><td>The tighter the coach-to-athlete ratio, the better</td><td><strong>Unverified</strong></td><td>A 1:2 vs 1:5 comparison in older women shows larger effects with more supervision, but on a small sample (Vieira et al., 2020)</td></tr></tbody></table>
+<h2>How to use this</h2>
+<ol class="steps"><li><strong>Judge an online coach by what he measures, not by how often he messages you.</strong> One question before you pay: how will you know how close to failure I am on each set?</li><li><strong>Log load, reps and RIR on every working set.</strong> Without all three together, nobody at a distance can decide whether you add weight next week.</li><li><strong>Calibrate your RIR once, with a test.</strong> On a safe exercise (machine, or barbell with safety pins) take the load you would use &quot;for 10&quot; and go to failure. If 15 come out, your &quot;10&quot; was really RIR 5 and your whole scale is shifted.</li><li><strong>Send video of the last set, not the warm-up.</strong> It is the only one that shows technique under fatigue and how much margin was really left.</li><li><strong>Insist on a written progression rule.</strong> For example: finish a set at RIR 2 or more and you go up next session. A rule like that keeps working in the weeks your coach is slow to reply.</li><li><strong>Cover the blind spots with numbers.</strong> The measures that held up worst remotely were grip and trunk stability: if they matter to you, program them as exercises with a load and a time to record, not as accessory work &quot;by feel&quot;.</li></ol>
+<div class="app"><div><h3>With Nurvan.</h3><p>Remote coaching always breaks at the same point: the coach cannot see the numbers behind your sets. In Nurvan the coach and the athlete work on the same plan, and every set records load, reps and RIR, so the history shows the coach whether you are progressing or stuck on the same weight for three weeks. Warm-up sets are proposed automatically, and a plan already written in PDF, Excel or even a photo can be imported without retyping it.</p></div><a class="cta" href="https://nurvan.app">Try Nurvan</a></div>
+<h2>FAQ</h2>
+<details><summary>Does online coaching actually work?</summary><p>Yes — in the available studies it produces real adaptations: strength, body composition, aerobic capacity and reduced low back pain. The head-to-head with in-person training holds on many outcomes but not all, and every dataset comes from healthy adults or workers, not advanced strength athletes.</p></details>
+<details><summary>Online coach or a coach at the gym?</summary><p>It depends on what you are missing. If your problem is technique on complex lifts or the fear of pushing hard, physical presence has an advantage no chat replicates. If technique is there and the problem is load progression, an online coach who receives load, reps and RIR is working on exactly the mechanism that made the difference in the studies.</p></details>
+<details><summary>How can a remote coach know whether I trained hard enough?</summary><p>From the data you send. RIR scales are the studied tool for this, with a known limit: the estimate is reliable close to failure, much less so six or seven reps out. That is why one video of your last set beats ten messages.</p></details>
+<details><summary>Is online coaching suitable for a beginner?</summary><p>Supervision showed its largest effects precisely in untrained people, so a badly coached beginner loses a lot. If you are starting from zero, ask for live video calls in the first weeks and a short list of exercises that are easy to check on video.</p></details>
+<h2>Read next</h2>
+<ul><li><a href="/en/blog/how-many-reps-build-muscle">How many reps build muscle? The 8-12 myth</a> — why distance from failure matters more than the rep number</li><li><a href="/en/blog/training-split-beginner-vs-advanced">Training split: beginner vs advanced lifter</a> — how much structure you actually need at your level</li></ul>
+<h2>References</h2>
+<ol class="refs"><li>Mazzetti SA, Kraemer WJ, Volek JS, Duncan ND, Ratamess NA, Gómez AL, Newton RU, Häkkinen K, Fleck SJ, 2000. The influence of direct supervision of resistance training on strength performance. <em>Med Sci Sports Exerc</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/10862549/">10862549</a> · <a href="https://doi.org/10.1097/00005768-200006000-00023">DOI</a></li><li>Gentil P, Bottaro M, 2010. Influence of supervision ratio on muscle adaptations to resistance training in nontrained subjects. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/19661830/">19661830</a> · <a href="https://doi.org/10.1519/JSC.0b013e3181ad3373">DOI</a></li><li>Barbosa-Netto S, d&#x27;Acelino-e-Porto OS, Almeida MB, 2021. Self-Selected Resistance Exercise Load: Implications for Research and Prescription. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/29112055/">29112055</a> · <a href="https://doi.org/10.1519/JSC.0000000000002287">DOI</a></li><li>Langeard A, Bigot L, Maffiuletti NA, Moussay S, Sesboüé B, Quarck G, Gauthier A, 2022. Non-inferiority of a home-based videoconference physical training program in comparison with the same program administered face-to-face in healthy older adults: the MOTION randomised controlled trial. <em>Age Ageing</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/35290431/">35290431</a> · <a href="https://doi.org/10.1093/ageing/afac059">DOI</a></li><li>Espin A, Irazusta J, Aiestaran M, Latorre Erezuma U, García-García J, Arrinda I, Acedo K, Rodriguez-Larrad A, 2024. Videoconference-Supervised Group Exercise Reduces Low Back Pain in Eldercare Workers: Results from the ReViEEW Randomised Controlled Trial. <em>J Occup Rehabil</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/38632115/">38632115</a> · <a href="https://doi.org/10.1007/s10926-024-10182-2">DOI</a></li><li>Bastos V, Machado S, Teixeira DS, 2024. Feasibility and Usefulness of Repetitions-In-Reserve Scales for Selecting Exercise Intensity: A Scoping Review. <em>Percept Mot Skills</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/38563729/">38563729</a> · <a href="https://doi.org/10.1177/00315125241241785">DOI</a></li><li>Vieira DCL, Nascimento DC, Tajra V, Teixeira TG, Farias DL, Tibana RA, Silva AO, Rosa TS, De Moraes MR, Voltarelli FA, Navalta JW, Prestes J, 2020. High Supervised Resistance Training in Elderly Women: The Role of Supervision Ratio. <em>Int J Exerc Sci</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32509119/">32509119</a> · <a href="https://doi.org/10.70252/WNVF6463">DOI</a></li></ol>
+<p>Trend signal: ACSM, <em>Worldwide Fitness Trends 2026</em> (published 22 October 2025), with mobile exercise apps ranked 4th and data-driven technology 8th. The text, structure and fact-checking in this article are original.</p>
+<p class="note"><strong>Giammaria Loi</strong> is the founder of Nurvan. He has been lifting since 2012, has worked as a FIPE-certified personal trainer and coach since 2013, and has competed in powerlifting at national level since 2018.</p>
+<p class="note">Note: this is educational content and does not replace the advice of a doctor or qualified professional. If you have pain or an ongoing health condition, speak to a doctor before starting or changing a training program, in person or online.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

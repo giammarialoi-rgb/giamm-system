@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Работает ли онлайн-коучинг? Что говорят исследования | Nurvan</title>
+<meta name="description" content="Одна программа — разные результаты: под плотным контролем жим вырос на 15,9% против 10,2%. Разбираем семь работ и то, что нужно тренеру онлайн.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Коучинг</div>
+<h1>Работает ли онлайн-коучинг? Что говорят исследования</h1>
+<p class="lede">«Ты платишь человеку, который ни разу не видел, как ты тренируешься». Это первое возражение против онлайн-коучинга, и у него есть реальная основа: существуют исследования, где две группы выполняют одну и ту же программу, а та, рядом с которой стоит тренер, заканчивает сильнее. Я прочитал семь индексированных работ о контроле, интенсивности и тренировках под дистанционным руководством. Разрыв действительно есть — но возникает он не там, где думает большинство, и это полностью меняет то, чего стоит требовать от онлайн-тренера.</p>
+<div class="meta"><span><b>12</b> мин чтения</span><span><b>7</b> исследований</span><span><a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 26 октября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Работает ли онлайн-коучинг? Что говорят исследования"><figcaption class="cap">PTPioneer (ptpioneer.com), через Wikimedia Commons / Flickr, CC BY 2.0</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Одна программа, разные результаты.</strong> Двенадцать недель одинакового периодизированного плана: группа, тренировавшаяся с персональным тренером рядом, поднимала веса быстрее и закончила с более высокими максимумами в приседе и жиме, чем группа без контроля (Mazzetti et al., 2000).</li><li><strong>Плотность контроля имеет значение.</strong> При одном тренере на 5 человек жим лёжа вырос на <strong>15,9%</strong> против <strong>10,2%</strong> при одном тренере на 25; сила разгибателей колена выросла (<strong>+11,8%</strong>) только в группе с плотным контролем (Gentil и Bottaro, 2010).</li><li><strong>Дело не в мотивации, а в интенсивности.</strong> В том же исследовании посещаемость и объём работы в группах были одинаковыми. Различалась доля людей, реально доходивших до максимальной интенсивности.</li><li><strong>В одиночку жмут слабее, чем думают.</strong> 160 тренированных мужчин взяли в жиме вес, который обычно используют «на 10 повторений»: получилось <strong>16 ± 5</strong> (медиана 15), и лишь 22% остановились между 10 и 12 (Barbosa-Netto et al., 2021).</li><li><strong>Дистанционно работает, но не во всём.</strong> Шестнадцать недель одной и той же программы по видеосвязи оказались не хуже очных занятий по весу, жировой массе, аэробной мощности и силе разгибателей колена; по кистевому хвату, разгибанию корпуса и сгибанию колена сравнение не прошло (Langeard et al., 2022).</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="c1t c1d">
+<title id="c1t">Одна программа, разный контроль</title><desc id="c1d">При одном тренере на 5 человек жим лёжа вырос на 15,9 процента, а сила разгибателей колена на 11,8 процента; при одном тренере на 25 человек жим вырос на 10,2 процента, а у разгибателей значимого прироста нет.</desc>
+<rect width="800" height="500" fill="#0c0c0c"/>
+<text x="40" y="44" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="23" fill="#f0f0f0" font-weight="700">Одна программа, разный контроль</text>
+<text x="40" y="72" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Прирост за 11 недель, программа одинаковая в обеих группах</text>
+<rect x="40" y="92" width="14" height="14" fill="#d4af37" rx="3"/>
+<text x="62" y="104" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#f0f0f0">1 тренер на 5 человек</text>
+<rect x="330" y="92" width="14" height="14" fill="#aa8a2e" opacity="0.55" rx="3"/>
+<text x="352" y="104" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#f0f0f0">1 тренер на 25 человек</text>
+<line x1="70" y1="420.0" x2="770" y2="420.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="424" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">0%</text>
+<line x1="70" y1="352.5" x2="770" y2="352.5" stroke="#222" stroke-width="1"/>
+<text x="60" y="356" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">5%</text>
+<line x1="70" y1="285.0" x2="770" y2="285.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="289" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">10%</text>
+<line x1="70" y1="217.5" x2="770" y2="217.5" stroke="#222" stroke-width="1"/>
+<text x="60" y="222" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">15%</text>
+<line x1="70" y1="150.0" x2="770" y2="150.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="154" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">20%</text>
+<line x1="70" y1="420" x2="770" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="70" y1="150" x2="70" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<rect x="121" y="205.3" width="110" height="214.7" fill="#d4af37" rx="4"/>
+<text x="176" y="193" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#d4af37" text-anchor="middle">+15,9%</text>
+<rect x="259" y="282.3" width="110" height="137.7" fill="#aa8a2e" opacity="0.55" rx="4"/>
+<text x="314" y="270" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#f0f0f0" text-anchor="middle">+10,2%</text>
+<text x="245" y="448" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" fill="#f0f0f0" text-anchor="middle">Жим лёжа (1ПМ)</text>
+<rect x="471" y="260.7" width="110" height="159.3" fill="#d4af37" rx="4"/>
+<text x="526" y="249" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#d4af37" text-anchor="middle">+11,8%</text>
+<rect x="609" y="410" width="110" height="10" fill="#aa8a2e" opacity="0.35" rx="3"/>
+<text x="664" y="398" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" font-weight="700" fill="#a0a0a0" text-anchor="middle">н.з.</text>
+<text x="595" y="448" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" fill="#f0f0f0" text-anchor="middle">Разгибатели колена</text>
+<text x="40" y="478" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0">Данные: Gentil и Bottaro, 2010 · 124 нетренированных мужчины, 11 недель, одна программа · н.з. = значимого прироста нет</text>
+</svg></div><figcaption class="cap">Столбчатая диаграмма: при одном тренере на 5 человек жим лёжа растёт на 15,9 процента, а сила разгибателей колена на 11,8 процента; при одном тренере на 25 человек жим растёт на 10,2 процента, а у разгибателей значимого прироста нет</figcaption></figure>
+<h2>Тренер даёт не лучшую программу, а исполнение той, что у тебя есть</h2>
+<p>Исследование, с которого началось это направление, вышло в 2000 году, и устроено оно почти грубо. Двадцать умеренно тренированных мужчин разделили на две группы: одна занималась под прямым контролем персонального тренера, другая — сама. Программа была идентичной: двенадцать недель линейной периодизации с подготовительной фазой (10-12 повторений до отказа), гипертрофией (8-10), силой (5-8) и пиком (3-6), со свободными весами и тренажёрами (Mazzetti et al., 2000).</p>
+<p>Интересен не вывод «группа под контролем показала больше», а то, <em>где</em> она показала больше. Средний вес за подход стал значимо выше в группе под контролем начиная с седьмой недели в приседе и уже с третьей — в жиме. Скорость, с которой вес рос от недели к неделе, тоже была выше. К двенадцатой неделе максимумы в приседе и жиме были значимо больше при контроле. Прогрессировали обе группы — но одна действительно выполнила программу, которую вторая выполнила наполовину.</p>
+<p>Иначе говоря: ценность тренера в том исследовании была не в программировании — оно было одинаковым, — а в том, что кто-то смотрел на штангу и говорил: «добавь пять килограммов».</p>
+<h2>Меняется интенсивность, а не физическое присутствие</h2>
+<p>Следующее исследование объясняет механизм и для оценки онлайн-коучинга оно важнее всех остальных. Сто двадцать четыре нетренированных молодых человека одиннадцать недель выполняли одну и ту же программу, разделённые на две группы, которые отличались одним: соотношением тренеров и занимающихся в зале — 1 на 5 или 1 на 25 (Gentil и Bottaro, 2010).</p>
+<p>При высоком соотношении максимум в жиме вырос на <strong>15,9%</strong> против <strong>10,2%</strong> при низком, а сила разгибателей колена значимо выросла (<strong>+11,8%</strong>) только в группе с плотным контролем. Межгрупповые различия были статистически значимы по обоим показателям.</p>
+<p>Дальше идёт цифра, которая разрушает привычное объяснение. Между группами <strong>не было</strong> разницы ни в посещаемости, ни в объёме работы в жиме и жиме ногами. Отличалась только доля людей, тренировавшихся с максимальной интенсивностью, — выше в группе с плотным контролем. Тренер сработал не потому, что удерживал людей в регулярности (она и так была), а потому, что подводил их ближе к пределу в каждом подходе.</p>
+<p>Третья работа двигает ту же логику дальше: пожилые женщины, тренировавшиеся шестнадцать недель при соотношении 1:2, показали более крупные эффекты по максимумам, чем при 1:5, и только в группе с более плотным контролем снизилась жировая масса (Vieira et al., 2020). Выборка маленькая, межгрупповые различия не заявлены, так что это подсказка, а не доказательство — но она указывает в ту же сторону.</p>
+<h2>Слепая зона: насколько ты на самом деле выкладываешься</h2>
+<p>Если механизм — интенсивность, следующий вопрос: насколько ошибается человек, оставленный наедине с собой. Это измерили максимально безжалостным способом.</p>
+<p>160 тренированным мужчинам задали один вопрос: «какой вес ты обычно берёшь на 10 повторений в жиме лёжа со штангой?» После короткой разминки им предложили сделать с ним максимум повторений. В среднем вышло <strong>16 ± 5 повторений</strong>, медиана 15 — огромный и статистически очень устойчивый разрыв с заявленными 10 (p &lt; 0,001). Самый частый диапазон — 13-15 повторений (31% выборки), и только 22% остановились между 10 и 12 (Barbosa-Netto et al., 2021).</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" role="img" aria-labelledby="c2t c2d">
+<title id="c2t">Вес «на 10 повторений» даёт 16</title><desc id="c2d">Вес, который 160 тренированных мужчин называют своим весом на 10 повторений в жиме лёжа, позволил в среднем 16 повторений при стандартном отклонении 5 и медиане 15.</desc>
+<rect width="800" height="420" fill="#0c0c0c"/>
+<text x="40" y="44" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="23" fill="#f0f0f0" font-weight="700">Вес «на 10 повторений» даёт 16</text>
+<text x="40" y="72" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Максимум повторений с весом, который обычно берут на 10</text>
+<text x="40" y="120" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Ожидаемые повторения</text>
+<rect x="40" y="130" width="300" height="54" fill="#aa8a2e" opacity="0.55" rx="6"/>
+<text x="780" y="167" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="26" font-weight="700" fill="#f0f0f0" text-anchor="end">10</text>
+<text x="40" y="240" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">Фактические повторения (среднее)</text>
+<rect x="40" y="250" width="480" height="54" fill="#d4af37" opacity="1.0" rx="6"/>
+<line x1="370" y1="277" x2="670" y2="277" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="370" y1="265" x2="370" y2="289" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="670" y1="265" x2="670" y2="289" stroke="#f0f0f0" stroke-width="2"/>
+<text x="780" y="287" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="26" font-weight="700" fill="#f0f0f0" text-anchor="end">16 ± 5</text>
+<line x1="40" y1="324" x2="640" y2="324" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="40" y1="324" x2="40" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="40" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">0</text>
+<line x1="190" y1="324" x2="190" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="190" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">5</text>
+<line x1="340" y1="324" x2="340" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="340" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">10</text>
+<line x1="490" y1="324" x2="490" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="490" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">15</text>
+<line x1="640" y1="324" x2="640" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="640" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">20</text>
+<text x="40" y="382" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#d4af37">Медиана 15 · только 22% остановились между 10 и 12 повторениями</text>
+<text x="40" y="406" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0">Данные: Barbosa-Netto и др., 2021 · 160 тренированных мужчин, жим лёжа со штангой</text>
+</svg></div><figcaption class="cap">Горизонтальная диаграмма: вес, выбранный на 10 повторений, позволил в среднем 16 повторений при стандартном отклонении 5 и медиане 15; только 22 процента из 160 тренированных мужчин остановились между 10 и 12 повторениями</figcaption></figure>
+<p>Авторы пишут прямо: эти тренировочные схемы были несовместимы с максимальным усилием. Речь не о новичках: это тренированные мужчины, уверенные, что используют свой вес «на десять». Именно поэтому число повторений значит меньше, чем близость к отказу — об этом я подробно писал в материале <a href="/ru/blog/skolko-povtoreniy-dlya-massy">сколько повторений действительно нужно для массы</a>.</p>
+<p>Тренер в зале исправляет эту ошибку в реальном времени. Настоящий вопрос про онлайн-коучинг — существует ли другой способ её исправить.</p>
+<h2>Так работает ли дистанционное ведение? Зависит от того, что нужно контролировать</h2>
+<p>Самое чистое прямое сравнение — исследование не меньшей эффективности на здоровых пожилых людях. Три группы: без тренировок, домашние тренировки под очным руководством и домашние тренировки под руководством по видеосвязи. Для обеих активных групп программа была одинаковой, комбинированной, шестнадцать недель, по часу дважды в неделю (Langeard et al., 2022).</p>
+<p>Видеосвязь оказалась <strong>не хуже</strong> очного формата по массе тела, жировой массе, максимальной аэробной мощности, максимальной ЧСС, максимальному потреблению кислорода, силе разгибания колена и мощности нижних конечностей. И <strong>не подтвердилась</strong> как не худшая по мышечной массе, силе кистевого хвата, разгибанию корпуса и сгибанию колена. Авторы говорят об этом прямо: по этим изометрическим показателям силы очный формат остаётся лучше.</p>
+<p>Второе рандомизированное исследование показывает, что дистанционно можно работать и с теми, у кого есть боль: 130 сотрудников ухода за пожилыми двенадцать недель добавляли силовые упражнения под руководством по видеосвязи в реальном времени, и экспериментальная группа снизила среднюю интенсивность боли в пояснице по сравнению с контролем (p = 0,034), с улучшениями также по запястью и кисти и по мышечной работоспособности верхних конечностей. В анализе по протоколу те, кто выполнил не менее 50% занятий, получили дополнительную пользу по настроению, качеству жизни и приёму лекарств (Espin et al., 2024).</p>
+<p>Честное уточнение, потому что оно меняет чтение этих цифр: участниками обоих исследований были здоровые пожилые люди и работники, а не силовые атлеты. Они показывают, что дистанционное руководство даёт реальные адаптации. Они не говорят, насколько продвинутый пауэрлифтер приблизится к своему очному тренеру. Такого сравнения в литературе сегодня нет.</p>
+<h2>Что дистанционный тренер обязан измерять, чтобы стоить столько же, сколько очный</h2>
+<p>Отсюда практический вывод пишется почти сам. У очного тренера есть одно доказанное преимущество: он видит, сколько осталось до отказа, и заставляет добавить вес. Онлайн-тренер на равных, если у него есть надёжный способ знать то же самое.</p>
+<p>Инструмент существует и изучен. Обзор 31 исследования по шкалам RIR — повторениям, которые остались бы в запасе в конце подхода, — заключает, что они применимы и полезны и для назначения интенсивности, и для корректировки веса, с оговоркой: оценка точнее, когда делается близко к отказу, а не за десять повторений до конца (Bastos et al., 2024).</p>
+<p>В переводе: тренер, который получает только «сделал, всё нормально», слеп ровно так же, как тренер 1:25 из работы Gentil. Тренер, который получает вес, повторения и RIR по каждому подходу плюс видео последнего подхода в базовых упражнениях, имеет те два показателя, что нужны для единственного важного действия — сказать, когда прибавлять.</p>
+<h2>Что на самом деле говорит наука</h2>
+<table><thead><tr><th>Утверждение</th><th>Вердикт</th><th>Данные</th></tr></thead><tbody><tr><td>Тренер, который на тебя смотрит, даёт больший прогресс</td><td><strong>Подтверждено</strong></td><td>Одна программа 12 недель: выше веса за подход и выше максимумы при прямом контроле (Mazzetti et al., 2000)</td></tr><tr><td>Он нужен в основном для мотивации и регулярности</td><td><strong>Опровергнуто</strong></td><td>Между 1:5 и 1:25 посещаемость и объём были равны; менялась доля тренирующихся с максимальной интенсивностью (Gentil и Bottaro, 2010)</td></tr><tr><td>«Я и сам знаю, когда поднажать»</td><td><strong>Опровергнуто</strong></td><td>Вес «на 10» позволял 16 ± 5; лишь 22% останавливались между 10 и 12 (Barbosa-Netto et al., 2021)</td></tr><tr><td>Онлайн-коучинг даёт те же результаты, что и очный</td><td><strong>С оговорками</strong></td><td>Не хуже по весу, жировой массе, МПК, силе разгибателей колена и мощности ног; хуже по хвату, корпусу и сгибанию колена (Langeard et al., 2022)</td></tr><tr><td>Дистанционно нельзя вести человека с болью</td><td><strong>Опровергнуто</strong></td><td>12 недель занятий по видеосвязи снизили боль в пояснице у 130 сотрудников ухода (Espin et al., 2024)</td></tr><tr><td>Не видя подход, невозможно контролировать интенсивность</td><td><strong>С оговорками</strong></td><td>Шкалы RIR годятся для назначения и коррекции веса, но оценка точна только близко к отказу (Bastos et al., 2024)</td></tr><tr><td>Чем плотнее соотношение тренер-атлет, тем лучше</td><td><strong>Не доказано</strong></td><td>Сравнение 1:2 против 1:5 у пожилых женщин показывает большие эффекты, но на малой выборке (Vieira et al., 2020)</td></tr></tbody></table>
+<h2>Как это применить</h2>
+<ol class="steps"><li><strong>Оценивай онлайн-тренера по тому, что он измеряет, а не по частоте сообщений.</strong> Один вопрос до оплаты: как ты поймёшь, насколько я далёк от отказа в каждом подходе?</li><li><strong>Записывай вес, повторения и RIR в каждом рабочем подходе.</strong> Без всех трёх чисел вместе никто на расстоянии не решит, добавлять ли вес на следующей неделе.</li><li><strong>Откалибруй свой RIR один раз, тестом.</strong> В безопасном упражнении (тренажёр или штанга со страховочными упорами) возьми вес, который взял бы «на 10», и иди до отказа. Если выйдет 15, твоя «десятка» на деле была RIR 5, и вся шкала смещена.</li><li><strong>Отправляй видео последнего подхода, а не разминки.</strong> Только там видно технику на фоне усталости и реальный остаток запаса.</li><li><strong>Требуй письменное правило прогрессии.</strong> Например: закончил подход с RIR 2 или больше — на следующей тренировке прибавляешь вес. Такое правило работает и в те недели, когда тренер отвечает с задержкой.</li><li><strong>Закрывай слепые зоны цифрами.</strong> Хуже всего дистанционно держались хват и стабильность корпуса: если они важны, ставь их как упражнения с весом и временем для записи, а не как подсобку «по ощущениям».</li></ol>
+<div class="app"><div><h3>С Nurvan.</h3><p>Дистанционное ведение ломается всегда в одной точке: тренер не видит цифр за твоими подходами. В Nurvan тренер и атлет работают над одной программой, и каждый подход записывает вес, повторения и RIR, так что история показывает тренеру, прогрессируешь ты или третью неделю стоишь на том же весе. Разминочные подходы предлагаются автоматически, а программу, уже написанную в PDF, Excel или даже на фото, можно импортировать, не переписывая вручную.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Онлайн-коучинг действительно работает?</summary><p>Да: в доступных исследованиях он даёт реальные адаптации — силу, состав тела, аэробные возможности и снижение боли в пояснице. Прямое сравнение с очным форматом выдерживается по многим параметрам, но не по всем, и все данные получены на здоровых взрослых и работниках, а не на продвинутых силовых атлетах.</p></details>
+<details><summary>Что лучше: тренер онлайн или в зале?</summary><p>Зависит от того, чего не хватает. Если проблема в технике сложных движений или в страхе выложиться, физическое присутствие даёт преимущество, которое не заменит ни один чат. Если техника есть, а дело в прогрессии весов, онлайн-тренер, получающий вес, повторения и RIR, работает ровно с тем механизмом, который дал разницу в исследованиях.</p></details>
+<details><summary>Как дистанционный тренер поймёт, что я тренировался достаточно?</summary><p>По данным, которые ты отправляешь. Шкалы RIR — изученный для этого инструмент с известным ограничением: оценка надёжна близко к отказу и заметно хуже за шесть-семь повторений до конца. Поэтому одно видео последнего подхода стоит десяти сообщений.</p></details>
+<details><summary>Подходит ли онлайн-коучинг новичку?</summary><p>Именно у нетренированных контроль дал самые большие эффекты, так что плохо ведомый новичок теряет много. Если начинаешь с нуля, проси живые видеосозвоны в первые недели и короткий список упражнений, которые легко проверить по видео.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/skolko-povtoreniy-dlya-massy">Сколько повторений нужно для роста мышц: миф 8-12</a> — почему близость к отказу важнее числа повторений</li><li><a href="/ru/blog/split-trenirovok-novichok-prodvinutyy">Сплит: новичок и продвинутый — в чём разница</a> — сколько структуры действительно нужно на твоём уровне</li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>Mazzetti SA, Kraemer WJ, Volek JS, Duncan ND, Ratamess NA, Gómez AL, Newton RU, Häkkinen K, Fleck SJ, 2000. The influence of direct supervision of resistance training on strength performance. <em>Med Sci Sports Exerc</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/10862549/">10862549</a> · <a href="https://doi.org/10.1097/00005768-200006000-00023">DOI</a></li><li>Gentil P, Bottaro M, 2010. Influence of supervision ratio on muscle adaptations to resistance training in nontrained subjects. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/19661830/">19661830</a> · <a href="https://doi.org/10.1519/JSC.0b013e3181ad3373">DOI</a></li><li>Barbosa-Netto S, d&#x27;Acelino-e-Porto OS, Almeida MB, 2021. Self-Selected Resistance Exercise Load: Implications for Research and Prescription. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/29112055/">29112055</a> · <a href="https://doi.org/10.1519/JSC.0000000000002287">DOI</a></li><li>Langeard A, Bigot L, Maffiuletti NA, Moussay S, Sesboüé B, Quarck G, Gauthier A, 2022. Non-inferiority of a home-based videoconference physical training program in comparison with the same program administered face-to-face in healthy older adults: the MOTION randomised controlled trial. <em>Age Ageing</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/35290431/">35290431</a> · <a href="https://doi.org/10.1093/ageing/afac059">DOI</a></li><li>Espin A, Irazusta J, Aiestaran M, Latorre Erezuma U, García-García J, Arrinda I, Acedo K, Rodriguez-Larrad A, 2024. Videoconference-Supervised Group Exercise Reduces Low Back Pain in Eldercare Workers: Results from the ReViEEW Randomised Controlled Trial. <em>J Occup Rehabil</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/38632115/">38632115</a> · <a href="https://doi.org/10.1007/s10926-024-10182-2">DOI</a></li><li>Bastos V, Machado S, Teixeira DS, 2024. Feasibility and Usefulness of Repetitions-In-Reserve Scales for Selecting Exercise Intensity: A Scoping Review. <em>Percept Mot Skills</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/38563729/">38563729</a> · <a href="https://doi.org/10.1177/00315125241241785">DOI</a></li><li>Vieira DCL, Nascimento DC, Tajra V, Teixeira TG, Farias DL, Tibana RA, Silva AO, Rosa TS, De Moraes MR, Voltarelli FA, Navalta JW, Prestes J, 2020. High Supervised Resistance Training in Elderly Women: The Role of Supervision Ratio. <em>Int J Exerc Sci</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32509119/">32509119</a> · <a href="https://doi.org/10.70252/WNVF6463">DOI</a></li></ol>
+<p>Трендовый сигнал: ACSM, <em>Worldwide Fitness Trends 2026</em> (опубликованы 22 октября 2025 года): тренировочные приложения на 4-м месте, технологии на основе данных — на 8-м. Текст, структура и проверки этой статьи оригинальны.</p>
+<p class="note"><strong>Giammaria Loi</strong> — основатель Nurvan. Тренируется с отягощениями с 2012 года, с 2013 года работает персональным тренером и коучем с сертификацией FIPE, с 2018 года выступает в пауэрлифтинге на национальном уровне.</p>
+<p class="note">Примечание: информационный материал, не заменяет консультацию врача или профильного специалиста. При боли или имеющемся заболевании обсудите с врачом начало или изменение тренировочной программы — очной или дистанционной.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

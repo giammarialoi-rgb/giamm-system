@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>线上教练真的有用吗？研究怎么说 | Nurvan</title>
+<meta name="description" content="同样的计划，结果却不同：被盯得紧的人卧推涨了15.9%，一名教练带25人时只有10.2%。七篇被收录研究告诉你，线上教练必须测量什么，才追得上线下教练。">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">训练</a><a href="#">营养</a><a href="#">补剂</a><a href="#" class="on">博客</a></nav><a class="cta" href="https://nurvan.app">下载应用</a></div></header>
+<main class="wrap" lang="zh">
+<div class="crumb">博客 · 教练</div>
+<h1>线上教练真的有用吗？研究怎么说</h1>
+<p class="lede">「你花钱请了一个从来没看过你训练的人。」这是对线上教练最常见的质疑，而且它有依据：确实有研究让两组人执行完全一样的计划，身边站着教练的那一组最后更强。我读了七篇被收录的研究，内容是训练监督、强度和远程指导。差距真实存在，但它出现的位置和大多数人以为的不一样——想明白这一点，你对线上教练该提的要求就完全变了。</p>
+<div class="meta"><span><b>15</b> 分钟阅读</span><span><b>7</b> 篇研究</span><span>作者 <a href="/autore/giammaria-loi">Giammaria Loi</a> · 更新于 2026年10月26日</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="线上教练真的有用吗？研究怎么说"><figcaption class="cap">PTPioneer (ptpioneer.com)，来自 Wikimedia Commons / Flickr，CC BY 2.0</figcaption></figure>
+<div class="box"><h2>要点速览</h2><ul><li><strong>同样的计划，不同的结果。</strong> 十二周完全相同的周期化方案：身边有私教的那组加重更快，最后深蹲和卧推的最大重量都高于无人监督的那组（Mazzetti et al., 2000）。</li><li><strong>被盯得多紧，有影响。</strong> 1名教练带5人时，卧推最大重量涨了 <strong>15.9%</strong>，1名教练带25人时只涨 <strong>10.2%</strong>；膝关节伸肌力量只有在紧密监督组才出现提升（<strong>+11.8%</strong>）（Gentil 和 Bottaro, 2010）。</li><li><strong>关键不是动力，而是强度。</strong> 同一项研究里，两组的出勤率和训练量完全一样。不同的是真正练到最大强度的人所占的比例。</li><li><strong>一个人练，比你以为的要轻。</strong> 160名有训练经验的男性用他们平时「做10次」的重量做卧推，结果平均做了 <strong>16 ± 5</strong> 次（中位数15），只有22%停在10到12次之间（Barbosa-Netto et al., 2021）。</li><li><strong>远程撑得住，但不是全部项目。</strong> 同一套方案做十六周，视频指导在体重、脂肪量、有氧功率和膝关节伸肌力量上不劣于面对面；但在握力、躯干伸展和屈膝力量上没能通过检验（Langeard et al., 2022）。</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-labelledby="c1t c1d">
+<title id="c1t">同样的计划，不同的监督</title><desc id="c1d">1名教练带5人时，卧推最大力量增长15.9%，膝关节伸肌力量增长11.8%；1名教练带25人时，卧推增长10.2%，膝关节伸肌没有显著增长。</desc>
+<rect width="800" height="500" fill="#0c0c0c"/>
+<text x="40" y="44" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="23" fill="#f0f0f0" font-weight="700">同样的计划，不同的监督</text>
+<text x="40" y="72" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">11周后的增长，两组训练方案完全相同</text>
+<rect x="40" y="92" width="14" height="14" fill="#d4af37" rx="3"/>
+<text x="62" y="104" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#f0f0f0">1名教练带5人</text>
+<rect x="330" y="92" width="14" height="14" fill="#aa8a2e" opacity="0.55" rx="3"/>
+<text x="352" y="104" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#f0f0f0">1名教练带25人</text>
+<line x1="70" y1="420.0" x2="770" y2="420.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="424" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">0%</text>
+<line x1="70" y1="352.5" x2="770" y2="352.5" stroke="#222" stroke-width="1"/>
+<text x="60" y="356" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">5%</text>
+<line x1="70" y1="285.0" x2="770" y2="285.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="289" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">10%</text>
+<line x1="70" y1="217.5" x2="770" y2="217.5" stroke="#222" stroke-width="1"/>
+<text x="60" y="222" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">15%</text>
+<line x1="70" y1="150.0" x2="770" y2="150.0" stroke="#222" stroke-width="1"/>
+<text x="60" y="154" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="end">20%</text>
+<line x1="70" y1="420" x2="770" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="70" y1="150" x2="70" y2="420" stroke="#3a3a3a" stroke-width="1.5"/>
+<rect x="121" y="205.3" width="110" height="214.7" fill="#d4af37" rx="4"/>
+<text x="176" y="193" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#d4af37" text-anchor="middle">+15.9%</text>
+<rect x="259" y="282.3" width="110" height="137.7" fill="#aa8a2e" opacity="0.55" rx="4"/>
+<text x="314" y="270" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#f0f0f0" text-anchor="middle">+10.2%</text>
+<text x="245" y="448" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" fill="#f0f0f0" text-anchor="middle">卧推（1RM）</text>
+<rect x="471" y="260.7" width="110" height="159.3" fill="#d4af37" rx="4"/>
+<text x="526" y="249" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="20" font-weight="700" fill="#d4af37" text-anchor="middle">+11.8%</text>
+<rect x="609" y="410" width="110" height="10" fill="#aa8a2e" opacity="0.35" rx="3"/>
+<text x="664" y="398" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" font-weight="700" fill="#a0a0a0" text-anchor="middle">无显著</text>
+<text x="595" y="448" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="15" fill="#f0f0f0" text-anchor="middle">膝关节伸肌</text>
+<text x="40" y="478" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0">数据：Gentil 和 Bottaro，2010 · 124名无训练经验男性，11周，同一方案 · 无显著 = 无显著增长</text>
+</svg></div><figcaption class="cap">柱状图：1名教练带5人时卧推最大重量提高15.9%，膝关节伸肌力量提高11.8%；1名教练带25人时卧推提高10.2%，膝关节伸肌没有显著提升</figcaption></figure>
+<h2>教练给你的不是更好的计划，而是让你真正执行手上的计划</h2>
+<p>开创这条研究线的论文发表于2000年，设计几乎简陋。二十名中等训练水平的男性被分成两组：一组在私教的直接监督下训练，另一组自己练。方案完全相同——十二周线性周期化，依次是准备期（10-12RM）、增肌期（8-10RM）、力量期（5-8RM）和峰值期（3-6RM），自由重量加器械（Mazzetti et al., 2000）。</p>
+<p>有意思的不是「监督组更好」，而是它<strong>好在哪里</strong>。从第七周起，监督组深蹲的每组平均负荷显著更高，卧推从第三周就开始拉开差距。负荷逐周上升的速度也更快。到第十二周，监督组的深蹲和卧推最大重量都显著更高。两组都进步了，但其中一组真的把计划做完了，另一组只做了一半。</p>
+<p>换句话说：在那项研究里，教练的价值不在编排——编排是一样的——而在于有人盯着杠铃说「再加五公斤」。</p>
+<h2>改变的是强度，不是人站在旁边</h2>
+<p>后续研究揭示了机制，对于评估线上教练服务的人来说，它是七篇里最重要的一篇。124名没有训练经验的年轻男性用同一套方案练了十一周，两组只差一件事：场上教练与学员的比例，1比5或者1比25（Gentil 和 Bottaro, 2010）。</p>
+<p>高比例组的卧推最大重量提高 <strong>15.9%</strong>，低比例组是 <strong>10.2%</strong>；膝关节伸肌力量只有在紧密监督组出现显著提升（<strong>+11.8%</strong>）。两项指标的组间差异都达到统计显著。</p>
+<p>接下来是推翻常见解释的那个数据。两组之间，出勤率<strong>没有</strong>差别，卧推和腿举的训练量也<strong>没有</strong>差别。唯一不同的是以最大强度训练的人所占比例，紧密监督组更高。教练起作用，不是因为让人更规律——他们本来就规律——而是因为每一组都把人带得更靠近极限。</p>
+<p>第三篇把同样的逻辑再推一步：老年女性训练十六周，1比2的比例在最大力量上的效应量大于1比5，而且只有监督更紧的那组脂肪量下降（Vieira et al., 2020）。样本小、组间差异未声明，所以只能当线索，不能当证据，但方向一致。</p>
+<h2>盲区：你到底练得有多狠</h2>
+<p>如果机制是强度，下一个问题就是：一个人独自训练时，偏差有多大。有一项研究用最直白的方式量了出来。</p>
+<p>研究者只问了160名有训练经验的男性一个问题：「你平时杠铃卧推做10次用多重？」短暂热身后，让他们用这个重量做到力竭。结果平均 <strong>16 ± 5 次</strong>，中位数15——与他们自己说的10次相比差距巨大，统计上非常稳健（p &lt; 0.001）。最常见的区间是13到15次（占31%），只有22%停在10到12次之间（Barbosa-Netto et al., 2021）。</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" role="img" aria-labelledby="c2t c2d">
+<title id="c2t">以为只能做10次的重量，实际能做16次</title><desc id="c2d">160名训练者自称用于10次卧推的重量，平均可以做16次，标准差为5，中位数为15。</desc>
+<rect width="800" height="420" fill="#0c0c0c"/>
+<text x="40" y="44" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="23" fill="#f0f0f0" font-weight="700">以为只能做10次的重量，实际能做16次</text>
+<text x="40" y="72" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">用平时当作10次的重量做到力竭的次数</text>
+<text x="40" y="120" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">预期次数</text>
+<rect x="40" y="130" width="300" height="54" fill="#aa8a2e" opacity="0.55" rx="6"/>
+<text x="780" y="167" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="26" font-weight="700" fill="#f0f0f0" text-anchor="end">10</text>
+<text x="40" y="240" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="14" fill="#a0a0a0">实际完成次数（平均）</text>
+<rect x="40" y="250" width="480" height="54" fill="#d4af37" opacity="1.0" rx="6"/>
+<line x1="370" y1="277" x2="670" y2="277" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="370" y1="265" x2="370" y2="289" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="670" y1="265" x2="670" y2="289" stroke="#f0f0f0" stroke-width="2"/>
+<text x="780" y="287" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="26" font-weight="700" fill="#f0f0f0" text-anchor="end">16 ± 5</text>
+<line x1="40" y1="324" x2="640" y2="324" stroke="#3a3a3a" stroke-width="1.5"/>
+<line x1="40" y1="324" x2="40" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="40" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">0</text>
+<line x1="190" y1="324" x2="190" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="190" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">5</text>
+<line x1="340" y1="324" x2="340" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="340" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">10</text>
+<line x1="490" y1="324" x2="490" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="490" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">15</text>
+<line x1="640" y1="324" x2="640" y2="330" stroke="#3a3a3a" stroke-width="1.5"/>
+<text x="640" y="348" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0" text-anchor="middle">20</text>
+<text x="40" y="382" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="13" fill="#d4af37">中位数15 · 只有22%的人停在10到12次之间</text>
+<text x="40" y="406" font-family="Helvetica Neue,Helvetica,Arial,Noto Sans,Noto Sans Arabic,Noto Sans Devanagari,sans-serif" font-size="12" fill="#a0a0a0">数据：Barbosa-Netto 等，2021 · 160名训练者，杠铃卧推</text>
+</svg></div><figcaption class="cap">横向柱状图：被当作10次的重量平均能做16次，标准差5，中位数15；160名训练者中只有22%停在10到12次之间</figcaption></figure>
+<p>作者写得毫不客气：这些人的训练安排与最大努力并不相符。他们不是新手，而是自认为在用「10次重量」的训练者。这也是为什么次数本身没有「离力竭还差多少」重要，这一点我在<a href="/zh/blog/duoshao-cishu-zengji">增肌到底要做多少次</a>里展开过。</p>
+<p>健身房里的教练能实时纠正这件事。关于线上教练，真正的问题是：有没有别的办法纠正它。</p>
+<h2>那远程指导有用吗？取决于它要控制什么</h2>
+<p>最干净的正面比较来自一项在健康老年人中进行的非劣效性试验。三组：不训练、居家面对面指导训练、居家视频指导训练。两个训练组方案完全相同，混合训练，十六周，每周两次、每次一小时（Langeard et al., 2022）。</p>
+<p>视频指导在体重、脂肪量、最大有氧功率、最大心率、最大摄氧量、膝关节伸展力量和下肢功率上，<strong>不劣于</strong>面对面。但在肌肉量、握力、躯干伸展和屈膝力量上，<strong>没有</strong>通过非劣效检验。作者说得很直接：在这些等长力量指标上，面对面仍然更好。</p>
+<p>另一项随机对照试验说明，远程也能带有疼痛的人：130名养老护理人员在十二周内增加了实时视频指导的力量训练，实验组的腰痛平均强度低于对照组（p = 0.034），手腕和手部疼痛以及上肢肌肉表现也有改善。按方案分析中，完成至少50%课次的人在情绪、生活质量和用药上还有额外获益（Espin et al., 2024）。</p>
+<p>需要诚实说明一点，因为它决定这些数字怎么读：两项试验的受试者是健康老年人和劳动者，不是力量项目运动员。它们说明远程指导能带来真实的适应，但没有告诉我们一个高水平力量举运动员能多接近他线下的教练。这个比较目前文献里还没有。</p>
+<h2>远程教练必须测量什么，才值线下教练的价</h2>
+<p>到这里，实际结论几乎自己写出来了。线下教练只有一个被证实的优势：他能看出你离力竭还有多远，并让你加重。线上教练只要有可靠的办法知道同一件事，就站在同一条线上。</p>
+<p>这个工具存在，而且被研究过。一篇覆盖31项研究的综述指出，RIR 量表——也就是一组结束时你还剩几次没做——在安排强度和调整负荷上都可行、好用，但有一个前提：估计越接近力竭越准，离结束还有十次时并不可靠（Bastos et al., 2024）。</p>
+<p>翻译过来：只收到「练完了，感觉不错」的教练，和 Gentil 研究里那个1比25的教练一样瞎。而收到每一组的重量、次数和 RIR，外加主项最后一组视频的教练，手上就有了做那件唯一重要的事所需要的两项数据——告诉你什么时候该加重。</p>
+<h2>研究到底怎么说</h2>
+<table><thead><tr><th>说法</th><th>结论</th><th>数据</th></tr></thead><tbody><tr><td>有教练盯着，你进步更多</td><td><strong>已确认</strong></td><td>同样的计划练12周，直接监督组每组负荷更高、最大重量更大（Mazzetti et al., 2000）</td></tr><tr><td>教练主要作用是鼓励你、让你按时来</td><td><strong>不成立</strong></td><td>1比5和1比25之间出勤和训练量相同，差别在以最大强度训练的人数占比（Gentil 和 Bottaro, 2010）</td></tr><tr><td>「我自己知道什么时候该拼」</td><td><strong>不成立</strong></td><td>被当作「10次」的重量实际能做16 ± 5次，只有22%停在10到12次（Barbosa-Netto et al., 2021）</td></tr><tr><td>线上教练效果和线下一样</td><td><strong>需要细分</strong></td><td>在体重、脂肪量、最大摄氧量、膝伸力量和下肢功率上不劣；在握力、躯干和屈膝上没通过（Langeard et al., 2022）</td></tr><tr><td>有疼痛就不能远程指导</td><td><strong>不成立</strong></td><td>12周视频指导训练降低了130名护理人员的腰痛（Espin et al., 2024）</td></tr><tr><td>看不到这一组，就控制不了强度</td><td><strong>需要细分</strong></td><td>RIR 量表可用于安排和调整负荷，但只有接近力竭时估计才准（Bastos et al., 2024）</td></tr><tr><td>教练与学员的比例越紧越好</td><td><strong>未证实</strong></td><td>老年女性1比2对比1比5显示效应更大，但样本很小（Vieira et al., 2020）</td></tr></tbody></table>
+<h2>怎么落地</h2>
+<ol class="steps"><li><strong>判断一个线上教练，看他测什么，而不是看他发多少消息。</strong> 付钱前只问一句：你靠什么知道我每一组离力竭还有多远？</li><li><strong>每一组正式组都记录重量、次数和 RIR。</strong> 这三个数字缺一个，远端的人就无法判断下周该不该加重。</li><li><strong>用一次测试校准你的 RIR。</strong> 在安全的动作上（器械，或带安全销的杠铃），用你心目中的「10次重量」做到力竭。如果做出15次，你的「10」其实是 RIR 5，整条标尺都偏了。</li><li><strong>发最后一组的视频，不是热身的。</strong> 只有那一组能看出疲劳下的技术，以及真正还剩多少余量。</li><li><strong>要一条写下来的进阶规则。</strong> 例如：一组结束时 RIR 还有2或更多，下次训练就加重。这样的规则在教练回复慢的那几周照样管用。</li><li><strong>用数字补上盲区。</strong> 远程表现最差的是握力和躯干稳定：如果这两项对你重要，就把它们编成有重量、有时间可记录的动作，而不是「凭感觉」的辅助训练。</li></ol>
+<div class="app"><div><h3>用 Nurvan。</h3><p>远程指导总是断在同一个地方：教练看不到你每组背后的数字。在 Nurvan 里，教练和学员使用同一份计划，每一组都会记录重量、次数和 RIR，历史记录会让教练看出你是在进步，还是已经在同一个重量上停了三周。热身组会自动给出，已经写在 PDF、Excel 甚至照片里的计划也能直接导入，不用手动重打。</p></div><a class="cta" href="https://nurvan.app">试用 Nurvan</a></div>
+<h2>常见问题</h2>
+<details><summary>线上教练真的有效吗？</summary><p>有效：现有研究显示它能带来真实的适应——力量、身体成分、有氧能力和腰痛改善。与线下的正面比较在很多指标上站得住，但不是全部；而且所有数据都来自健康成年人或劳动者，不是高水平力量运动员。</p></details>
+<details><summary>线上教练和健身房教练选哪个？</summary><p>看你缺什么。如果问题出在复杂动作的技术，或者不敢把力气使出来，线下的人在现场有聊天框替代不了的优势。如果技术没问题，卡在负荷进阶上，那么一个能收到重量、次数和 RIR 的线上教练，正好作用在研究里拉开差距的那个机制上。</p></details>
+<details><summary>远程教练怎么知道我练得够不够？</summary><p>靠你发回去的数据。RIR 量表是针对这件事被研究过的工具，但有已知的边界：接近力竭时估计可靠，离结束还有六七次时就差很多。所以最后一组的一段视频，胜过十条消息。</p></details>
+<details><summary>新手适合找线上教练吗？</summary><p>恰恰是没有训练经验的人身上，监督的效果最大，所以新手如果远程被带得不好，损失很大。如果你从零开始，前几周要求真人视频连线，并把动作数量控制住，选容易在视频里看清的。</p></details>
+<h2>延伸阅读</h2>
+<ul><li><a href="/zh/blog/duoshao-cishu-zengji">增肌每组做多少次？8-12 次的迷思</a> —— 为什么「离力竭多远」比次数本身更重要</li><li><a href="/zh/blog/xunlian-fenhua-xinshou-gaoji">训练分化：新手和高手该一样吗</a> —— 你现在的水平到底需要多少结构</li></ul>
+<h2>参考文献</h2>
+<ol class="refs"><li>Mazzetti SA, Kraemer WJ, Volek JS, Duncan ND, Ratamess NA, Gómez AL, Newton RU, Häkkinen K, Fleck SJ, 2000. The influence of direct supervision of resistance training on strength performance. <em>Med Sci Sports Exerc</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/10862549/">10862549</a> · <a href="https://doi.org/10.1097/00005768-200006000-00023">DOI</a></li><li>Gentil P, Bottaro M, 2010. Influence of supervision ratio on muscle adaptations to resistance training in nontrained subjects. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/19661830/">19661830</a> · <a href="https://doi.org/10.1519/JSC.0b013e3181ad3373">DOI</a></li><li>Barbosa-Netto S, d&#x27;Acelino-e-Porto OS, Almeida MB, 2021. Self-Selected Resistance Exercise Load: Implications for Research and Prescription. <em>J Strength Cond Res</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/29112055/">29112055</a> · <a href="https://doi.org/10.1519/JSC.0000000000002287">DOI</a></li><li>Langeard A, Bigot L, Maffiuletti NA, Moussay S, Sesboüé B, Quarck G, Gauthier A, 2022. Non-inferiority of a home-based videoconference physical training program in comparison with the same program administered face-to-face in healthy older adults: the MOTION randomised controlled trial. <em>Age Ageing</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/35290431/">35290431</a> · <a href="https://doi.org/10.1093/ageing/afac059">DOI</a></li><li>Espin A, Irazusta J, Aiestaran M, Latorre Erezuma U, García-García J, Arrinda I, Acedo K, Rodriguez-Larrad A, 2024. Videoconference-Supervised Group Exercise Reduces Low Back Pain in Eldercare Workers: Results from the ReViEEW Randomised Controlled Trial. <em>J Occup Rehabil</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/38632115/">38632115</a> · <a href="https://doi.org/10.1007/s10926-024-10182-2">DOI</a></li><li>Bastos V, Machado S, Teixeira DS, 2024. Feasibility and Usefulness of Repetitions-In-Reserve Scales for Selecting Exercise Intensity: A Scoping Review. <em>Percept Mot Skills</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/38563729/">38563729</a> · <a href="https://doi.org/10.1177/00315125241241785">DOI</a></li><li>Vieira DCL, Nascimento DC, Tajra V, Teixeira TG, Farias DL, Tibana RA, Silva AO, Rosa TS, De Moraes MR, Voltarelli FA, Navalta JW, Prestes J, 2020. High Supervised Resistance Training in Elderly Women: The Role of Supervision Ratio. <em>Int J Exerc Sci</em>. PMID <a href="https://pubmed.ncbi.nlm.nih.gov/32509119/">32509119</a> · <a href="https://doi.org/10.70252/WNVF6463">DOI</a></li></ol>
+<p>趋势信号：ACSM《Worldwide Fitness Trends 2026》（2025年10月22日发布），训练类 App 排第4，数据驱动技术排第8。本文的文字、结构和事实核查均为原创。</p>
+<p class="note"><strong>Giammaria Loi</strong> 是 Nurvan 的创始人。他从2012年开始力量训练，2013年起担任 FIPE 认证私人教练，2018年起在国内级别的力量举比赛中参赛。</p>
+<p class="note">注：本文为信息性内容，不能替代医生或专业人士的意见。如有疼痛或正在治疗中的健康问题，请先与医生沟通，再开始或调整训练计划，无论线上还是线下。</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>
