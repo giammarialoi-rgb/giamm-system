@@ -92,7 +92,7 @@ Le **squat** passe de 36,7 % du total chez les 40-49 ans à 34,2 % chez les 70 a
 
 Le glissement ne fait que quelques points, mais il est monotone et va dans le sens que suggère la physiologie : le mouvement qui exige le plus d'amplitude articulaire, le plus de mobilité de cheville et de hanche et le plus de contrôle en excentrique profond est le premier à céder. Ce n'est pas la force qui disparaît : c'est le *squat* qui devient plus difficile à exprimer.
 
-En clair, côté entraînement : si après cinquante ans votre squat recule plus que le reste, avant de baisser la charge, vérifiez mobilité et profondeur. Et les variantes comptent — un sujet que j'ai développé à propos des [genoux vers l'extérieur au squat](/fr/blog/ginocchia-in-fuori-squat).
+En clair, côté entraînement : si après cinquante ans votre squat recule plus que le reste, avant de baisser la charge, vérifiez mobilité et profondeur. Et les variantes comptent — un sujet que j'ai développé à propos des [genoux vers l'extérieur au squat](/fr/blog/genoux-vers-exterieur-squat).
 
 ## Ce que dit vraiment la recherche
 
@@ -137,9 +137,9 @@ Dans la méta-analyse sur les personnes âgées en bonne santé, le plus grand e
 
 ## À lire aussi
 
-- [Mondiaux masters de force athlétique à Reno : ce qui était en jeu](/fr/blog/mondiali-powerlifting-master-reno-2026) — l'avant-match, règlement et catégories
-- [Combien de répétitions pour la masse : le mythe du 8-12](/fr/blog/ripetizioni-serie-recupero-ipertrofia) — comment régler vraiment intensité et volume
-- [Le coaching en ligne fonctionne-t-il ? Ce que disent les études](/fr/blog/coaching-online-funziona-studi) — pourquoi la supervision change les résultats à programme identique
+- [Mondiaux masters de force athlétique à Reno : ce qui était en jeu](/fr/blog/mondiaux-masters-force-athletique-2026-reno) — l'avant-match, règlement et catégories
+- [Combien de répétitions pour la masse : le mythe du 8-12](/fr/blog/combien-de-repetitions-masse-musculaire) — comment régler vraiment intensité et volume
+- [Le coaching en ligne fonctionne-t-il ? Ce que disent les études](/fr/blog/le-coaching-en-ligne-fonctionne) — pourquoi la supervision change les résultats à programme identique
 
 ## Sources
 

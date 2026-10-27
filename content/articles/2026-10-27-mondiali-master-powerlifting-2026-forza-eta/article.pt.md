@@ -92,7 +92,7 @@ O **agachamento** cai de 36,7% do total nos 40-49 anos para 34,2% nos 70+. O **s
 
 O deslocamento é de poucos pontos percentuais, mas é monótono e aponta na direção que a fisiologia sugere: o levantamento que exige mais amplitude articular, mais mobilidade de tornozelo e anca e mais controlo numa fase excêntrica profunda é o primeiro a ceder. Não é a força que desaparece: é o *agachamento* que fica mais difícil de expressar.
 
-Traduzindo para o treino: se depois dos cinquenta o teu agachamento recua mais do que o resto, antes de baixar a carga vale a pena rever mobilidade e profundidade. E as variantes contam — um tema que desenvolvi ao falar de [joelhos para fora no agachamento](/pt/blog/ginocchia-in-fuori-squat).
+Traduzindo para o treino: se depois dos cinquenta o teu agachamento recua mais do que o resto, antes de baixar a carga vale a pena rever mobilidade e profundidade. E as variantes contam — um tema que desenvolvi ao falar de [joelhos para fora no agachamento](/pt/blog/joelhos-para-fora-agachamento).
 
 ## O que a investigação diz mesmo
 
@@ -137,9 +137,9 @@ Na meta-análise sobre idosos saudáveis o maior efeito na força apareceu a 70-
 
 ## Lê também
 
-- [Mundial master de powerlifting em Reno: o que estava em jogo](/pt/blog/mondiali-powerlifting-master-reno-2026) — a antevisão, com regulamento e categorias
-- [Quantas repetições para massa: o mito do 8-12](/pt/blog/ripetizioni-serie-recupero-ipertrofia) — como se definem mesmo intensidade e volume
-- [O coaching online funciona? O que dizem os estudos](/pt/blog/coaching-online-funziona-studi) — porque a supervisão muda os resultados com o mesmo plano
+- [Mundial master de powerlifting em Reno: o que estava em jogo](/pt/blog/mundial-master-de-powerlifting-2026-reno) — a antevisão, com regulamento e categorias
+- [Quantas repetições para massa: o mito do 8-12](/pt/blog/quantas-repeticoes-massa-muscular) — como se definem mesmo intensidade e volume
+- [O coaching online funciona? O que dizem os estudos](/pt/blog/o-coaching-online-funciona) — porque a supervisão muda os resultados com o mesmo plano
 
 ## Fontes
 

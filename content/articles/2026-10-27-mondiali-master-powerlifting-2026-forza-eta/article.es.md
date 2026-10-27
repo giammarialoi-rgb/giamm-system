@@ -92,7 +92,7 @@ La **sentadilla** baja del 36,7% del total en 40-49 años al 34,2% en 70+. El **
 
 El desplazamiento es de pocos puntos porcentuales, pero es monótono y apunta donde la fisiología sugiere: el levantamiento que exige más recorrido articular, más movilidad de tobillo y cadera y más control en una fase excéntrica profunda es el primero que cede. No desaparece la fuerza: se vuelve más difícil expresar la *sentadilla*.
 
-Traducido al entrenamiento: si después de los cincuenta tu sentadilla retrocede más que el resto, antes de bajar la carga conviene revisar movilidad y profundidad. Y las variantes cuentan, un tema que desarrollé al hablar de [rodillas hacia fuera en la sentadilla](/es/blog/ginocchia-in-fuori-squat).
+Traducido al entrenamiento: si después de los cincuenta tu sentadilla retrocede más que el resto, antes de bajar la carga conviene revisar movilidad y profundidad. Y las variantes cuentan, un tema que desarrollé al hablar de [rodillas hacia fuera en la sentadilla](/es/blog/rodillas-hacia-fuera-sentadilla).
 
 ## Qué dice realmente la investigación
 
@@ -137,9 +137,9 @@ En el metaanálisis sobre mayores sanos el mayor efecto sobre la fuerza apareci�
 
 ## Lee también
 
-- [Mundial máster de powerlifting en Reno: qué estaba en juego](/es/blog/mondiali-powerlifting-master-reno-2026) — la previa, con reglamento y categorías
-- [Cuántas repeticiones para la masa: el mito del 8-12](/es/blog/ripetizioni-serie-recupero-ipertrofia) — cómo se fijan de verdad intensidad y volumen
-- [¿Funciona el coaching online? Qué dicen los estudios](/es/blog/coaching-online-funziona-studi) — por qué la supervisión cambia los resultados con la misma rutina
+- [Mundial máster de powerlifting en Reno: qué estaba en juego](/es/blog/mundial-master-powerlifting-2026-reno) — la previa, con reglamento y categorías
+- [Cuántas repeticiones para la masa: el mito del 8-12](/es/blog/cuantas-repeticiones-masa-muscular) — cómo se fijan de verdad intensidad y volumen
+- [¿Funciona el coaching online? Qué dicen los estudios](/es/blog/funciona-el-coaching-online) — por qué la supervisión cambia los resultados con la misma rutina
 
 ## Fuentes
 

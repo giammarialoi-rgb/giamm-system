@@ -92,7 +92,7 @@ classic 项目成绩最好的两个名字是：**Nathan Kulas**（美国，43 �
 
 位移只有几个百分点，但方向单一，而且与生理学的预期一致：对关节活动范围要求最大、对踝关节和髋关节灵活性要求最高、在深度离心阶段需要最多控制的那个动作，最先退让。消失的不是力量，而是**深蹲**变得更难表现出来。
 
-落到训练上：如果五十岁之后你的深蹲退步得比其他动作更明显，在减重量之前先检查灵活性和深度。动作变式也有影响——这一点我在[深蹲时膝盖外展：规则还是口令？](/zh/blog/ginocchia-in-fuori-squat)里展开过。
+落到训练上：如果五十岁之后你的深蹲退步得比其他动作更明显，在减重量之前先检查灵活性和深度。动作变式也有影响——这一点我在[深蹲时膝盖外展：规则还是口令？](/zh/blog/shenzun-xigai-waizhan)里展开过。
 
 ## 研究到底怎么说
 
@@ -137,9 +137,9 @@ classic 项目成绩最好的两个名字是：**Nathan Kulas**（美国，43 �
 
 ## 延伸阅读
 
-- [里诺大师级力量举世锦赛：这次比什么](/zh/blog/mondiali-powerlifting-master-reno-2026) — 赛前前瞻，含规则与级别
-- [增肌该做几次：8-12 次的迷思](/zh/blog/ripetizioni-serie-recupero-ipertrofia) — 强度和训练量到底怎么定
-- [线上教练有用吗？研究怎么说](/zh/blog/coaching-online-funziona-studi) — 同一份计划下，为什么监督会改变结果
+- [里诺大师级力量举世锦赛：这次比什么](/zh/blog/2026-ipf-master-liliangju-shijie-jinbiaosai) — 赛前前瞻，含规则与级别
+- [增肌该做几次：8-12 次的迷思](/zh/blog/duoshao-cishu-zengji) — 强度和训练量到底怎么定
+- [线上教练有用吗？研究怎么说](/zh/blog/xianshang-jiaolian-youxiao-ma) — 同一份计划下，为什么监督会改变结果
 
 ## 参考文献
 

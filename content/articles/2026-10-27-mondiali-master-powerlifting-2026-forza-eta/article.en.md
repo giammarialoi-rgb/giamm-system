@@ -92,7 +92,7 @@ The **squat** falls from 36.7% of the total at 40-49 to 34.2% at 70-plus. The **
 
 The shift is only a few percentage points, but it is monotonic and it points where physiology suggests it should: the lift that demands the most range of motion, the most ankle and hip mobility and the most control in a deep eccentric is the one that gives way first. Strength isn't vanishing — the *squat* is getting harder to express.
 
-In training terms: if your squat falls behind the rest after fifty, check mobility and depth before you cut the load. And variations matter — something I covered in [knees out in the squat: rule or cue?](/en/blog/ginocchia-in-fuori-squat).
+In training terms: if your squat falls behind the rest after fifty, check mobility and depth before you cut the load. And variations matter — something I covered in [knees out in the squat: rule or cue?](/en/blog/knees-out-squat-cue-or-rule).
 
 ## What the research actually says
 
@@ -137,9 +137,9 @@ In the meta-analysis on healthy older adults the largest strength effect came at
 
 ## Read next
 
-- [World masters powerlifting in Reno: what was at stake](/en/blog/mondiali-powerlifting-master-reno-2026) — the preview, with rules and categories
-- [How many reps for muscle: the 8-12 myth](/en/blog/ripetizioni-serie-recupero-ipertrofia) — how to actually set intensity and volume
-- [Does online coaching work? What the studies say](/en/blog/coaching-online-funziona-studi) — why supervision changes results on an identical program
+- [World masters powerlifting in Reno: what was at stake](/en/blog/ipf-world-masters-powerlifting-2026-reno) — the preview, with rules and categories
+- [How many reps for muscle: the 8-12 myth](/en/blog/how-many-reps-build-muscle) — how to actually set intensity and volume
+- [Does online coaching work? What the studies say](/en/blog/does-online-coaching-work) — why supervision changes results on an identical program
 
 ## Sources
 

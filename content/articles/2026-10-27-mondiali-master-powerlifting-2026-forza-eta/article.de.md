@@ -92,7 +92,7 @@ Die **Kniebeuge** fällt von 36,7 % des Totals bei 40-49 Jahren auf 34,2 % bei 7
 
 Die Verschiebung beträgt nur wenige Prozentpunkte, ist aber monoton und zeigt in die Richtung, die die Physiologie nahelegt: Die Übung mit dem größten Bewegungsumfang, der höchsten Anforderung an Sprunggelenk- und Hüftbeweglichkeit und der meisten Kontrolle in der tiefen exzentrischen Phase gibt zuerst nach. Nicht die Kraft verschwindet — die *Kniebeuge* wird schwerer auszudrücken.
 
-Für das Training heißt das: Wenn die Kniebeuge nach fünfzig stärker zurückfällt als der Rest, lohnt es sich, Beweglichkeit und Tiefe zu prüfen, bevor man Gewicht abnimmt. Und die Variante zählt — ein Thema, das ich bei den [Knien nach außen in der Kniebeuge](/de/blog/ginocchia-in-fuori-squat) ausgeführt habe.
+Für das Training heißt das: Wenn die Kniebeuge nach fünfzig stärker zurückfällt als der Rest, lohnt es sich, Beweglichkeit und Tiefe zu prüfen, bevor man Gewicht abnimmt. Und die Variante zählt — ein Thema, das ich bei den [Knien nach außen in der Kniebeuge](/de/blog/knie-nach-aussen-kniebeuge) ausgeführt habe.
 
 ## Was die Forschung wirklich sagt
 
@@ -137,9 +137,9 @@ In der Metaanalyse zu gesunden Älteren zeigte sich der größte Krafteffekt bei
 
 ## Lies auch
 
-- [Masters-WM im Kraftdreikampf in Reno: worum es ging](/de/blog/mondiali-powerlifting-master-reno-2026) — die Vorschau mit Reglement und Klassen
-- [Wie viele Wiederholungen für Muskelmasse: der 8-12-Mythos](/de/blog/ripetizioni-serie-recupero-ipertrofia) — wie man Intensität und Volumen wirklich festlegt
-- [Funktioniert Online-Coaching? Was die Studien sagen](/de/blog/coaching-online-funziona-studi) — warum Betreuung bei identischem Plan die Ergebnisse verändert
+- [Masters-WM im Kraftdreikampf in Reno: worum es ging](/de/blog/masters-weltmeisterschaft-powerlifting-2026-reno) — die Vorschau mit Reglement und Klassen
+- [Wie viele Wiederholungen für Muskelmasse: der 8-12-Mythos](/de/blog/wie-viele-wiederholungen-muskelaufbau) — wie man Intensität und Volumen wirklich festlegt
+- [Funktioniert Online-Coaching? Was die Studien sagen](/de/blog/funktioniert-online-coaching) — warum Betreuung bei identischem Plan die Ergebnisse verändert
 
 ## Quellen
 
