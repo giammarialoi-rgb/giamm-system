@@ -1,0 +1,15 @@
+# Crediti immagini — Steroidi anabolizzanti: effetti collaterali e rischi (2026-10-28)
+
+| File | Descrizione / alt | Autore | Fonte | Licenza |
+|---|---|---|---|---|
+| cover.jpg (1600x900) | IT: Illustrazione astratta su fondo nero: un punto luminoso centrale collegato da linee sottili a dodici punti dorati sparsi, con cerchi concentrici · EN: Abstract illustration on a black background: one bright central node connected by thin lines to twelve scattered gold nodes, with concentric rings | Nurvan | Generata da noi con uno script Python/Pillow (`cover.py`) | Immagine originale Nurvan |
+| grafico-cuore-steroidi.&lt;lang&gt;.svg (10 lingue) | Frazione di eiezione ventricolare sinistra: 63% nei non utilizzatori, 58% negli utilizzatori con farmaco sospeso, 49% negli utilizzatori con farmaco in corso (media ± DS) | Nurvan | Baggish et al., 2017, Circulation (PMID 28533317) | Grafico originale Nurvan |
+| grafico-recupero-ormonale.&lt;lang&gt;.svg (10 lingue) | Scostamento dal basale durante l'uso e dopo la sospensione: LH −3,37 e FSH −1,73 UI/L durante l'uso e ritorno al basale in 13-24 settimane; testosterone endogeno −10,75 nmol/L durante l'uso e ancora −9,40 nmol/L dopo la sospensione | Nurvan | Christou et al., 2017, Sports Medicine (PMID 28258581) | Grafico originale Nurvan |
+
+## Note sulle licenze
+
+- **Nessuna immagine di terzi è stata usata in questo articolo.** La copertina è un'illustrazione astratta generata da noi: il punto centrale che raggiunge molti punti diversi rappresenta il concetto dell'articolo (un solo recettore degli androgeni espresso in molti tessuti). Non contiene testo, quindi è identica in tutte e dieci le lingue.
+- Motivo della scelta: in questa esecuzione **commons.wikimedia.org non è risultato raggiungibile** dallo strumento di fetch (tre tentativi su pagine diverse, tutti `url_not_found`) e Pexels blocca il fetch da robots. Non potendo verificare la licenza di nessuna foto di repertorio, si è preferito produrre un'immagine interamente nostra piuttosto che usarne una con licenza non verificata.
+- **Nessuna slide, immagine o screenshot del post di built4mayhem (Project Mayhem) è stata scaricata, vista o ripubblicata.** Del post sono stati letti solo autore, data e didascalia, che sono dati e non contenuto creativo riprodotto. Il tentativo di screenshot della pagina non è andato a buon fine (timeout del renderer) e non è stato ripetuto.
+- I due grafici sono interamente originali. Tutti i valori provengono dagli abstract pubblicati su PubMed: medie e deviazioni standard riportate testualmente da Baggish et al. (2017); differenze medie pesate riportate testualmente da Christou et al. (2017). **Nessun valore è stato letto approssimativamente da una figura altrui** e nessun dato è stato rielaborato o convertito.
+- Nel grafico sul recupero ormonale le due metà hanno scale e unità diverse (UI/L per LH e FSH, nmol/L per il testosterone): la differenza è dichiarata nella didascalia del grafico e nel testo dell'articolo in tutte le lingue, per non suggerire un confronto diretto fra le altezze delle barre.
