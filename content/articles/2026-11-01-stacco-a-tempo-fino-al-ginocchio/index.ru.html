@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Становая тяга в темпе до колена: работает ли? | Nurvan</title>
+<meta name="description" content="Замедлять становую до колена — мода из соцсетей или рабочее упражнение? Что говорят данные о скорости, мёртвой точке и времени под нагрузкой.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;overflow-x:auto}
+.chart img{border:0;border-radius:0;min-width:520px}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart img{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart img{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(hi) .pill,:lang(hi) .crumb{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru" dir="ltr">
+<div class="crumb">Блог · Тренировки</div>
+<h1>Становая тяга в темпе до колена: работает ли?</h1>
+<p class="lede">Среди пауэрлифтеров ходит один вариант становой тяги: стартуешь медленно, контролируешь штангу до колена, затем ускоряешься. Его называют <em>tempo to knee</em>, и те, кто его программирует, говорят, что он помогает «почувствовать» стартовое положение и убрать таз, который взлетает вверх. Идея хорошая. Проблема в том, что почти всё, что ему приписывают — больше силы, больше мышц, лучше техника — складывается из трёх разных утверждений, с которыми наука обходится совершенно по-разному. Их стоит разделить: два выдерживают проверку, одно нет.</p>
+<div class="meta"><span><b>11</b> мин чтения</span><span><b>9</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 1 ноября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Атлет поднимает нагруженную штангу в становой тяге на соревнованиях по силовым видам"><figcaption class="cap">Фото Charles Walton — Pexels, лицензия Pexels (бесплатное использование)</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Сам вариант никто не изучал.</strong> В PubMed нет ни одного индексированного интервенционного исследования темповой становой до колена (проверено 1 ноября 2026). Кто утверждает обратное, экстраполирует.</li><li><strong>Становая и так медленная там, где это важно.</strong> В мёртвой точке вертикальная скорость штанги составляет <strong>0,20 м/с</strong> в становой против <strong>0,09 м/с</strong> в приседе, при куда более открытых углах бедра и корпуса (Hales et al., 2009).</li><li><strong>Таз, который поднимается первым, — не ошибка, а само движение.</strong> Та же работа классифицирует становую как <strong>последовательное</strong> движение, а присед как <strong>одновременное</strong>. Степень обсуждаема, само явление — нет.</li><li><strong>Замедление не даёт больше мышц.</strong> От 0,5 до 8 секунд на повторение гипертрофия одинакова; свыше 10 секунд — хуже (Schoenfeld et al., 2015).</li><li><strong>И силы тоже не даёт.</strong> Быстрый и умеренно-медленный режимы дают схожий прирост, а преимущество, если и есть, склоняется к быстрому в диапазоне 60-79 % от 1ПМ (Davies et al., 2017).</li><li><strong>Мёртвая точка есть не у всех.</strong> В классической становой <strong>у 68 % участников нет никакой измеримой мёртвой точки</strong> (Lockie et al., 2018).</li></ul></div>
+<h2>Что это такое на практике</h2>
+<p>В <em>tempo to knee</em> ты задаёшь фиксированную длительность — обычно 3-5 секунд — отрезку от пола до уровня колена, а затем завершаешь подъём в обычном темпе. Это не тяга с плинтов и не статическая пауза: это контролируемое замедление первой части подъёма.</p>
+<p>Заявленная цель двойная: заставить тебя задержаться в стартовом положении достаточно долго, чтобы заметить, где на самом деле находится вес, и не дать тазу подняться раньше плеч. Это задачи двигательного контроля, а не силы. Держать это различие в голове — половина дела, потому что именно здесь рассуждение обычно и соскальзывает.</p>
+<h2>Что на самом деле говорят исследования</h2>
+<h3>Утверждение 1 — «Становую теряют на первых сантиметрах»</h3>
+<p><strong>Подтверждено, с оговоркой.</strong></p>
+<p>Трёхмерный анализ 25 пауэрлифтеров на региональных соревнованиях измерил, что происходит в мёртвой точке обоих движений. Результат однозначен.</p>
+<figure><div class="chart"><img src="images/grafico-angoli-punto-critico.ru.svg" alt="Сгруппированная столбчатая диаграмма: угол бедра и угол корпуса в мёртвой точке, 32,5 и 40,6 градуса в приседе против 57,4 и 58,3 градуса в классической становой тяге"></div><figcaption class="cap">График Nurvan по данным Hales et al., 2009 (J Strength Cond Res). Средние значения и стандартные отклонения приведены в статье; 25 пауэрлифтеров на соревнованиях, четыре камеры, синхронизированные на 60 Гц.</figcaption></figure>
+<p>В становой корпус наклонён вперёд почти на 60 градусов в самый тяжёлый момент подъёма против 40 в приседе. Рычаг на позвоночник просто длиннее. И максимален он именно в первом отрезке: это не мнение из зала, а геометрия, измеренная на соревнованиях.</p>
+<p>Так что да, первая часть становой — уязвимый отрезок. Но осторожнее с выводом: «уязвимый» не значит «выполнять нарочно медленно». Становая там и так ползёт — 0,20 м/с в мёртвой точке — а на больших весах замедляется ещё сильнее сама по себе. Систематический обзор 2025 года по 22 исследованиям и 293 опытным атлетам подтверждает: с ростом интенсивности средняя и пиковая скорость падают, концентрическая фаза удлиняется, а вариативность в суставах растёт именно в фазах ускорения и мёртвой точки (Bakhshinejad et al., 2025).</p>
+<h3>Утверждение 2 — «Таз, который взлетает, — ошибка, её надо исправлять»</h3>
+<p><strong>Требует уточнения.</strong></p>
+<p>Это самый частый аргумент в пользу варианта и тот, что требует наибольшей осторожности. Работа Hales заключает, что присед — движение <strong>синергичное и одновременное</strong>, а становая — <strong>последовательная и сегментированная</strong>: суставы не разгибаются вместе, они передают работу друг другу. То, что таз поднимается раньше плеч, в определённых пределах <em>и есть</em> становая.</p>
+<p>Сравнение вариантов усиливает картину. У одиннадцати тренированных женщин в 3ПМ классика и сумо дают большие моменты в тазобедренном суставе ближе к локауту, чем трэп-гриф, который сильнее нагружает колено и позволяет более высокую скорость штанги (Gundersen et al., 2025). Чем более тазодоминантна тяга, тем ожидаемее последовательность «сначала таз».</p>
+<p>Настоящая проблема не в том, что таз поднимается, а в том, что он поднимается <strong>настолько</strong>, что становая превращается в тягу на прямых ногах со штангой, уже ушедшей от тела. Это разница в степени, и упражнение на контроль может помочь её почувствовать. Но называть «ошибкой» само явление — значит тренироваться против механики упражнения.</p>
+<h3>Утверждение 3 — «Помогает пройти мёртвую точку»</h3>
+<p><strong>Требует уточнения.</strong></p>
+<p>Мёртвая точка в становой не универсальна. Из 31 тренированного участника, измеренного линейным датчиком на максимальном подъёме, у большинства её не было вовсе.</p>
+<figure><div class="chart"><img src="images/grafico-sticking-point.ru.svg" alt="Столбчатая диаграмма: доля атлетов с измеримой мёртвой точкой на 1ПМ, 32 процента в классической становой и 23 процента с трэп-грифом с высокими ручками"></div><figcaption class="cap">График Nurvan по данным Lockie et al., 2018 (J Strength Cond Res). Доли рассчитаны нами как дополнение к приведённым в аннотации долям участников без мёртвой точки (68 % и 77 %); 31 тренированный участник, 21 мужчина и 10 женщин.</figcaption></figure>
+<p>У двух атлетов из трёх в классической становой нет мёртвой точки, которую можно атаковать. Прежде чем строить вокруг неё тренировочный блок, стоит убедиться, что она у тебя есть: сними тяжёлый одиночный подход сбоку и посмотри, действительно ли штанга тормозит в конкретной точке или замедляется равномерно.</p>
+<h3>Утверждение 4 — «Больше времени под нагрузкой — больше мышц»</h3>
+<p><strong>Опровергнуто.</strong></p>
+<p>Это стандартное обоснование любого медленного варианта, и метаанализ закрывает вопрос. Восемь исследований с прямым сравнением длительности повторения: гипертрофия <strong>одинакова во всём диапазоне от 0,5 до 8 секунд</strong> и ухудшается только свыше 10 секунд на повторение (Schoenfeld et al., 2015).</p>
+<p>Более поздняя работа показывает, почему бухгалтерия «времени под нагрузкой» вводит в заблуждение: при уравненном до 60 секунд времени под нагрузкой медленный темп позволяет взять больший внешний вес, но традиционный даёт больше суммарного объёма, больше лактата, выше ЧСС и выше RPE (Mang et al., 2022). Два протокола — не одна и та же тренировка с другим секундомером, а разные стимулы.</p>
+<h3>Утверждение 5 — «Медленная работа строит больше силы»</h3>
+<p><strong>Опровергнуто.</strong></p>
+<p>Пятнадцать исследований, сравнение быстрого и умеренно-медленного выполнения при уравненных объёме и интенсивности: прирост динамической силы схож независимо от возраста и стажа. Там, где различие появляется, это тренд в пользу <strong>быстрого</strong> в диапазоне 60-79 % от 1ПМ (ES 0,31; p = 0,06) (Davies et al., 2017).</p>
+<p>И ещё: дело скорее в намерении, чем в секундомере. Двадцать шесть участников, получивших инструкции с внешним фокусом внимания, показали достоверно большую скорость штанги, чем те, кому давали инструкции с внутренним фокусом, при одинаковом весе (Finlay et al., 2025). То, как ты говоришь себе толкать, меняет силу, которую ты прикладываешь. Поэтому упражнение, приучающее не тянуть мощно на первом отрезке, надо применять, понимая, что именно оно тренирует: контроль, а не намерение ускоряться.</p>
+<h3>Утверждение 6 — «Подходит для больших весов»</h3>
+<p><strong>Требует уточнения.</strong></p>
+<p>Вблизи максимума замедление приходит само, а техническая вариативность растёт (Bakhshinejad et al., 2025): задавать темп поверх этого означает просто поднимать меньше. Есть и момент, о котором говорят редко: в приседе на 60 % от 1ПМ пиковая деформация надколенникового сухожилия оказалась <strong>выше</strong> в быстрых повторениях, чем при медленном темпе 2-1-2 (Earp et al., 2016). Медленный темп, таким образом, бережнее к сухожилиям, что делает его полезным в фазах высокой нагрузки — и именно поэтому это не место для поиска максимума.</p>
+<h2>Как применять</h2>
+<p>Если решишь использовать, относись к нему как к тому, чем он является: вспомогательному упражнению на контроль.</p>
+<p>Действует тот же принцип, что и в нашем разборе <a href="/ru/blog/skolko-povtoreniy-dlya-massy">подходов, повторений и отдыха для гипертрофии</a>: отдельная переменная значит мало, если остальная программа её не поддерживает.</p>
+<ol class="steps"><li><strong>Проверь, нужно ли оно тебе.</strong> Сними два тяжёлых одиночных подъёма сбоку. Если таз поднимается немного, а штанга идёт близко к голени, у тебя другая задача.</li><li><strong>Держи вес субмаксимальным.</strong> Диапазон, где заданный темп остаётся выполнимым без слома техники, ориентировочно 60-75 % от 1ПМ, по 3-5 повторений. Выше темп диктует штанга.</li><li><strong>Задавай темп только нужному отрезку.</strong> От пола до колена за 3-5 секунд, дальше заверши в обычном темпе. Замедлять ещё и локаут — значит менять упражнение, не получая новой информации.</li><li><strong>Не заменяй им соревновательную тягу.</strong> Ставь после основного движения, 2-4 подхода, блоком на 4-6 недель.</li><li><strong>Измеряй, работает ли это.</strong> Показатель — не вес в варианте, а высота, на которую поднимается таз в обычной становой, и скорость первого отрезка при тех же килограммах.</li><li><strong>Разделяй эти два упражнения в дневнике.</strong> Максимум варианта — не твой максимум: держать их в одной строке проще всего, чтобы спутать технический прогресс с силовым.</li></ol>
+<div class="app"><div><h3>Попробуй Nurvan — у каждого варианта своя история весов</h3><p>В Nurvan темповая становая — отдельное упражнение: веса, повторения и RIR хранятся отдельно от соревновательной тяги, так что видно, прогрессирует ли вариант, и цифры не смешиваются. Разминочные подходы предлагаются автоматически от рабочего веса дня, а история показывает, улучшается ли первый отрезок или ты просто набираешь подходы.</p></div><a class="cta" href="https://nurvan.app">Попробуй Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Сколько секунд должен длиться tempo to knee?</summary><p>Те, кто его программирует, обычно берут 3-5 секунд от пола до колена. Исследований по этому варианту с оптимальной длительностью нет; известно лишь, что свыше 10 секунд на повторение гипертрофические адаптации ухудшаются (Schoenfeld et al., 2015), так что растягивать дольше смысла нет.</p></details><details><summary>Работает ли это и для классической тяги?</summary><p>Исходный пост подаёт это как вариант для сумо, но логика — дольше оставаться в стартовом положении — не зависит от ширины стойки. У классики корпус в мёртвой точке наклонён даже сильнее (Hales et al., 2009), то есть первый отрезок ещё уязвимее. Данных, сравнивающих оба применения, нет.</p></details><details><summary>У меня болит спина в становой: поможет этот вариант?</summary><p>Стойкую или усиливающуюся боль должен оценить врач или физиотерапевт, прежде чем менять упражнение. Ни один технический вариант не является лечением, а упражнение, снижающее нагрузку, может скрыть проблему вместо того, чтобы её решить.</p></details><details><summary>Что лучше: темповая тяга или тяга с паузой?</summary><p>Прямого сравнения в литературе нет. Это два упражнения с разной логикой: пауза изолирует одно положение, темп распределяет контроль по всему отрезку. Выбирай по тому, что ты теряешь: конкретное положение или последовательность целиком.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/skolko-povtoreniy-dlya-massy">Подходы, повторения и отдых для гипертрофии</a> — сколько на самом деле весят переменные программы, с цифрами.</li><li><a href="/ru/blog/koleni-naruzhu-prised">Колени наружу в приседе: правило или подсказка?</a> — ещё одна часто повторяемая техническая подсказка, проверенная по исследованиям.</li><li><a href="/ru/blog/khvat-bulldog-zhim-lezha">Хват «бульдог» в жиме лёжа: что говорят исследования</a> — что делать, когда распространённую технику никто не измерял.</li></ul>
+<h2>Источники</h2>
+<p>Литература найдена через PubMed. Отправная точка: публикация <a href="https://www.instagram.com/p/DduBVWWiQOw/">Reactive Training Systems с Adam Jones</a> от 25 сентября 2026. Содержание поста использовано только для выбора темы и утверждений для проверки: ни текст, ни изображения, ни структура не заимствованы.</p>
+<ol class="refs"><li>Hales ME, Johnson BF, Johnson JT, 2009. Kinematic analysis of the powerlifting style squat and the conventional deadlift during competition: is there a cross-over effect between lifts? <em>Journal of Strength and Conditioning Research</em> 23(9):2574-80. PMID 19910816. <a href="https://doi.org/10.1519/JSC.0b013e3181bc1d2a">DOI</a></li><li>Lockie RG, Moreno MR, Lazar A, et al., 2018. The 1 Repetition Maximum Mechanics of a High-Handle Hexagonal Bar Deadlift Compared With a Conventional Deadlift as Measured by a Linear Position Transducer. <em>Journal of Strength and Conditioning Research</em> 32(1):150-161. PMID 28394830. <a href="https://doi.org/10.1519/JSC.0000000000001781">DOI</a></li><li>Schoenfeld BJ, Ogborn DI, Krieger JW, 2015. Effect of repetition duration during resistance training on muscle hypertrophy: a systematic review and meta-analysis. <em>Sports Medicine</em> 45(4):577-85. PMID 25601394. <a href="https://doi.org/10.1007/s40279-015-0304-0">DOI</a></li><li>Davies TB, Kuang K, Orr R, Halaki M, Hackett D, 2017. Effect of Movement Velocity During Resistance Training on Dynamic Muscular Strength: A Systematic Review and Meta-Analysis. <em>Sports Medicine</em> 47(8):1603-1617. PMID 28105573. <a href="https://doi.org/10.1007/s40279-017-0676-4">DOI</a></li><li>Bakhshinejad JA, Ramer JD, Dunsmore KA, Pelton LM, Berglund L, 2025. Effects of Intensity and Fatigue on the Kinetics and Kinematics of the Barbell Squat, Bench Press, and Deadlift in Experienced Lifters: A Systematic Review. <em>Sports Medicine - Open</em> 11(1):115. PMID 41085612. <a href="https://doi.org/10.1186/s40798-025-00921-x">DOI</a></li><li>Mang ZA, Realzola RA, Ducharme J, et al., 2022. The effect of repetition tempo on cardiovascular and metabolic stress when time under tension is matched during lower body exercise. <em>European Journal of Applied Physiology</em> 122(6):1485-1495. PMID 35394146. <a href="https://doi.org/10.1007/s00421-022-04941-3">DOI</a></li><li>Earp JE, Newton RU, Cormie P, Blazevich AJ, 2016. Faster Movement Speed Results in Greater Tendon Strain during the Loaded Squat Exercise. <em>Frontiers in Physiology</em> 7:366. PMID 27630574. <a href="https://doi.org/10.3389/fphys.2016.00366">DOI</a></li><li>Gundersen AH, van den Tillaar R, Falch HN, Fredriksen AB, Larsen S, 2025. A Biomechanical Comparison Between Conventional, Sumo, and Hex-Bar Deadlifts Among Resistance Trained Women. <em>Journal of Strength and Conditioning Research</em> 39(3):281-288. PMID 39705135. <a href="https://doi.org/10.1519/JSC.0000000000005011">DOI</a></li><li>Finlay M, Marchant D, Langley C, Simpson T, 2025. Impact of attentional focus and action verbs on bench press performance. <em>Human Movement Science</em> 102:103385. PMID 40602018. <a href="https://doi.org/10.1016/j.humov.2025.103385">DOI</a></li></ol>
+<p class="cap" style="font-size:14px">Giammaria Loi — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и коучем с сертификацией FIPE с 2013 года и выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных исследований и заканчивается тем, что действительно работает в зале.</p>
+<p class="note">Примечание: информационный материал, не заменяет консультацию врача или специалиста.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

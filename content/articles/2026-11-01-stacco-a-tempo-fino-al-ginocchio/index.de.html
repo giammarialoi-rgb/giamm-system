@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tempo-Kreuzheben bis zum Knie: bringt das was? | Nurvan</title>
+<meta name="description" content="Das Kreuzheben bis zum Knie bremsen: Social-Media-Trend oder echte Übung? Was die Daten zu Geschwindigkeit, Sticking Point und Time under Tension sagen.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;overflow-x:auto}
+.chart img{border:0;border-radius:0;min-width:520px}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart img{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart img{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(hi) .pill,:lang(hi) .crumb{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Ernährung</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">App laden</a></div></header>
+<main class="wrap" lang="de" dir="ltr">
+<div class="crumb">Blog · Training</div>
+<h1>Tempo-Kreuzheben bis zum Knie: bringt das was?</h1>
+<p class="lede">Unter Powerliftern kursiert eine Kreuzheben-Variante: langsam starten, die Hantel bis zum Knie kontrollieren, danach beschleunigen. Sie heißt <em>Tempo to Knee</em>, und wer sie programmiert, sagt, sie helfe dabei, die Startposition zu spüren und die hochschießende Hüfte zu korrigieren. Die Idee ist gut. Das Problem: Fast alles, was ihr zugeschrieben wird — mehr Kraft, mehr Muskeln, bessere Technik — stammt aus drei verschiedenen Behauptungen, die die Forschung sehr unterschiedlich behandelt. Es lohnt sich, sie zu trennen, denn zwei halten stand und eine nicht.</p>
+<div class="meta"><span><b>11</b> Min. Lesezeit</span><span><b>9</b> zitierte Studien</span><span>Von <a href="/autore/giammaria-loi">Giammaria Loi</a> · aktualisiert am 1. November 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Athlet zieht eine beladene Langhantel im Kreuzheben während eines Kraftwettkampfs"><figcaption class="cap">Foto von Charles Walton — Pexels, Pexels-Lizenz (kostenlose Nutzung)</figcaption></figure>
+<div class="box"><h2>Kurz gefasst</h2><ul><li><strong>Die Variante selbst wurde nie untersucht.</strong> Keine in PubMed indexierte Interventionsstudie hat das Tempo-Kreuzheben bis zum Knie getestet (geprüft am 1. November 2026). Wer etwas anderes behauptet, extrapoliert.</li><li><strong>Kreuzheben ist dort, wo es zählt, ohnehin langsam.</strong> Am Sticking Point beträgt die vertikale Hantelgeschwindigkeit <strong>0,20 m/s</strong> beim Kreuzheben gegenüber <strong>0,09 m/s</strong> bei der Kniebeuge, bei deutlich offeneren Oberschenkel- und Rumpfwinkeln (Hales et al., 2009).</li><li><strong>Eine zuerst steigende Hüfte ist kein Fehler, sondern die Bewegung.</strong> Dieselbe Arbeit stuft das Kreuzheben als <strong>sequenzielle</strong>, die Kniebeuge als <strong>simultane</strong> Bewegung ein. Das Ausmaß ist diskutabel, das Phänomen nicht.</li><li><strong>Langsamer macht nicht mehr Muskeln.</strong> Von 0,5 bis 8 Sekunden pro Wiederholung ist die Hypertrophie gleichwertig; über 10 Sekunden wird sie schlechter (Schoenfeld et al., 2015).</li><li><strong>Und auch nicht mehr Kraft.</strong> Schnell und moderat-langsam liefern ähnliche Zuwächse, wobei ein möglicher Vorteil eher beim Schnellen im Bereich 60-79 % des 1RM liegt (Davies et al., 2017).</li><li><strong>Nicht jeder hat einen Sticking Point.</strong> Beim konventionellen Kreuzheben zeigen <strong>68 % der Probanden gar keine messbare Sticking Region</strong> (Lockie et al., 2018).</li></ul></div>
+<h2>Was es praktisch ist</h2>
+<p>Beim <em>Tempo to Knee</em> gibst du dem Abschnitt vom Boden bis Kniehöhe eine feste Dauer vor — typischerweise 3 bis 5 Sekunden — und beendest die Wiederholung dann in normalem Tempo. Es ist weder Deficit-Kreuzheben noch eine statische Pause: Es ist ein kontrolliertes Abbremsen des ersten Teils des Zugs.</p>
+<p>Das erklärte Ziel ist doppelt: lange genug in der Startposition bleiben, um zu merken, wo das Gewicht tatsächlich liegt, und verhindern, dass die Hüfte vor den Schultern hochkommt. Das sind Ziele der Bewegungskontrolle, nicht der Kraft. Diese Unterscheidung im Kopf zu behalten, ist die halbe Arbeit — denn genau hier rutscht die Argumentation sonst ab.</p>
+<h2>Was die Forschung wirklich sagt</h2>
+<h3>Behauptung 1 — „Kreuzheben verliert man im ersten Abschnitt&quot;</h3>
+<p><strong>Bestätigt, mit Einschränkung.</strong></p>
+<p>Eine dreidimensionale Analyse von 25 Powerliftern während eines Regionalwettkampfs hat gemessen, was am Sticking Point beider Übungen passiert. Das Ergebnis ist eindeutig.</p>
+<figure><div class="chart"><img src="images/grafico-angoli-punto-critico.de.svg" alt="Gruppiertes Balkendiagramm: Oberschenkel- und Rumpfwinkel am Sticking Point, 32,5 und 40,6 Grad bei der Kniebeuge gegenüber 57,4 und 58,3 Grad beim konventionellen Kreuzheben"></div><figcaption class="cap">Nurvan-Grafik auf Basis der Daten von Hales et al., 2009 (J Strength Cond Res). Mittelwerte und Standardabweichungen wie im Artikel berichtet; 25 Powerlifter im Wettkampf, vier mit 60 Hz synchronisierte Kameras.</figcaption></figure>
+<p>Beim Kreuzheben ist der Rumpf im schwersten Moment der Bewegung fast 60 Grad nach vorn geneigt, gegenüber 40 Grad bei der Kniebeuge. Der Hebel auf die Wirbelsäule ist schlicht länger. Und im ersten Abschnitt ist dieser Hebel am größten: keine Studiomeinung, sondern im Wettkampf gemessene Geometrie.</p>
+<p>Also ja, der frühe Teil des Kreuzhebens ist der verletzliche Abschnitt. Aber Vorsicht bei der Schlussfolgerung: „verletzlich&quot; heißt nicht „absichtlich langsam auszuführen&quot;. Das Kreuzheben kriecht dort ohnehin — 0,20 m/s am Sticking Point — und bei schweren Lasten bremst es von allein weiter ab. Eine systematische Übersichtsarbeit von 2025 über 22 Studien und 293 erfahrene Athleten bestätigt: Mit steigender Intensität sinken mittlere und Spitzengeschwindigkeit, die konzentrischen Dauern verlängern sich und die Gelenkvariabilität nimmt genau in der Beschleunigungs- und Sticking-Phase zu (Bakhshinejad et al., 2025).</p>
+<h3>Behauptung 2 — „Die hochschießende Hüfte ist ein zu korrigierender Fehler&quot;</h3>
+<p><strong>Zu präzisieren.</strong></p>
+<p>Das ist die meistgenannte Begründung für diese Variante — und die, die am meisten Vorsicht verdient. Die Hales-Studie kommt zu dem Schluss, dass die Kniebeuge eine <strong>synergistische, simultane</strong> Bewegung ist, das Kreuzheben dagegen <strong>sequenziell und segmentiert</strong>: Die Gelenke strecken sich nicht gemeinsam, sie reichen die Arbeit weiter. Dass die Hüfte vor den Schultern hochkommt, ist innerhalb gewisser Grenzen <em>das</em> Kreuzheben.</p>
+<p>Der Variantenvergleich stützt das Bild. Bei elf trainierten Frauen im 3RM erzeugen konventionell und Sumo nahe dem Lockout größere Hüftgelenkmomente als die Trap Bar, die dafür das Knie stärker belastet und höhere Hantelgeschwindigkeiten erlaubt (Gundersen et al., 2025). Je hüftdominanter der Zug, desto erwartbarer die Hüfte-zuerst-Sequenz.</p>
+<p>Das eigentliche Problem ist nicht, dass die Hüfte steigt, sondern dass sie <strong>so stark</strong> steigt, dass aus dem Kreuzheben ein gestrecktes Kreuzheben mit bereits körperfern geführter Hantel wird. Das ist ein Gradunterschied, und eine Kontrollübung kann helfen, ihn zu spüren. Das Phänomen selbst „Fehler&quot; zu nennen, heißt dagegen, gegen die Mechanik der Übung zu trainieren.</p>
+<h3>Behauptung 3 — „Sie hilft über den Sticking Point&quot;</h3>
+<p><strong>Zu präzisieren.</strong></p>
+<p>Der Sticking Point beim Kreuzheben ist nichts Universelles. Von 31 trainierten Personen, die im Maximalversuch mit linearem Wegaufnehmer gemessen wurden, zeigte die Mehrheit gar keinen.</p>
+<figure><div class="chart"><img src="images/grafico-sticking-point.de.svg" alt="Balkendiagramm: Anteil der Athleten mit messbarem Sticking Point bei 1RM, 32 Prozent beim konventionellen Kreuzheben und 23 Prozent mit der Trap Bar mit hohen Griffen"></div><figcaption class="cap">Nurvan-Grafik auf Basis der Daten von Lockie et al., 2018 (J Strength Cond Res). Die Anteile haben wir als Ergänzung zu den im Abstract berichteten Quoten ohne Sticking Region (68 % und 77 %) berechnet; 31 trainierte Personen, 21 Männer und 10 Frauen.</figcaption></figure>
+<p>Zwei von drei Athleten haben beim konventionellen Kreuzheben keinen Sticking Point zum Angreifen. Bevor man darauf einen Trainingsblock aufbaut, lohnt sich die Prüfung: einen schweren Einzelversuch von der Seite filmen und schauen, ob die Hantel tatsächlich an einer bestimmten Stelle stockt oder gleichmäßig abbremst.</p>
+<h3>Behauptung 4 — „Mehr Time under Tension, mehr Muskeln&quot;</h3>
+<p><strong>Widerlegt.</strong></p>
+<p>Das ist die Standardbegründung für jede langsame Variante, und die Metaanalyse schließt den Fall. Acht Studien im direkten Vergleich verschiedener Wiederholungsdauern: Die Hypertrophie ist <strong>über den gesamten Bereich von 0,5 bis 8 Sekunden gleichwertig</strong> und wird erst jenseits von 10 Sekunden pro Wiederholung schlechter (Schoenfeld et al., 2015).</p>
+<p>Eine spätere Arbeit zeigt, warum die Time-under-Tension-Rechnung täuscht: Bei auf 60 Sekunden angeglichener Time under Tension erlaubt das langsame Tempo eine höhere externe Last, das traditionelle Tempo erzeugt dagegen mehr Gesamtvolumen, mehr Laktat, eine höhere Herzfrequenz und ein höheres RPE (Mang et al., 2022). Die beiden Protokolle sind nicht dieselbe Einheit mit anderer Stoppuhr, sondern unterschiedliche Reize.</p>
+<h3>Behauptung 5 — „Langsam trainieren macht mehr Kraft&quot;</h3>
+<p><strong>Widerlegt.</strong></p>
+<p>Fünfzehn Studien, Vergleich schneller und moderat-langsamer Ausführung bei angeglichenem Volumen und Intensität: Die Zuwächse an dynamischer Kraft sind ähnlich, unabhängig von Alter und Trainingsstand. Wo ein Unterschied auftaucht, ist es ein Trend zugunsten des <strong>Schnellen</strong> im Bereich 60-79 % des 1RM (ES 0,31; p = 0,06) (Davies et al., 2017).</p>
+<p>Und es gibt mehr, und es betrifft die Absicht mehr als die Stoppuhr. Sechsundzwanzig Probanden mit extern fokussierten Anweisungen erzeugten bei gleicher Last signifikant höhere Hantelgeschwindigkeiten als jene mit intern fokussierten Anweisungen (Finlay et al., 2025). Wie du dir sagst zu drücken, verändert, wie stark du drückst. Eine Übung, die dich daran gewöhnt, im ersten Abschnitt nicht kräftig zu ziehen, sollte man deshalb im Bewusstsein einsetzen, was sie trainiert: Kontrolle, nicht die Absicht zu beschleunigen.</p>
+<h3>Behauptung 6 — „Funktioniert auch mit schweren Lasten&quot;</h3>
+<p><strong>Zu präzisieren.</strong></p>
+<p>Nahe am Maximum kommt die Verlangsamung von selbst und die technische Variabilität steigt (Bakhshinejad et al., 2025): ein Tempo obendrauf vorzuschreiben bedeutet schlicht, weniger zu heben. Hinzu kommt ein selten erwähnter Punkt: Bei der Kniebeuge mit 60 % des 1RM war die Spitzendehnung der Patellasehne in schnellen Ausführungen <strong>größer</strong> als bei einem langsamen 2-1-2-Tempo (Earp et al., 2016). Langsames Tempo ist also sehnenschonender, was es in Phasen hoher Last nützlich macht — und genau deshalb nicht der Ort ist, an dem man sein Maximum sucht.</p>
+<h2>Wie man es einsetzt</h2>
+<p>Wenn du es nutzt, behandle es als das, was es ist: eine Zusatzübung zur Kontrolle.</p>
+<p>Es gilt dasselbe Prinzip wie in unserem Beitrag zu <a href="/de/blog/wie-viele-wiederholungen-muskelaufbau">Sätzen, Wiederholungen und Pausen für die Hypertrophie</a>: Eine isolierte Variable zählt wenig, wenn der Rest des Programms sie nicht trägt.</p>
+<ol class="steps"><li><strong>Prüfe, ob du es brauchst.</strong> Filme zwei schwere Einzelwiederholungen von der Seite. Steigt die Hüfte kaum und bleibt die Hantel nah am Schienbein, hast du ein anderes Problem.</li><li><strong>Halte die Last submaximal.</strong> Der Bereich, in dem ein vorgegebenes Tempo ohne Technikverlust machbar bleibt, liegt grob bei 60-75 % des 1RM, mit 3 bis 5 Wiederholungen. Darüber diktiert die Hantel das Tempo.</li><li><strong>Gib das Tempo nur für den gewünschten Abschnitt vor.</strong> Vom Boden bis zum Knie in 3 bis 5 Sekunden, dann in normalem Tempo beenden. Auch den Lockout zu bremsen verändert die Übung, ohne Information zu liefern.</li><li><strong>Ersetze damit nicht das Wettkampf-Kreuzheben.</strong> Setze es nach der Hauptübung an, 2 bis 4 Sätze, in einem Block von 4 bis 6 Wochen.</li><li><strong>Miss, ob es wirkt.</strong> Der Maßstab ist nicht die Last in der Variante, sondern wie hoch deine Hüfte im normalen Kreuzheben steigt und wie schnell der erste Abschnitt bei gleichem Gewicht läuft.</li><li><strong>Trenne beide Übungen im Logbuch.</strong> Das Maximum der Variante ist nicht dein Maximum: Beide in derselben Zeile zu führen, ist der schnellste Weg, technischen Fortschritt mit Kraftfortschritt zu verwechseln.</li></ol>
+<div class="app"><div><h3>Teste Nurvan — jede Variante mit eigener Lasthistorie</h3><p>In Nurvan ist das Tempo-Kreuzheben eine eigene Übung: Lasten, Wiederholungen und RIR bleiben vom Wettkampf-Kreuzheben getrennt, so siehst du, ob die Variante Fortschritte macht, ohne dass sich die Zahlen vermischen. Die Aufwärmsätze werden automatisch aus der Arbeitslast des Tages vorgeschlagen, und die Historie zeigt dir, ob der erste Abschnitt besser wird oder du nur Sätze sammelst.</p></div><a class="cta" href="https://nurvan.app">Teste Nurvan</a></div>
+<h2>Häufige Fragen</h2>
+<details><summary>Wie viele Sekunden sollte ein Tempo to Knee dauern?</summary><p>Wer es programmiert, nutzt in der Regel 3 bis 5 Sekunden vom Boden bis zum Knie. Es gibt keine Studie zur Variante, die eine optimale Dauer nennt; bekannt ist nur, dass jenseits von 10 Sekunden pro Wiederholung die Hypertrophieanpassungen schlechter werden (Schoenfeld et al., 2015) — länger zu dehnen ergibt also keinen Sinn.</p></details><details><summary>Funktioniert das auch beim konventionellen Kreuzheben?</summary><p>Der Ausgangspost präsentiert es als Sumo-Variante, doch die Logik — länger in der Startposition bleiben — hängt nicht von der Standbreite ab. Konventionell ist der Rumpf am Sticking Point sogar stärker geneigt (Hales et al., 2009), der erste Abschnitt also noch exponierter. Daten, die beide Anwendungen vergleichen, gibt es nicht.</p></details><details><summary>Mir tut beim Kreuzheben der Rücken weh — hilft diese Variante?</summary><p>Anhaltende oder zunehmende Schmerzen gehören vor jedem Übungswechsel ärztlich oder physiotherapeutisch abgeklärt. Keine Technikvariante ist eine Behandlung, und eine Übung, die die Last senkt, kann ein Problem eher verdecken als lösen.</p></details><details><summary>Tempo-Kreuzheben oder Kreuzheben mit Pause?</summary><p>Ein direkter Vergleich fehlt in der Literatur. Es sind zwei Übungen mit unterschiedlicher Logik: Die Pause isoliert eine Position, das Tempo verteilt die Kontrolle über den gesamten Abschnitt. Wähle danach, was du verlierst — eine bestimmte Position oder die Sequenz als Ganzes.</p></details>
+<h2>Weiterlesen</h2>
+<ul><li><a href="/de/blog/wie-viele-wiederholungen-muskelaufbau">Sätze, Wiederholungen und Pausen für die Hypertrophie</a> — was die Programmvariablen wirklich wiegen, mit Zahlen.</li><li><a href="/de/blog/knie-nach-aussen-kniebeuge">Knie nach außen in der Kniebeuge: Regel oder Cue?</a> — ein weiterer vielzitierter Technik-Cue, an der Forschung geprüft.</li><li><a href="/de/blog/bulldog-griff-bankdruecken">Bulldog-Griff beim Bankdrücken: was die Studien sagen</a> — was tun, wenn eine verbreitete Technik nie gemessen wurde.</li></ul>
+<h2>Quellen</h2>
+<p>Literatur über PubMed recherchiert. Ausgangspunkt: Beitrag von <a href="https://www.instagram.com/p/DduBVWWiQOw/">Reactive Training Systems mit Adam Jones</a> vom 25. September 2026. Der Inhalt des Posts diente nur dazu, Thema und zu prüfende Behauptungen zu identifizieren: Es wurden weder Text noch Bild noch Struktur übernommen.</p>
+<ol class="refs"><li>Hales ME, Johnson BF, Johnson JT, 2009. Kinematic analysis of the powerlifting style squat and the conventional deadlift during competition: is there a cross-over effect between lifts? <em>Journal of Strength and Conditioning Research</em> 23(9):2574-80. PMID 19910816. <a href="https://doi.org/10.1519/JSC.0b013e3181bc1d2a">DOI</a></li><li>Lockie RG, Moreno MR, Lazar A, et al., 2018. The 1 Repetition Maximum Mechanics of a High-Handle Hexagonal Bar Deadlift Compared With a Conventional Deadlift as Measured by a Linear Position Transducer. <em>Journal of Strength and Conditioning Research</em> 32(1):150-161. PMID 28394830. <a href="https://doi.org/10.1519/JSC.0000000000001781">DOI</a></li><li>Schoenfeld BJ, Ogborn DI, Krieger JW, 2015. Effect of repetition duration during resistance training on muscle hypertrophy: a systematic review and meta-analysis. <em>Sports Medicine</em> 45(4):577-85. PMID 25601394. <a href="https://doi.org/10.1007/s40279-015-0304-0">DOI</a></li><li>Davies TB, Kuang K, Orr R, Halaki M, Hackett D, 2017. Effect of Movement Velocity During Resistance Training on Dynamic Muscular Strength: A Systematic Review and Meta-Analysis. <em>Sports Medicine</em> 47(8):1603-1617. PMID 28105573. <a href="https://doi.org/10.1007/s40279-017-0676-4">DOI</a></li><li>Bakhshinejad JA, Ramer JD, Dunsmore KA, Pelton LM, Berglund L, 2025. Effects of Intensity and Fatigue on the Kinetics and Kinematics of the Barbell Squat, Bench Press, and Deadlift in Experienced Lifters: A Systematic Review. <em>Sports Medicine - Open</em> 11(1):115. PMID 41085612. <a href="https://doi.org/10.1186/s40798-025-00921-x">DOI</a></li><li>Mang ZA, Realzola RA, Ducharme J, et al., 2022. The effect of repetition tempo on cardiovascular and metabolic stress when time under tension is matched during lower body exercise. <em>European Journal of Applied Physiology</em> 122(6):1485-1495. PMID 35394146. <a href="https://doi.org/10.1007/s00421-022-04941-3">DOI</a></li><li>Earp JE, Newton RU, Cormie P, Blazevich AJ, 2016. Faster Movement Speed Results in Greater Tendon Strain during the Loaded Squat Exercise. <em>Frontiers in Physiology</em> 7:366. PMID 27630574. <a href="https://doi.org/10.3389/fphys.2016.00366">DOI</a></li><li>Gundersen AH, van den Tillaar R, Falch HN, Fredriksen AB, Larsen S, 2025. A Biomechanical Comparison Between Conventional, Sumo, and Hex-Bar Deadlifts Among Resistance Trained Women. <em>Journal of Strength and Conditioning Research</em> 39(3):281-288. PMID 39705135. <a href="https://doi.org/10.1519/JSC.0000000000005011">DOI</a></li><li>Finlay M, Marchant D, Langley C, Simpson T, 2025. Impact of attentional focus and action verbs on bench press performance. <em>Human Movement Science</em> 102:103385. PMID 40602018. <a href="https://doi.org/10.1016/j.humov.2025.103385">DOI</a></li></ol>
+<p class="cap" style="font-size:14px">Giammaria Loi ist der Gründer von Nurvan. Er trainiert seit 2012 mit Gewichten, arbeitet seit 2013 als FIPE-zertifizierter Personal Trainer und Coach und startet seit 2018 auf nationalem Niveau im Powerlifting. Jeder Artikel, den er zeichnet, beginnt bei den Studien und endet bei dem, was im Studio wirklich funktioniert.</p>
+<p class="note">Hinweis: informativer Inhalt, ersetzt nicht die Beratung durch Arzt oder Fachperson.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>
