@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>برنامج تدريب بالذكاء الاصطناعي: ماذا تقول الدراسات | Nurvan</title>
+<meta name="description" content="هل ينجح فعلاً طلب برنامج تمارين من ChatGPT؟ ثماني دراسات علمية تكشف ما يصيبه الذكاء الاصطناعي، وأين يخطئ، ولماذا يخرج البرنامج نفسه للرجل وللمرأة.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;overflow-x:auto}
+.chart img{border:0;border-radius:0;min-width:520px}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart img{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart img{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(hi) .pill,:lang(hi) .crumb{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">التدريب</a><a href="#">التغذية</a><a href="#">المكمّلات</a><a href="#" class="on">المدوّنة</a></nav><a class="cta" href="https://nurvan.app">حمّل التطبيق</a></div></header>
+<main class="wrap" lang="ar" dir="rtl">
+<div class="crumb">المدوّنة · التدريب</div>
+<h1>برنامج تدريب بالذكاء الاصطناعي: ماذا تقول الدراسات</h1>
+<p class="lede">اطلب برنامج تمارين من روبوت محادثة، وبعد عشر ثوانٍ يصل إليك برنامج من اثني عشر أسبوعاً، بمراحل ونسب مئوية وأزمنة راحة. يبدو متماسكاً ومكتوباً بخبرة. السؤال الحقيقي ليس ما إذا كان الذكاء الاصطناعي قادراً على كتابة برنامج — فهو قادر — بل ما إذا كان ذلك البرنامج <em>برنامجك أنت</em> فعلاً، وكم من العناصر التي تجعل أي برنامج ينجح تبقى خارج الملف. منذ 2024 توقّفت بعض فرق البحث عن الجدل وبدأت تقيس: جعلت النماذج تولّد برامج، ثم سلّمتها إلى خبراء يملكون معايير تقييم مكتوبة، وفي حالة واحدة جعلت رياضيين ينفّذون البرنامج فعلياً لثمانية أسابيع. النتائج أكثر إثارة للاهتمام من الرواية التي يبيعها تسويق التطبيقات.</p>
+<div class="meta"><span><b>10</b> دقيقة قراءة</span><span><b>8</b> دراسة مُستشهَدة</span><span>بقلم <a href="/autore/giammaria-loi">Giammaria Loi</a> · تحديث 2 نوفمبر 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="هاتف ذكي مسنود على الأرض يقود تمرين شخص غير واضح في الخلفية"><figcaption class="cap">صورة بعدسة Mister Mister — Pexels، رخصة Pexels (استخدام مجاني)</figcaption></figure>
+<div class="box"><h2>باختصار</h2><ul><li><strong>البرنامج يخرج منطقياً، لكنه مسودة.</strong> برامج من 12 أسبوعاً في ثلاث مراحل، وشدّة بين 60% و95% من 1RM حسب المستوى: بنية متوافقة مع المراجع، لكنها &quot;تتطلب على الأرجح ضبطاً إضافياً قبل التطبيق&quot; (Washif et al., 2024).</li><li><strong>ليس مخصّصاً لك: إنه برنامج عام في ثوب شخصي.</strong> في الدراسة نفسها خرجت البرامج المولّدة لملف رجل وملف امرأة <strong>متشابهة موضوعياً</strong>. غيّر النموذج الاسم، لا المحتوى.</li><li><strong>يمكن أن ينجح، إذا مرّ على يد إنسان.</strong> ثمانية أسابيع من برنامج تدريب لا مركزي (eccentric) ولّده ChatGPT <em>وأقرّه خبراء قبل الاستخدام</em>: تحسّن في العدو على 5 أمتار وفي تغيير الاتجاه وفي الرشاقة، ولا تحسّن في الوثب (Negra et al., 2026).</li><li><strong>فكرة أن الروبوت يجعلك منتظماً لا دليل عليها.</strong> مراجعة منهجية لسبع تجارب معشّاة: آثار <strong>غير متسقة</strong> على النشاط البدني والتغذية عند البالغين، ولا دليل على أي أثر عند الأطفال. ينجح مع الإقلاع عن التدخين، لا مع النادي (Chen et al., 2025).</li><li><strong>في السعرات هو أدقّ في الوصفة الواحدة من الخطة اليومية.</strong> خطط غذائية ووصفات مولّدة ثم أُعيد حسابها على قواعد بيانات غذائية: الوصفات صمدت أفضل من قوائم اليوم الكامل (Aslan و Sozlu, 2025).</li><li><strong>ليس خطيراً بقدر ما هو ناقص.</strong> قيّم اثنا عشر أخصائي علاج طبيعي أجوبة ChatGPT بأنها آمنة ودقيقة في معظمها في <strong>خمسة مجالات من ستة</strong>، لكنها تنقصها الشمولية (Schütze et al., 2026).</li></ul></div>
+<h2>ما يحدث فعلاً عندما تطلب &quot;اكتب لي برنامجاً&quot;</h2>
+<p>النموذج اللغوي لا يحسب برنامجك: يتوقّع النص الأكثر ترجيحاً بناءً على ما كتبته له. الناتج معدّل مدروس لكل ما قرأه، ولأنه قرأ كثيراً من المراجع الجدّية فهذا المعدّل معقول في الغالب. لهذا تبدو البرامج المولّدة جيدة من النظرة الأولى: المراحل موجودة، ونطاقات التكرارات سليمة، والتسخين في موضعه الصحيح.</p>
+<p>المشكلة تبدأ بعد ذلك. البرنامج موجود لينتج تكيّفاً في شخص <em>واحد</em>، بتاريخ أحماله وجدوله اليومي ومتاعبه القديمة واستجابته الخاصة للتعب. هذا الجزء ليس موجوداً في ما كتبته للنموذج، ولا في النص الذي يعيده: يأتي لاحقاً، أسبوعاً بعد أسبوع. الدراسات التالية تقيس هذه المسافة بالضبط.</p>
+<h2>ما تقوله الأبحاث فعلاً</h2>
+<table><thead><tr><th>الادعاء الشائع</th><th>الحكم</th><th>المصدر</th></tr></thead><tbody><tr><td>&quot;الذكاء الاصطناعي يكتب برنامجاً منطقياً&quot;</td><td>مؤكّد، لكنه مسودة</td><td>Washif et al., 2024</td></tr><tr><td>&quot;البرنامج مخصّص لك&quot;</td><td>مُدحَض</td><td>Washif et al., 2024</td></tr><tr><td>&quot;برنامج يكتبه الذكاء الاصطناعي لا ينجح&quot;</td><td>مُدحَض، بشرط واحد</td><td>Negra et al., 2026</td></tr><tr><td>&quot;الإصدارات الجديدة حلّت كل هذا&quot;</td><td>يحتاج تفصيلاً</td><td>Genç et al., 2025</td></tr><tr><td>&quot;روبوت المحادثة يجعلك منتظماً&quot;</td><td>غير مدعوم</td><td>Chen et al., 2025</td></tr><tr><td>&quot;يمكنك أن تطلب منه نظامك الغذائي أيضاً&quot;</td><td>يحتاج تفصيلاً</td><td>Aslan و Sozlu, 2025</td></tr><tr><td>&quot;إنه خطير&quot;</td><td>يحتاج تفصيلاً: ناقص أكثر من كونه غير آمن</td><td>Schütze et al., 2026</td></tr></tbody></table>
+<h3>الادعاء 1 — &quot;الذكاء الاصطناعي يكتب برنامجاً منطقياً&quot;</h3>
+<p>أول دراسة مفهرسة دخلت في التفاصيل طلبت من GPT-3.5 وGPT-4.0 تصميم برامج قوة من اثني عشر أسبوعاً لملفات افتراضية لأشخاص في العشرين من العمر، بخبرة متوسطة أولاً ثم متقدّمة. أنتج الإصداران برامج في ثلاث مراحل من أربعة أسابيع لكل منها أهداف مختلفة (تضخيم، قوة)، مع متغيّرات داخل نطاقات المراجع وأزمنة راحة متماسكة.</p>
+<figure><div class="chart"><img src="images/grafico-intensita-ai.ar.svg" alt="مخطط أعمدة أفقية يوضح نطاقات الشدة المقترحة: 70-85% من 1RM من GPT-3.5، و60-90% من GPT-4.0 للمستوى المتوسط، و70-95% من GPT-4.0 للمستوى المتقدّم"></div><figcaption class="cap">مخطط Nurvan على بيانات Washif et al., 2024 (Biology of Sport). نطاقات الشدة التي اقترحتها النماذج لبرامج من 12 أسبوعاً؛ ملفات افتراضية لعمر 20 سنة، بدون إصابات.</figcaption></figure>
+<p>الفروق بين الإصدارين حقيقية وتسير في الاتجاه المتوقّع: GPT-4.0 يميّز المستوى المتوسط عن المتقدّم، ويوسّع نافذة الراحة (من 60-180 إلى 60-300 ثانية)، ويتعامل مع معلومات أكثر في وقت واحد. مع ذلك فإن خلاصة الباحثين حاسمة: البرامج &quot;تتطلب على الأرجح ضبطاً إضافياً قبل التطبيق&quot;، والنموذج &quot;قد يصلح كأداة مكمّلة لكتابة مسودة&quot;.</p>
+<p>كلمة &quot;مسودة&quot; هي الكلمة الصحيحة هنا. البرنامج المعقول ليس بالضرورة البرنامج المناسب.</p>
+<h3>الادعاء 2 — &quot;البرنامج مخصّص لك&quot;</h3>
+<p>هذه أكثر نتيجة محرجة في الدراسة نفسها، ولا يكاد أحد يذكرها. كفى الباحثين أن يغيّروا جنس الملف في الطلب ليروا ما يحدث: كل البرامج المولّدة خرجت <strong>متشابهة موضوعياً بغضّ النظر عن الجنس</strong>. ليست هذه ملاحظة على الفيزيولوجيا — فتوصيات التدريب للرجال والنساء متقاربة فعلاً إلى حد كبير — بل ملاحظة على الآلية: النموذج لم يستخدم المعلومة الفردية الوحيدة التي أُعطيت له.</p>
+<p>وإذا كانت معلومة صريحة في الطلب لا تحرّك الناتج، فكل ما لم تكتبه وزنه صفر. وما لا تكتبه هو كل شيء تقريباً: كم نمت، وكم أنهكتك حصة الأمس، ولماذا يشدّ كتفك الأيمن في ضغط البار بقبضة واسعة فقط.</p>
+<h3>الادعاء 3 — &quot;برنامج يكتبه الذكاء الاصطناعي لا ينجح&quot;</h3>
+<p>في 2026 وصلت أول دراسة تدخّل. أربعة وعشرون لاعب تنس تحت 14 سنة قُسّموا إلى مجموعتين: الأولى اتبعت ثمانية أسابيع من برنامج عمل لا مركزي ولّده ChatGPT، والثانية واصلت تدريب التنس وحده. حقّقت مجموعة الذكاء الاصطناعي تحسناً دالاً في العدو على 5 أمتار، وفي تغيير الاتجاه (اختبار 505)، وفي الرشاقة، بأحجام أثر بين 0.6 و2.15 مقابل 0.15-0.6 في مجموعة الضبط. أما العدو على 10 أمتار واختبارات الوثب فلم يظهر فيهما فرق بين المجموعتين.</p>
+<figure><div class="chart"><img src="images/grafico-swc-ai.ar.svg" alt="مخطط أعمدة أفقية: نسبة المشاركين الذين تجاوز تحسّنهم أصغر تغيّر ذي قيمة تتراوح بين 73 و100 بالمئة في مجموعة البرنامج المولّد بالذكاء الاصطناعي والمُقرّ من خبراء، مقابل 18-63 بالمئة في مجموعة الضبط"></div><figcaption class="cap">مخطط Nurvan على بيانات Negra et al., 2026 (Journal of Sports Sciences). نسبة المشاركين الذين تجاوزوا أصغر تغيّر ذي قيمة في الاختبارات المختلفة؛ دراسة مضبوطة غير معشّاة، 24 رياضياً تحت 14 سنة.</figcaption></figure>
+<p>الشرط مكتوب في سطر واحد من فصل المنهجية: البرنامج المولّد بالذكاء الاصطناعي <strong>أقرّه خبراء بشريون قبل أن يُطبّق على أي أحد</strong>. هذه ليست قصة &quot;الذكاء الاصطناعي درّب مجموعة من الناشئين&quot;، بل &quot;خبراء استخدموا الذكاء الاصطناعي لكتابة النسخة الأولى، ثم راجعوها، ثم طبّقوها&quot;. وهذا بالضبط سير العمل الذي ينجح، وهو نفسه السبب في أن الدراسة لا تسمح لك بتخطّي المراجعة.</p>
+<h3>الادعاء 4 — &quot;الإصدارات الجديدة حلّت كل هذا&quot;</h3>
+<p>أخذ فريق بحثي ثلاثة إصدارات من ChatGPT وكلّفها بتوليد برامج قوة من اثني عشر أسبوعاً انطلاقاً من سبع مجموعات مختلفة من التعليمات، ثم عرضها على سبعة خبراء — مدرّبين معتمدين CSCS وحاملي دكتوراه في علوم الرياضة بخبرة عشر سنوات على الأقل — ليقيّموها على معيار يشمل، بين أمور أخرى، تفريد التدرّج، وتعديل البرنامج، وخطر الإصابة، ووجود توصيات خاطئة.</p>
+<p>كانت الفروق بين الإصدارات دالة إحصائياً في كل المقارنات الثنائية (p = 0.018)، وحُكم على الإصدار الأحدث بأنه أكثر تفصيلاً وأكثر تماسكاً داخلياً وأفضل استناداً إلى الأدبيات. التحسّن حقيقي. لكن خلاصة الباحثين مطابقة لخلاصة 2024: لكي تكون الخطة المدعومة بالذكاء الاصطناعي آمنة ومبنية على الأدلة ومفرّدة، &quot;يبقى إشراك خبرة بشرية مؤهّلة أمراً جوهرياً&quot;. الإصدارات الجديدة تحسّن المسودة، ولا تلغي المراجعة.</p>
+<h3>الادعاء 5 — &quot;روبوت المحادثة يجعلك منتظماً أكثر من مدرب&quot;</h3>
+<p>هنا يسبق الوعد التجاري البيانات بمسافة كبيرة. مسحت مراجعة منهجية اثنتي عشرة قاعدة بيانات و6301 سجل لعزل التجارب المعشّاة على روبوتات محادثة قادرة على حوار طبيعي مفتوح: بقي منها سبع. في الإقلاع عن التدخين كانت الآثار متسقة. أما في التغذية والنشاط البدني عند البالغين فكانت <strong>غير متسقة</strong>، وعند الأطفال لم يظهر أي دليل على أثر، واثنتان من أربع دراسات النشاط البدني حملتا خطر تحيّز مرتفعاً.</p>
+<p>وهناك تفصيل يفسّر الكثير: كان المستخدمون يتفاعلون كثيراً مع الروبوتات بشكل عام، لكن أقل بكثير حين يتعلق الأمر بسلوكيات الصحة المحدّدة. الرضا مرتفع، والتغيير لا. هذا هو الفرق بين تطبيق يعجبك وتطبيق يجعلك تتدرّب، وهو نفس الفرق بين مدرب لطيف ومدرب يحقّق نتائج: جمعت أرقام الإشراف البشري في مقال <a href="/ar/blog/hal-yanjah-altadrib-an-bud">هل ينجح التدريب عن بُعد فعلاً</a>.</p>
+<h3>الادعاء 6 — &quot;يمكنك أن تطلب منه نظامك الغذائي أيضاً&quot;</h3>
+<p>طلبت دراسة استكشافية من ChatGPT خطط طعام يومية بـ1500 و2000 و2500 سعرة، ووصفات بـ300 و500 و700 سعرة، ثم أعادت حساب كل شيء على قواعد بيانات غذائية. تبيّن أن النموذج <strong>أدقّ في بناء وصفة تصيب السعرات المطلوبة من تركيب خطة يوم كامل</strong>: كلما كان الهدف أصغر وأكثر تحديداً، تراكم الخطأ أقل.</p>
+<p>هي دراسة استكشافية على إصدار أصبح قديماً، فتصلح كمؤشّر منهجي لا كحكم نهائي. والمؤشّر مفيد على أي حال: استخدم الذكاء الاصطناعي للأجزاء، لا للهيكل. وحين تحتاج غرامات حقيقية، فأنت تحتاج غرامات حقيقية من قاعدة بيانات غذائية، لا تقديراً معقول الشكل.</p>
+<h3>الادعاء 7 — &quot;إنه خطير&quot;</h3>
+<p>أقسى اختبار يأتي من خارج النادي. قيّم اثنا عشر أخصائي علاج طبيعي ذوي خبرة أجوبة ChatGPT على ست أسئلة حول التمرين في مرض عضلي نادر، على مقياس يمتد من &quot;شامل ودقيق&quot; إلى &quot;خاطئ وغير آمن&quot;. الحكم: أجوبة آمنة ودقيقة في معظمها في خمسة مجالات من ستة، لكنها في الغالب غير شاملة.</p>
+<p>هذا هو ملمح الخطر المميّز: لا يقول لك أن تفعل شيئاً سخيفاً، بل يقول لك شيئاً معقولاً ويترك خارجه الجزء الذي كان مهماً. وفي طب الرياضة تتكرر الخلاصة نفسها: أداء النموذج على اختباراته لا يترجم تلقائياً إلى نتائج أفضل، ويبقى المهني داخل الحلقة بصفته من يدمج المعلومات (Palermi et al., 2026). عَرَض لا يزول، وألم يزداد سوءاً، وتحليل يحتاج تفسيراً: هذه مهمة الطبيب، لا مهمة روبوت المحادثة.</p>
+<h2>كيف تستخدمه جيداً</h2>
+<ol><li><strong>استخدمه للمسودة، لا للقرار.</strong> برنامج انطلاق، أفكار لبدائل التمارين، إعادة تنظيم برنامج تملكه أصلاً: نعم. اختيار حمل الغد: لا.</li><li><strong>أعطه السياق الذي تملكه فعلاً.</strong> تاريخ الأحمال، وRIR الحصص الأخيرة، والأيام المتاحة، والإصابات. بدون هذه، كما أظهر Washif، لا يتحرك الناتج تقريباً حتى لو تغيّر الملف.</li><li><strong>راجع الأرقام.</strong> إذا ذكر دراسة فتحقّق منها: المراجع المُختلقة هي أسرع طريق لحمل اعتقاد خاطئ إلى النادي.</li><li><strong>اعرضه على من يعرف قراءته.</strong> في دراسة التدخّل الإيجابية الوحيدة كان البرنامج مُقرّاً من خبراء بشريين قبل الاستخدام. هذا هو الخط الفاصل بين أداة وبديل.</li><li><strong>قِس بدلاً من أن تثق.</strong> بعد أربعة أسابيع انظر إلى الأحمال، لا إلى الإحساس: إذا لم تنتج المسودة تدرّجاً، فهي مسودة خاطئة.</li><li><strong>أبعده عن الطب.</strong> الأمراض والأدوية ونتائج التحاليل: لا روبوت محادثة ولا تطبيق. اذهب إلى الطبيب.</li></ol>
+<div class="app"><div><h3>جرّب Nurvan — الذكاء الاصطناعي يكتب المسودة، وبياناتك تصحّحها</h3><p>في Nurvan لا يبقى البرنامج نصاً: الحمل والتكرارات وRIR لكل مجموعة تدخل في سجلك، ومجموعات التسخين تُقترح انطلاقاً من حمل العمل في ذلك اليوم، ويُبنى التدرّج على ما رفعته فعلاً. وإذا كنت تعمل مع مدرب فهو يرى الأرقام نفسها ويصحّح حيث يلزم — وهذا بالضبط الجزء الذي يغيب عن أي برنامج مولّد.</p></div><a class="cta" href="https://nurvan.app">جرّب Nurvan</a></div>
+<h2>أسئلة شائعة</h2>
+<details><summary>هل يمكنني استخدام ChatGPT لكتابة برنامج تمارين النادي؟</summary><p>كمسودة نعم، كبرنامج نهائي لا. الدراسات التي قيّمت البرامج المولّدة تصفها بأنها متماسكة بنيوياً لكنها تحتاج ضبطاً، وتتفق على نقطة واحدة: تلزم خبرة بشرية مؤهّلة لجعلها آمنة ومفرّدة (Washif et al., 2024; Genç et al., 2025).</p></details><details><summary>هل تختلف برامج الذكاء الاصطناعي بين الرجال والنساء؟</summary><p>في الدراسة التي تحقّقت من ذلك، لا: البرامج التي أُنتجت لملفات رجال وملفات نساء كانت متشابهة موضوعياً (Washif et al., 2024). إذا كنت تتوقع تخصيصاً لمجرّد أنك ذكرت من أنت، فأنت على الأرجح لا تحصل عليه.</p></details><details><summary>هل يساعدني تطبيق بالذكاء الاصطناعي على الالتزام؟</summary><p>لا يوجد دليل قوي حتى الآن. في التجارب المعشّاة السبع المتاحة، آثار روبوتات المحادثة على النشاط البدني والتغذية عند البالغين غير متسقة، والنتيجة المتسقة الوحيدة تتعلق بالتدخين (Chen et al., 2025).</p></details><details><summary>الذكاء الاصطناعي أم مدرب بشري؟</summary><p>ليسا بديلين على المستوى نفسه: أحدهما يكتب نصاً، والآخر يراقبك أنت. بيانات الإشراف تشير إلى أن الجزء الحاسم في العمل البشري هو جعل البرنامج يُنفّذ جيداً لا كتابته — فمع مشرف واحد لكل خمسة متدرّبين ارتفع ضغط البار الأقصى بنسبة 15.9% مقابل 10.2% مع مشرف واحد لكل خمسة وعشرين (Gentil و Bottaro, 2010).</p></details>
+<h2>اقرأ أيضاً</h2>
+<ul><li><a href="/ar/blog/hal-yanjah-altadrib-an-bud">هل ينجح التدريب عن بُعد؟ ما تقوله الدراسات</a> — كم يهمّ فعلاً أن يتابعك أحد، بالأرقام.</li><li><a href="/ar/blog/kam-takrar-lilkutla-aladalia">كم تكراراً لبناء الكتلة العضلية؟ أسطورة 8-12</a> — متغيّرات البرمجة التي تُسلّم لمسودة الذكاء الاصطناعي، وما تقوله الأدلة عنها.</li><li><a href="/ar/blog/itijahat-allyaqa-2027-ma-yanjah">اتجاهات اللياقة 2027: ما ينجح فعلاً</a> — موقع التقنية بين الموضات والأشياء التي تصمد.</li></ul>
+<h2>المصادر</h2>
+<p>المراجع البِبليوغرافية مستخرجة عبر PubMed. الموضوع اختير ببحث الاتجاهات في 2 نوفمبر 2026: سؤال &quot;الذكاء الاصطناعي أم مدرب&quot; من أكثر ما يُبحث عنه حالياً في اللياقة، لكن الصفحات التي تحتل تلك النتائج مدونات لشركات برمجيات بلا مصدر واحد.</p>
+<ol class="refs"><li>Washif JA, Pagaduan J, James C, Dergaa I, Beaven CM, 2024. Artificial intelligence in sport: Exploring the potential of using ChatGPT in resistance training prescription. <em>Biology of Sport</em> 41(2):209-220. PMID 38524820. <a href="https://doi.org/10.5114/biolsport.2024.132987">DOI</a></li><li>Genç A, Aydın GR, Kasap M, Özkan A, Rakhymzhanov A, Gürcan HH, Güllü S, Demirhan B, 2025. Comparative evaluation of ChatGPT versions in training program design: scientific approach, accuracy, and practical applicability. <em>BMC Sports Science, Medicine and Rehabilitation</em> 18(1):19. PMID 41345701. <a href="https://doi.org/10.1186/s13102-025-01409-7">DOI</a></li><li>Negra Y, Sammoud S, Bouguezzi R, Markov A, Capranica L, Müller P, Chaabene H, 2026. Effects of a ChatGPT-generated eccentric training programme on speed, change of direction, agility, and jumping performance in U14 tennis players: A non-randomised controlled study. <em>Journal of Sports Sciences</em>. PMID 41944488. <a href="https://doi.org/10.1080/02640414.2026.2653295">DOI</a></li><li>Chen J, Hu RZ, Zhuang YX, Zhang JQ, Shan R, Yang Y, Liu Z, 2025. Natural Language Processing Chatbot-Based Interventions for Improvement of Diet, Physical Activity, and Tobacco Smoking Behaviors: Systematic Review. <em>JMIR mHealth and uHealth</em> 13:e66403. PMID 40503914. <a href="https://doi.org/10.2196/66403">DOI</a></li><li>Aslan S, Sozlu S, 2025. A pilot study of the potential role of ChatGPT in stated-calorie diet planning. <em>International Journal of Obesity</em> 49(9):1891-1896. PMID 40628963. <a href="https://doi.org/10.1038/s41366-025-01839-w">DOI</a></li><li>Schütze K, Shehatha R, Beer K, Needham M, Smith T, Bagg M, Doverty A, Cooper I, 2026. Evaluating ChatGPT&#x27;s advice and recommendations regarding exercise for people with inclusion body myositis. <em>Neuromuscular Disorders</em> 62:106418. PMID 41950577. <a href="https://doi.org/10.1016/j.nmd.2026.106418">DOI</a></li><li>Palermi S, Pucciatti R, Regnard NE, et al., 2026. Artificial Intelligence in Sports Medicine: A Decision-Centered Framework for the Future Sports Physician. <em>Diagnostics</em> 16(10):1448. PMID 42196815. <a href="https://doi.org/10.3390/diagnostics16101448">DOI</a></li><li>Gentil P, Bottaro M, 2010. Influence of supervision ratio on muscle adaptations to resistance training in nontrained subjects. <em>Journal of Strength and Conditioning Research</em> 24(3):639-43. PMID 19661830. <a href="https://doi.org/10.1519/JSC.0b013e3181ad3373">DOI</a></li></ol>
+<p class="cap" style="font-size:14px">Giammaria Loi هو مؤسّس Nurvan. يتدرّب بالأثقال منذ 2012، ويعمل مدرّباً شخصياً وكوتشاً معتمداً من FIPE منذ 2013، وينافس في رفع الأثقال القوة (powerlifting) على المستوى الوطني منذ 2018. كل مقال يحمل اسمه يبدأ من الدراسات العلمية ويصل إلى ما ينجح فعلاً في النادي.</p>
+<p class="note">ملاحظة: محتوى تعليمي، لا يحلّ محلّ رأي طبيب أو مهني مؤهّل.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

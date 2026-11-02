@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="hi" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI workout plan: रिसर्च असल में क्या कहती है | Nurvan</title>
+<meta name="description" content="ChatGPT से जिम प्लान बनवाना काम करता है? आठ स्टडीज़ बताती हैं AI क्या सही करता है, कहाँ चूकता है, और क्यों मर्द-औरत को एक ही प्लान मिलता है।">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;overflow-x:auto}
+.chart img{border:0;border-radius:0;min-width:520px}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart img{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart img{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(hi) .pill,:lang(hi) .crumb{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">ट्रेनिंग</a><a href="#">पोषण</a><a href="#">सप्लीमेंट</a><a href="#" class="on">ब्लॉग</a></nav><a class="cta" href="https://nurvan.app">ऐप डाउनलोड करें</a></div></header>
+<main class="wrap" lang="hi" dir="ltr">
+<div class="crumb">ब्लॉग · ट्रेनिंग</div>
+<h1>AI workout plan: रिसर्च असल में क्या कहती है</h1>
+<p class="lede">चैटबॉट से workout plan मांगिए और दस सेकंड में बारह हफ्ते का पूरा प्रोग्राम हाजिर — phases, परसेंटेज और rest intervals के साथ। देखने में एकदम प्रोफेशनल लगता है। असली सवाल यह नहीं है कि AI plan लिख सकता है या नहीं — लिख सकता है — बल्कि यह है कि वह plan सच में <em>आपका</em> है या नहीं, और जो चीजें किसी plan को काम करने लायक बनाती हैं उनमें से कितनी उस फाइल में कभी पहुँचती ही नहीं। 2024 से कुछ रिसर्च ग्रुप्स ने बहस छोड़कर नापना शुरू किया: मॉडल से प्रोग्राम बनवाए, उन्हें स्कोरिंग rubric के साथ एक्सपर्ट्स को दिया, और एक मामले में एथलीट्स से आठ हफ्ते तक वह प्रोग्राम करवाया भी। नतीजे ऐप मार्केटिंग की कहानी से ज्यादा दिलचस्प हैं।</p>
+<div class="meta"><span><b>12</b> मिनट पढ़ाई</span><span><b>8</b> अध्ययन उद्धृत</span><span>लेखक: <a href="/autore/giammaria-loi">Giammaria Loi</a> · अपडेट 2 नवंबर 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="फर्श पर टिका एक स्मार्टफोन, पीछे धुंधली दिख रही एक व्यक्ति की वर्कआउट को गाइड करता हुआ"><figcaption class="cap">फोटो: Mister Mister — Pexels, Pexels लाइसेंस (मुफ्त उपयोग)</figcaption></figure>
+<div class="box"><h2>छोटे में</h2><ul><li><strong>Plan ठीक-ठाक निकलता है — पर draft के तौर पर।</strong> तीन phases में बारह हफ्ते का प्रोग्राम, level के हिसाब से 60% से 95% 1RM तक की intensity: structure किताबों से मेल खाता है, लेकिन ऐसा जो &quot;लागू करने से पहले अतिरिक्त fine-tuning मांगता है&quot; (Washif et al., 2024).</li><li><strong>यह personalised नहीं है — यह generic है, नाम बदलकर।</strong> उसी स्टडी में मर्द profile और औरत profile के लिए बने प्रोग्राम <strong>objectively एक जैसे</strong> निकले। मॉडल ने लेबल बदला, कंटेंट नहीं।</li><li><strong>काम कर सकता है — अगर पहले कोई इंसान चेक करे।</strong> ChatGPT से बने eccentric प्रोग्राम के आठ हफ्ते, <em>इस्तेमाल से पहले एक्सपर्ट्स से validate कराए गए</em>: 5 m sprint, change of direction और agility में सुधार; jumps में नहीं (Negra et al., 2026).</li><li><strong>&quot;चैटबॉट आपको consistent रखेगा&quot; — इसका कोई सबूत नहीं।</strong> 7 RCT की systematic review: बड़ों में physical activity और diet पर असर <strong>असंगत</strong>, बच्चों में कोई सबूत नहीं। स्मोकिंग पर काम करता है, जिम पर नहीं (Chen et al., 2025).</li><li><strong>Calories में यह पूरे दिन के plan से एक recipe में ज्यादा सटीक है।</strong> बनाए गए meal plans और recipes को nutrition databases पर दोबारा गिना गया: अकेली recipes पूरे दिन के मेन्यू से बेहतर टिकीं (Aslan और Sozlu, 2025).</li><li><strong>खतरनाक नहीं, अधूरा है।</strong> बारह फिजियोथेरेपिस्ट्स ने ChatGPT के जवाबों को <strong>छह में से पाँच domains</strong> में सुरक्षित और ज्यादातर सही माना, लेकिन comprehensiveness में कमजोर (Schütze et al., 2026).</li></ul></div>
+<h2>&quot;मेरा plan बना दो&quot; कहने पर असल में होता क्या है</h2>
+<p>लैंग्वेज मॉडल आपका प्रोग्राम calculate नहीं करता: आपने जो लिखा उसके आधार पर सबसे संभावित टेक्स्ट predict करता है। नतीजा उस सब का एक सधा हुआ औसत है जो उसने पढ़ा है, और चूंकि उसने बहुत सी गंभीर किताबें पढ़ी हैं, वह औसत आम तौर पर समझदार होता है। इसी वजह से बने हुए plans पहली नजर में अच्छे लगते हैं: phases मौजूद हैं, rep ranges सही हैं, warm-up अपनी जगह पर है।</p>
+<p>दिक्कत इसके बाद शुरू होती है। प्रोग्राम का काम <em>एक</em> आदमी में adaptation पैदा करना है — उसकी loading history, उसकी टाइमिंग, उसका पुराना दर्द और थकान पर उसकी अपनी प्रतिक्रिया के साथ। यह हिस्सा न prompt में होता है और न उस टेक्स्ट में जो मॉडल लौटाता है: यह बाद में आता है, हफ्ते दर हफ्ते। नीचे की स्टडीज़ ठीक इसी दूरी को नापती हैं।</p>
+<h2>रिसर्च असल में क्या कहती है</h2>
+<table><thead><tr><th>आम दावा</th><th>फैसला</th><th>स्रोत</th></tr></thead><tbody><tr><td>&quot;AI समझदार plan लिखता है&quot;</td><td>सही, पर वह एक draft है</td><td>Washif et al., 2024</td></tr><tr><td>&quot;Plan आपके हिसाब से personalised है&quot;</td><td>गलत</td><td>Washif et al., 2024</td></tr><tr><td>&quot;AI का लिखा plan काम नहीं करता&quot;</td><td>गलत, एक शर्त के साथ</td><td>Negra et al., 2026</td></tr><tr><td>&quot;नए वर्जन ने सब ठीक कर दिया&quot;</td><td>बारीकी चाहिए</td><td>Genç et al., 2025</td></tr><tr><td>&quot;चैटबॉट आपको consistent रखता है&quot;</td><td>सबूत नहीं</td><td>Chen et al., 2025</td></tr><tr><td>&quot;डाइट भी इससे पूछ सकते हैं&quot;</td><td>बारीकी चाहिए</td><td>Aslan और Sozlu, 2025</td></tr><tr><td>&quot;यह खतरनाक है&quot;</td><td>बारीकी चाहिए: unsafe से ज्यादा अधूरा</td><td>Schütze et al., 2026</td></tr></tbody></table>
+<h3>दावा 1 — &quot;AI समझदार plan लिखता है&quot;</h3>
+<p>भीतर झाँकने वाली पहली indexed स्टडी ने GPT-3.5 और GPT-4.0 से बीस साल के काल्पनिक profiles के लिए बारह हफ्ते के strength प्रोग्राम डिजाइन करवाए — पहले intermediate, फिर advanced। दोनों वर्जन ने चार-चार हफ्ते की तीन phases बनाईं, हर phase का अलग मकसद (hypertrophy, strength), parameters किताबी ranges के भीतर और rest periods आपस में मेल खाते हुए।</p>
+<figure><div class="chart"><img src="images/grafico-intensita-ai.hi.svg" alt="GPT-3.5 के बताए 70-85% 1RM, intermediate level के लिए GPT-4.0 के 60-90% और advanced level के लिए GPT-4.0 के 70-95% intensity ranges दिखाने वाला horizontal bar chart"></div><figcaption class="cap">Washif et al., 2024 (Biology of Sport) के डेटा पर बना Nurvan चार्ट। 12 हफ्ते के प्रोग्राम के लिए मॉडलों ने जो intensity ranges बताईं; 20 साल के काल्पनिक profiles, कोई चोट नहीं।</figcaption></figure>
+<p>वर्जन के बीच फर्क असली है और उम्मीद की दिशा में ही है: GPT-4.0 intermediate और advanced में अंतर करता है, rest की window चौड़ी करता है (60-180 से 60-300 सेकंड), और एक बार में ज्यादा जानकारी संभालता है। फिर भी लेखकों का निष्कर्ष सीधा है: ये प्रोग्राम &quot;लागू करने से पहले संभवतः अतिरिक्त fine-tuning मांगते हैं&quot;, और मॉडल &quot;draft लिखने के लिए एक पूरक टूल का काम कर सकता है&quot;।</p>
+<p>Draft ही सही शब्द है। संभव लगने वाला plan उपयुक्त plan नहीं होता।</p>
+<h3>दावा 2 — &quot;Plan आपके हिसाब से personalised है&quot;</h3>
+<p>उसी स्टडी का यह सबसे असहज नतीजा है और इसे कोई उद्धृत नहीं करता। लेखकों को सिर्फ prompt में profile का sex बदलना था यह देखने के लिए कि क्या होता है: हर generated प्रोग्राम <strong>sex से बेपरवाह objectively एक जैसा</strong> निकला। यह physiology पर टिप्पणी नहीं है — मर्दों और औरतों के training recommendations वाकई काफी मिलते-जुलते हैं — यह mechanism पर टिप्पणी है: मॉडल ने उस एक individual जानकारी का इस्तेमाल ही नहीं किया जो उसे दी गई थी।</p>
+<p>अगर prompt में साफ-साफ लिखी बात output नहीं हिलाती, तो जो आपने लिखा ही नहीं उसका वजन शून्य है। और जो आप नहीं लिखते वह लगभग सब कुछ है: आप कितना सोए, कल की session ने आपसे क्या वसूला, और दायाँ कंधा सिर्फ wide-grip bench में क्यों खिंचता है।</p>
+<h3>दावा 3 — &quot;AI का लिखा plan काम नहीं करता&quot;</h3>
+<p>पहली intervention स्टडी 2026 में आई। चौबीस under-14 टेनिस खिलाड़ी दो ग्रुप्स में: एक ने आठ हफ्ते ChatGPT से बना eccentric training प्रोग्राम किया, दूसरे ने सिर्फ टेनिस ट्रेनिंग जारी रखी। AI ग्रुप ने 5 m sprint, change of direction (505) और agility में significant सुधार किया, effect sizes 0.6 से 2.15 के बीच, जबकि control में 0.15-0.6। 10 m sprint और jump tests में दोनों ग्रुप्स के बीच कोई फर्क नहीं।</p>
+<figure><div class="chart"><img src="images/grafico-swc-ai.hi.svg" alt="Horizontal bar chart: एक्सपर्ट-validated AI प्रोग्राम वाले ग्रुप में smallest worthwhile change से ज्यादा सुधार करने वाले प्रतिभागियों का हिस्सा 73 से 100 प्रतिशत, जबकि control ग्रुप में 18-63 प्रतिशत"></div><figcaption class="cap">Negra et al., 2026 (Journal of Sports Sciences) के डेटा पर बना Nurvan चार्ट। विभिन्न टेस्ट में smallest worthwhile change पार करने वाले प्रतिभागियों का हिस्सा; non-randomised controlled स्टडी, 24 U14 एथलीट।</figcaption></figure>
+<p>शर्त methods की एक लाइन में छिपी है: AI से बना प्रोग्राम किसी को देने से पहले <strong>इंसानी एक्सपर्ट्स से validate कराया गया था</strong>। यह &quot;AI ने बच्चों को ट्रेन किया&quot; नहीं है। यह &quot;एक्सपर्ट्स ने पहला draft लिखने के लिए AI इस्तेमाल किया, उसे चेक किया, फिर करवाया&quot; है। यही वह workflow है जो काम करता है, और यही वजह है कि यह स्टडी चेकिंग छोड़ने की इजाजत नहीं देती।</p>
+<h3>दावा 4 — &quot;नए वर्जन ने सब ठीक कर दिया&quot;</h3>
+<p>एक ग्रुप ने ChatGPT के तीन वर्जन से सात अलग-अलग instruction sets पर बारह हफ्ते के strength प्रोग्राम बनवाए, फिर सात एक्सपर्ट्स से उन्हें स्कोर कराया — CSCS-certified कोच और स्पोर्ट्स साइंस के PhD, कम से कम दस साल के अनुभव वाले — एक ऐसी rubric पर जिसमें progression का individualisation, प्रोग्राम में बदलाव, चोट का जोखिम और गलत सिफारिशों की मौजूदगी शामिल थे।</p>
+<p>वर्जन के बीच फर्क हर pairwise तुलना में statistically significant रहे (p = 0.018), और सबसे नए वर्जन को ज्यादा विस्तृत, ज्यादा अंदरूनी रूप से संगत और literature पर बेहतर टिका हुआ माना गया। सुधार असली है। लेकिन लेखकों का निष्कर्ष 2024 वाले जैसा ही है: AI-असिस्टेड plan को सुरक्षित, evidence-based और individualised बनाने के लिए &quot;qualified इंसानी विशेषज्ञता की भागीदारी जरूरी बनी रहती है&quot;। नए वर्जन draft सुधारते हैं; review की जगह नहीं लेते।</p>
+<h3>दावा 5 — &quot;चैटबॉट कोच से ज्यादा consistent रखता है&quot;</h3>
+<p>यहाँ मार्केटिंग का वादा डेटा से बहुत आगे दौड़ता है। एक systematic review ने बारह databases और 6,301 records छाने ताकि उन randomised trials को अलग किया जाए जिनमें चैटबॉट खुली natural-language बातचीत कर सकते थे: सात बचे। स्मोकिंग में असर संगत थे। बड़ों में diet और physical activity पर <strong>असंगत</strong>, बच्चों में असर का कोई सबूत नहीं, और physical activity की चार स्टडीज़ में से दो में bias का जोखिम ऊँचा था।</p>
+<p>एक बारीकी बहुत कुछ समझा देती है: यूजर्स चैटबॉट से आम बातचीत में तो खूब जुड़े, पर उन खास health behaviours पर बहुत कम। संतुष्टि ऊँची थी, व्यवहार में बदलाव नहीं। यह उस ऐप और इस ऐप का फर्क है जो आपको पसंद आती है बनाम जो आपको ट्रेनिंग करवाती है — वही फर्क जो एक अच्छे लगने वाले कोच और असर करने वाले कोच के बीच है। इंसानी supervision के आंकड़े मैंने <a href="/hi/blog/online-coaching-kaam-karta-hai">ऑनलाइन कोचिंग सच में काम करती है या नहीं</a> वाले लेख में एक जगह रखे हैं।</p>
+<h3>दावा 6 — &quot;डाइट भी इससे पूछ सकते हैं&quot;</h3>
+<p>एक pilot स्टडी ने ChatGPT से 1500, 2000 और 2500 kcal के दिन भर के meal plans और 300, 500 और 700 kcal की recipes मांगीं, फिर सब कुछ nutrition databases पर दोबारा गिना। पता चला कि मॉडल <strong>पूरे दिन के plan की तुलना में एक अकेली recipe में target छूने में ज्यादा सटीक है</strong>: चीज जितनी छोटी और सीमित हो, गलती उतनी कम जमा होती है।</p>
+<p>यह एक अब पुराने पड़ चुके वर्जन पर pilot है, इसलिए इसे तरीके का इशारा मानिए, फैसला नहीं। इशारा फिर भी काम का है: AI को हिस्सों के लिए इस्तेमाल करें, ढाँचे के लिए नहीं। और जब असली ग्राम चाहिए, तो वे किसी food database से चाहिए, संभव लगने वाले अनुमान से नहीं।</p>
+<h3>दावा 7 — &quot;यह खतरनाक है&quot;</h3>
+<p>सबसे सख्त टेस्ट जिम के बाहर से आता है। बारह अनुभवी फिजियोथेरेपिस्ट्स ने एक दुर्लभ muscle disease में exercise से जुड़े छह सवालों पर ChatGPT के जवाब &quot;comprehensive और accurate&quot; से &quot;गलत और unsafe&quot; तक की स्केल पर आँके। फैसला: छह में से पाँच domains में सुरक्षित और ज्यादातर सही, लेकिन अक्सर पूरे नहीं।</p>
+<p>यही इसका खास risk profile है। यह आपसे कोई बेतुकी बात करने को नहीं कहता; यह आपको समझदार बात बताता है और वही हिस्सा छोड़ देता है जो मायने रखता था। स्पोर्ट्स मेडिसिन भी यही नतीजा निकालती है: अपने benchmarks पर मॉडल का प्रदर्शन अपने आप बेहतर नतीजों में नहीं बदलता, और प्रोफेशनल जानकारी जोड़ने वाले की भूमिका में loop में बना रहता है (Palermi et al., 2026). जो लक्षण न जाए, जो दर्द बढ़ता जाए, जो रिपोर्ट पढ़नी हो: वह डॉक्टर का काम है, चैटबॉट का नहीं।</p>
+<h2>इसे ठीक से कैसे इस्तेमाल करें</h2>
+<ol><li><strong>Draft के लिए इस्तेमाल करें, फैसले के लिए नहीं।</strong> शुरुआती plan, exercise के variations, पहले से मौजूद प्रोग्राम को दोबारा जमाना: हाँ। कल का load चुनना: नहीं।</li><li><strong>जो context आपके पास सच में है, वह दें।</strong> Loading history, पिछली sessions का RIR, उपलब्ध दिन, चोटें। इनके बिना, जैसा Washif ने दिखाया, profile बदलने पर भी output लगभग नहीं हिलता।</li><li><strong>नंबरों की जाँच करें।</strong> अगर वह कोई स्टडी गिनाए तो उसे चेक करें: गढ़े हुए references जिम में झूठा यकीन ले जाने का सबसे तेज रास्ता हैं।</li><li><strong>इसे किसी ऐसे को दिखाएँ जो पढ़ना जानता हो।</strong> एकमात्र positive intervention स्टडी में प्रोग्राम इस्तेमाल से पहले इंसानी एक्सपर्ट्स से validate कराया गया था। टूल और replacement के बीच की लाइन यही है।</li><li><strong>भरोसे की जगह नापें।</strong> चार हफ्ते बाद loads देखें, feeling नहीं: अगर draft progression नहीं दे रहा, तो वह गलत draft है।</li><li><strong>इसे मेडिसिन से दूर रखें।</strong> बीमारी, दवा, रिपोर्ट: कोई चैटबॉट नहीं, कोई ऐप नहीं। डॉक्टर के पास जाएँ।</li></ol>
+<div class="app"><div><h3>Nurvan आज़माएँ — AI draft लिखता है, आपका डेटा उसे सुधारता है</h3><p>Nurvan में plan टेक्स्ट का टुकड़ा बनकर नहीं रह जाता: हर set का load, reps और RIR आपकी history में जाता है, warm-up sets उस दिन के working load से प्रस्तावित होते हैं, और progression उस पर बनती है जो आपने सच में उठाया। अगर आप किसी कोच के साथ काम करते हैं, वह वही नंबर देखता है और जहाँ जरूरी हो वहाँ सुधार करता है — ठीक वही हिस्सा जो किसी generated plan में नहीं होता।</p></div><a class="cta" href="https://nurvan.app">Nurvan आज़माएँ</a></div>
+<h2>अक्सर पूछे जाने वाले सवाल</h2>
+<details><summary>क्या मैं ChatGPT से अपना जिम प्लान बनवा सकता हूँ?</summary><p>Draft के तौर पर हाँ, फाइनल प्रोग्राम के तौर पर नहीं। जिन स्टडीज़ ने generated plans को आँका है वे उन्हें structurally ठीक पर fine-tuning की जरूरत वाला बताती हैं, और एक बात पर सहमत हैं: उन्हें सुरक्षित और individualised बनाने के लिए qualified इंसानी विशेषज्ञता चाहिए (Washif et al., 2024; Genç et al., 2025).</p></details><details><summary>AI से बने workout plan मर्दों और औरतों के लिए अलग होते हैं?</summary><p>जिस स्टडी ने यह जाँचा, उसमें नहीं: मर्द और औरत profiles के लिए बने प्रोग्राम objectively एक जैसे थे (Washif et al., 2024). अगर आप सिर्फ अपनी जानकारी लिख देने से personalisation की उम्मीद रखते हैं, तो वह आपको मिल नहीं रही।</p></details><details><summary>क्या AI ऐप मुझे consistent रखने में मदद करेगी?</summary><p>अभी तक ठोस सबूत नहीं है। उपलब्ध सात randomised trials में बड़ों की physical activity और diet पर चैटबॉट का असर असंगत है; एकमात्र संगत नतीजा स्मोकिंग के लिए है (Chen et al., 2025).</p></details><details><summary>AI या पर्सनल ट्रेनर — किसे चुनें?</summary><p>ये एक ही काम के लिए मुकाबले में नहीं हैं: एक टेक्स्ट लिखता है, दूसरा आपको देखता है। Supervision के आंकड़े बताते हैं कि इंसानी योगदान का फैसलाकुन हिस्सा plan लिखना नहीं, उसे ठीक से करवाना है — पाँच ट्रेनीज़ पर एक supervisor के साथ maximal bench press 15.9% बढ़ा, जबकि पच्चीस पर एक के साथ 10.2% (Gentil और Bottaro, 2010).</p></details>
+<h2>यह भी पढ़ें</h2>
+<ul><li><a href="/hi/blog/online-coaching-kaam-karta-hai">ऑनलाइन कोचिंग काम करती है? स्टडीज़ क्या कहती हैं</a> — किसी की निगरानी में होना सच में कितना मायने रखता है, आंकड़ों के साथ।</li><li><a href="/hi/blog/kitne-reps-muscle-ke-liye">मसल के लिए कितने reps? 8-12 का मिथक</a> — AI के draft को जो programming variables थमाए जाते हैं, उनके बारे में सबूत क्या कहते हैं।</li><li><a href="/hi/blog/fitness-trends-2027-kya-kaam-karta-hai">फिटनेस ट्रेंड्स 2027: सच में क्या काम करता है</a> — फैशन और टिकने वाली चीजों के बीच टेक्नोलॉजी कहाँ खड़ी है।</li></ul>
+<h2>स्रोत</h2>
+<p>संदर्भ PubMed के जरिए निकाले गए। विषय 2 नवंबर 2026 की ट्रेंड रिसर्च से चुना गया: &quot;AI या कोच&quot; फिटनेस में अभी सबसे ज्यादा खोजे जाने वाले सवालों में है, पर उन नतीजों पर कब्जा जमाए पेज सॉफ्टवेयर कंपनियों के ब्लॉग हैं, एक भी स्रोत के बिना।</p>
+<ol class="refs"><li>Washif JA, Pagaduan J, James C, Dergaa I, Beaven CM, 2024. Artificial intelligence in sport: Exploring the potential of using ChatGPT in resistance training prescription. <em>Biology of Sport</em> 41(2):209-220. PMID 38524820. <a href="https://doi.org/10.5114/biolsport.2024.132987">DOI</a></li><li>Genç A, Aydın GR, Kasap M, Özkan A, Rakhymzhanov A, Gürcan HH, Güllü S, Demirhan B, 2025. Comparative evaluation of ChatGPT versions in training program design: scientific approach, accuracy, and practical applicability. <em>BMC Sports Science, Medicine and Rehabilitation</em> 18(1):19. PMID 41345701. <a href="https://doi.org/10.1186/s13102-025-01409-7">DOI</a></li><li>Negra Y, Sammoud S, Bouguezzi R, Markov A, Capranica L, Müller P, Chaabene H, 2026. Effects of a ChatGPT-generated eccentric training programme on speed, change of direction, agility, and jumping performance in U14 tennis players: A non-randomised controlled study. <em>Journal of Sports Sciences</em>. PMID 41944488. <a href="https://doi.org/10.1080/02640414.2026.2653295">DOI</a></li><li>Chen J, Hu RZ, Zhuang YX, Zhang JQ, Shan R, Yang Y, Liu Z, 2025. Natural Language Processing Chatbot-Based Interventions for Improvement of Diet, Physical Activity, and Tobacco Smoking Behaviors: Systematic Review. <em>JMIR mHealth and uHealth</em> 13:e66403. PMID 40503914. <a href="https://doi.org/10.2196/66403">DOI</a></li><li>Aslan S, Sozlu S, 2025. A pilot study of the potential role of ChatGPT in stated-calorie diet planning. <em>International Journal of Obesity</em> 49(9):1891-1896. PMID 40628963. <a href="https://doi.org/10.1038/s41366-025-01839-w">DOI</a></li><li>Schütze K, Shehatha R, Beer K, Needham M, Smith T, Bagg M, Doverty A, Cooper I, 2026. Evaluating ChatGPT&#x27;s advice and recommendations regarding exercise for people with inclusion body myositis. <em>Neuromuscular Disorders</em> 62:106418. PMID 41950577. <a href="https://doi.org/10.1016/j.nmd.2026.106418">DOI</a></li><li>Palermi S, Pucciatti R, Regnard NE, et al., 2026. Artificial Intelligence in Sports Medicine: A Decision-Centered Framework for the Future Sports Physician. <em>Diagnostics</em> 16(10):1448. PMID 42196815. <a href="https://doi.org/10.3390/diagnostics16101448">DOI</a></li><li>Gentil P, Bottaro M, 2010. Influence of supervision ratio on muscle adaptations to resistance training in nontrained subjects. <em>Journal of Strength and Conditioning Research</em> 24(3):639-43. PMID 19661830. <a href="https://doi.org/10.1519/JSC.0b013e3181ad3373">DOI</a></li></ol>
+<p class="cap" style="font-size:14px">Giammaria Loi, Nurvan के फाउंडर हैं। वे 2012 से वेट ट्रेनिंग करते हैं, 2013 से FIPE-सर्टिफाइड पर्सनल ट्रेनर और कोच के तौर पर काम करते हैं, और 2018 से राष्ट्रीय स्तर पर पावरलिफ्टिंग में प्रतिस्पर्धा करते हैं। उनके नाम से छपा हर लेख रिसर्च से शुरू होता है और वहाँ पहुँचता है जो जिम में सच में काम करता है।</p>
+<p class="note">नोट: जानकारी देने वाली सामग्री, यह डॉक्टर या योग्य प्रोफेशनल की सलाह का विकल्प नहीं है।</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

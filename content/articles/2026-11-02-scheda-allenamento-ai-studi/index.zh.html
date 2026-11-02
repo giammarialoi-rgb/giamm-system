@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 健身计划：研究到底怎么说 | Nurvan</title>
+<meta name="description" content="让 ChatGPT 写训练计划真的靠得住吗？八项研究说清了 AI 哪里做得对、哪里会出错：它能写出结构合理的草稿，强度区间也和教科书一致，但几乎不做个性化——把提示词里的性别换掉，方案几乎一模一样。经专家审核的 AI 计划在八周干预里确实提升了冲刺和变向成绩，而「聊天机器人帮你坚持」至今没有证据支持。">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;overflow-x:auto}
+.chart img{border:0;border-radius:0;min-width:520px}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart img{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart img{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(hi) .pill,:lang(hi) .crumb{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">训练</a><a href="#">营养</a><a href="#">补剂</a><a href="#" class="on">博客</a></nav><a class="cta" href="https://nurvan.app">下载应用</a></div></header>
+<main class="wrap" lang="zh" dir="ltr">
+<div class="crumb">博客 · 训练</div>
+<h1>AI 健身计划：研究到底怎么说</h1>
+<p class="lede">你向聊天机器人要一份训练计划，十秒钟后就拿到了十二周的方案：分期、1RM 百分比、组间休息时间，一样不少。看上去很专业。但真正的问题不是 AI 会不会写计划——它当然会——而是这份计划到底是不是<em>你的</em>，以及真正让一份计划起作用的那部分内容，有多少从来没有进入这个文件。从 2024 年开始，有几个研究团队不再争论，而是动手测量：他们让模型生成方案，交给专家按评分量表打分，其中一项研究还让运动员实打实地执行了八周。结果比 App 广告讲的那个版本有意思得多。</p>
+<div class="meta"><span><b>10</b> 分钟阅读</span><span><b>8</b> 篇研究</span><span>作者：<a href="/autore/giammaria-loi">Giammaria Loi</a> · 更新于 2026 年 11 月 2 日</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="一部靠在地板上的手机正在指导训练，背景里是一个虚化的人影"><figcaption class="cap">照片：Mister Mister —— Pexels，Pexels 许可协议（可免费使用）</figcaption></figure>
+<div class="box"><h2>快速结论</h2><ul><li><strong>计划看起来是合理的，但它只是草稿。</strong> 十二周、三个阶段的方案，强度按水平在 1RM 的 60% 到 95% 之间：结构和教科书对得上，但这些方案「在应用之前很可能需要进一步调整」（Washif et al., 2024）。</li><li><strong>这不是个性化，而是换了件外套的通用模板。</strong> 在同一项研究里，为男性档案和女性档案生成的方案<strong>客观上高度相似</strong>。模型改掉的是标签，不是内容。</li><li><strong>它可以有效，前提是先经过人手。</strong> 一份由 ChatGPT 生成、<em>在使用前经专家审核</em>的离心训练方案执行八周：5 米冲刺、变向和敏捷性都有提升，弹跳没有（Negra et al., 2026）。</li><li><strong>「聊天机器人能让你坚持」这句话没有证据。</strong> 一项纳入 7 项随机对照试验的系统综述：对成年人身体活动和饮食的效果<strong>并不一致</strong>，在儿童身上没有发现效果。它对戒烟有用，对健身房没用（Chen et al., 2025）。</li><li><strong>在热量上，它算单道菜比算一整天更准。</strong> 把生成的每日食谱和单道菜谱放回营养成分数据库重新核算：单道菜谱比整天的菜单更站得住（Aslan 和 Sozlu, 2025）。</li><li><strong>它不是危险，而是不完整。</strong> 十二位物理治疗师认为 ChatGPT 的回答是安全的，在<strong>六个维度中的五个</strong>基本准确，但完整性不足（Schütze et al., 2026）。</li></ul></div>
+<h2>当你说「给我一份训练计划」时，实际发生了什么</h2>
+<p>语言模型并不会计算你的训练方案：它只是根据你输入的内容，预测最可能出现的文本。输出结果是它读过的所有内容的一个「有道理的平均值」，而因为它读过大量严肃的教科书，这个平均值通常看起来挺靠谱。这就是为什么生成的计划第一眼看上去不错：分期在那里，次数区间也合理，热身放在了该放的位置。</p>
+<p>问题是从之后开始的。一份训练方案存在的意义，是在<em>某一个</em>具体的人身上产生适应——这个人有自己的负荷史、自己的作息、自己那个会闹脾气的肩膀，以及自己对疲劳的反应方式。这些东西都不在提示词里，也不在模型返回的文本里：它们是一周一周才显现出来的。下面这些研究，量的正是这段距离。</p>
+<h2>研究到底说了什么</h2>
+<table><thead><tr><th>常见说法</th><th>结论</th><th>来源</th></tr></thead><tbody><tr><td>「AI 能写出合理的训练计划」</td><td>成立，但只是草稿</td><td>Washif et al., 2024</td></tr><tr><td>「这份计划是为你量身定制的」</td><td>不成立</td><td>Washif et al., 2024</td></tr><tr><td>「AI 写的计划没用」</td><td>不成立，但有一个条件</td><td>Negra et al., 2026</td></tr><tr><td>「新版本已经把问题都解决了」</td><td>需要补充说明</td><td>Genç et al., 2025</td></tr><tr><td>「聊天机器人能让你坚持」</td><td>证据不足</td><td>Chen et al., 2025</td></tr><tr><td>「顺便还能让它安排饮食」</td><td>需要补充说明</td><td>Aslan 和 Sozlu, 2025</td></tr><tr><td>「它很危险」</td><td>需要补充说明：是不完整，而不是不安全</td><td>Schütze et al., 2026</td></tr></tbody></table>
+<h3>说法 1 ——「AI 能写出合理的训练计划」</h3>
+<p>第一篇真正深入这个问题的被收录研究，让 GPT-3.5 和 GPT-4.0 为假设的 20 岁训练者设计十二周力量方案，先是中级水平，然后是高级水平。两个版本都给出了三个为期四周、目标各不相同的阶段（增肌、力量），参数落在教科书区间之内，组间休息也彼此自洽。</p>
+<figure><div class="chart"><img src="images/grafico-intensita-ai.zh.svg" alt="水平条形图，显示模型给出的强度区间：GPT-3.5 为 1RM 的 70–85%，GPT-4.0 对中级水平为 60–90%，对高级水平为 70–95%"></div><figcaption class="cap">Nurvan 图表，数据来自 Washif et al., 2024（Biology of Sport）。模型为 12 周计划给出的强度区间；假设对象为 20 岁，无伤病。</figcaption></figure>
+<p>版本之间的差异确实存在，而且方向符合预期：GPT-4.0 会区分中级和高级，把休息时间的窗口放宽（从 60–180 秒扩到 60–300 秒），一次能处理更多信息。但作者的结论依然很直接：这些方案「在应用之前很可能需要进一步调整」，模型「可以作为写草稿的辅助工具」。</p>
+<p>草稿这个词是关键。一份看起来说得过去的计划，不等于一份适合你的计划。</p>
+<h3>说法 2 ——「这份计划是为你量身定制的」</h3>
+<p>这是同一项研究里最尴尬的结果，而几乎没人引用它。作者只需要把提示词里的性别改掉，就能看出会发生什么：所有生成的方案都<strong>不分性别地客观相似</strong>。这不是在说生理学——男性和女性的训练建议本来就有大量重叠——而是在说机制：模型没有用上它唯一拿到的那条个体信息。</p>
+<p>如果提示词里明确写出来的信息都没能改变输出，那么你<em>没有</em>写出来的东西，权重就是零。而你没写出来的几乎是全部：你睡了多久，昨天那堂训练让你付出了多少代价，为什么右肩只在宽握卧推时才难受。</p>
+<h3>说法 3 ——「AI 写的计划没用」</h3>
+<p>第一项干预研究在 2026 年落地。24 名 14 岁以下网球运动员分成两组：一组执行由 ChatGPT 生成的离心训练方案八周，另一组照常只练网球。AI 组在 5 米冲刺、变向（505 测试）和敏捷性上有显著提升，效应量在 0.6 到 2.15 之间，对照组为 0.15–0.6。在 10 米冲刺和弹跳测试上，两组没有差异。</p>
+<figure><div class="chart"><img src="images/grafico-swc-ai.zh.svg" alt="水平条形图：在使用经专家审核的 AI 计划的组别中，进步幅度超过最小有价值变化的参与者占 73% 到 100%，而对照组为 18% 到 63%"></div><figcaption class="cap">Nurvan 图表，数据来自 Negra et al., 2026（Journal of Sports Sciences）。各项测试中超过 smallest worthwhile change 的参与者比例；非随机对照研究，24 名 U14 运动员。</figcaption></figure>
+<p>那个条件藏在方法部分的一行字里：AI 生成的方案<strong>在交给任何人之前，先经过了真人专家的审核</strong>。这不是「AI 带了一群孩子训练」，而是「专家用 AI 写出第一版，检查过，然后才拿去执行」。这正是真正有效的工作流程，也正是这项研究并不允许你跳过审核的原因。</p>
+<h3>说法 4 ——「新版本已经把问题都解决了」</h3>
+<p>一个研究团队让三个版本的 ChatGPT 按七套不同的指令生成十二周力量方案，然后请七位专家评分——持有 CSCS 认证的教练和运动科学博士，从业至少十年——评分量表涵盖了进阶的个体化程度、方案可修改性、受伤风险，以及是否出现错误建议等内容。</p>
+<p>版本之间的差异在所有两两比较中都达到统计学显著（p = 0.018），最新版本被认为更详细、内部更一致，也更有文献依据。进步是真实的。但作者的结论和 2024 年那篇一模一样：要让一份 AI 辅助的方案做到安全、有证据支持且个体化，「合格的人类专业参与仍然是必要的」。新版本改善的是草稿，而不是取代审核。</p>
+<h3>说法 5 ——「聊天机器人比教练更能让你坚持」</h3>
+<p>在这一点上，营销话术跑得远远快过数据。一项系统综述检索了十二个数据库、6301 条记录，筛出能进行自然语言自由对话的聊天机器人随机对照试验：最后只剩七项。在戒烟方面，效果是一致的。在成年人的饮食和身体活动方面则<strong>并不一致</strong>，在儿童身上没有发现效果，而四项身体活动研究里有两项存在高偏倚风险。</p>
+<p>有一个细节解释了很多事：用户整体上跟聊天机器人互动得很积极，但在具体的健康行为上互动少得多。满意度很高，行为改变却没有。这就是「一个你喜欢的 App」和「一个让你真去训练的 App」之间的区别，也正是一个讨人喜欢的教练和一个能出结果的教练之间的区别。关于人工监督的那些数字，我整理在<a href="/zh/blog/xianshang-jiaolian-youxiao-ma">线上教练到底有没有效</a>那篇文章里。</p>
+<h3>说法 6 ——「顺便还能让它安排饮食」</h3>
+<p>一项先导研究让 ChatGPT 分别给出 1500、2000、2500 千卡的每日食谱，以及 300、500、700 千卡的单道菜谱，然后把所有内容放回营养成分数据库重新核算。结果是：模型<strong>在做一道达到指定热量的菜谱时，比安排一整天的食谱更准确</strong>——对象越小、边界越清楚，误差累积得越少。</p>
+<p>这是一项基于现已过时版本的先导研究，所以它的价值在于方法上的提示，而不是定论。但这个提示依然有用：用 AI 处理局部，不要用它搭架构。而当你需要真实的克数时，你需要的是食物数据库里的真实克数，不是一个听起来合理的估计。</p>
+<h3>说法 7 ——「它很危险」</h3>
+<p>最严格的那场测试来自健身房之外。十二位资深物理治疗师对 ChatGPT 回答的六个关于某种罕见肌肉疾病运动问题的答案进行了评分，量表从「完整且准确」一直到「错误且不安全」。结论是：在六个维度中的五个里，回答是安全且基本准确的，但经常不够完整。</p>
+<p>这是一种很典型的风险画像：它不会让你去做什么荒唐的事，它会告诉你一些合理的东西，然后把真正要紧的那部分漏在外面。运动医学给出的结论是一样的：模型在自家基准测试上的表现，不会自动转化成更好的临床结果，专业人员仍然留在流程之中，负责把信息整合起来（Palermi et al., 2026）。一个迟迟不好的症状、一处越来越疼的地方、一份需要解读的检查报告：那是医生的工作，不是聊天机器人的。</p>
+<h2>怎么用才算用对</h2>
+<ol><li><strong>用它写草稿，不要用它做决定。</strong> 一份起步计划、动作替换的思路、把你已有的方案重新排一遍：可以。决定明天上多少重量：不行。</li><li><strong>把你真正掌握的信息给它。</strong> 负荷史、最近几次训练的 RIR、每周能训练的天数、伤病情况。没有这些，正如 Washif 的研究所显示的，就算你换掉档案，输出也几乎不动。</li><li><strong>逐个核对数字。</strong> 如果它引用了某项研究，就去查一下：凭空编造的参考文献，是把一个错误观念带进健身房最快的路径。</li><li><strong>让看得懂的人过一遍。</strong> 在唯一那项结果为正的干预研究里，方案在使用前经过了真人专家审核。这就是工具和替代品之间的那条界线。</li><li><strong>用测量代替信任。</strong> 四周之后看重量，而不是看感觉：如果草稿没能带来进步，那它就是份错的草稿。</li><li><strong>别让它碰医疗。</strong> 疾病、用药、检查结果：没有任何聊天机器人、任何 App 能替代。去看医生。</li></ol>
+<div class="app"><div><h3>试用 Nurvan —— AI 写草稿，你的数据来修正</h3><p>在 Nurvan 里，一份计划不会停留在一段文字：每一组的重量、次数和 RIR 都会进入你的训练历史，热身组按当天的工作重量自动给出，进阶则建立在你真正举起来的数字之上。如果你跟教练合作，他看到的是同一批数字，并在关键的地方做出调整——而这恰恰是生成式计划缺掉的那一块。</p></div><a class="cta" href="https://nurvan.app">试用 Nurvan</a></div>
+<h2>常见问题</h2>
+<details><summary>可以用 ChatGPT 给自己写健身计划吗？</summary><p>当草稿可以，当最终方案不行。评估过生成式计划的研究都把它们描述为结构上说得通、但需要调整，并且在一点上意见一致：要让这些计划变得安全且个体化，需要合格的人类专业判断（Washif et al., 2024；Genç et al., 2025）。</p></details><details><summary>AI 生成的训练计划，男性和女性会不一样吗？</summary><p>在验证过这一点的研究里，不会：为男性和女性档案生成的方案客观上高度相似（Washif et al., 2024）。如果你只因为写明了自己是谁就期待个性化，那你大概并没有得到它。</p></details><details><summary>AI 健身 App 能帮我坚持下来吗？</summary><p>目前还没有可靠证据。在已有的七项随机对照试验中，聊天机器人对成年人身体活动和饮食的效果并不一致；唯一一致的结果出现在戒烟上（Chen et al., 2025）。</p></details><details><summary>AI 私教和真人教练，该选哪个？</summary><p>它们并不是在抢同一份工作：一个写文字，另一个看着你。监督方面的数据说明，人的决定性贡献是让一份计划被正确执行，而不是把它写出来——每五名训练者配一位指导者时，卧推最大重量提升了 15.9%，而每二十五人配一位时只有 10.2%（Gentil 和 Bottaro, 2010）。</p></details>
+<h2>延伸阅读</h2>
+<ul><li><a href="/zh/blog/xianshang-jiaolian-youxiao-ma">线上教练有效吗？研究怎么说</a> —— 被人盯着练到底有多重要，用数字说话。</li><li><a href="/zh/blog/duoshao-cishu-zengji">增肌该做多少次？8–12 次的迷思</a> —— AI 草稿接手的那些训练变量，以及证据对它们的说法。</li><li><a href="/zh/blog/2027-jianshen-qushi-shime-youxiao">2027 健身趋势：什么才真正有效</a> —— 在潮流和真正扛得住的东西之间，技术究竟站在哪里。</li></ul>
+<h2>参考文献</h2>
+<p>参考文献通过 PubMed 检索获得。选题来自 2026 年 11 月 2 日的趋势调研：「AI 还是教练」是当下健身领域搜索量最高的问题之一，但占据这些搜索结果的页面全是健身软件公司的博客，没有引用过任何一篇研究。</p>
+<ol class="refs"><li>Washif JA, Pagaduan J, James C, Dergaa I, Beaven CM, 2024. Artificial intelligence in sport: Exploring the potential of using ChatGPT in resistance training prescription. <em>Biology of Sport</em> 41(2):209-220. PMID 38524820. <a href="https://doi.org/10.5114/biolsport.2024.132987">DOI</a></li><li>Genç A, Aydın GR, Kasap M, Özkan A, Rakhymzhanov A, Gürcan HH, Güllü S, Demirhan B, 2025. Comparative evaluation of ChatGPT versions in training program design: scientific approach, accuracy, and practical applicability. <em>BMC Sports Science, Medicine and Rehabilitation</em> 18(1):19. PMID 41345701. <a href="https://doi.org/10.1186/s13102-025-01409-7">DOI</a></li><li>Negra Y, Sammoud S, Bouguezzi R, Markov A, Capranica L, Müller P, Chaabene H, 2026. Effects of a ChatGPT-generated eccentric training programme on speed, change of direction, agility, and jumping performance in U14 tennis players: A non-randomised controlled study. <em>Journal of Sports Sciences</em>. PMID 41944488. <a href="https://doi.org/10.1080/02640414.2026.2653295">DOI</a></li><li>Chen J, Hu RZ, Zhuang YX, Zhang JQ, Shan R, Yang Y, Liu Z, 2025. Natural Language Processing Chatbot-Based Interventions for Improvement of Diet, Physical Activity, and Tobacco Smoking Behaviors: Systematic Review. <em>JMIR mHealth and uHealth</em> 13:e66403. PMID 40503914. <a href="https://doi.org/10.2196/66403">DOI</a></li><li>Aslan S, Sozlu S, 2025. A pilot study of the potential role of ChatGPT in stated-calorie diet planning. <em>International Journal of Obesity</em> 49(9):1891-1896. PMID 40628963. <a href="https://doi.org/10.1038/s41366-025-01839-w">DOI</a></li><li>Schütze K, Shehatha R, Beer K, Needham M, Smith T, Bagg M, Doverty A, Cooper I, 2026. Evaluating ChatGPT&#x27;s advice and recommendations regarding exercise for people with inclusion body myositis. <em>Neuromuscular Disorders</em> 62:106418. PMID 41950577. <a href="https://doi.org/10.1016/j.nmd.2026.106418">DOI</a></li><li>Palermi S, Pucciatti R, Regnard NE, et al., 2026. Artificial Intelligence in Sports Medicine: A Decision-Centered Framework for the Future Sports Physician. <em>Diagnostics</em> 16(10):1448. PMID 42196815. <a href="https://doi.org/10.3390/diagnostics16101448">DOI</a></li><li>Gentil P, Bottaro M, 2010. Influence of supervision ratio on muscle adaptations to resistance training in nontrained subjects. <em>Journal of Strength and Conditioning Research</em> 24(3):639-43. PMID 19661830. <a href="https://doi.org/10.1519/JSC.0b013e3181ad3373">DOI</a></li></ol>
+<p class="cap" style="font-size:14px">Giammaria Loi 是 Nurvan 的创始人。他从 2012 年开始进行负重训练，2013 年起担任私人教练并持有 FIPE 认证教练资格，2018 年起在全国级别的力量举比赛中参赛。他署名的每一篇文章，都从科研文献出发，落到健身房里真正有效的做法上。</p>
+<p class="note">注意：本文为科普内容，不能替代医生或专业人士的诊断与建议。</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>
