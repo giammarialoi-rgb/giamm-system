@@ -11,17 +11,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const SOURCE_DATE = '2026-10-26';
+const SOURCE_DATE = '2026-11-02';
 const SEASON = '2026/27';
 const BASE = 'https://hyrox.com/event/';
 
 const LINES = `
-Tampa | US | 2026-10-22 | 2026-10-25 | hyrox-tampa
 Birmingham | GB | 2026-10-27 | 2026-11-01 | hyrox-birmingham
 Amburgo | DE | 2026-10-28 | 2026-11-01 | intersport-hyrox-hamburg
 Nizza | FR | 2026-10-29 | 2026-11-01 | hyrox-nice-s26-27
 Città del Messico | MX | 2026-10-29 | 2026-11-01 | hyrox-mexico-city
-Shanghai | CN | | | hyrox-shanghai-1031
 Dublino | IE | 2026-11-11 | 2026-11-15 | hyrox-dublin
 Düsseldorf | DE | 2026-11-11 | 2026-11-15 | hyrox-dusseldorf
 Barcellona | ES | 2026-11-11 | 2026-11-15 | hyrox-barcelona-2
@@ -91,6 +89,7 @@ Monterrey | MX | 2027-04-16 | 2027-04-18 | hyrox-monterrey
 Ottawa | CA | 2027-04-21 | 2027-04-25 | hyrox-ottawa-26-27
 Atlanta | US | 2027-04-23 | 2027-04-25 | factor_-hyrox-atlanta
 Cracovia | PL | 2027-05-07 | 2027-05-09 | hyrox-krakow-26-27
+San Paolo | BR | 2027-05-08 | 2027-05-09 | hyrox-sao-paulo
 Lione | FR | 2027-05-12 | 2027-05-16 | hyrox-lyon-s26-27
 Bengaluru | IN | 2027-05-19 | 2027-05-23 | hyrox-bengaluru
 Incheon | KR | 2027-05-13 | 2027-05-16 | hyrox-incheon
