@@ -36,6 +36,21 @@ const I18nService = {
   },
   dictionaries: {
     it: {
+      // Keys the page used with no Italian text: t() showed the key itself, in English, in every language.
+      noActiveProgram: "Nessun programma attivo",
+      askCoach: "CHIEDI A COACH AI",
+      scientificEvidence: "Evidenza scientifica",
+      listening: "Ascolto…",
+      voiceUnavailable: "Dettatura non disponibile",
+      everyDay: "Tutti i giorni",
+      weeksLabel: "Settimana",
+      dayNotSet: "Giorno non impostato",
+      weeksUnknown: "Settimane non indicate",
+      activeScale: "Scala attiva",
+      hardResetLocal: "Azzera dati locali",
+      voiceChoiceRead: "Leggi",
+      voiceOrReadAsk: "Vuoi la risposta a voce o da leggere?",
+      weekScaleUpdated: "Scala della settimana aggiornata",
       appName: "NURVAN",
       appTitle: "NURVAN",
       dashboard: "DASHBOARD",
@@ -1041,8 +1056,9 @@ const FoodDatabaseService = {
   // leaves the catalog as it was.
   loadExtra() {
     if (this._extraLoading) return this._extraLoading;
-    if (typeof fetch === 'undefined') return Promise.resolve(false);
-    this._extraLoading = fetch('food-ciqual.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+    if (typeof fetch === 'undefined' && typeof fetchJsonAsset !== 'function') return Promise.resolve(false);
+    // fetchJsonAsset falls back to XMLHttpRequest: the Android app reads its files from file://, where fetch() is refused.
+    this._extraLoading = (typeof fetchJsonAsset === 'function' ? fetchJsonAsset('food-ciqual.json') : fetch('food-ciqual.json').then((r) => (r.ok ? r.json() : null))).then((j) => {
       const rows = (j && Array.isArray(j.items)) ? j.items : [];
       this._extra = rows.map((r, i) => ({
         id: 'ciqual_' + r[0], name: r[1], name_en: '', brand: '', aliases: r[2] || [], category: r[3] || 'Altro', group: r[4] || '',
@@ -1881,7 +1897,10 @@ const ReadinessService = {
     const hasSleep = typeof samples.sleepHours === 'number';
     const hasSteps = typeof samples.steps === 'number' && samples.steps > 0;
     const hasHrv = typeof samples.hrvMs === 'number';
-    if (!hasHr && !hasSleep && !trainingLoad && !hasSteps) {
+    // Without one body signal (sleep, heart rate, HRV, steps) there is nothing to estimate: training load
+    // only moves a score, it does not make one. A new account with no data read "recovery looks good",
+    // while the workout screen said "not enough data" (Play testers' report, BUG-009).
+    if (!hasHr && !hasSleep && !hasSteps && !hasHrv) {
       return { level: 'unknown', label: 'Dati insufficienti', advice: 'Registra sonno e battito a riposo per una stima.', kind: 'estimate', confidence: 0.2 };
     }
     let score = 70;

@@ -123,7 +123,7 @@ export async function recordPaymentEvent(pool, coachId, input = {}) {
   );
   if (input.kind === "paid" && input.clientId) {
     await pool.query(
-      "UPDATE coach_clients SET paid = TRUE, pay_tracking = (pay_tracking OR $2::timestamptz IS NOT NULL), next_due_at = COALESCE($2::timestamptz, next_due_at) WHERE id = $1 AND coach_user_id = $3",
+      "UPDATE coach_clients SET paid = TRUE, paid_at = NOW(), pay_tracking = (pay_tracking OR $2::timestamptz IS NOT NULL), next_due_at = COALESCE($2::timestamptz, next_due_at) WHERE id = $1 AND coach_user_id = $3",
       [input.clientId, nextDue, coachId]
     );
   }

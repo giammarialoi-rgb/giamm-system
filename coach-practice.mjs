@@ -319,6 +319,8 @@ function clientRow(r, { includeIntake = false, includeSecrets = false } = {}) {
     billingCycle: BILLING_CYCLES.includes(r.billing_cycle) ? r.billing_cycle : "monthly",
     // true once the coach tracks this client's payments (or has marked them unpaid, as the old toggle did)
     payTracking: !!r.pay_tracking || r.paid === false,
+    // when the coach last recorded a payment; null with tracking on = nothing recorded yet
+    paidAt: r.paid_at === undefined ? undefined : (r.paid_at || null),
     nextDueAt: r.next_due_at,
     allowProgramDb: !!r.allow_program_db,
     lastWorkoutAt: r.last_workout_at,
@@ -576,6 +578,7 @@ export async function ensureCoachPracticeTables(client) {
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_unlock JSONB;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS pending_intake JSONB;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+    ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS workout_started_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS program_expires_at TIMESTAMPTZ;
     ALTER TABLE coach_clients ADD COLUMN IF NOT EXISTS next_check_at TIMESTAMPTZ;
@@ -2343,7 +2346,7 @@ export function mountCoachPractice(app, deps) {
     const unpaidSql = "(c.paid = FALSE OR (c.next_due_at IS NOT NULL AND c.next_due_at <= NOW()))";
     const payFilter = String(req.query.pay || "").toLowerCase();
     if (payFilter === "unpaid") conditions.push(trackedSql + " AND " + unpaidSql);
-    else if (payFilter === "paid") conditions.push(trackedSql + " AND NOT " + unpaidSql);
+    else if (payFilter === "paid") conditions.push(trackedSql + " AND NOT " + unpaidSql + " AND c.paid_at IS NOT NULL");
     else if (payFilter === "none") conditions.push("NOT " + trackedSql);
     const assignFilter = String(req.query.assign || "").toLowerCase();
     if (assignFilter === "assigned") conditions.push(hasProgramSql);
@@ -2368,7 +2371,7 @@ export function mountCoachPractice(app, deps) {
               c.last_workout_at, c.last_seen_at, c.workout_started_at, c.program_expires_at, c.next_check_at,
               c.unread_count, c.invite_token, c.created_at, c.intake_mode, c.intake, c.intake_completed_at,
               c.leave_requested_at, c.chat_thread, c.allow_max_freedom, c.allow_nurvan_ai, c.pending_change, c.pending_unlock,
-              c.checkin_template, c.coaching_mode, c.pay_tracking,
+              c.checkin_template, c.coaching_mode, c.pay_tracking, c.paid_at,
               COALESCE(c.has_program, FALSE) AS has_program,
               (SELECT CASE WHEN x.rq IS NULL OR COALESCE(x.pa, 0) > x.rq THEN NULL
                            WHEN COALESCE(x.ag, 0) > x.rq THEN 'agreed' ELSE 'waiting' END
@@ -2440,8 +2443,8 @@ export function mountCoachPractice(app, deps) {
     const lastName = String(req.body?.lastName || intake.lastName || "").trim();
     const displayName = String(req.body?.name || req.body?.displayName || [firstName, lastName].filter(Boolean).join(" ")).trim().slice(0, 80);
     const password = String(req.body?.password || "");
-    if (displayName.length < 2 || password.length < 4) {
-      return res.status(400).json({ error: "Nome e password (min. 4) sono obbligatori." });
+    if (displayName.length < 2 || password.length < 8) {
+      return res.status(400).json({ error: "Nome e password (almeno 8 caratteri) sono obbligatori." });
     }
     if (intakeMode === "transition") {
       const filled = sanitizeIntake({ ...intake, firstName: firstName || intake.firstName, lastName: lastName || intake.lastName }, intakeConfig);
@@ -2844,7 +2847,7 @@ export function mountCoachPractice(app, deps) {
     const paid = !!req.body?.paid;
     const cycle = BILLING_CYCLES.includes(row.billing_cycle) ? row.billing_cycle : "monthly";
     const next = paid ? nextBillingDue(row.next_due_at, cycle).toISOString() : row.next_due_at;
-    await pool.query("UPDATE coach_clients SET paid = $2, next_due_at = $3, pay_tracking = TRUE WHERE id = $1", [row.id, paid, next]);
+    await pool.query("UPDATE coach_clients SET paid = $2, next_due_at = $3, pay_tracking = TRUE, paid_at = CASE WHEN $2 THEN NOW() ELSE paid_at END WHERE id = $1", [row.id, paid, next]);
     if (!paid) {
       await pool.query(
         "INSERT INTO coach_events(client_id, kind, payload) VALUES($1,'payment_due',$2)",
@@ -3663,7 +3666,7 @@ export function mountCoachPractice(app, deps) {
     const row = await loadOwnedClient(coach, req.params.id, res);
     if (!row) return;
     const password = String(req.body?.password || "");
-    if (password.length < 4) return res.status(400).json({ error: "Password minimo 4 caratteri." });
+    if (password.length < 8) return res.status(400).json({ error: "La password deve avere almeno 8 caratteri." });
     const hash = await hashPassword(password);
     if (row.athlete_user_id) {
       // A new password ends the athlete's open sessions (a leaked one no longer works).

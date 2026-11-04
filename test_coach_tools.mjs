@@ -42,11 +42,12 @@ const cut = (src, a, b) => { const i = src.indexOf(a); const j = src.indexOf(b, 
   ok('2b. la domanda mostra l’utente, spiega che la password non si può rileggere e offre le due strade', /Utente: <b>/.test(dialog) && /non si può rileggere/.test(dialog) && /confirmResendInvite\(true\)/.test(dialog) && /confirmResendInvite\(false\)/.test(dialog) && /ANNULLA/.test(dialog));
   const confirm = cut(ui, 'async function confirmResendInvite(reset) {', 'window.confirmResendInvite = confirmResendInvite;');
   ok('2c. la password viene reimpostata solo se il coach lo sceglie, ed è scritta nell’invito', /if \(!reset\) \{[\s\S]*?return;\s*\}/.test(confirm) && confirm.indexOf('reset-password') > confirm.indexOf('if (!reset)') && /password: password \}\)\)/.test(confirm));
-  ok('2d. almeno 4 caratteri, come chiede il server', /password\.length < 4/.test(confirm));
+  ok('2d. almeno 8 caratteri, come chiede il server', /password\.length < 8/.test(confirm));
   const c = { String, Math, Uint32Array, crypto: { getRandomValues: (a) => { a[0] = 123456; a[1] = 3; return a; } } };
   vm.createContext(c);
   vm.runInContext(cut(ui, 'function suggestClientPassword() {', 'function openResendInviteDialog(info) {') + '\nthis.p = suggestClientPassword();', c);
-  ok('2e. viene proposta una password che si legge e si detta', /^[a-z]{5}\d{4}$/.test(c.p));
+  // The client's account holds health data: 12 random characters, no look-alikes (0/O, 1/l/I).
+  ok('2e. viene proposta una password lunga e casuale, senza caratteri che si confondono', /^[a-km-zA-HJ-NP-Z2-9]{12}$/.test(c.p) && !/[0O1lI]/.test(c.p));
 }
 // --- the calendar --------------------------------------------------------------
 {

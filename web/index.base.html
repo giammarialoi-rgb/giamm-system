@@ -321,10 +321,33 @@ header .logo-container {
 .header-actions::before { content: ''; margin-left: auto; flex: 0 0 auto; }
 .header-actions::-webkit-scrollbar { display: none; }
 .header-actions > .btn,
-.header-actions > #cp-notify-btn,
-.header-actions > #cp-coach-header-controls {
+.header-actions > #cp-notify-btn {
   flex-shrink: 0;
 }
+/* The coach controls give up room first (their client selector narrows), so the last button is never
+   cut off at the screen edge on a narrow phone (Play testers' report). */
+.header-actions > #cp-coach-header-controls {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.coach-os-header-controls .coach-os-client-select { width: auto; min-width: 56px; }
+@media (max-width: 380px) {
+  .coach-os-header-controls .coach-os-icon-btn { width: 32px !important; min-width: 32px !important; }
+  header .coach-os-header-controls { gap: 4px !important; }
+}
+/* NURVAN HUB tiles: long labels (and long words in other languages) wrap inside the tile. */
+#menu-hub-modal .card > div > button.btn {
+  height: auto !important;
+  min-height: 70px;
+  padding: 8px 6px !important;
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
+}
+#menu-hub-modal .card > div > button.btn > span { display: block; max-width: 100%; line-height: 1.15; }
 #menu-hub-button,
 #profile-button,
 #coach-unlock-button,
@@ -837,6 +860,12 @@ body[data-view="training"] .fab-save { display: flex; }
    the top of the session. It appears once the page has been scrolled past
    the first screen (see the fab-on script after the button). */
 body:not(.fab-on) .fab-save { display: none !important; }
+/* Smaller and right above the bottom bar, where the row under it is the one about to scroll up, and the
+   page ends with room to lift the last set clear of it (it sat on the delete button mid-page). */
+body[data-view="training"] .fab-save { width: 46px; height: 46px; border-radius: 23px; right: 12px; bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+body[data-view="training"] .fab-save svg { width: 24px; height: 24px; }
+body[data-view="training"] #view-container { padding-bottom: 150px; }
+.fab-save.is-saved { background: #4caf50; color: #fff; }
 
 /* Interface audit 03-10-2026.
    A card made without a header or an inner wrapper put its title on the
@@ -860,8 +889,8 @@ div[style*="font-size:10px"], span[style*="font-size:10px"], p[style*="font-size
 .coach-chat-actions { flex-wrap: wrap; }
 @media (max-width: 420px) {
   .ai-composer { flex-wrap: wrap; }
-  .ai-composer #ai-input { flex: 1 1 100% !important; order: -1; padding: 6px 4px; }
-  .ai-composer .btn-primary { margin-left: auto; }
+  .ai-composer #ai-input { flex: 1 1 60% !important; order: -2; padding: 8px 4px; }
+  .ai-composer .btn-primary { order: -1; }
 }
 .cal-nav-btn { width: 40px; height: 40px; padding: 0 !important; display: inline-flex; align-items: center; justify-content: center; }
 .cal-nav-btn svg { width: 22px; height: 22px; }
@@ -1187,11 +1216,20 @@ body.nurvan-locked { background: var(--bg, #000); }
   max-height: calc(90vh - env(safe-area-inset-bottom, 0px));
   padding-bottom: 0;
 }
+/* These cards have no padding of their own: the fields and SCANSIONA BARCODE touched the border, and the
+   footer's -16px margins stuck out on both sides (testers' report, BUG-020). */
+#add-food-modal .modal-body-scroll,
+#add-supplement-modal .modal-body-scroll,
+#add-therapy-modal .modal-body-scroll,
+#add-exam-modal .modal-body-scroll {
+  padding: 12px 16px 8px;
+  box-sizing: border-box;
+}
 #add-food-modal .modal-sticky-footer,
 #add-supplement-modal .modal-sticky-footer,
 #add-therapy-modal .modal-sticky-footer,
 #add-exam-modal .modal-sticky-footer {
-  margin: 0 -16px 0;
+  margin: 0;
   padding: 12px 16px max(16px, env(safe-area-inset-bottom, 16px));
 }
 
@@ -1751,7 +1789,7 @@ body.focus-mode [data-rewards-only] {
       <h2 style="font-size:18px;color:var(--gold);" data-i18n="hubTitle">NURVAN HUB</h2>
       <button class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="closeMenuHub()" data-i18n="close">CHIUDI</button>
     </div>
-    <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:10px;">
+    <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill, minmax(min(140px, 100%), 1fr));gap:10px;">
       <button class="btn btn-outline" style="height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;" onclick="closeMenuHub();navigate('training')">
         <span style="font-size:20px;">🏋️</span>
         <span style="font-size:11px;font-weight:800;" data-i18n="training">Allenamento</span>
@@ -2274,7 +2312,7 @@ body.focus-mode [data-rewards-only] {
   <div class="modal-card">
     <div class="card-header"><h2 data-i18n="account">Account</h2><button class="btn btn-outline" onclick="closeAccount()" data-i18n="close">CHIUDI</button></div>
     <div id="account-welcome" class="msg ai" style="display:none;margin-top:10px;"></div>
-    <form id="account-form" onsubmit="submitAccount(event)" style="margin-top:10px;">
+    <form id="account-form" novalidate onsubmit="submitAccount(event)" style="margin-top:10px;">
       <input id="account-name" type="text" placeholder="Nome e cognome" autocomplete="name" style="margin-bottom:8px;display:none;">
       <input id="account-email" type="email" placeholder="Email" autocomplete="email" required style="margin-bottom:8px;">
       <div id="account-password-wrap" class="pw-field">
@@ -2314,11 +2352,11 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="openChangePassword()" id="account-change-password">CAMBIA PASSWORD</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="editAccountName()" id="account-edit-name">MODIFICA NOME</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutOtherDevices()" id="account-logout-others">ESCI DAGLI ALTRI DISPOSITIVI</button>
-    <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="logoutAccount()" id="account-logout">ESCI</button>
+    <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="confirmLogout()" id="account-logout">ESCI</button>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()" id="account-delete">ELIMINA ACCOUNT</button>
     <button id="account-recover-training" class="btn btn-outline" style="width:100%;margin-top:8px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA ALLENAMENTO (CLOUD/IDB)</button>
-    <div id="account-status" class="msg ai" style="margin-top:10px;"></div>
+    <div id="account-status" class="msg ai" role="status" aria-live="polite" style="margin-top:10px;"></div>
     <div id="account-legal-links" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:11px;margin-top:12px;">
       <a data-legal-link="privacy" href="#" style="color:#999;">Informativa privacy</a>
       <a data-legal-link="termini" href="#" style="color:#999;">Termini di servizio</a>
@@ -2547,7 +2585,7 @@ body.focus-mode [data-rewards-only] {
 <!-- Tooltip Carico Precedente -->
 <div id="prev-load-tooltip" class="prev-load-popup">PREV: 00kg</div>
 
-<button class="fab-save" onclick="saveAll()">
+<button class="fab-save" onclick="saveAll()" aria-label="Salva">
   <svg viewBox="0 0 24 24"><path d="M17,3H5C3.89,3 3,3.9 3,5V19C3,20.1 3.89,21 5,21H19C20.1,21 21,20.1 21,19V7L17,3M12,19C10.34,19 9,17.66 9,16C9,14.34 10.34,13 12,13C13.66,13 15,14.34 15,16C15,17.66 13.66,19 12,19M15,9H5V5H15V9Z"/></svg>
 </button>
 <script>
@@ -5077,7 +5115,7 @@ function openProfileHub() {
     '<button type="button" class="btn btn-primary" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAthleteProfile()">Profilo atleta</button>' +
     '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;" onclick="closeProfileHub();openAccount()">' + (logged ? 'Account / Sync' : 'Accedi / Registrati') + '</button>' +
     ((logged && personalTrainingHistoryExists()) ? '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#555;color:#ccc;" onclick="closeProfileHub();recoverPersonalTrainingEmergency()">Ripristina scheda (backup)</button>' : '') +
-    (logged ? '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#442222;color:var(--accent-red);" onclick="closeProfileHub();logoutAccount()">Esci</button>' : '') +
+    (logged ? '<button type="button" class="btn btn-outline" style="width:100%;height:44px;font-weight:800;border-color:#442222;color:var(--accent-red);" onclick="closeProfileHub();confirmLogout()">Esci</button>' : '') +
     '</div></div>';
   el.style.display = 'flex';
   pushUiOverlay('profile-hub-sheet');
@@ -5277,6 +5315,15 @@ window.activeGsStoreKey = activeGsStoreKey;
 window.loginGateRequired = loginGateRequired;
 
 function closeAccount(){ if (loginGateRequired()) return; const modal = $('account-modal'); if(modal) { modal.style.display = 'none'; hidePasswordFields(modal); } }
+// One tap while scrolling a menu signed people out (testers' report, BUG-021): asked first. The unsaved
+// changes go up before leaving.
+async function confirmLogout() {
+  const ok = await nurvanConfirm(trText('Uscire dall’account su questo dispositivo? I tuoi dati restano salvati nell’account.'), { okLabel: trText('ESCI'), cancelLabel: trText('ANNULLA') });
+  if (!ok) return;
+  try { if (typeof uploadAccountDataFast === 'function' && store.accountToken) await Promise.race([uploadAccountDataFast(), new Promise(function (r) { setTimeout(r, 4000); })]); } catch (_) {}
+  logoutAccount();
+}
+window.confirmLogout = confirmLogout;
 function logoutAccount(){
   const wasClient = typeof isClientStorageContext === 'function' && isClientStorageContext();
   clearTimeout(accountSyncTimer);
@@ -5424,6 +5471,7 @@ async function submitAccount(event){
   try {
     if (accountVerifyMode) {
       const email = $('account-email').value.trim();
+      if (!email) throw new Error('Inserisci l’email dell’account.');
       const code = ($('account-verify-code') && $('account-verify-code').value || '').trim();
       if (!/^\d{6}$/.test(code)) throw new Error('Inserisci il codice di 6 cifre che trovi nell’email.');
       const response = await apiFetch(coachEndpoint('/api/auth/verify-email'), {
@@ -5443,6 +5491,7 @@ async function submitAccount(event){
     }
     if (accountRecoveryMode) {
       const email = $('account-email').value.trim();
+      if (!email) throw new Error('Inserisci l’email dell’account.');
       const code = ($('account-reset-code') && $('account-reset-code').value || '').trim();
       const password = ($('account-reset-password') && $('account-reset-password').value) || '';
       if (!code || password.length < 8) throw new Error('Inserisci codice a 6 cifre e nuova password (min. 8).');
@@ -5465,6 +5514,8 @@ async function submitAccount(event){
     const body = { email: $('account-email').value.trim(), password: $('account-password').value };
     if(accountRegisterMode) body.name = $('account-name').value.trim();
     if (accountRegisterMode && (!body.name || body.name.length < 2)) throw new Error('Inserisci nome e cognome.');
+    if (!body.email) throw new Error('Inserisci l’email dell’account.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) throw new Error('Inserisci un’email valida.');
     if (!body.password || body.password.length < 8) throw new Error('La password deve avere almeno 8 caratteri.');
     if (accountRegisterMode) {
       const ticked = ['consent-age', 'consent-terms', 'consent-health'].every(function (id) { const el = $(id); return el && el.checked; });
@@ -5843,6 +5894,61 @@ function iosAskNotificationPermission() {
     .then(function (r) { return !!(r && r.display === 'granted'); })
     .catch(function () { return false; });
 }
+function iosNotificationsAllowed() {
+  const ln = iosNotifications();
+  if (!ln || typeof ln.checkPermissions !== 'function') return Promise.resolve(false);
+  return Promise.resolve(ln.checkPermissions())
+    .then(function (r) { return !!(r && r.display === 'granted'); })
+    .catch(function () { return false; });
+}
+
+// ---- Notifications: asked when they are needed, once ----
+// The system question came on the first screen, before sign-in, and again after the email check, with
+// no word on what for (testers' report, BUG-013). Now: only when the person turns on something that
+// notifies (a reminder, the coach area, a client's link), after a line saying why, and never again
+// after a "no" (the phone's settings remain the way back).
+const NOTIF_ASKED_KEY = 'nurvan.notif.asked';
+function notificationPermissionState() {
+  try {
+    if (typeof isIosApp === 'function' && isIosApp()) {
+      const ln = iosNotifications();
+      if (!ln || typeof ln.checkPermissions !== 'function') return Promise.resolve('default');
+      return Promise.resolve(ln.checkPermissions()).then(function (r) {
+        const d = r && r.display;
+        return d === 'granted' ? 'granted' : (d === 'denied' ? 'denied' : 'default');
+      }).catch(function () { return 'default'; });
+    }
+    if (typeof NativeConfig !== 'undefined' && typeof NativeConfig.notificationPermission === 'function') {
+      return Promise.resolve(String(NativeConfig.notificationPermission() || 'default'));
+    }
+    if (typeof Notification !== 'undefined') return Promise.resolve(Notification.permission === 'granted' ? 'granted' : (Notification.permission === 'denied' ? 'denied' : 'default'));
+  } catch (_) {}
+  return Promise.resolve('default');
+}
+const NOTIF_REASONS = {
+  reminders: 'Per avvisarti all’ora del promemoria anche con l’app chiusa, Nurvan ha bisogno del permesso di inviarti notifiche.',
+  coach: 'Le notifiche ti avvisano dei messaggi e delle richieste dei tuoi clienti anche con l’app chiusa.',
+  client: 'Le notifiche ti avvisano quando il tuo coach ti scrive o ti assegna una scheda.',
+  rest: 'Le notifiche ti avvisano della fine del recupero anche se blocchi il telefono.'
+};
+async function ensureNotificationPermission(reason) {
+  const state = await notificationPermissionState();
+  if (state === 'granted') return true;
+  if (state === 'denied') return false;
+  let asked = false;
+  try { asked = localStorage.getItem(NOTIF_ASKED_KEY) === '1'; } catch (_) {}
+  if (asked) return false;
+  try { localStorage.setItem(NOTIF_ASKED_KEY, '1'); } catch (_) {}
+  const ok = await nurvanConfirm(trText(NOTIF_REASONS[reason] || NOTIF_REASONS.reminders), { title: trText('NOTIFICHE'), okLabel: trText('ATTIVA'), cancelLabel: trText('NON ORA') });
+  if (!ok) return false;
+  try {
+    if (typeof isIosApp === 'function' && isIosApp()) return await iosAskNotificationPermission();
+    if (typeof NativeConfig !== 'undefined' && NativeConfig.requestNotifications) { NativeConfig.requestNotifications(); return true; }
+    if (typeof Notification !== 'undefined' && Notification.requestPermission) return (await Notification.requestPermission()) === 'granted';
+  } catch (_) {}
+  return false;
+}
+window.ensureNotificationPermission = ensureNotificationPermission;
 // job: { id, title, body, at (epoch ms), daily (bool), route }
 function iosScheduleNotification(job) {
   const ln = iosNotifications();
@@ -5852,7 +5958,7 @@ function iosScheduleNotification(job) {
   const schedule = job.daily
     ? { on: { hour: when.getHours(), minute: when.getMinutes() }, allowWhileIdle: true }
     : { at: when, allowWhileIdle: true };
-  iosAskNotificationPermission().then(function (ok) {
+  iosNotificationsAllowed().then(function (ok) {
     if (!ok) return;
     const id = iosNotifId(job.id);
     Promise.resolve(ln.cancel({ notifications: [{ id: id }] })).catch(function () {}).then(function () {
@@ -5889,8 +5995,8 @@ function iosSetBadge(n) {
   const count = Math.max(0, Number(n) || 0);
   try {
     if (count > 0) {
-      Promise.resolve(b.requestPermissions && b.requestPermissions()).catch(function () {})
-        .then(function () { return b.set({ count: count }); }).catch(function () {});
+      // The number on the icon follows the notification permission; it never asks by itself.
+      iosNotificationsAllowed().then(function (ok) { if (ok) return b.set({ count: count }); }).catch(function () {});
     } else {
       Promise.resolve(b.clear()).catch(function () {});
     }
@@ -6843,9 +6949,17 @@ async function nativeAppleResult(ticket){
   }
   await appleSignInRequest({ ticket: String(ticket), verifier: verifier });
 }
-function nativeAuthError(message){
+// The Android app's Google sign-in reports a code: the person reads a plain sentence with a way in by
+// email, not Credential Manager's text ("No credentials available"), which stays in the log.
+function nativeAuthError(message, code){
   setGoogleAuthLoading(false);
-  $('account-status').textContent = String(message || 'Autenticazione non riuscita.');
+  const status = $('account-status');
+  if (!status) return;
+  if (!code) { status.textContent = trText(String(message || 'Autenticazione non riuscita.')); return; }
+  try { console.warn('[GOOGLE_NATIVE]', code, message); } catch (_) {}
+  status.textContent = trText(code === 'google_cancelled'
+    ? 'Accesso Google annullato.'
+    : 'Accesso con Google non riuscito su questo telefono. Entra con email e password, oppure tocca «CREA UN ACCOUNT» se non ne hai uno.');
 }
 // Largest saved program (as JSON) that still travels with its content.
 var MODEL_UPLOAD_MAX_CHARS = 400 * 1024;
@@ -7920,10 +8034,20 @@ async function collectRecoverSchedaCandidates() {
     if (!prog || typeof prog !== 'object') return;
     const body = prog.training && Array.isArray(prog.training.weeks) ? prog.training : prog;
     if (!Array.isArray(body.weeks) || !body.weeks.length) return;
-    const key = String(body.id || '') + '|' + String(body.title || '') + '|' + body.weeks.length + '|' +
-      ((body.weeks[0] && (body.weeks[0].sessions || body.weeks[0].days) || []).length);
-    if (seen[key]) return;
-    seen[key] = 1;
+    // The same program under two ids (the program and its locked backup copy) is one choice, not two:
+    // the key is its content, and the real id wins over the backup's.
+    let key;
+    try { key = activeProgramFingerprint(Object.assign({}, body, { id: '' })); } catch (_) { key = ''; }
+    if (!key) key = String(body.title || '') + '|' + body.weeks.length + '|' + ((body.weeks[0] && (body.weeks[0].sessions || body.weeks[0].days) || []).length);
+    if (seen[key] != null) {
+      const prev = candidates[seen[key]];
+      if (prev && prev.prog && prev.prog.id === 'personal_locked_backup' && body.id && body.id !== 'personal_locked_backup') {
+        prev.prog = JSON.parse(JSON.stringify(body));
+        prev.source = source;
+      }
+      return;
+    }
+    seen[key] = candidates.length;
     candidates.push({
       prog: JSON.parse(JSON.stringify(body)),
       source: source,
@@ -10197,6 +10321,8 @@ async function syncProgramLibraryFromIdb() {
     })).filter(function (m) {
       const id = String(m.id || '');
       const name = String(m.name || '');
+      // The locked backup copy of the active program is not a program of its own.
+      if (id === 'personal_locked_backup') return false;
       return hidden.indexOf(id) < 0 && hidden.indexOf(name) < 0 && hidden.indexOf('name:' + name) < 0;
     });
     // The cloud copy of the library carries the programs themselves, not only
@@ -15258,6 +15384,7 @@ async function init() {
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadActiveProgram) {
       try {
         activeProg = await GiammariaPersistence.loadActiveProgram();
+        window.__bootLoadedProgram = activeProg || null;
       } catch (idbErr) {
         console.warn('[NURVAN_BOOT] Could not load active program from IDB:', idbErr);
       }
@@ -15364,6 +15491,14 @@ async function init() {
     finishInit();
   } catch (globalErr) {
     console.error('[NURVAN_BOOT][FATAL_RECOVERY]', globalErr);
+    // Something failed after the program was read from this phone: keep it rather than an empty shell
+    // (an empty one also opened the "Scegli la tua scheda" picker and the restore banner).
+    const loaded = window.__bootLoadedProgram;
+    if (!DATA && loaded && Array.isArray((loaded.training || loaded).weeks) && (loaded.training || loaded).weeks.length) {
+      try { DATA = normalizeProgram(loaded.training || loaded); } catch (_) { DATA = loaded.training || loaded; }
+      store.activeProgram = DATA;
+      store.activeProgramId = loaded.id || store.activeProgramId;
+    }
     if (!DATA) {
       DATA = { title: "Nessun Programma Attivo", weeks: [] };
     }
@@ -15383,7 +15518,11 @@ function setSplashProgress(pct, label) {
 }
 
 function finishInit() {
-  if (window.__nurvanBootState && window.__nurvanBootState.ready) return;
+  if (window.__nurvanBootState && window.__nurvanBootState.ready) {
+    // The splash safety timer got here first: the program arrived later, so the page is drawn again with it.
+    try { if (typeof DATA !== 'undefined' && DATA && typeof render === 'function') render(); } catch (_) {}
+    return;
+  }
   if (window.__nurvanWatchdog) clearTimeout(window.__nurvanWatchdog);
   if (window.__nurvanBootState) {
     window.__nurvanBootState.ready = true;
@@ -16382,11 +16521,102 @@ function pageTutorialApplies(view) {
   if (tut.who === 'coach' && (athlete || !(store && (store.coachUnlocked || store.coachSessionActive)) || (typeof isClientStorageContext === 'function' && isClientStorageContext()))) return false;
   return true;
 }
+// ---- Dialogs a screen reader can follow ----
+// While one is open, the page behind it is inert (no touch exploration, no focus) and hidden from
+// accessibility; focus goes into the dialog and comes back where it was when the last one closes.
+// The Play testers found TalkBack reading the dashboard under the first-run questions.
+const A11Y_BEHIND = 'body > header, #view-container, nav.bottom-nav, .fab-save';
+let a11yDialogs = [];
+let a11yReturnFocus = null;
+let a11yWatch = null;
+function a11yRefreshBehind() {
+  a11yDialogs = a11yDialogs.filter(function (d) {
+    try { return d && d.isConnected && window.getComputedStyle(d).display !== 'none'; } catch (_) { return false; }
+  });
+  const hide = a11yDialogs.length > 0;
+  document.querySelectorAll(A11Y_BEHIND).forEach(function (el) {
+    if (hide) { el.setAttribute('aria-hidden', 'true'); el.setAttribute('inert', ''); }
+    else { el.removeAttribute('aria-hidden'); el.removeAttribute('inert'); }
+  });
+  if (hide) {
+    // A dialog removed by code that does not say so must not leave the page frozen.
+    if (!a11yWatch && typeof MutationObserver === 'function') {
+      a11yWatch = new MutationObserver(function () { a11yRefreshBehind(); });
+      a11yWatch.observe(document.body, { childList: true });
+    }
+    return;
+  }
+  if (a11yWatch) { a11yWatch.disconnect(); a11yWatch = null; }
+  if (a11yReturnFocus) {
+    try { if (a11yReturnFocus.isConnected && a11yReturnFocus.focus) a11yReturnFocus.focus({ preventScroll: true }); } catch (_) {}
+    a11yReturnFocus = null;
+  }
+}
+function a11yOpenDialog(el, titleId) {
+  if (!el) return;
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  if (titleId) el.setAttribute('aria-labelledby', titleId);
+  if (!a11yDialogs.length) a11yReturnFocus = document.activeElement;
+  if (a11yDialogs.indexOf(el) < 0) a11yDialogs.push(el);
+  a11yRefreshBehind();
+}
+function a11yFocus(root, selector) {
+  try {
+    const target = root && (selector ? root.querySelector(selector) : root);
+    if (!target) return;
+    if (!target.hasAttribute('tabindex') && !/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  } catch (_) {}
+}
+function a11yCloseDialog(el) {
+  if (el) a11yDialogs = a11yDialogs.filter(function (d) { return d !== el; });
+  a11yRefreshBehind();
+}
+
+// A question with two answers in the app's own style and language, in place of the white system
+// dialog (confirm()). Resolves true for the main button; back, a tap outside or ANNULLA is false.
+function nurvanConfirm(message, opts) {
+  opts = opts || {};
+  return new Promise(function (resolve) {
+    const id = 'nc-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
+    const overlay = document.createElement('div');
+    overlay.className = 'nurvan-confirm';
+    overlay.setAttribute('data-back-close', '');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10700;background:rgba(0,0,0,.82);display:flex;align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));box-sizing:border-box;';
+    overlay.innerHTML = '<div class="card" style="max-width:440px;width:100%;margin:0;border:1px solid var(--gold);padding:16px;box-sizing:border-box;">' +
+      (opts.title ? '<div id="' + id + '-t" style="font-size:12px;color:var(--gold);font-weight:900;letter-spacing:1px;margin-bottom:8px;">' + esc(opts.title) + '</div>' : '') +
+      '<p id="' + id + '-m" style="margin:0 0 14px;font-size:14px;color:#eee;line-height:1.5;white-space:pre-line;">' + esc(message) + '</p>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button type="button" class="btn btn-outline" data-nc="no" style="flex:1;padding:12px 8px;font-size:12px;">' + esc(opts.cancelLabel || 'ANNULLA') + '</button>' +
+      '<button type="button" class="btn btn-primary" data-nc="yes" style="flex:1;padding:12px 8px;font-size:12px;' + (opts.danger ? 'background:var(--accent-red);border-color:var(--accent-red);color:#fff;' : '') + '">' + esc(opts.okLabel || 'CONFERMA') + '</button>' +
+      '</div></div>';
+    let settled = false;
+    const finish = function (value) {
+      if (settled) return;
+      settled = true;
+      overlay.remove();
+      a11yCloseDialog(overlay);
+      resolve(value);
+    };
+    overlay.__backClose = function () { finish(false); };
+    overlay.addEventListener('click', function (ev) {
+      const b = ev.target && ev.target.closest ? ev.target.closest('[data-nc]') : null;
+      if (b) finish(b.getAttribute('data-nc') === 'yes');
+      else if (ev.target === overlay) finish(false);
+    });
+    document.body.appendChild(overlay);
+    a11yOpenDialog(overlay, opts.title ? id + '-t' : id + '-m');
+    a11yFocus(overlay, '#' + id + '-m');
+  });
+}
+window.nurvanConfirm = nurvanConfirm;
+
 // Anything else on top of the page: a tutorial never opens over it.
 function anyOverlayOpen() {
   try {
     if (document.body && document.body.classList.contains('nurvan-locked')) return true;
-    const nodes = document.querySelectorAll('.modal, [id$="-modal"], .cp-overlay, #timer-overlay, #splash, #busy-overlay, #lesson-overlay, #program-slot-choice');
+    const nodes = document.querySelectorAll('.modal, [id$="-modal"], .cp-overlay, #timer-overlay, #splash, #busy-overlay, #lesson-overlay, #program-slot-choice, #onboarding-sheet, .nurvan-sheet.is-open, .nurvan-confirm');
     for (let i = 0; i < nodes.length; i++) {
       const el = nodes[i];
       if (el.id === 'page-tutorial') continue;
@@ -16425,11 +16655,10 @@ function openPageTutorial(view, replay) {
   window.__pageTut = { view: view, step: 0, replay: !!replay };
   const el = document.createElement('div');
   el.id = 'page-tutorial';
-  el.setAttribute('role', 'dialog');
-  el.setAttribute('aria-modal', 'true');
   el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10150;background:rgba(0,0,0,.82);align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom, 0px));box-sizing:border-box;';
   el.innerHTML = '<div class="card" id="page-tutorial-card" style="max-width:460px;width:100%;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;"></div>';
   document.body.appendChild(el);
+  a11yOpenDialog(el, 'page-tutorial-title');
   drawPageTutorial();
 }
 window.openPageTutorial = openPageTutorial;
@@ -16447,15 +16676,16 @@ function drawPageTutorial() {
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">' +
     '<div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">' + esc(String(trText('TUTORIAL')) + ' · ' + String(trText(tut.label)).toUpperCase() + ' · ' + (st.step + 1) + '/' + n) + '</div>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 10px;flex-shrink:0;" onclick="closePageTutorial()">' + esc(trText('SALTA')) + '</button></div>' +
-    '<div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.25;">' + esc(trText(step.t)) + '</div>' +
+    '<div id="page-tutorial-title" role="heading" aria-level="2" tabindex="-1" style="font-size:17px;font-weight:900;color:#fff;margin-bottom:8px;line-height:1.25;">' + esc(trText(step.t)) + '</div>' +
     '<div style="font-size:13px;color:#ccc;line-height:1.55;margin-bottom:14px;">' + esc(trText(step.d)) + '</div>' +
-    '<div style="display:flex;justify-content:center;gap:5px;margin-bottom:12px;">' +
+    '<div aria-hidden="true" style="display:flex;justify-content:center;gap:5px;margin-bottom:12px;">' +
     steps.map(function (_, i) { return '<span style="width:' + (i === st.step ? 16 : 6) + 'px;height:6px;border-radius:3px;background:' + (i === st.step ? 'var(--gold)' : '#444') + ';"></span>'; }).join('') + '</div>' +
     '<div style="display:flex;gap:8px;">' +
     (st.step > 0 ? '<button type="button" class="btn btn-outline" style="flex:1;" onclick="stepPageTutorial(-1)">' + esc(trText('INDIETRO')) + '</button>' : '') +
     '<button type="button" class="btn btn-primary" style="flex:2;" onclick="' + (last ? 'closePageTutorial()' : 'stepPageTutorial(1)') + '">' + esc(trText(last ? 'HO CAPITO' : 'AVANTI')) + '</button></div>' +
-    (st.replay ? '' : '<div style="text-align:center;margin-top:10px;"><a href="#" onclick="disablePageTutorials();return false;" style="font-size:10px;color:#888;text-decoration:underline;">' + esc(trText('Non mostrarmi più i tutorial')) + '</a>' +
+    (st.replay ? '' : '<div style="text-align:center;margin-top:10px;"><button type="button" onclick="disablePageTutorials()" style="background:none;border:0;padding:4px;font:inherit;font-size:10px;color:#888;text-decoration:underline;cursor:pointer;">' + esc(trText('Non mostrarmi più i tutorial')) + '</button>' +
       '<span style="font-size:10px;color:#666;"> · ' + esc(trText('li ritrovi in Menu → Tutorial')) + '</span></div>');
+  a11yFocus(card, '#page-tutorial-title');
 }
 function stepPageTutorial(delta) {
   if (!window.__pageTut) return;
@@ -16466,6 +16696,7 @@ window.stepPageTutorial = stepPageTutorial;
 function closePageTutorialElement() {
   const el = document.getElementById('page-tutorial');
   if (el) el.remove();
+  a11yCloseDialog(el);
 }
 // Read to the end or skipped: either way this page has been explained.
 function closePageTutorial() {
@@ -16491,12 +16722,13 @@ function openTutorialIndex() {
   if (old) old.remove();
   const el = document.createElement('div');
   el.id = 'tutorial-index-modal';
+  el.setAttribute('data-back-close', '');
   el.style.cssText = 'display:flex;position:fixed;inset:0;z-index:10140;background:rgba(0,0,0,.88);align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
   el.onclick = function (ev) { if (ev.target === el) el.remove(); };
   const seen = tutorialsSeen();
   const views = Object.keys(PAGE_TUTORIALS).filter(pageTutorialApplies);
   el.innerHTML = '<div class="card" style="max-width:460px;width:100%;max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--gold);padding:16px;box-sizing:border-box;margin:0;">' +
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><h2 style="font-size:16px;color:var(--gold);margin:0;">' + esc(trText('TUTORIAL')) + '</h2>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><h2 id="tutorial-index-title" tabindex="-1" style="font-size:16px;color:var(--gold);margin:0;">' + esc(trText('TUTORIAL')) + '</h2>' +
     '<button type="button" class="btn btn-outline" style="font-size:10px;padding:4px 8px;" onclick="document.getElementById(\'tutorial-index-modal\').remove()">' + esc(trText('CHIUDI')) + '</button></div>' +
     '<div style="font-size:11px;color:#888;line-height:1.5;margin-bottom:12px;">' + esc(trText('Ogni pagina si spiega da sola la prima volta che la apri. Da qui rivedi la spiegazione di quella che vuoi.')) + '</div>' +
     '<div style="display:grid;gap:6px;">' +
@@ -16511,6 +16743,8 @@ function openTutorialIndex() {
     '<button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;font-size:11px;" onclick="resetPageTutorials()">' + esc(trText('RIVEDILI TUTTI DA CAPO')) + '</button>' +
     '</div>';
   document.body.appendChild(el);
+  a11yOpenDialog(el, 'tutorial-index-title');
+  a11yFocus(el, '#tutorial-index-title');
 }
 window.openTutorialIndex = openTutorialIndex;
 function replayPageTutorial(view) {
@@ -16632,6 +16866,7 @@ function domainTitleTapHtml(eyebrow, title) {
     '</div>';
 }
 
+
 function pushUiOverlay(id) {
   if (!window.__gsOverlayStack) window.__gsOverlayStack = [];
   if (window.__gsOverlayStack[window.__gsOverlayStack.length - 1] !== id) window.__gsOverlayStack.push(id);
@@ -16647,6 +16882,12 @@ function closeTopUiOverlay() {
   const stack = window.__gsOverlayStack || [];
   const id = stack[stack.length - 1];
   if (!id) return false;
+  // Back on the first-run questions: the step before, or skip them from the first one.
+  if (id === 'onboarding-sheet' && document.getElementById('onboarding-sheet')) {
+    const d = window.__onboardingDraft;
+    if (d && d.step > 1) setOnboardingStep(d.step - 1); else skipOnboarding();
+    return true;
+  }
   if (id === 'cp-tutorial') {
     if (typeof closeClientTutorial === 'function') closeClientTutorial();
     else {
@@ -16678,7 +16919,9 @@ function handleNativeBack() {
     // any Android app, instead of the page behind it moving.
     const backSheets = document.querySelectorAll('[data-back-close]');
     if (backSheets.length) {
-      backSheets[backSheets.length - 1].remove();
+      const top = backSheets[backSheets.length - 1];
+      if (typeof top.__backClose === 'function') top.__backClose(); else top.remove();
+      a11yRefreshBehind();
       return true;
     }
     const menu = $('menu-hub-modal');
@@ -16937,6 +17180,8 @@ function scrollAppToTop() {
 window.scrollAppToTop = scrollAppToTop;
 
 function renderCurrentView() {
+  // A dialog closed without saying so must not leave the page hidden from screen readers.
+  try { if (a11yDialogs.length) a11yRefreshBehind(); } catch (_) {}
   ensureStoreIntegrity();
   const c = $('view-container');
   if (!c) return;
@@ -16984,10 +17229,31 @@ function renderCurrentView() {
   }
 
   if (!DATA) {
-    c.innerHTML = `
+    // A client's draft with nothing in it yet: nothing is loading, so say so and offer a way on. (Re-running
+    // the boot from here, as "Riprova" did, read the coach's own program and loads into the client draft.)
+    if (typeof nurvanClientAreaActive === 'function' && nurvanClientAreaActive()) {
+      c.innerHTML = `
+        <div class="card" style="padding:20px;text-align:center;">
+          <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:8px;">Bozza vuota</div>
+          <p style="font-size:12px;color:#aaa;margin-bottom:15px;">In questa bozza per il cliente non c’è ancora una scheda.</p>
+          <button class="btn btn-primary" style="width:100%;margin-bottom:8px;" onclick="startEmptyClientDraft()">INIZIA UNA SCHEDA VUOTA</button>
+          <button class="btn btn-outline" style="width:100%;" onclick="cancelAssignSandbox()">ESCI DALLA BOZZA</button>
+        </div>
+      `;
+      return;
+    }
+    // Started more than 15 s ago and still nothing: it is not loading any more.
+    const booted = !!(window.__nurvanBootState && window.__nurvanBootState.ready && Date.now() - (window.__nurvanBootState.ts || 0) > 15000);
+    c.innerHTML = booted ? `
       <div class="card" style="padding:20px;text-align:center;">
-        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:8px;">Caricamento Iniziale</div>
-        <p style="font-size:12px;color:#aaa;margin-bottom:15px;">Inizializzazione dei moduli di sistema in corso...</p>
+        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:8px;">Caricamento non riuscito</div>
+        <p style="font-size:12px;color:#aaa;margin-bottom:15px;">La scheda non si è caricata. I tuoi dati restano salvati su questo telefono.</p>
+        <button class="btn btn-outline" onclick="location.reload()">RICARICA</button>
+      </div>
+    ` : `
+      <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-bottom:8px;">Caricamento iniziale</div>
+        <p style="font-size:12px;color:#aaa;margin-bottom:15px;">Un momento: l’app si sta avviando.</p>
         <button class="btn btn-outline" onclick="init()">RIPROVA CARICAMENTO</button>
       </div>
     `;
@@ -17914,6 +18180,11 @@ window.diaryDeleteFood = diaryDeleteFood;
 function saveDiaryFood(target, foodObj) {
   const d = diaryEntry(target.iso) || { source: 'manual', meals: DIARY_MEALS.map(function (n) { return { name: n, foods: [] }; }) };
   const meals = d.meals.map(function (m) { return Object.assign({}, m, { foods: (m.foods || []).slice() }); });
+  // A meal the day's diary does not have yet (chosen from the barcode's meal list) is added, not merged into the first.
+  if (!meals[target.mealIdx] && target.mealName) {
+    meals.push({ name: target.mealName, foods: [] });
+    target = Object.assign({}, target, { mealIdx: meals.length - 1 });
+  }
   const meal = meals[target.mealIdx] || meals[0];
   if (!meal) return;
   if (target.foodIdx != null && meal.foods[target.foodIdx]) meal.foods[target.foodIdx] = foodObj;
@@ -18773,7 +19044,7 @@ function saveFoodItem() {
     saveDiaryFood(diaryTarget, foodObj);
     closeAddFoodModal();
     render();
-    if (typeof showToast === 'function') showToast(diaryTarget.foodIdx != null ? 'Alimento aggiornato' : 'Alimento aggiunto', 'ok');
+    if (typeof showToast === 'function') showToast(diaryTarget.foodIdx != null ? 'Alimento aggiornato' : (diaryTarget.mealName ? trText('Aggiunto al diario di oggi') + ' · ' + trText(diaryTarget.mealName) : 'Alimento aggiunto'), 'ok');
     return;
   }
 
@@ -21147,8 +21418,7 @@ function chooseCoachReadMode(mode) {
   const name = pending && pending.name ? pending.name : '';
   const prompt = (pending && pending.kind === 'supplement')
     ? buildSupplementCoachPrompt(name)
-    : (String((typeof t === 'function' && t('supplementCoachPrompt') !== 'supplementCoachPrompt' ? t('supplementCoachPrompt') : '') || '').replace('{name}', name)
-      || buildSupplementCoachPrompt(name));
+    : buildSupplementCoachPrompt(name);
   store.chatHistory = (store.chatHistory || []).filter(function (item) { return !item.voiceChoice; });
   persist();
   if (typeof navigate === 'function') navigate('ai');
@@ -21240,16 +21510,8 @@ function nextAlertEpoch(hhmm) {
   } catch (_) {}
   return d.getTime();
 }
-function requestAppNotificationPermission() {
-  if (typeof isIosApp === 'function' && isIosApp()) { iosAskNotificationPermission(); return; }
-  try {
-    if (typeof NativeConfig !== 'undefined' && NativeConfig.requestNotifications) {
-      NativeConfig.requestNotifications();
-    }
-  } catch (_) {}
-  try {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
-  } catch (_) {}
+function requestAppNotificationPermission(reason) {
+  return ensureNotificationPermission(reason || 'reminders');
 }
 function scheduleAllItemAlerts() {
   if (typeof store !== 'undefined' && store && (store.coachViewingClient || store.coachAssigning)) {
@@ -22697,8 +22959,8 @@ function renderSettings(c) {
       <input type="file" id="import-backup-input" accept=".json" style="display:none;" onchange="importFullDatabaseBackup(this)">
     </div>
 
-    <!-- Storage & Diagnostics Card -->
-    <div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
+    <!-- Storage & Diagnostics Card: developer mode only -->
+    ${!isDevMode() ? '' : `<div class="card" style="border:1px solid var(--border);margin-bottom:14px;">
       <div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">🛡️ ${t('architectureStatus')}</div>
       <div style="font-size:11px;color:#aaa;display:flex;flex-direction:column;gap:4px;">
         <div>IndexedDB Store: <strong style="color:#4caf50;">ATTIVO (Core 2.0)</strong></div>
@@ -22709,7 +22971,7 @@ function renderSettings(c) {
         <button class="btn btn-outline" style="flex:1;font-size:10px;color:var(--accent-red);border-color:#442222;" onclick="resetWorkoutData()">${t('resetWorkoutLog')}</button>
         <button class="btn btn-outline" style="flex:1;font-size:10px;color:var(--accent-red);border-color:#442222;" onclick="resetAllData()">${t('hardReset')}</button>
       </div>
-    </div>
+    </div>`}
   `;
 
   c.innerHTML = html;
@@ -23247,9 +23509,9 @@ function computeHomeReadinessHtml(opts) {
           <div style="font-size:10px;color:var(--gold);font-weight:800;letter-spacing:1px;">STIMA DEL RECUPERO</div>
           <div style="font-size:14px;font-weight:800;margin-top:4px;">${esc(r.label)}</div>
           <div style="font-size:11px;color:#888;margin-top:4px;">${esc(r.advice)}</div>
-          <div style="font-size:9px;color:#555;margin-top:6px;">Non è una misura clinica · confidenza ${Math.round((r.confidence || 0) * 100)}%</div>
+          ${r.level === 'unknown' ? '' : `<div style="font-size:9px;color:#555;margin-top:6px;">Non è una misura clinica · confidenza ${Math.round((r.confidence || 0) * 100)}%</div>`}
         </div>
-        ${(opts.noButton || !healthTileAvailable()) ? '' : '<button class="btn btn-outline" style="font-size:11px;padding:8px 14px;white-space:nowrap;flex:0 0 auto;" onclick="openHealthConnect()">DATI</button>'}
+        ${(opts.noButton || !healthTileAvailable()) ? '' : '<button class="btn btn-outline" style="font-size:11px;padding:8px 14px;white-space:nowrap;flex:0 0 auto;" onclick="openHealthConnect()">' + (r.level === 'unknown' ? 'AGGIUNGI DATI' : 'DATI') + '</button>'}
       </div>
     </div>`;
   } catch (_) { return ''; }
@@ -23752,7 +24014,7 @@ function updateCatalogFiltersFromUi() {
   // Switching to or from HYROX changes what the equipment filter offers.
   if ((catalogWhole(window.__catalogFilters.goal) ? window.__catalogFilters.goal : '') !== (window.__catalogHyroxShown || '') && currentView === 'programs') { window.__catalogFilters.equipment = ''; window.__catalogOpen = true; render(); return; }
   const totalCat = (window.__catalogMatchTotal != null) ? window.__catalogMatchTotal : catalogTotalCount();
-  if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '') + ' / ' + totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT'));
+  if (countEl) countEl.textContent = filtered.length + (totalCat > filtered.length ? '+' : '');
   if (!listEl) {
     if (currentView === 'programs') render();
     return;
@@ -23905,7 +24167,7 @@ function renderPrograms(c){
       <div>
         <span style="font-size:10px; color:var(--gold); font-weight:800; letter-spacing:1.5px; text-transform:uppercase;">PROGRAM DATABASE</span>
         <h2 style="font-size:18px; margin:2px 0 0; color:#fff; font-weight:900;">LIBRERIA PROGRAMMI</h2>
-        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? (totalCat.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) + ' schede · copertura completa filtri · sezione Donna inclusa') : 'Caricamento database…'}</div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">${catalogReady ? 'Programmi per ogni obiettivo, livello e attrezzatura · sezione Donna inclusa' : 'Caricamento database…'}</div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-outline" style="font-size:11px; padding:6px 12px; border-color:var(--gold); color:var(--gold);" onclick="navigate('import')">IMPORTA FILE</button>
@@ -24062,7 +24324,7 @@ function renderPrograms(c){
     </div>` : ''}
     <div class="card" style="margin-bottom:16px;">
       <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady ? ' / ' + matchTotal.toLocaleString((typeof appLocale === 'function' ? appLocale() : 'it-IT')) : ''}</span>
+        <span id="catalog-count" style="font-size:10px; color:#666;">${filtered.length}${catalogReady && matchTotal > filtered.length ? '+' : ''}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;">
         <input id="catalog-q" type="search" placeholder="Es. 4 giorni push pull legs ipertrofia petto casa" value="${esc(f.q || '')}" oninput="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()" style="padding:10px;font-size:13px;">
@@ -27140,12 +27402,12 @@ function renderHome(c) {
 
       ${homeDomainModulesHtml()}
 
-      <details style="margin-top:18px;padding:8px 4px;">
+      ${!isDevMode() ? '' : `<details style="margin-top:18px;padding:8px 4px;">
         <summary style="font-size:10px;color:#666;cursor:pointer;">Manutenzione</summary>
         <button class="btn btn-outline" style="width:100%;margin-top:10px;border-color:#442222;color:#a66;font-size:10px;" onclick="resetAllData()">
           ${t('hardResetLocal')}
         </button>
-      </details>
+      </details>`}
     `;
     return;
   }
@@ -27167,14 +27429,16 @@ function renderHome(c) {
   const bw = store.bw[currentWeek] || '--';
   const duration = store.prefs.duration || DATA.weeks.length;
   const frequency = store.prefs.frequency || sessions.length;
+  const wip = workoutInProgressInfo();
+  if (wip && wip.running) setTimeout(function () { try { ensureWorkoutSessionTimerTick(); } catch (_) {} }, 0);
 
   c.innerHTML = `
     <div style="text-align:center;padding:20px 0;"><img src="nurvan_wordmark.png" alt="Nurvan" style="width:min(300px,80%);height:auto;display:block;margin:0 auto 6px;" onerror="this.onerror=null;this.src='nurvan_logo.png'"><h1 class="text-gold" style="font-size:26px;font-weight:900;letter-spacing:3px;">${t('dashboard')}</h1></div>
 
     ${personalRestoreBannerHtml()}
 
-    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">OGGI · PROSSIMA AZIONE</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div><div style="display:flex;gap:10px;margin-top:20px;">
-        <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${t('startWorkout')}</button>
+    <div class="card" style="border:2px solid var(--gold);"><div class="card-header"><h2>${t('activeSession')}</h2></div><div style="padding:20px;"><div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">${wip ? 'ALLENAMENTO IN CORSO' : 'OGGI · PROSSIMA AZIONE'}</div><div style="font-size:20px;font-weight:900;">Settimana ${currentWeek} • Giorno ${currentDay+1}</div><div style="color:var(--gold-glow);font-size:14px;margin-top:8px;font-weight:700;">${esc(sessions[currentDay].name||sessions[currentDay].title||sessions[currentDay].day||'Sessione')}</div>${wip ? `<div style="font-size:12px;color:#ccc;margin-top:6px;">${wip.elapsedMs ? '<span id="home-session-clock">' + formatSessionClock(wip.elapsedMs) + '</span> · ' : ''}${wip.sets === 1 ? trText('1 serie registrata') : trText('{0} serie registrate').replace('{0}', String(wip.sets))}</div>` : ''}<div style="display:flex;gap:10px;margin-top:20px;">
+        <button class="btn btn-primary" style="flex:2;font-size:16px;height:55px;" onclick="navigate('training')">${wip ? 'RIPRENDI ALLENAMENTO' : t('startWorkout')}</button>
         <button class="btn btn-outline" style="flex:1;font-size:12px;height:55px;border-color:var(--gold);color:var(--gold);" onclick="navigate('${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'clientChat' : 'programs'}')">${(typeof isAthleteRole === 'function' && isAthleteRole()) ? 'CHAT COACH' : 'PROGRAMMI'}</button>
       </div></div></div>
 
@@ -27217,7 +27481,7 @@ function renderHome(c) {
 
     ${homeCollapsibleCard('Razionale & Regole Operative', `<div style="font-size:11px;line-height:1.5;color:#ccc;">${buildOperationalRulesHtml(DATA)}</div>`, false)}
 
-    ${homeCollapsibleCard(t('architectureStatus'), `<div style="display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">${t('restoreLoads')}</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">${t('hardResetApp')}</button></div>`, false)}
+    ${!isDevMode() ? '' : homeCollapsibleCard(t('architectureStatus'), `<div style="display:flex;flex-direction:column;gap:10px;"><button class="btn btn-outline" style="width:100%;border-color:var(--gold);color:var(--gold);" onclick="resetWorkoutData()">${t('restoreLoads')}</button><button class="btn btn-outline" style="width:100%;border-color:var(--accent-red);color:var(--accent-red);font-size:10px;" onclick="resetAllData()">${t('hardResetApp')}</button></div>`, false)}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">BODYWEIGHT</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${bw} kg</div></div><div class="card" style="padding:15px;text-align:center;"><span style="font-size:11px;color:var(--text-secondary);font-weight:800;">PROGRESSO</span><div style="font-size:22px;font-weight:900;color:var(--gold);">${Math.min(100, Math.round((currentWeek/(DATA.weeks.length||1))*100))}%</div></div></div>
   `;
@@ -30661,7 +30925,8 @@ let __recipeCatalogLoading = null;
 function loadRecipeCatalog() {
   if (__recipeCatalog) return Promise.resolve(__recipeCatalog);
   if (!__recipeCatalogLoading) {
-    __recipeCatalogLoading = fetch('recipe-catalog.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    // fetchJsonAsset reads it on Android too (file://, where fetch() alone is refused).
+    __recipeCatalogLoading = fetchJsonAsset('recipe-catalog.json').then(function (j) {
       // Values come computed in the file; the larger table only for a file
       // without them.
       const computed = j && Array.isArray(j.recipes) && j.recipes.every(function (r) { return Array.isArray(r.parsed); });
@@ -31807,11 +32072,42 @@ window.saveFinalizedWorkoutEdits = saveFinalizedWorkoutEdits;
 window.updateSessionBodyWeight = updateSessionBodyWeight;
 window.isEditingFinalizedSession = isEditingFinalizedSession;
 
-function finalizeWorkout(){
+// The exercises of today's session with no set ticked (OK), skipped ones left out.
+function unloggedSessionExercises(week, day) {
+  try {
+    const wk = DATA && DATA.weeks && DATA.weeks[week - 1];
+    const sess = wk && (wk.sessions || wk.days || [])[day];
+    const rows = (sess && (sess.exercises || sess.rows)) || [];
+    const data = (store && store.data) || {};
+    const out = [];
+    withBonusRows(rows, week, day).forEach(function (item) {
+      const eK = 'w' + week + '_d' + day + '_e' + item.eIdx;
+      if (store.skips && store.skips[eK]) return;
+      let any = false;
+      for (let set = 1; set <= 20 && !any; set++) if (data[eK + '_s' + set + '_done']) any = true;
+      if (!any) out.push((store.subs && store.subs[eK]) || item.row.name || item.row.exercise || '');
+    });
+    return out;
+  } catch (_) { return []; }
+}
+
+// "Finalizza" with exercises not done closes the session for good and moves the program on: asked first
+// (the testers finalized with five of six exercises empty, by mistake, with no warning).
+async function finalizeWorkout(){
   if (typeof isTrainingDayFinalized === 'function' && isTrainingDayFinalized(currentWeek, currentDay)) {
     startEditFinalizedWorkout();
     return;
   }
+  const empty = unloggedSessionExercises(currentWeek, currentDay);
+  if (empty.length) {
+    const names = empty.filter(Boolean).slice(0, 4).join(', ') + (empty.length > 4 ? '…' : '');
+    const msg = trText(empty.length === 1 ? '1 esercizio senza serie segnate' : '{0} esercizi senza serie segnate').replace('{0}', String(empty.length)) +
+      (names ? ': ' + names : '') + (/…$/.test(names) ? '' : '.') + '\n' + trText('Contano solo le serie con OK. Finalizzi comunque? La seduta si chiude e il programma passa alla prossima.');
+    if (!(await nurvanConfirm(msg, { title: trText('FINALIZZARE L’ALLENAMENTO?'), okLabel: trText('FINALIZZA'), cancelLabel: trText('CONTINUA L’ALLENAMENTO') }))) return;
+  }
+  return finalizeWorkoutNow();
+}
+function finalizeWorkoutNow(){
   markSessionClockIfNeeded();
   const snap = collectSessionStats({ currentSessionOnly: true });
   const intensityPts = Math.round(snap.intensity || 0);
@@ -33513,7 +33809,7 @@ function renderAthleteProfile(container) {
     '<div style="font-size:13px;font-weight:900;color:var(--gold);margin-bottom:8px;">Account</div>' +
     '<button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="navigate(\'settings\')">Preferenze app</button>' +
     (typeof openAccount === 'function' ? '<button class="btn btn-outline" style="width:100%;font-size:11px;margin-bottom:8px;" onclick="openAccount()">Account e accesso</button>' : '') +
-    (typeof logoutAccount === 'function' ? '<button class="btn btn-outline" style="width:100%;font-size:11px;color:#c66;border-color:#c66;" onclick="logoutAccount()">Esci</button>' : '') +
+    (typeof logoutAccount === 'function' ? '<button class="btn btn-outline" style="width:100%;font-size:11px;color:#c66;border-color:#c66;" onclick="confirmLogout()">Esci</button>' : '') +
     '</div>';
   html += '<button class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="navigate(\'settings\')">Altre impostazioni</button>';
   container.innerHTML = html;
@@ -34568,10 +34864,13 @@ function addLastScannedFoodToDiary() {
   // which meal the user actually meant - ask instead, same picker the
   // meal-photo flow already uses.
   openMealTargetModal(null, function (mealName) {
-    const dayIdx = (typeof currentNutritionDayIndex === 'number' ? currentNutritionDayIndex : 0);
-    const targetSlot = (typeof ensureTargetMealSlot === 'function') ? ensureTargetMealSlot(dayIdx, mealName) : null;
-    const mealIdx = targetSlot ? targetSlot.mealIdx : 0;
-    openAddFoodModal(targetSlot ? targetSlot.dayIdx : dayIdx, mealIdx);
+    const iso = nutritionTodayKey();
+    const diary = diaryEntry(iso);
+    const names = diary ? diary.meals.map(function (m) { return String((m && m.name) || ''); }) : DIARY_MEALS.slice();
+    let mealIdx = names.findIndex(function (n) { return n.toLowerCase() === String(mealName || '').toLowerCase(); });
+    if (mealIdx < 0) mealIdx = names.length;
+    openAddFoodModal(-1, -1);
+    window.__diaryFoodTarget = { iso: iso, mealIdx: mealIdx, mealName: mealName, foodIdx: null };
     if ($('food-name-input')) $('food-name-input').value = p.name;
     if ($('food-kcal-input')) $('food-kcal-input').value = p.kcal;
     if ($('food-pro-input')) $('food-pro-input').value = p.pro;
@@ -34798,6 +35097,24 @@ function sessionDurationSec(week, day, setCount) {
   return Math.max(60, (Number(setCount) || 0) * 90);
 }
 
+// A workout started and not finalized: Home says so and leads back to it, instead of "start workout"
+// (after a restart mid-session the testers thought it was lost; the sets and the clock were all there).
+function workoutInProgressInfo() {
+  try {
+    if (store.coachViewingClient || store.coachAssigning) return null;
+    if (!DATA || !Array.isArray(DATA.weeks) || !DATA.weeks.length) return null;
+    const w = currentWeek || 1, d = currentDay || 0;
+    if (typeof sessionWasFinalized === 'function' && sessionWasFinalized(w, d)) return null;
+    const prefix = 'w' + w + '_d' + d + '_e';
+    const data = store.data || {};
+    let sets = 0;
+    Object.keys(data).forEach(function (k) { if (k.indexOf(prefix) === 0 && /_s\d+_done$/.test(k) && data[k]) sets++; });
+    const live = !!store.sessionStartedAt && (Date.now() - Number(store.sessionStartedAt)) < 4 * 3600 * 1000;
+    if (!live && !sets) return null;
+    return { sets: sets, elapsedMs: live ? sessionElapsedMs() : 0, running: live && store.sessionClockRunning !== false };
+  } catch (_) { return null; }
+}
+
 function formatSessionClock(ms) {
   const total = Math.floor(Math.max(0, ms) / 1000);
   const h = Math.floor(total / 3600);
@@ -34876,7 +35193,7 @@ function ensureWorkoutSessionTimerTick() {
   if (window.__workoutSessionTimerIv) return;
   window.__workoutSessionTimerIv = setInterval(function () {
     try { syncWorkoutScreenAwake(); } catch (_) {}
-    const el = document.getElementById('workout-session-clock');
+    const el = document.getElementById('workout-session-clock') || document.getElementById('home-session-clock');
     if (!el) return;
     if (!store.sessionStartedAt || store.sessionClockRunning === false) return;
     el.textContent = formatSessionClock(sessionElapsedMs());
@@ -35603,20 +35920,28 @@ function drillStatsMuscle(group) {
     GAMBE: ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci'],
     GLUTEI: ['Quadricipiti', 'Femorali', 'Glutei', 'Polpacci']
   };
-  const list = subgroups[group] || [group];
-  const exercises = [];
+  // Only what was trained: exercises with at least one set ticked. Listing the whole program named
+  // exercises and muscle groups never done (Play testers' report, BUG-010).
+  const data = (store && store.data) || {};
+  const logged = function (eK) { for (let n = 1; n <= 20; n++) if (data[eK + '_s' + n + '_done']) return true; return false; };
+  const done = [];
   if (DATA && DATA.weeks) {
     DATA.weeks.forEach(function (w, wi) {
       (w.sessions || w.days || []).forEach(function (s, dIdx) {
         (s.exercises || s.rows || []).forEach(function (e, eIdx) {
-          const name = store.subs['w' + (wi + 1) + '_d' + dIdx + '_e' + eIdx] || e.name || e.name_original || '';
           const eK = 'w' + (wi + 1) + '_d' + dIdx + '_e' + eIdx;
-          if (exerciseMatchesMuscleGroup(name, e.movement, e.muscle_groups || e.muscleGroups, group, eK)) {
-            exercises.push(name);
-          }
+          if (!logged(eK)) return;
+          const name = (store.subs && store.subs[eK]) || e.name || e.name_original || '';
+          done.push({ name: name, e: e, eK: eK });
         });
       });
     });
+  }
+  const matches = function (x, g) { return exerciseMatchesMuscleGroup(x.name, x.e.movement, x.e.muscle_groups || x.e.muscleGroups, g, x.eK); };
+  const exercises = done.filter(function (x) { return matches(x, group); }).map(function (x) { return x.name; });
+  let list = subgroups[group] || [group];
+  if (group === 'GENERALE' || group === 'TOTAL') {
+    list = MACRO_MUSCLE_GROUPS.filter(function (g) { return done.some(function (x) { return matches(x, g.id); }); }).map(function (g) { return g.label; });
   }
   const label = (STATS_MUSCLE_CHIPS.find(function (x) { return x.id === group; }) || {}).label || (group === 'TOTAL' ? 'Generale' : group);
   const uniq = Array.from(new Set(exercises)).slice(0, 16);
@@ -35626,8 +35951,8 @@ function drillStatsMuscle(group) {
   box.innerHTML = '<div style="color:#fff;font-weight:800;margin-bottom:4px;">Volume ' + esc(label) + '</div>' +
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + formatStatsKg(totalVol) + ' ' + wUnit() + ' nel periodo</div>' +
     (weekBits ? '<div style="margin-bottom:6px;color:#aaa;">' + esc(weekBits) + '</div>' : '') +
-    '<div style="margin-bottom:6px;">Distretti: ' + list.map(function (x) { return esc(x); }).join(' · ') + '</div>' +
-    (uniq.length ? '<div>Esercizi usati per questo calcolo: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessun esercizio di questo gruppo nel programma/log.</div>');
+    (list.length && uniq.length ? '<div style="margin-bottom:6px;">Distretti: ' + list.map(function (x) { return esc(x); }).join(' · ') + '</div>' : '') +
+    (uniq.length ? '<div>Esercizi usati per questo calcolo: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessuna serie segnata per questo gruppo.</div>');
 }
 window.drillStatsMuscle = drillStatsMuscle;
 
@@ -37576,6 +37901,18 @@ function renderStatsData(){
   window.__statsMuscleSelected = selectedGroup;
 }
 
+// Coach AI is closed on the Free plan (an athlete's AI is the coach's to open, asked elsewhere).
+function aiCoachLocked() {
+  if (typeof isAthleteRole === 'function' && isAthleteRole()) return false;
+  return typeof planCan === 'function' && !planCan('ai_coach');
+}
+function growAiInput(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  window.__aiDraft = el.value;
+}
+window.growAiInput = growAiInput;
 function renderAI(c){
   if (!window.activeCoachProposals) window.activeCoachProposals = {};
   // Rehydrate proposals from persisted chat history
@@ -37660,7 +37997,7 @@ function renderAI(c){
     </div>
 
     <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="checkBackendHealth()">${t('checkAiServer')}</button>
+      ${isDevMode() ? `<button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="checkBackendHealth()">${t('checkAiServer')}</button>` : ''}
       <span id="ai-status" style="font-size:10px;color:#777;align-self:center;"></span>
     </div>
     <div class="coach-ai-layout">
@@ -37684,11 +38021,12 @@ function renderAI(c){
       </div>
       <div style="padding:12px;">
         <div id="chat-history">${history || '<div class="msg ai">' + (t('coachWelcome') || 'Ciao! Sono Nurvan AI, il tuo coach di allenamento. Dimmi pure come posso aiutarti.') + '</div>'}</div>
-        <div class="ai-composer" style="display:flex;gap:10px;background:var(--surface-light);padding:10px;border-radius:12px;margin-top:10px;">
+        ${aiCoachLocked() ? (typeof planLockedHtml === 'function' ? planLockedHtml('ai_coach') : '') : ''}
+        <div class="ai-composer" style="display:flex;gap:10px;align-items:flex-end;background:var(--surface-light);padding:10px;border-radius:12px;margin-top:10px;">
           <button class="btn btn-outline" title="${t('analyzeCoachFile')}" style="padding:10px 12px; border-color:var(--gold); color:var(--gold);" onclick="triggerCoachFileSelect()">📎</button>
-          <input type="text" id="ai-input" placeholder="${t('chatPlaceholder')}" style="flex:1;min-width:0;border:none;background:transparent;" onkeydown="if(event.key==='Enter') askAI()">
-          <button class="btn btn-outline" onclick="startVoiceInput()" style="padding:10px 12px;">🎙</button>
-          <button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;">${t('send')}</button>
+          <textarea id="ai-input" rows="1" placeholder="${aiCoachLocked() ? 'Coach AI è incluso nel piano Standard' : t('chatPlaceholder')}" ${aiCoachLocked() ? 'disabled' : ''} style="flex:1;min-width:0;border:none;background:transparent;resize:none;max-height:6.5em;overflow-y:auto;font:inherit;line-height:1.4;padding:8px 4px;" oninput="growAiInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askAI();}">${esc(window.__aiDraft || '')}</textarea>
+          <button class="btn btn-outline" onclick="startVoiceInput()" style="padding:10px 12px;" ${aiCoachLocked() ? 'disabled' : ''}>🎙</button>
+          <button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;" ${aiCoachLocked() ? 'disabled' : ''}>${t('send')}</button>
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;">
           <span id="voice-status" style="font-size:10px;color:#777;align-self:center;"></span>
@@ -37705,6 +38043,12 @@ function renderAI(c){
   }, 40);
 }
 
+function isDevMode() {
+  try {
+    if (/[?&]dev=1\b/.test(location.search)) localStorage.setItem('nurvan.dev', '1');
+    return localStorage.getItem('nurvan.dev') === '1' || !!(store && store.prefs && store.prefs.devMode);
+  } catch (_) { return false; }
+}
 async function checkBackendHealth(){
   const status = $('ai-status');
   if(status) status.textContent = 'Verifica in corso…';
@@ -39271,6 +39615,11 @@ async function askAI(){
     return;
   }
   const q0 = $('ai-input').value.trim(); if(!q0) return;
+  window.__aiDraft = $('ai-input').value;
+  if (aiCoachLocked()) {
+    if (typeof requirePlan === 'function') requirePlan('ai_coach');
+    return;
+  }
   if (!(await ensureAiConsent())) { if (typeof showToast === 'function') showToast('Funzioni AI non attive. Puoi attivarle da Impostazioni › Privacy e dati.', 'info'); return; }
   return withBusy(function () { return askAIInner(q0); }, 'Nurvan AI sta pensando…', { immediate: true });
 }
@@ -39279,9 +39628,9 @@ async function askAIInner(q0, opts){
   // Free: the Coach AI is closed, except importing a program (its own path,
   // not this one). An athlete's AI is the coach's to open (askAI).
   if (!(typeof isAthleteRole === 'function' && isAthleteRole()) && typeof requirePlan === 'function' && !requirePlan('ai_coach')) {
-    if (typeof navigate === 'function') navigate('pricing');
     return;
   }
+  window.__aiDraft = '';
   let q = q0;
   if (store.pendingCoachAsk && store.pendingCoachAsk.needVoiceChoice) {
     const wantVoice = /\b(voc|ascolt|audio|listen|speak)\b/i.test(q);
@@ -39291,7 +39640,8 @@ async function askAIInner(q0, opts){
       const name = store.pendingCoachAsk.name;
       store.pendingCoachAsk = null;
       store.chatHistory = (store.chatHistory || []).filter(function (item) { return !item.voiceChoice; });
-      q = String(t('supplementCoachPrompt') || '').replace('{name}', name);
+      // The key had no text: the question sent was the literal "Supplement Coach Prompt".
+      q = buildSupplementCoachPrompt(name);
     } else {
       const h = $('chat-history');
       store.chatHistory.push({ role: 'user', text: q });
@@ -42428,13 +42778,13 @@ async function createProgramFromDraft(how) {
       ? '\n\nLa trovi in «Programmi creati» e la attivi quando vuoi. La tua scheda attiva non cambia.'
       : (target === 'assign'
         ? '\n\nDiventa la bozza per il cliente: la modifichi e poi la invii con INVIA.'
-        : '\n\nIl programma attivo verrà sostituito.'));
+        : (activeProgramWouldBeReplaced() ? '\n\nIl programma attivo verrà sostituito.' : '')));
   var msg = head + String(d.title).trim() + '"?\n\n' +
     withExercises.length + ' giorni · ' + (Number(d.weeks) || 8) + ' settimane' +
     (modelForMsg ? '\nProgressione: ' + modelForMsg.label : '') +
     (skipped ? '\n' + skipped + ' giorno/i vuoto/i non verranno inclusi.' : '') +
     tail;
-  if (!confirm(msg)) return;
+  if (!(await nurvanConfirm(msg, { okLabel: target === 'active' ? 'ATTIVA' : 'CONFERMA' }))) return;
   try {
     var built = programFromDraft(d);
     await deliverProgram(normalizeProgram(built), target, {
@@ -42654,6 +43004,7 @@ function openOnboarding() {
 function closeOnboarding() {
   var sheet = document.getElementById('onboarding-sheet');
   if (sheet) sheet.remove();
+  a11yCloseDialog(sheet);
   window.__onboardingDraft = null;
   try { popUiOverlay('onboarding-sheet'); } catch (_) {}
 }
@@ -42686,38 +43037,38 @@ function setOnboardingEquipment(id) {
 
 function onboardingStepHtml(d) {
   if (d.step === 1) {
-    return '<h1 style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Su cosa vuoi concentrarti?</h1>' +
+    return '<h1 id="onboarding-title" tabindex="-1" style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Su cosa vuoi concentrarti?</h1>' +
       '<p style="font-size:12px;color:#888;margin:0 0 18px;line-height:1.5;">Quelli che scegli prendono un esercizio in più per seduta, gli altri uno in meno. Puoi anche non sceglierne nessuno.</p>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+      '<div role="group" aria-labelledby="onboarding-title" style="display:flex;flex-wrap:wrap;gap:8px;">' +
       MACRO_MUSCLE_GROUPS.map(function (g) {
         var on = d.focus.indexOf(g.id) >= 0;
         return '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:12px;padding:10px 16px;text-transform:none;' +
           (on ? 'border-color:var(--gold);background:rgba(212,175,55,0.12);' : 'opacity:0.5;') +
-          '" onclick="toggleOnboardingFocus(\'' + g.id + '\')">' + (on ? '✓ ' : '') + esc(g.label) + '</button>';
+          '" aria-pressed="' + (on ? 'true' : 'false') + '" data-ob="f-' + g.id + '" onclick="toggleOnboardingFocus(\'' + g.id + '\')">' + (on ? '<span aria-hidden="true">✓ </span>' : '') + esc(g.label) + '</button>';
       }).join('') +
       '</div>';
   }
   if (d.step === 2) {
-    return '<h1 style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Quanti giorni a settimana?</h1>' +
+    return '<h1 id="onboarding-title" tabindex="-1" style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Quanti giorni a settimana?</h1>' +
       '<p style="font-size:12px;color:#888;margin:0 0 18px;line-height:1.5;">Quante sedute scrive la scheda. Quando farle lo decidi allenandoti: la seduta dopo si apre quando arrivi, non a calendario.</p>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:8px;">' +
+      '<div role="radiogroup" aria-labelledby="onboarding-title" style="display:flex;flex-wrap:wrap;gap:8px;">' +
       ONBOARDING_MAX_DAYS_LIST.map(function (n) {
         var on = d.days === n;
         return '<button type="button" class="btn btn-outline" style="flex:1 1 60px;min-width:54px;font-size:15px;font-weight:800;padding:14px 0;text-transform:none;' +
           (on ? 'border-color:var(--gold);background:rgba(212,175,55,0.12);' : 'opacity:0.5;') +
-          '" onclick="setOnboardingDays(' + n + ')">' + n + '</button>';
+          '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-ob="d-' + n + '" onclick="setOnboardingDays(' + n + ')">' + n + '</button>';
       }).join('') +
       '</div>';
   }
-  return '<h1 style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Che attrezzatura hai?</h1>' +
+  return '<h1 id="onboarding-title" tabindex="-1" style="font-size:21px;font-weight:900;color:#fff;margin:0 0 6px;line-height:1.25;">Che attrezzatura hai?</h1>' +
     '<p style="font-size:12px;color:#888;margin:0 0 18px;line-height:1.5;">La scheda userà solo esercizi che puoi fare davvero. Si cambia quando vuoi.</p>' +
-    '<div style="display:flex;flex-direction:column;gap:8px;">' +
+    '<div role="radiogroup" aria-labelledby="onboarding-title" style="display:flex;flex-direction:column;gap:8px;">' +
     ONBOARDING_EQUIPMENT.map(function (e) {
       var on = d.equipment === e.id;
       return '<button type="button" class="btn btn-outline" style="width:100%;text-align:left;padding:13px 14px;text-transform:none;' +
         (on ? 'border-color:var(--gold);background:rgba(212,175,55,0.12);' : 'opacity:0.5;') +
-        '" onclick="setOnboardingEquipment(\'' + e.id + '\')">' +
-        '<span style="display:block;font-size:13px;font-weight:800;color:' + (on ? 'var(--gold)' : '#fff') + ';">' + (on ? '✓ ' : '') + esc(e.label) + '</span>' +
+        '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-ob="e-' + e.id + '" onclick="setOnboardingEquipment(\'' + e.id + '\')">' +
+        '<span style="display:block;font-size:13px;font-weight:800;color:' + (on ? 'var(--gold)' : '#fff') + ';">' + (on ? '<span aria-hidden="true">✓ </span>' : '') + esc(e.label) + '</span>' +
         '<span style="display:block;font-size:11px;color:#888;margin-top:2px;">' + esc(e.note) + '</span>' +
         '</button>';
     }).join('') +
@@ -42727,6 +43078,8 @@ function onboardingStepHtml(d) {
 function renderOnboarding() {
   var d = onboardingDraft();
   var sheet = document.getElementById('onboarding-sheet');
+  var focused = sheet && document.activeElement && sheet.contains(document.activeElement) ? document.activeElement.getAttribute('data-ob') : null;
+  var newStep = !sheet || sheet.getAttribute('data-step') !== String(d.step);
   if (!sheet) {
     sheet = document.createElement('div');
     sheet.id = 'onboarding-sheet';
@@ -42734,9 +43087,11 @@ function renderOnboarding() {
     sheet.style.zIndex = '10400';
     document.body.appendChild(sheet);
     try { pushUiOverlay('onboarding-sheet'); } catch (_) {}
+    a11yOpenDialog(sheet, 'onboarding-title');
   }
+  sheet.setAttribute('data-step', String(d.step));
   var bars = [1, 2, 3].map(function (n) {
-    return '<span style="flex:1 1 0;height:3px;border-radius:2px;background:' +
+    return '<span aria-hidden="true" style="flex:1 1 0;height:3px;border-radius:2px;background:' +
       (n <= d.step ? 'var(--gold)' : '#2a2a2a') + ';"></span>';
   }).join('');
   var last = d.step === 3;
@@ -42746,7 +43101,7 @@ function renderOnboarding() {
     (d.step > 1
       ? '<button type="button" class="btn btn-outline" aria-label="Indietro" style="flex:0 0 auto;font-size:15px;padding:6px 12px;min-width:40px;" onclick="setOnboardingStep(' + (d.step - 1) + ')">‹</button>'
       : '<span style="flex:0 0 auto;width:40px;"></span>') +
-    '<div style="flex:1 1 auto;display:flex;gap:5px;align-items:center;">' + bars + '</div>' +
+    '<div role="img" aria-label="' + esc(trText('Passo') + ' ' + d.step + ' / 3') + '" style="flex:1 1 auto;display:flex;gap:5px;align-items:center;">' + bars + '</div>' +
     '<button type="button" class="btn btn-outline" style="flex:0 0 auto;font-size:11px;padding:6px 12px;color:#888;" onclick="skipOnboarding()">SALTA</button>' +
     '</div>' +
     '<div class="nurvan-sheet-body">' + onboardingStepHtml(d) + '</div>' +
@@ -42756,6 +43111,8 @@ function renderOnboarding() {
     (last ? 'FATTO' : 'CONTINUA') + '</button>' +
     '</div>' +
     '</div>';
+  if (newStep || !focused) a11yFocus(sheet, '#onboarding-title');
+  else a11yFocus(sheet, '[data-ob="' + focused + '"]');
 }
 
 // Quello che l'onboarding lascia scritto: le tre risposte nel profilo atleta,
@@ -43779,10 +44136,15 @@ async function deliverGeneratedReview(target) {
     : (target === 'library' ? 'Mettere nel tuo database?'
       : (target === 'assign' ? 'Usare come bozza per il cliente?' : 'Attivare questa scheda?'));
   var tail = target === 'active'
-    ? '\n\nIl programma attivo verrà sostituito.'
+    ? (activeProgramWouldBeReplaced() ? '\n\nIl programma attivo verrà sostituito.' : '')
     : (target === 'save' ? '\n\nLa trovi in «Programmi creati» e la attivi quando vuoi.'
       : (target === 'library' ? '\n\nFinisce nel tuo database schede.' : '\n\nDiventa la bozza da rivedere e inviare.'));
-  if (!confirm(head + '\n\n' + (prog.title || '') + '\n' + (prog.weeks || []).length + ' settimane' + tail)) return;
+  // The generated title already ends with "· N settimane": said once.
+  var nWeeks = (prog.weeks || []).length;
+  var weeksLine = String(prog.title || '').indexOf(nWeeks + ' settimane') >= 0 ? '' : '\n' + nWeeks + ' settimane';
+  // Nothing active, nothing lost: ATTIVA was the answer already.
+  var plainActivate = target === 'active' && !(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+  if (!plainActivate && !(await nurvanConfirm(head + '\n\n' + (prog.title || '') + weeksLine + tail, { okLabel: target === 'active' ? 'ATTIVA' : 'CONFERMA' }))) return;
   try {
     await deliverProgram(normalizeProgram(prog), target, {
       what: 'generata',
@@ -44815,7 +45177,17 @@ function addExerciseToProgram(name, muscle, cfg) {
 }
 window.addExerciseToProgram = addExerciseToProgram;
 
-function saveAll(){ persist(); showToast('Salvato', 'ok'); }
+// Every change is already saved as it is made; the button confirms it where the finger is, not only in a toast.
+function saveAll(){
+  persist();
+  showToast('Salvato', 'ok');
+  const fab = document.querySelector('.fab-save');
+  if (fab) {
+    fab.classList.add('is-saved');
+    clearTimeout(window.__fabSavedTimer);
+    window.__fabSavedTimer = setTimeout(function () { fab.classList.remove('is-saved'); }, 1200);
+  }
+}
 // Everything kept per slot (week/day/exercise position) belongs to the program
 // it was written for. The finalized sessions stay, as history.
 var TRAINING_SLOT_FIELDS = ['data', 'customSets', 'subs', 'skips', 'loadTypes', 'tempos', 'exIntensity', 'bonus', 'intelTargets', 'warmups', 'warmupProgress'];
@@ -44853,6 +45225,14 @@ async function clearWorkoutLogsForNewProgram(previousProgramId) {
 function parkedPrograms() {
   if (!Array.isArray(store.parkedPrograms)) store.parkedPrograms = [];
   return store.parkedPrograms;
+}
+// A new program in "active" replaces the current one only when there is one and no free slot holds it.
+function activeProgramWouldBeReplaced() {
+  try {
+    const hasActive = !!(DATA && Array.isArray(DATA.weeks) && DATA.weeks.length);
+    if (!hasActive) return false;
+    return multiProgramBlocked() || programSlotsUsed() >= activeProgramsLimit();
+  } catch (_) { return true; }
 }
 function multiProgramBlocked() {
   return !!(store && (store.coachAssigning || store.coachViewingClient)) || (typeof isClientStorageContext === 'function' && isClientStorageContext() && !(typeof isAthleteRole === 'function' && isAthleteRole()));

@@ -519,7 +519,7 @@ function applyClientChrome() {
       const profileBtn = document.getElementById('profile-button');
       if (profileBtn) {
         profileBtn.textContent = 'ESCI CLIENT';
-        profileBtn.onclick = function () { logoutAccount(); };
+        profileBtn.onclick = function () { if (typeof confirmLogout === 'function') confirmLogout(); else logoutAccount(); };
       }
     } else {
       const profileBtn = document.getElementById('profile-button');
@@ -623,7 +623,7 @@ function ensureCoachHeaderControls(coachSession) {
     headerActions.insertBefore(wrap, coachBtn);
   }
   wrap.style.display = 'flex';
-  wrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:nowrap;max-width:min(62vw,340px);min-width:0;overflow:hidden;';
+  wrap.style.cssText = 'display:flex;align-items:center;gap:4px;flex-wrap:nowrap;max-width:min(62vw,340px);min-width:0;';
   const hubBtn = document.getElementById('menu-hub-button');
   if (hubBtn) hubBtn.style.display = 'none';
   const profileBtn = document.getElementById('profile-button');
@@ -1389,9 +1389,18 @@ async function flushAllOfflineQueues() {
   } catch (_) {}
 }
 
+// Offline, one "sync later" marker is enough. Enqueuing saves the store, and saving asks for a sync,
+// which came back here: an endless loop that crashed every offline save, the one at start included
+// (the program vanished at the gym with no signal, Play testers' report BUG-003).
+let accountSyncQueueing = false;
 function queueAccountSyncIfOffline() {
   if (isAppOnline()) return false;
-  enqueueClientOutbox({ id: 'account-sync', type: 'account-sync', note: 'deferred' });
+  if (accountSyncQueueing) return true;
+  const queued = Array.isArray(store.clientOutbox) && store.clientOutbox.some(function (r) { return r && r.id === 'account-sync'; });
+  if (!queued) {
+    accountSyncQueueing = true;
+    try { enqueueClientOutbox({ id: 'account-sync', type: 'account-sync', note: 'deferred' }); } finally { accountSyncQueueing = false; }
+  }
   return true;
 }
 
@@ -2192,7 +2201,7 @@ async function submitClientInviteLogin() {
     try {
       if (store.inviteToken) history.replaceState(null, '', '/c/' + encodeURIComponent(store.inviteToken));
     } catch (_) {}
-    requestNotifyPermission();
+    requestNotifyPermission('client');
     try { await syncAccountData(true); } catch (_) {}
     applyClientChrome();
     if (payload.client && payload.client.needIntake) showClientIntake(payload.client.intake || { firstName: '', lastName: '' });
@@ -3181,7 +3190,7 @@ async function unlockCoachFromPlan() {
     store.coachUnlocked = true;
     store.coachSessionActive = true;
     if (typeof persist === 'function') persist();
-    requestNotifyPermission();
+    requestNotifyPermission('coach');
     applyClientChrome();
     practiceToast('Modalità Coach attiva.', 'success');
     navigate(coachLandingView());
@@ -3252,8 +3261,8 @@ function athletePaymentCardHtml() {
   const p = store && store.clientProfile;
   if (!p || !p.payTracking) return '';
   const st = paymentStatusFor(p);
-  const color = st.state === 'overdue' ? '#c66' : (st.state === 'soon' ? '#e8a13a' : '#6c6');
-  const label = st.state === 'overdue' ? 'Da regolare' : (st.state === 'soon' ? 'In scadenza' : 'Regolare');
+  const color = st.state === 'overdue' ? '#c66' : (st.state === 'soon' ? '#e8a13a' : (st.state === 'unrecorded' ? '#aaa' : '#6c6'));
+  const label = st.state === 'overdue' ? 'Da regolare' : (st.state === 'soon' ? 'In scadenza' : (st.state === 'unrecorded' ? 'In attesa' : 'Regolare'));
   return '<div class="card" style="margin-top:12px;padding:14px;">' +
     '<div style="font-size:10px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:6px;">PAGAMENTO AL COACH</div>' +
     '<div style="font-size:15px;font-weight:900;color:' + color + ';">' + esc(label) + '</div>' +
@@ -3469,6 +3478,8 @@ function paymentStatusFor(row, now) {
   const dueOk = due && !Number.isNaN(due.getTime());
   const days = dueOk ? Math.ceil((due.getTime() - t) / 86400000) : null;
   if (row.paid === false) return { state: 'overdue', days: days, text: 'Pagamento da regolare' };
+  // Reminders on, but the coach has not recorded a payment yet (a client just added): not "Pagato".
+  if (row.paidAt === null) return { state: 'unrecorded', days: days, text: 'Pagamento non registrato' + (dueOk ? ' · scade il ' + fmtDay(row.nextDueAt) : '') };
   if (!dueOk) return { state: 'ok', days: null, text: 'Pagato' };
   if (days < 0) return { state: 'overdue', days: days, text: 'Scaduto da ' + Math.abs(days) + ' gg' };
   if (days === 0) return { state: 'soon', days: 0, text: 'Scade oggi' };
@@ -3563,7 +3574,7 @@ async function loadCoachClientList(append) {
         '<div class="cp-client-actions" style="margin-top:6px;">' +
         '<button class="btn btn-outline" onclick="copyClientInvite(\'' + esc(cl.id) + '\',\'' + esc(cl.inviteToken || '') + '\')">LINK DI INVITO</button>' +
         '<button class="btn btn-outline" onclick="openClientBilling(\'' + esc(cl.id) + '\')">PROMEMORIA PAGAMENTO</button>' +
-        (cl.payTracking ? '<button class="btn btn-outline" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + (cl.paid ? 'false' : 'true') + ')">' + (cl.paid ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' : '') +
+        (cl.payTracking ? '<button class="btn btn-outline" onclick="toggleClientPaid(\'' + esc(cl.id) + '\',' + ((cl.paid && cl.paidAt !== null) ? 'false' : 'true') + ')">' + ((cl.paid && cl.paidAt !== null) ? 'SEGNA NON PAGATO' : 'SEGNA PAGATO') + '</button>' : '') +
         '<button class="btn btn-outline" onclick="revokeCoachClient(\'' + esc(cl.id) + '\')">REVOCA</button>' +
         '<button class="btn btn-outline" style="color:#c66;border-color:#c66;" onclick="removeCoachClient(\'' + esc(cl.id) + '\')">RIMUOVI</button>' +
         '</div></details></div>';
@@ -3620,7 +3631,7 @@ function ensureAssignStrip(domain) {
   }
   strip.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;">BOZZA PER ' + esc(job.name || 'cliente') + ' · NON ANCORA INVIATA</div>' +
     '<div style="display:flex;gap:6px;">' +
-    '<button type="button" class="btn btn-primary" style="flex:2;font-size:11px;padding:10px 6px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
+    '<button type="button" class="btn btn-primary" style="flex:2;font-size:11px;padding:10px 6px;"' + ((typeof DATA === 'undefined' || !DATA) ? ' disabled' : '') + ' onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
     '<button type="button" class="btn btn-outline" style="flex:1;font-size:11px;padding:10px 6px;" onclick="cancelAssignSandbox()">ESCI</button></div>';
   if (strip.parentElement !== c || c.firstChild !== strip) c.insertBefore(strip, c.firstChild);
 }
@@ -3739,7 +3750,7 @@ function drawAddClientWizard() {
     '<div id="cp-add-base">' +
     '<div class="cp-field"><label>Nome *</label><input id="cp-add-first" type="text"></div>' +
     '<div class="cp-field"><label>Cognome *</label><input id="cp-add-last" type="text"></div>' +
-    '<div class="cp-field"><label>Password di accesso (min. 4) *</label><input id="cp-add-pass" type="text" autocomplete="off"></div>' +
+    '<div class="cp-field"><label>Password di accesso (min. 8) *</label><input id="cp-add-pass" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(suggestClientPassword()) + '"></div>' +
     '<div class="cp-field"><label>Come lo segui</label><select id="cp-add-coaching-mode" style="width:100%;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;">' +
     COACHING_MODE_LABELS.map(function (m) { return '<option value="' + m[0] + '">' + esc(m[1]) + '</option>'; }).join('') + '</select></div>' +
     billingFieldsHtml('cp-add', null) + '</div>' +
@@ -3801,8 +3812,12 @@ async function submitAddClient() {
   const modeEl = document.getElementById('cp-add-coaching-mode');
   const coachingMode = (modeEl && modeEl.value) || 'remote';
   const intake = intakeMode === 'transition' ? Object.assign(readIntakeForm('cpa'), { firstName: firstName, lastName: lastName }) : { firstName: firstName, lastName: lastName };
-  if (firstName.length < 2 || lastName.length < 2 || password.length < 4) {
+  if (firstName.length < 2 || lastName.length < 2 || !password) {
     if (status) status.textContent = 'Nome, cognome e password sono obbligatori.';
+    return;
+  }
+  if (password.length < 8) {
+    if (status) status.textContent = 'La password deve avere almeno 8 caratteri.';
     return;
   }
   if (intakeMode === 'transition') {
@@ -3871,11 +3886,19 @@ async function copyClientInvite(id, token) {
   if (!info || !info.inviteUrl) { practiceToast('Link non disponibile', 'warning'); return; }
   openResendInviteDialog(info);
 }
+// A client's account holds health data, photos, therapy and exams: its password is 12 random characters
+// (no 0/O, 1/l/I), not a word and four digits (Play testers' report, BUG-005).
 function suggestClientPassword() {
-  const words = ['forza', 'squat', 'panca', 'corsa', 'gamba', 'ferro', 'salto', 'fiato'];
-  let n = 0;
-  try { const a = new Uint32Array(2); crypto.getRandomValues(a); n = a[0]; return words[a[1] % words.length] + String(1000 + (n % 9000)); } catch (_) {}
-  return words[Math.floor(Math.random() * words.length)] + String(1000 + Math.floor(Math.random() * 9000));
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let out = '';
+  try {
+    const a = new Uint32Array(12);
+    crypto.getRandomValues(a);
+    for (let i = 0; i < a.length; i++) out += chars[a[i] % chars.length];
+    return out;
+  } catch (_) {}
+  for (let i = 0; i < 12; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
 }
 function openResendInviteDialog(info) {
   const old = document.getElementById('cp-resend-invite');
@@ -3889,7 +3912,7 @@ function openResendInviteDialog(info) {
     '<div style="font-size:14px;font-weight:900;color:var(--gold);margin-bottom:8px;">Invia di nuovo l’invito</div>' +
     (info.username ? '<div style="font-size:12px;color:#eee;margin-bottom:8px;">Utente: <b>' + esc(info.username) + '</b></div>' : '') +
     '<div style="font-size:12px;color:#bbb;line-height:1.5;margin-bottom:12px;">La password del cliente non si può rileggere: è salvata in modo che nessuno possa vederla. Per scriverla nell’invito va impostata di nuovo.</div>' +
-    '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;">Nuova password (minimo 4 caratteri)' +
+    '<label style="font-size:10px;color:#ccc;font-weight:800;display:block;">Nuova password (minimo 8 caratteri)' +
     '<input id="cp-resend-password" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(suggestClientPassword()) + '" style="width:100%;box-sizing:border-box;margin-top:4px;padding:10px;background:#111;border:1px solid #333;color:#fff;border-radius:8px;font-size:16px;"></label>' +
     '<div style="font-size:10px;color:#888;line-height:1.45;margin:6px 0 12px;">Con una nuova password il cliente viene scollegato dai suoi dispositivi e rientra con questa.</div>' +
     '<div id="cp-resend-error" style="font-size:12px;color:#ff8a80;min-height:14px;"></div>' +
@@ -3912,7 +3935,7 @@ async function confirmResendInvite(reset) {
   const input = document.getElementById('cp-resend-password');
   const err = document.getElementById('cp-resend-error');
   const password = String((input && input.value) || '').trim();
-  if (password.length < 4) { if (err) err.textContent = 'La password deve avere almeno 4 caratteri.'; return; }
+  if (password.length < 8) { if (err) err.textContent = 'La password deve avere almeno 8 caratteri.'; return; }
   const btn = document.getElementById('cp-resend-reset');
   if (btn) btn.disabled = true;
   try {
@@ -4841,6 +4864,19 @@ function stripProgramSessionPerformance(prog) {
   return prog;
 }
 
+// From the "Bozza vuota" card: an empty program in the client's draft, to fill with the builder.
+function startEmptyClientDraft() {
+  if (!(typeof nurvanClientAreaActive === 'function' && nurvanClientAreaActive())) return;
+  DATA = emptyClientAssignDraft();
+  store.activeProgram = DATA;
+  store.activeProgramId = DATA.id;
+  currentWeek = 1;
+  currentDay = 0;
+  navigate('training');
+  if (typeof openProgramBuilder === 'function') openProgramBuilder('assign');
+}
+window.startEmptyClientDraft = startEmptyClientDraft;
+
 function emptyClientAssignDraft() {
   return {
     id: 'assign_draft_' + Date.now(),
@@ -4881,16 +4917,9 @@ async function restoreCoachMaster(backup) {
   }
 }
 
-function requestNotifyPermission() {
-  try {
-    const native = typeof nativeBridge === 'function' ? nativeBridge() : (typeof NativeConfig !== 'undefined' ? NativeConfig : null);
-    if (native && typeof native.requestNotifications === 'function') native.requestNotifications();
-  } catch (_) {}
-  try {
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  } catch (_) {}
+function requestNotifyPermission(reason) {
+  if (!reason) return;
+  try { if (typeof ensureNotificationPermission === 'function') ensureNotificationPermission(reason); } catch (_) {}
 }
 
 /* ——— Add to Home (A2HS) + Web Push ——— */
@@ -5175,7 +5204,7 @@ function ensureAssignBanner() {
   bar.innerHTML = '<div style="font-size:11px;color:var(--gold);font-weight:800;margin-bottom:6px;"><span>BOZZA PER</span> ' + esc(job.name || 'cliente') + ' · <span>NON ANCORA INVIATA</span></div>' +
     '<div style="display:flex;gap:6px;">' +
     '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:8px 6px;" onclick="assignBarEdit()">MODIFICA</button>' +
-    '<button class="btn btn-primary" style="flex:2;font-size:11px;padding:8px 6px;" onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
+    '<button class="btn btn-primary" style="flex:2;font-size:11px;padding:8px 6px;"' + ((typeof DATA === 'undefined' || !DATA) ? ' disabled' : '') + ' onclick="confirmAssignSandbox()">INVIA AL CLIENTE</button>' +
     '<button class="btn btn-outline" style="flex:1;font-size:11px;padding:8px 6px;" onclick="cancelAssignSandbox()">ESCI</button></div>' +
     '<button type="button" class="btn btn-outline" style="width:100%;font-size:10px;padding:5px;margin-top:6px;border-style:dashed;" onclick="toggleAssignBannerExpand()">' + (more ? '<span>NASCONDI LE ALTRE SEZIONI</span> ▴' : '<span>ALTRE SEZIONI (ALIMENTAZIONE, INTEGRAZIONE…)</span> ▾') + '</button>' +
     (more
@@ -5346,6 +5375,17 @@ function beginAssignSandbox(clientId, name, mode) {
   // a client's draft rather than the coach's own program is a small chip, which
   // is not enough to tell the two apart.
   store.__cpAssignBarExpanded = false;
+  // "Usa scheda attiva come base": the coach's own program, read before entering the client area, which
+  // starts empty (DATA null). Read after it, as until 1.5.36, there was nothing to copy and the draft
+  // stayed on "Caricamento iniziale" (Play testers' report, BUG-004). From the client view the global
+  // DATA is the client's program, so the coach's comes from the personal area.
+  let ownProgram = null;
+  if (mode === 'copy') {
+    try {
+      const own = (typeof NurvanMemory !== 'undefined' && NurvanMemory.active !== 'personal' && NurvanMemory.personal) ? NurvanMemory.personal.DATA : DATA;
+      if (own && Array.isArray(own.weeks) && own.weeks.length) ownProgram = JSON.parse(JSON.stringify(own));
+    } catch (_) { ownProgram = null; }
+  }
   // Order matters: enter the client area first. resetSandboxSessionState()
   // below clears the domain fields, and those are accessors onto whichever area
   // is active - run it a moment too early and it would clear the coach's own.
@@ -5358,11 +5398,21 @@ function beginAssignSandbox(clientId, name, mode) {
   // copy: struttura della scheda personale, senza kg/serie fatte. import/programs/mylib: merge sezioni cliente.
   if (mode === 'copy') {
     try {
-      if (typeof DATA !== 'undefined' && DATA) {
-        DATA = JSON.parse(JSON.stringify(DATA));
-        stripProgramSessionPerformance(DATA);
-        store.activeProgram = DATA;
-      }
+      // Training only: the coach's own diet, supplements, therapy and exams never go to a client.
+      const draft = ownProgram || emptyClientAssignDraft();
+      draft.id = 'assign_copy_' + Date.now();
+      draft.nutrition = null;
+      draft.supplementation = null;
+      draft.therapy = null;
+      draft.exams = null;
+      stripProgramSessionPerformance(draft);
+      DATA = draft;
+      store.activeProgram = DATA;
+      store.activeProgramId = DATA.id;
+      currentWeek = 1;
+      currentDay = 0;
+      window.__cpAssignSeed = null;
+      if (!ownProgram) practiceToast('Non hai una scheda attiva da copiare: parti da una bozza vuota.', 'warning');
     } catch (_) {}
   } else {
     seedAssignSandboxFromClient(clientId);
@@ -5402,7 +5452,7 @@ function beginAssignSandbox(clientId, name, mode) {
     promptCatalogFromIntakeThenOpen(clientId, name);
   } else {
     navigate('training');
-    practiceToast('Copia della tua scheda attiva come base cliente. Modifica e conferma.', 'success');
+    if (ownProgram) practiceToast('Copia della tua scheda attiva come base cliente. Modifica e conferma.', 'success');
   }
 }
 
@@ -6044,8 +6094,9 @@ async function confirmRequestExams(id) {
 window.confirmRequestExams = confirmRequestExams;
 
 async function resetClientPassword(id) {
-  const password = prompt('Nuova password per il cliente (min. 4):');
-  if (!password || password.length < 4) return;
+  const password = prompt('Nuova password per il cliente (min. 8):', suggestClientPassword());
+  if (!password) return;
+  if (password.length < 8) { practiceToast('La password deve avere almeno 8 caratteri.', 'warning'); return; }
   try {
     const res = await practiceFetch('/api/coach/clients/' + encodeURIComponent(id) + '/reset-password', {
       method: 'POST', headers: practiceHeaders(true), body: JSON.stringify({ password: password })

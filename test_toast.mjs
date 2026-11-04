@@ -151,7 +151,7 @@ console.log('\n--- 6. i testi ---');
   eq((all.match(/con successo/g) || []).length, 0, '6d. niente «con successo»: il verde lo dice gia\'');
   const gone = ['Toast aggiornato', 'Alimento cambiato in', 'Apertura revisione per', "'Serie completata: '", 'Calorie e stats aggiornate'];
   eq(gone.filter((w) => all.includes(w)), [], '6e. tolti quelli che ripetevano cio\' che lo schermo mostra gia\'');
-  ok('6f. il 💾 della scheda dice «Salvato», senza finestra bloccante', /function saveAll\(\)\{ persist\(\); showToast\('Salvato', 'ok'\); \}/.test(SRC));
+  ok('6f. il 💾 della scheda dice «Salvato», senza finestra bloccante, e si accende sotto il dito', /function saveAll\(\)\{\s*persist\(\);\s*showToast\('Salvato', 'ok'\);[\s\S]{0,200}classList\.add\('is-saved'\)/.test(SRC) && !/function saveAll\(\)\{[^}]*alert\(/.test(SRC));
   ok('6g. offline: un listener solo, legato una volta', (COACH.match(/addEventListener\('offline'/g) || []).length === 1 && /if \(window\.__nurvanOfflineSyncBound\) return;/.test(COACH) && !/addEventListener\('offline'/.test(SRC));
   ok('6h. e dice che i dati restano, come informazione', /showToast\('Offline: i dati restano salvati in locale', 'info'\)/.test(COACH));
 }

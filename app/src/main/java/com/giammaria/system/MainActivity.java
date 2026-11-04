@@ -67,6 +67,8 @@ import androidx.credentials.CredentialManagerCallback;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.exceptions.GetCredentialException;
+import androidx.credentials.exceptions.GetCredentialCancellationException;
+import androidx.credentials.exceptions.NoCredentialException;
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
@@ -185,8 +187,9 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(nativeConfig, "Android");
         // Warm CredentialManager + TTS so first Google login / speak is not cold-start slow
         try { nativeConfig.warmAuthAndTts(); } catch (Exception ignored) {}
-        // Ask for notification permission early (Android 13+)
-        try { nativeConfig.requestNotifications(); } catch (Exception ignored) {}
+        // The notification channel only: the permission is asked by the page when something needs it
+        // (it used to pop up over the sign-in screen at first launch).
+        try { ReminderReceiver.ensureChannel(this); } catch (Exception ignored) {}
 
         // Handle JS alerts and file picking
         web.setWebChromeClient(new WebChromeClient() {
@@ -228,12 +231,14 @@ public class MainActivity extends Activity {
                     }
                 });
             }
+            // The page's remaining alert()/confirm(): dark like the app (the app theme is a light one, so
+            // they came up white), no "Nurvan" title, and buttons in the phone's language instead of a
+            // fixed Italian "S\u00cc/NO" (Play testers' report, BUG-016).
             @Override
             public boolean onJsAlert(WebView view, String url, String message, final JsResult result) {
-                new AlertDialog.Builder(view.getContext())
-                    .setTitle("Nurvan")
+                new AlertDialog.Builder(view.getContext(), android.R.style.Theme_Material_Dialog_Alert)
                     .setMessage(message)
-                    .setPositiveButton("OK", (dialog, which) -> result.confirm())
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> result.confirm())
                     .setCancelable(false)
                     .show();
                 return true;
@@ -241,11 +246,10 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, final JsResult result) {
-                new AlertDialog.Builder(view.getContext())
-                    .setTitle("Nurvan")
+                new AlertDialog.Builder(view.getContext(), android.R.style.Theme_Material_Dialog_Alert)
                     .setMessage(message)
-                    .setPositiveButton("S\u00cc", (dialog, which) -> result.confirm())
-                    .setNegativeButton("NO", (dialog, which) -> result.cancel())
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> result.confirm())
+                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> result.cancel())
                     .setCancelable(false)
                     .show();
                 return true;
@@ -871,13 +875,31 @@ public class MainActivity extends Activity {
             }
         }
 
+        /** "granted", "denied" (refused once: the system is not asked again) or "default" (never asked). */
+        @JavascriptInterface
+        public String notificationPermission() {
+            try {
+                if (Build.VERSION.SDK_INT < 33) {
+                    android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                    return nm == null || nm.areNotificationsEnabled() ? "granted" : "denied";
+                }
+                if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return "granted";
+                boolean asked = getSharedPreferences("gs_notif", MODE_PRIVATE).getBoolean("asked", false);
+                return asked ? "denied" : "default";
+            } catch (Exception e) {
+                return "default";
+            }
+        }
+
         @JavascriptInterface
         public void requestNotifications() {
             runOnUiThread(() -> {
                 ReminderReceiver.ensureChannel(MainActivity.this);
                 if (Build.VERSION.SDK_INT >= 33) {
                     if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-                            != PackageManager.PERMISSION_GRANTED) {
+                            != PackageManager.PERMISSION_GRANTED
+                            && !getSharedPreferences("gs_notif", MODE_PRIVATE).getBoolean("asked", false)) {
+                        getSharedPreferences("gs_notif", MODE_PRIVATE).edit().putBoolean("asked", true).apply();
                         requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 77);
                     }
                 }
@@ -975,6 +997,11 @@ public class MainActivity extends Activity {
                         }
                         @Override public void onError(GetCredentialException error) {
                             Log.e("GiammariaWebView", "[GS-DEBUG-34] GOOGLE_SIWG_ERROR type=" + error.getType() + " class=" + error.getClass().getSimpleName() + " msg=" + String.valueOf(error.getMessage()));
+                            // Closed by the person: no second picker and no error, just say it was cancelled.
+                            if (error instanceof GetCredentialCancellationException) {
+                                notifyGoogleError("google_cancelled", error, null);
+                                return;
+                            }
                             fallbackGoogleIdAllAccounts(error != null ? error : firstError);
                         }
                     }
@@ -1007,16 +1034,24 @@ public class MainActivity extends Activity {
                         }
                         @Override public void onError(GetCredentialException error) {
                             Log.e("GiammariaWebView", "[GS-DEBUG-34] GOOGLE_ON_ERROR type=" + error.getType() + " class=" + error.getClass().getSimpleName() + " msg=" + String.valueOf(error.getMessage()));
-                            String detail = error.getMessage() != null ? error.getMessage() : error.getType();
-                            notifyAuthError("Accesso Google: " + detail);
+                            // The page shows a plain, translated message (and offers email); the details stay in the log.
+                            String code = error instanceof GetCredentialCancellationException ? "google_cancelled"
+                                : (error instanceof NoCredentialException || firstError instanceof NoCredentialException) ? "google_no_credential" : "google_failed";
+                            notifyGoogleError(code, error, firstError);
                         }
                     }
                 );
             } catch (Exception error) {
                 Log.e("GiammariaWebView", "GOOGLE_FALLBACK_ERROR", error);
-                String detail = firstError != null && firstError.getMessage() != null ? firstError.getMessage() : (firstError != null ? firstError.getType() : "errore");
-                notifyAuthError("Accesso Google: " + detail);
+                notifyGoogleError("google_failed", null, firstError);
             }
+        }
+
+        private void notifyGoogleError(String code, GetCredentialException last, GetCredentialException first) {
+            String detail = describeCredentialError(first) + (last != null && last != first ? " | " + describeCredentialError(last) : "");
+            if (web == null) return;
+            String js = "window.nativeAuthError && window.nativeAuthError(" + JSONObject.quote(detail) + "," + JSONObject.quote(code) + ");";
+            web.post(() -> web.evaluateJavascript(js, null));
         }
 
         private void handleGoogleCredential(GetCredentialResponse response) {
@@ -1372,6 +1407,10 @@ public class MainActivity extends Activity {
             if (web == null) return;
             String js = "window.nativeVoiceResult && window.nativeVoiceResult(" + JSONObject.quote(text) + ");";
             web.post(() -> web.evaluateJavascript(js, null));
+        }
+
+        private String describeCredentialError(GetCredentialException e) {
+            return e == null ? "" : e.getClass().getSimpleName() + ": " + (e.getMessage() != null ? e.getMessage() : e.getType());
         }
 
         private void notifyAuthError(String message) {

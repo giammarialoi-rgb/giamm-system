@@ -302,12 +302,34 @@
     return '';
   }
   var BASE = base();
+  function xhrJson(url) {
+    return new Promise(function (resolve, reject) {
+      var x = new XMLHttpRequest();
+      x.open('GET', url, true);
+      x.onload = function () {
+        // A file read from the app's own folder answers with status 0.
+        if ((x.status === 200 || x.status === 0) && x.responseText) {
+          try { resolve(JSON.parse(x.responseText)); } catch (e) { reject(e); }
+        } else reject(new Error('i18n ' + url + ': ' + x.status));
+      };
+      x.onerror = function () { reject(new Error('i18n ' + url + ': unreadable')); };
+      x.send();
+    });
+  }
+  // The Android app loads the page from file:///android_asset, and the Android web view refuses fetch()
+  // on file:// addresses (only XMLHttpRequest may read them): with fetch alone the translations never
+  // loaded there, and the app stayed in Italian whatever the language chosen.
   function fetchPack(l) {
     if (loading[l]) return loading[l];
-    loading[l] = fetch((window.__NURVAN_LANG ? '/' : BASE) + 'i18n/' + l + '.json').then(function (r) {
-      if (!r.ok) throw new Error('i18n ' + l + ': ' + r.status);
-      return r.json();
-    }).catch(function (e) { delete loading[l]; throw e; });
+    var url = (window.__NURVAN_LANG ? '/' : BASE) + 'i18n/' + l + '.json';
+    var viaXhr = function () { return xhrJson(url); };
+    loading[l] = (location.protocol === 'file:' || typeof fetch !== 'function'
+      ? viaXhr()
+      : fetch(url).then(function (r) {
+        if (!r.ok) throw new Error('i18n ' + l + ': ' + r.status);
+        return r.json();
+      }, viaXhr)
+    ).catch(function (e) { delete loading[l]; throw e; });
     return loading[l];
   }
   function setLang(l) {
