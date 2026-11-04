@@ -851,20 +851,12 @@ input[type="checkbox"], input[type="radio"] {
 
 .fab-save svg { width: 28px; height: 28px; fill: currentColor; }
 
-/* A save button floating over every screen covers whatever is under it, and
-   on most screens there is nothing to save by hand - the app writes as you
-   go. It stays where a session is being logged. */
-.fab-save { display: none; }
-body[data-view="training"] .fab-save { display: flex; }
-/* ...and even there it sat on top of MASSIMALE, 1RM and the delete column at
-   the top of the session. It appears once the page has been scrolled past
-   the first screen (see the fab-on script after the button). */
-body:not(.fab-on) .fab-save { display: none !important; }
-/* Smaller and right above the bottom bar, where the row under it is the one about to scroll up, and the
-   page ends with room to lift the last set clear of it (it sat on the delete button mid-page). */
-body[data-view="training"] .fab-save { width: 46px; height: 46px; border-radius: 23px; right: 12px; bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
-body[data-view="training"] .fab-save svg { width: 24px; height: 24px; }
-body[data-view="training"] #view-container { padding-bottom: 150px; }
+/* A save button floating over the page covers whatever scrolls under it, and
+   there is nothing to save by hand: every field is written as it changes.
+   Kept out of the workout too: wherever it sat, the delete button (✕) of the
+   set row passing under it could not be reached (Play testers' report,
+   BUG-015; moved and shrunk it still covered a row in one scroll out of three). */
+.fab-save { display: none !important; }
 .fab-save.is-saved { background: #4caf50; color: #fff; }
 
 /* Interface audit 03-10-2026.
@@ -2355,7 +2347,7 @@ body.focus-mode [data-rewards-only] {
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;" onclick="confirmLogout()" id="account-logout">ESCI</button>
     <button class="btn btn-primary" style="width:100%;margin-top:8px;display:none;" onclick="syncAccountData(true)" id="account-sync">SINCRONIZZA DATI</button>
     <button class="btn btn-outline" style="width:100%;margin-top:8px;display:none;border-color:#442222;color:var(--accent-red);" onclick="openDeleteAccount()" id="account-delete">ELIMINA ACCOUNT</button>
-    <button id="account-recover-training" class="btn btn-outline" style="width:100%;margin-top:8px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">RIPRISTINA ALLENAMENTO (CLOUD/IDB)</button>
+    <button id="account-recover-training" class="btn btn-outline" style="width:100%;margin-top:8px;border-color:#c66;color:#c66;" onclick="recoverPersonalTrainingEmergency()">RECUPERA I CARICHI SALVATI</button>
     <div id="account-status" class="msg ai" role="status" aria-live="polite" style="margin-top:10px;"></div>
     <div id="account-legal-links" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:11px;margin-top:12px;">
       <a data-legal-link="privacy" href="#" style="color:#999;">Informativa privacy</a>
@@ -8080,7 +8072,7 @@ async function collectRecoverSchedaCandidates() {
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.getAllPrograms) {
       const all = await GiammariaPersistence.getAllPrograms();
       (all || []).forEach(function (p, i) {
-        addCandidate(p, 'IndexedDB · ' + ((p && p.title) || ('programma ' + (i + 1))));
+        addCandidate(p, 'Su questo telefono · ' + ((p && p.title) || ('programma ' + (i + 1))));
       });
     }
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.listPrograms && GiammariaPersistence.loadProgram) {
@@ -8089,7 +8081,7 @@ async function collectRecoverSchedaCandidates() {
         const meta = listed[i];
         try {
           const full = await GiammariaPersistence.loadProgram(meta.id);
-          addCandidate(full, 'IndexedDB · ' + ((meta && meta.title) || meta.id) + (meta.isActive ? ' (attiva)' : ''));
+          addCandidate(full, 'Su questo telefono · ' + ((meta && meta.title) || meta.id) + (meta.isActive ? ' (attiva)' : ''));
         } catch (_) {}
       }
     }
@@ -8158,7 +8150,7 @@ async function collectRecoverSchedaCandidates() {
   try {
     if (typeof GiammariaPersistence !== 'undefined' && GiammariaPersistence.loadProgram) {
       const lockedProg = await GiammariaPersistence.loadProgram('personal_locked_backup');
-      addCandidate(lockedProg, 'IndexedDB · backup bloccato');
+      addCandidate(lockedProg, 'Su questo telefono · copia di sicurezza');
     }
   } catch (_) {}
 
@@ -13450,6 +13442,9 @@ function startTimer(secondsText, exKey) {
     console.warn('[TIMER] overlay missing — UI not blocked');
     return;
   }
+  // iPhone: the end of the rest reaches a locked phone only as a notification. The permission is asked
+  // here, the first time a rest starts, with the reason (once: never again after a "no").
+  try { if (typeof isIosApp === 'function' && isIosApp()) setTimeout(function () { ensureNotificationPermission('rest'); }, 600); } catch (_) {}
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -16134,6 +16129,8 @@ function closeCoachInsightModal() {
   popUiOverlay('coach-insight-modal');
 }
 async function openCoachInsightModal(promptText) {
+  // The quick questions are Coach AI too: closed on the Free plan, like the chat.
+  if (typeof aiCoachLocked === 'function' && aiCoachLocked()) { if (typeof requirePlan === 'function') requirePlan('ai_coach'); return; }
   const modal = $('coach-insight-modal');
   const body = $('coach-insight-body');
   const title = $('coach-insight-title');
@@ -21478,7 +21475,12 @@ function toggleItemAlert(kind, idx, on) {
   else store.supplementation = DATA.supplementation;
   persist();
   scheduleAllItemAlerts();
-  if (on && typeof requestAppNotificationPermission === 'function') requestAppNotificationPermission();
+  if (on && typeof requestAppNotificationPermission === 'function') {
+    Promise.resolve(requestAppNotificationPermission()).then(function (allowed) {
+      // Without the permission the reminder is kept but the phone will not ring it: said, not left silent.
+      if (!allowed && typeof showToast === 'function') showToast('Notifiche non consentite: il promemoria resta segnato ma il telefono non lo farà suonare. Puoi consentirle dalle impostazioni del telefono.', 'info');
+    }).catch(function () {});
+  }
   if (typeof showToast === 'function') showToast(on ? 'Avviso attivo alle ' + item.alertTime : 'Avviso disattivato', 'ok');
   render();
 }
@@ -24329,7 +24331,7 @@ function renderPrograms(c){
       <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px;">
         <input id="catalog-q" type="search" placeholder="Es. 4 giorni push pull legs ipertrofia petto casa" value="${esc(f.q || '')}" oninput="window.updateCatalogFiltersFromUi && window.updateCatalogFiltersFromUi()" style="padding:10px;font-size:13px;">
         ${(catGen && !catalogWhole(f.goal)) ? `<div style="margin-bottom:2px;">
-          <div style="font-size:10px;color:#888;margin-bottom:6px;">Focus muscolare · fino a 3 gruppi${focusOn.length ? '' : ' (nessuno: scheda equilibrata)'}</div>
+          <div style="font-size:10px;color:#888;margin-bottom:6px;">${focusOn.length ? 'Focus muscolare · fino a 3 gruppi' : 'Focus muscolare · fino a 3 gruppi (nessuno: scheda equilibrata)'}</div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">${focusMuscles.map((m) => `<button type="button" class="btn ${focusOn.indexOf(m.id) >= 0 ? 'btn-primary' : 'btn-outline'}" style="font-size:11px;padding:6px 10px;" onclick="toggleCatalogFocus('${m.id}')">${esc(m.label)}</button>`).join('')}</div>
         </div>` : ''}
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
@@ -34864,13 +34866,20 @@ function addLastScannedFoodToDiary() {
   // which meal the user actually meant - ask instead, same picker the
   // meal-photo flow already uses.
   openMealTargetModal(null, function (mealName) {
-    const iso = nutritionTodayKey();
-    const diary = diaryEntry(iso);
-    const names = diary ? diary.meals.map(function (m) { return String((m && m.name) || ''); }) : DIARY_MEALS.slice();
-    let mealIdx = names.findIndex(function (n) { return n.toLowerCase() === String(mealName || '').toLowerCase(); });
-    if (mealIdx < 0) mealIdx = names.length;
-    openAddFoodModal(-1, -1);
-    window.__diaryFoodTarget = { iso: iso, mealIdx: mealIdx, mealName: mealName, foodIdx: null };
+    if (store.coachAssigning || store.coachViewingClient) {
+      // A coach writing a client's draft: what travels to the client is the plan, so the food goes there.
+      const dayIdx = (typeof currentNutritionDayIndex === 'number' ? currentNutritionDayIndex : 0);
+      const targetSlot = (typeof ensureTargetMealSlot === 'function') ? ensureTargetMealSlot(dayIdx, mealName) : null;
+      openAddFoodModal(targetSlot ? targetSlot.dayIdx : dayIdx, targetSlot ? targetSlot.mealIdx : 0);
+    } else {
+      const iso = nutritionTodayKey();
+      const diary = diaryEntry(iso);
+      const names = diary ? diary.meals.map(function (m) { return String((m && m.name) || ''); }) : DIARY_MEALS.slice();
+      let mealIdx = names.findIndex(function (n) { return n.toLowerCase() === String(mealName || '').toLowerCase(); });
+      if (mealIdx < 0) mealIdx = names.length;
+      openAddFoodModal(-1, -1);
+      window.__diaryFoodTarget = { iso: iso, mealIdx: mealIdx, mealName: mealName, foodIdx: null };
+    }
     if ($('food-name-input')) $('food-name-input').value = p.name;
     if ($('food-kcal-input')) $('food-kcal-input').value = p.kcal;
     if ($('food-pro-input')) $('food-pro-input').value = p.pro;
@@ -35275,6 +35284,7 @@ function getIsoWeekKey() {
 }
 
 async function runWeeklyCheckIn() {
+  if (typeof aiCoachLocked === 'function' && aiCoachLocked()) { if (typeof requirePlan === 'function') requirePlan('ai_coach'); return; }
   if (!store.accountToken) {
     if (typeof showToast === 'function') showToast('Accedi per il check-in settimanale AI.', 'error');
     return;
@@ -35945,6 +35955,19 @@ function drillStatsMuscle(group) {
   }
   const label = (STATS_MUSCLE_CHIPS.find(function (x) { return x.id === group; }) || {}).label || (group === 'TOTAL' ? 'Generale' : group);
   const uniq = Array.from(new Set(exercises)).slice(0, 16);
+  // A group credited only as a helper muscle (arms and shoulders in a bench press): the chip counts it at
+  // half, so the detail names the exercise instead of saying no set was logged (they contradicted).
+  let helpers = [];
+  const TAE = window.TrainingAnalyticsEngine;
+  if (group !== 'GENERALE' && group !== 'TOTAL' && TAE && typeof TAE.muscleContributionForExercise === 'function') {
+    const gid = normalizeMacroMuscleGroup(group);
+    helpers = Array.from(new Set(done.filter(function (x) { return !matches(x, group); }).filter(function (x) {
+      try {
+        const c = TAE.muscleContributionForExercise(x.name, { movement: x.e.movement, muscle_groups: x.e.muscle_groups || x.e.muscleGroups });
+        return (c.secondary || []).concat(c.indirect || []).indexOf(gid) >= 0;
+      } catch (_) { return false; }
+    }).map(function (x) { return x.name; }))).slice(0, 16);
+  }
   const vols = window.__statsMuscleVolumeByWeek || [];
   const totalVol = vols.reduce(function (s, n) { return s + (Number(n) || 0); }, 0);
   const weekBits = vols.map(function (n, i) { return 'W' + (i + 1) + ' ' + formatStatsKg(Number(n) || 0) + ' ' + wUnit(); }).join(' · ');
@@ -35952,7 +35975,9 @@ function drillStatsMuscle(group) {
     '<div style="color:var(--gold);font-weight:800;margin-bottom:6px;">' + formatStatsKg(totalVol) + ' ' + wUnit() + ' nel periodo</div>' +
     (weekBits ? '<div style="margin-bottom:6px;color:#aaa;">' + esc(weekBits) + '</div>' : '') +
     (list.length && uniq.length ? '<div style="margin-bottom:6px;">Distretti: ' + list.map(function (x) { return esc(x); }).join(' · ') + '</div>' : '') +
-    (uniq.length ? '<div>Esercizi usati per questo calcolo: ' + uniq.map(esc).join(', ') + '</div>' : '<div>Nessuna serie segnata per questo gruppo.</div>');
+    (uniq.length ? '<div>Esercizi usati per questo calcolo: ' + uniq.map(esc).join(', ') + '</div>' : '') +
+    (helpers.length ? '<div style="margin-top:4px;">' + esc(trText('Lavorato come muscolo di supporto (conta la metà) in:')) + ' ' + helpers.map(esc).join(', ') + '</div>' : '') +
+    (!uniq.length && !helpers.length ? '<div>Nessuna serie segnata per questo gruppo.</div>' : '');
 }
 window.drillStatsMuscle = drillStatsMuscle;
 
@@ -38024,7 +38049,7 @@ function renderAI(c){
         ${aiCoachLocked() ? (typeof planLockedHtml === 'function' ? planLockedHtml('ai_coach') : '') : ''}
         <div class="ai-composer" style="display:flex;gap:10px;align-items:flex-end;background:var(--surface-light);padding:10px;border-radius:12px;margin-top:10px;">
           <button class="btn btn-outline" title="${t('analyzeCoachFile')}" style="padding:10px 12px; border-color:var(--gold); color:var(--gold);" onclick="triggerCoachFileSelect()">📎</button>
-          <textarea id="ai-input" rows="1" placeholder="${aiCoachLocked() ? 'Coach AI è incluso nel piano Standard' : t('chatPlaceholder')}" ${aiCoachLocked() ? 'disabled' : ''} style="flex:1;min-width:0;border:none;background:transparent;resize:none;max-height:6.5em;overflow-y:auto;font:inherit;line-height:1.4;padding:8px 4px;" oninput="growAiInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askAI();}">${esc(window.__aiDraft || '')}</textarea>
+          <textarea id="ai-input" rows="1" placeholder="${aiCoachLocked() ? 'Coach AI è incluso nel piano Standard' : t('chatPlaceholder')}" ${aiCoachLocked() ? 'disabled' : ''} style="flex:1;min-width:0;border:none;background:transparent;resize:none;max-height:6.5em;overflow-y:auto;font:inherit;line-height:1.4;padding:8px 4px;" oninput="growAiInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();askAI();}">${esc(window.__aiDraft || '')}</textarea>
           <button class="btn btn-outline" onclick="startVoiceInput()" style="padding:10px 12px;" ${aiCoachLocked() ? 'disabled' : ''}>🎙</button>
           <button class="btn btn-primary" onclick="askAI()" style="padding:10px 15px;" ${aiCoachLocked() ? 'disabled' : ''}>${t('send')}</button>
         </div>
@@ -42996,6 +43021,13 @@ function maybeShowOnboarding() {
 }
 
 function openOnboarding() {
+  // A page tutorial already open (it starts 700 ms after the first drawing, the questions only after the
+  // account download) is put away unseen: two dialogs at once confuse a screen reader, and the
+  // tutorial comes back once the questions are done.
+  try {
+    if (document.getElementById('page-tutorial')) { closePageTutorialElement(); window.__pageTut = null; }
+    clearTimeout(window.__pageTutTimer);
+  } catch (_) {}
   window.__onboardingDraft = null;
   onboardingDraft();
   renderOnboarding();

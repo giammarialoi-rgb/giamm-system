@@ -245,6 +245,27 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, final android.webkit.JsPromptResult result) {
+                // The field is made in the dialog's dark theme, so its text is light on the dark background.
+                android.view.ContextThemeWrapper themed = new android.view.ContextThemeWrapper(view.getContext(), android.R.style.Theme_Material_Dialog_Alert);
+                final android.widget.EditText input = new android.widget.EditText(themed);
+                input.setText(defaultValue != null ? defaultValue : "");
+                input.setSelectAllOnFocus(true);
+                int pad = (int) (20 * view.getResources().getDisplayMetrics().density);
+                android.widget.FrameLayout box = new android.widget.FrameLayout(themed);
+                box.setPadding(pad, pad / 3, pad, 0);
+                box.addView(input);
+                new AlertDialog.Builder(view.getContext(), android.R.style.Theme_Material_Dialog_Alert)
+                    .setMessage(message)
+                    .setView(box)
+                    .setPositiveButton(android.R.string.ok, (dialog, which) -> result.confirm(input.getText().toString()))
+                    .setNegativeButton(android.R.string.cancel, (dialog, which) -> result.cancel())
+                    .setCancelable(false)
+                    .show();
+                return true;
+            }
+
+            @Override
             public boolean onJsConfirm(WebView view, String url, String message, final JsResult result) {
                 new AlertDialog.Builder(view.getContext(), android.R.style.Theme_Material_Dialog_Alert)
                     .setMessage(message)

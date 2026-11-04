@@ -156,11 +156,30 @@
   // once, then an exercise in it shows at once and offline. Anything missing
   // from it still goes to the server below.
   let bundled = null;
+  // The Android app reads its files from file:///android_asset, where the web view refuses fetch():
+  // XMLHttpRequest reads them (status 0). With fetch alone the bundled images were never found there,
+  // so every image came from the server, and none showed offline.
+  function readLocalJson(path) {
+    return new Promise(function (resolve) {
+      try {
+        const x = new XMLHttpRequest();
+        x.open('GET', path, true);
+        x.onload = function () {
+          try { resolve((x.status === 200 || x.status === 0) && x.responseText ? JSON.parse(x.responseText) : {}); } catch (_) { resolve({}); }
+        };
+        x.onerror = function () { resolve({}); };
+        x.send();
+      } catch (_) { resolve({}); }
+    });
+  }
   function bundledIndex() {
     if (!bundled) {
-      bundled = fetch('media/index.json')
-        .then(function (res) { return res.ok ? res.json() : {}; })
-        .catch(function () { return {}; });
+      const local = typeof location !== 'undefined' && location.protocol === 'file:';
+      bundled = (local || typeof fetch !== 'function')
+        ? readLocalJson('media/index.json')
+        : fetch('media/index.json')
+          .then(function (res) { return res.ok ? res.json() : {}; })
+          .catch(function () { return readLocalJson('media/index.json'); });
     }
     return bundled;
   }

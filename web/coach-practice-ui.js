@@ -5398,21 +5398,27 @@ function beginAssignSandbox(clientId, name, mode) {
   // copy: struttura della scheda personale, senza kg/serie fatte. import/programs/mylib: merge sezioni cliente.
   if (mode === 'copy') {
     try {
-      // Training only: the coach's own diet, supplements, therapy and exams never go to a client.
-      const draft = ownProgram || emptyClientAssignDraft();
-      draft.id = 'assign_copy_' + Date.now();
-      draft.nutrition = null;
-      draft.supplementation = null;
-      draft.therapy = null;
-      draft.exams = null;
-      stripProgramSessionPerformance(draft);
-      DATA = draft;
-      store.activeProgram = DATA;
-      store.activeProgramId = DATA.id;
       currentWeek = 1;
       currentDay = 0;
       window.__cpAssignSeed = null;
-      if (!ownProgram) practiceToast('Non hai una scheda attiva da copiare: parti da una bozza vuota.', 'warning');
+      if (ownProgram) {
+        // Training only: the coach's own diet, supplements, therapy and exams never go to a client.
+        const draft = ownProgram;
+        draft.id = 'assign_copy_' + Date.now();
+        draft.nutrition = null;
+        draft.supplementation = null;
+        draft.therapy = null;
+        draft.exams = null;
+        stripProgramSessionPerformance(draft);
+        DATA = draft;
+        store.activeProgram = DATA;
+        store.activeProgramId = DATA.id;
+      } else {
+        // Nothing to copy: the draft stays empty, and its card offers to start one (INVIA waits).
+        DATA = null;
+        store.activeProgram = null;
+        practiceToast('Non hai una scheda attiva da copiare: parti da una bozza vuota.', 'warning');
+      }
     } catch (_) {}
   } else {
     seedAssignSandboxFromClient(clientId);
@@ -6044,8 +6050,8 @@ async function loadExamCatalog() {
     __examCatalogCache = await res.json();
   } catch (_) {
     try {
-      const res2 = await fetch('exam-request-catalog.json', { cache: 'no-store' });
-      __examCatalogCache = await res2.json();
+      // The copy in the app: fetchJsonAsset also reads it on Android (file://, where fetch() is refused).
+      __examCatalogCache = (typeof fetchJsonAsset === 'function' ? await fetchJsonAsset('exam-request-catalog.json') : await (await fetch('exam-request-catalog.json', { cache: 'no-store' })).json()) || { categories: [] };
     } catch (e2) {
       __examCatalogCache = { categories: [] };
     }
@@ -7851,10 +7857,15 @@ function wrapPracticeHooks() {
   }
   if (typeof finalizeWorkout === 'function' && !finalizeWorkout.__cpWrapped) {
     const _fw = finalizeWorkout;
-    finalizeWorkout = function () {
-      const ret = _fw.apply(this, arguments);
-      if (typeof isAthleteRole === 'function' && isAthleteRole()) {
-        const last = Array.isArray(store.logs) && store.logs.length ? store.logs[store.logs.length - 1] : null;
+    // finalizeWorkout may first ask (exercises left empty) and is async: the coach is told only once a
+    // session was really closed, i.e. a new log exists - not while the question is open, nor after CONTINUA.
+    finalizeWorkout = async function () {
+      const lastOf = function () { return Array.isArray(store.logs) && store.logs.length ? store.logs[store.logs.length - 1] : null; };
+      const before = lastOf();
+      const ret = await _fw.apply(this, arguments);
+      const closed = lastOf();
+      if (typeof isAthleteRole === 'function' && isAthleteRole() && closed && closed !== before) {
+        const last = closed;
         const weeksPlanned = (DATA && Array.isArray(DATA.weeks) && DATA.weeks.length)
           ? DATA.weeks.length
           : (DATA && DATA.programWeeksPlanned) || 0;

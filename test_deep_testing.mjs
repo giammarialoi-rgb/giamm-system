@@ -48,6 +48,7 @@ ok('BUG-001: the page shows a translated sentence that points to email sign-in',
 ok('BUG-002: the food database and the recipes load on Android too', /fetchJsonAsset\('food-ciqual\.json'\)/.test(services) && /__recipeCatalogLoading = fetchJsonAsset\('recipe-catalog\.json'\)/.test(base));
 ok('BUG-002: the keys shown in English in every language have Italian texts', ['noActiveProgram', 'askCoach', 'scientificEvidence', 'everyDay', 'weeksLabel', 'activeScale', 'voiceOrReadAsk', 'weekScaleUpdated'].every((k) => new RegExp('\\n      ' + k + ': "').test(services.slice(services.indexOf('  dictionaries: {'), services.indexOf('    en: {', services.indexOf('  dictionaries: {'))))));
 ok('BUG-002: the supplement question sent to the AI is the real question, not "Supplement Coach Prompt"', !/t\('supplementCoachPrompt'\)/.test(base));
+ok('BUG-002: no English "CLOSE" left in the Spanish, French and German dictionaries', /close: "CERRAR"/.test(services) && /close: "FERMER"/.test(services) && /close: "SCHLIESSEN"/.test(services) && (services.match(/close: "CLOSE"/g) || []).length === 1);
 
 // BUG-003 offline: every save looped through the offline queue and crashed, the start too
 {
@@ -89,6 +90,8 @@ ok('BUG-005: 8 characters at least, in the app and on the server (sign-in still 
 // BUG-006 / BUG-019 Coach AI on the Free plan, and its field
 ok('BUG-006: on the Free plan the lock is on the screen before typing, and the question is kept',
   /function aiCoachLocked\(\)/.test(base) && /aiCoachLocked\(\) \? \(typeof planLockedHtml === 'function' \? planLockedHtml\('ai_coach'\)/.test(base) && /window\.__aiDraft = \$\('ai-input'\)\.value;/.test(base) && !/requirePlan\('ai_coach'\)\) \{\s*if \(typeof navigate === 'function'\) navigate\('pricing'\);/.test(base));
+ok('BUG-006: the quick questions and the weekly check-in are closed on the Free plan too, like the chat',
+  /async function openCoachInsightModal\(promptText\) \{\s*\/\/[^\n]*\n\s*if \(typeof aiCoachLocked === 'function' && aiCoachLocked\(\)\)/.test(base) && /async function runWeeklyCheckIn\(\) \{\s*if \(typeof aiCoachLocked === 'function' && aiCoachLocked\(\)\)/.test(base));
 ok('BUG-019: the field grows to four lines, Enter sends and Shift+Enter is a new line', /<textarea id="ai-input" rows="1"/.test(base) && /event\.key==='Enter'&&!event\.shiftKey/.test(base) && /function growAiInput\(el\)/.test(base));
 
 // BUG-007 finalize with exercises not done
@@ -101,7 +104,8 @@ ok('BUG-019: the field grows to four lines, Enter sends and Shift+Enter is a new
 // BUG-008 barcode "Aggiungi al diario" writes in the diary, not in the plan
 {
   const a = fnBody(base, 'addLastScannedFoodToDiary');
-  ok('BUG-008: the barcode food goes into today\'s diary as eaten', /window\.__diaryFoodTarget = \{ iso: iso, mealIdx: mealIdx, mealName: mealName/.test(a) && !/ensureTargetMealSlot/.test(a));
+  // the plan path stays only for a coach writing a client's draft (checked below)
+  ok('BUG-008: the barcode food goes into today\'s diary as eaten', /window\.__diaryFoodTarget = \{ iso: iso, mealIdx: mealIdx, mealName: mealName/.test(a) && a.includes('if (store.coachAssigning || store.coachViewingClient) {'));
   ok('BUG-008: a meal the diary does not have yet is added', /if \(!meals\[target\.mealIdx\] && target\.mealName\)/.test(fnBody(base, 'saveDiaryFood')));
 }
 
@@ -150,7 +154,7 @@ ok('BUG-014: a payment is "registered" only when the coach records it', /ADD COL
 }
 
 // BUG-015 / BUG-020 / QC-043 layout
-ok('BUG-015: the save button sits above the bottom bar and the page can lift the last set clear of it', /body\[data-view="training"\] \.fab-save \{ width: 46px;/.test(base) && /body\[data-view="training"\] #view-container \{ padding-bottom: 150px; \}/.test(base));
+ok('BUG-015: nothing floats over the set rows any more (see the verify check below)', /\.fab-save \{ display: none !important; \}/.test(base));
 ok('BUG-020: the food form has inner margins and its footer no longer sticks out', /#add-food-modal \.modal-body-scroll,[\s\S]{0,200}padding: 12px 16px 8px;/.test(base) && !/margin: 0 -16px 0;/.test(base));
 ok('QC-043: the coach controls shrink first; hub tiles wrap their labels', /\.header-actions > #cp-coach-header-controls \{\s*flex: 0 1 auto;/.test(base) && /#menu-hub-modal \.card > div > button\.btn \{\s*height: auto !important;/.test(base));
 
@@ -171,6 +175,22 @@ ok('BUG-018: Home shows the workout in progress, with its clock and sets, and le
 // BUG-021 logout
 ok('BUG-021: logging out is confirmed, and pending changes are uploaded first',
   /async function confirmLogout\(\)/.test(base) && /onclick="confirmLogout\(\)" id="account-logout"/.test(base) && /closeProfileHub\(\);confirmLogout\(\)/.test(base) && /confirmLogout\(\); else logoutAccount\(\)/.test(cpu));
+
+// ---- found by the independent verification of 1.5.37 (before release) ----
+const media = read('web/exercise-media-client.js');
+ok('verify: coaching clients - the coach is told only when a session was really closed (finalize asks first now)',
+  /finalizeWorkout = async function \(\) \{[\s\S]{0,400}const ret = await _fw\.apply\(this, arguments\);[\s\S]{0,200}closed && closed !== before/.test(cpu));
+ok('verify: iPhone - the end-of-rest notification asks its permission the first time a rest starts', /function startTimer\(secondsText, exKey\) \{[\s\S]{0,700}ensureNotificationPermission\('rest'\)/.test(base));
+ok('verify: a coach\'s client draft - a barcode food goes into the plan that is sent, not into a diary', /if \(store\.coachAssigning \|\| store\.coachViewingClient\) \{[\s\S]{0,300}ensureTargetMealSlot\(dayIdx, mealName\)/.test(fnBody(base, 'addLastScannedFoodToDiary')));
+ok('verify: a reminder whose notification was refused says so', /il promemoria resta segnato ma il telefono non lo farà suonare/.test(base));
+ok('verify BUG-015: no floating save button over the sets (every field saves itself)', /\.fab-save \{ display: none !important; \}/.test(base) && !/body\[data-view="training"\] \.fab-save \{ display: flex; \}/.test(base));
+ok('verify BUG-002: bundled exercise images are read on Android too (XMLHttpRequest on file://)', /function readLocalJson\(path\)/.test(media) && /location\.protocol === 'file:'/.test(media));
+ok('verify BUG-004: no program to copy - the draft stays empty with its card, INVIA waits', /\} else \{\s*\/\/ Nothing to copy[^\n]*\n\s*DATA = null;/.test(cpu));
+ok('verify BUG-010: helper-muscle exercises are named, the detail agrees with the chips', /Lavorato come muscolo di supporto \(conta la metà\) in:/.test(base) && /TAE\.muscleContributionForExercise\(x\.name/.test(base));
+ok('verify BUG-012: the first-run questions put away a tutorial that opened first', /if \(document\.getElementById\('page-tutorial'\)\) \{ closePageTutorialElement\(\); window\.__pageTut = null; \}/.test(base));
+ok('verify BUG-016: prompt() on Android is the dark dialog too, with a readable field', /public boolean onJsPrompt\(/.test(main) && /new android\.view\.ContextThemeWrapper\(view\.getContext\(\), android\.R\.style\.Theme_Material_Dialog_Alert\)/.test(main));
+ok('verify BUG-011: no "CLOUD/IDB" or "IndexedDB" in what a user reads', !/RIPRISTINA ALLENAMENTO \(CLOUD\/IDB\)/.test(base) && !/addCandidate\([^,]+, 'IndexedDB · /.test(base));
+ok('verify BUG-019: Enter does not send while an input method is composing', /!event\.isComposing\)\{event\.preventDefault\(\);askAI\(\);\}/.test(base));
 
 if (failed) { console.log('\n' + failed + ' failed'); process.exit(1); }
 console.log('\nAll deep-testing fixes hold.');

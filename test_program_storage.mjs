@@ -301,7 +301,7 @@ console.log('--- 6. la copia bloccata non prova a stare dove non ci sta ---');
   ok('6l. il recupero salta un record senza scheda dentro',
     /if \(locked && locked\.program\) addCandidate\(locked\.program, 'Backup locale bloccato'\)/.test(SRC));
   ok('6m. e il backup di IndexedDB è già fra i candidati',
-    /loadProgram\('personal_locked_backup'\)[\s\S]{0,120}addCandidate\(lockedProg, 'IndexedDB · backup bloccato'\)/.test(SRC));
+    /loadProgram\('personal_locked_backup'\)[\s\S]{0,120}addCandidate\(lockedProg, 'Su questo telefono · copia di sicurezza'\)/.test(SRC));
   ok('6n. tutto questo è anche nella pagina costruita', /var NURVAN_PROGRAM_LOCK_MAX_BYTES = /.test(BUILT));
 }
 

@@ -78,9 +78,11 @@ console.log('\n--- 3. a section is one card, not a card inside a card ---');
 
 console.log('\n--- 4. the save button lives where there is something to save ---');
 {
-  ok('4a. it is hidden by default', /\.fab-save \{ display: none; \}/.test(SRC));
-  ok('4b. and shown while a session is being logged',
-    /body\[data-view="training"\] \.fab-save \{ display: flex; \}/.test(SRC));
+  // Since 1.5.37 not even during a workout: wherever it floated it covered the delete button of the set
+  // row passing under it (Play testers' Deep Testing, BUG-015), and every field saves itself anyway.
+  ok('4a. it is hidden everywhere', /\.fab-save \{ display: none !important; \}/.test(SRC));
+  ok('4b. the workout no longer brings it back over the set rows',
+    !/body\[data-view="training"\] \.fab-save \{ display: flex; \}/.test(SRC));
   ok('4c. the view is written onto the body for it to key off',
     /document\.body\.setAttribute\('data-view'/.test(SRC),
     'without the marker the rule above hides the button everywhere');
