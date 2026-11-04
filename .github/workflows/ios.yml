@@ -12,13 +12,21 @@ name: iOS TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      # When GitHub runs short of arm64 Macs the job is cancelled unstarted ("not acquired by Runner ...
+      # even after multiple attempts", 04-11-2026): the Intel machines are a separate pool, with Xcode 26 too.
+      runner:
+        description: 'macOS machine: macos-15 (default, arm64) or macos-15-intel when arm64 is short'
+        type: choice
+        options: [macos-15, macos-15-intel]
+        default: macos-15
   # A tag v* releases iOS and Android together (see android.yml).
   push:
     tags: ['v*']
 
 jobs:
   ios:
-    runs-on: macos-15
+    runs-on: ${{ inputs.runner || 'macos-15' }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
