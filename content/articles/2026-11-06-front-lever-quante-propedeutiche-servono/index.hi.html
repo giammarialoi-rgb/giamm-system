@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="hi" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>फ्रंट लीवर: कितनी प्रोग्रेशन चाहिए होती हैं? | Nurvan</title>
+<meta name="description" content="फ्रंट लीवर के लिए प्रोग्रेशन की कोई तय संख्या नहीं है। आइसोमेट्रिक रिसर्च बताती है कि असल में कितनी पोज़िशन चाहिए और ताक़त कितनी ट्रांसफ़र होती है।">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">ट्रेनिंग</a><a href="#">न्यूट्रिशन</a><a href="#">सप्लीमेंट</a><a href="#" class="on">ब्लॉग</a></nav><a class="cta" href="https://nurvan.app">ऐप डाउनलोड करें</a></div></header>
+<main class="wrap" lang="hi">
+<div class="crumb">ब्लॉग · ट्रेनिंग</div>
+<h1>फ्रंट लीवर: कितनी प्रोग्रेशन चाहिए होती हैं?</h1>
+<p class="lede">टक, एडवांस्ड टक, एक टाँग, स्ट्रैडल, हाफ़ ले: फ्रंट लीवर की प्रोग्रेशन लिस्टें सालों से ऐसे घूम रही हैं जैसे यह एक तय सीढ़ियों वाली सीढ़ी हो, सबके लिए एक जैसी। सवाल भी हमेशा वही रहता है — फ़ुल तक पहुँचने से पहले कितने स्टेप पूरे करने हैं? आइसोमेट्रिक ट्रेनिंग की रिसर्च कोई संख्या नहीं देती, लेकिन उससे ज़्यादा काम की चीज़ देती है: एक पोज़िशन में बनाई ताक़त का कितना हिस्सा अगली पोज़िशन में सच में बचता है। और यही आँकड़ा तय करता है कि सीढ़ी कैसे बनाई जाए।</p>
+<div class="meta"><span>6 नवंबर 2026</span><span><b>13</b> मिनट पढ़ाई</span><span><b>6</b> अध्ययन उद्धृत</span><span>लेखक <a href="/autore/giammaria-loi">Giammaria Loi</a> · 6 नवंबर 2026 को अपडेट</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="फ्रंट लीवर: कितनी प्रोग्रेशन चाहिए होती हैं?"><figcaption class="cap">फ़ोटो: KoolShooters — Pexels, Pexels लाइसेंस (मुफ़्त उपयोग)</figcaption></figure>
+<div class="box"><h2>संक्षेप में</h2><ul><li>कोई भी स्टडी प्रोग्रेशन की संख्या तय नहीं करती: तीन, चार या छह अनिवार्य स्टेप किसी के लिए भी नहीं हैं।</li><li>आइसोमेट्रिक ताक़त काफ़ी हद तक पोज़िशन से बँधी होती है: एक ही कोण पर ट्रेनिंग करने से ताक़त वहीं सबसे ज़्यादा बढ़ती है (+12%) और दूर जाते-जाते घटती जाती है, 30 डिग्री दूर तो बिल्कुल नहीं बढ़ती (Lanza et al., 2019)।</li><li>इसलिए प्रोग्रेशन ज़रूरी हैं, पर टिक लगाने की लिस्ट की तरह नहीं: वे उन पोज़िशनों को कवर करती हैं जिनमें आप मज़बूत बनना चाहते हैं।</li><li>स्टेप की संख्या व्यक्तिगत है क्योंकि ट्रेनिंग का रिस्पॉन्स ही व्यक्तिगत है: एक ही प्रोग्राम, 585 लोग, 12 हफ़्तों में ताक़त में 0 से +250% तक का फ़र्क़ (Hubal et al., 2005)।</li><li>पोज़िशन कठिन करके या सेकंड बढ़ाकर — दोनों तरह से बढ़ा जा सकता है: ताक़त और साइज़ पर दोनों रास्ते बराबर रहे (Chaves et al., 2024)।</li></ul></div>
+<h2>एक प्रोग्रेशन से दूसरी में असल में बदलता क्या है</h2>
+<p>फ्रंट लीवर में शरीर बार से लटका हुआ क्षैतिज रहता है: कंधे धुरी का काम करते हैं और शरीर का वज़न उनके आगे की हर चीज़ को नीचे खींचता है। मेहनत इस बात पर नहीं कि आपका वज़न कितना है, बल्कि इस पर कि आपका सेंटर ऑफ़ मास कंधों से कितनी दूर है। घुटनों को छाती तक लाने से यह दूरी घटती है; एक टाँग सीधी करने से बढ़ती है; स्ट्रैडल में टाँगें खोलने से फिर थोड़ी घट जाती है। यानी प्रोग्रेशन वही एक्सरसाइज़ हैं, बस अलग-अलग तीव्रता पर — बार पर चढ़ी प्लेटों जैसा।</p>
+<p>लेकिन बारबेल से एक अहम फ़र्क़ है। लीवरेज बदलने पर सिर्फ़ लोड नहीं बदलता: जोड़ों के कोण और वह पोज़िशन भी बदलती है जिसमें आप फ़ोर्स लगाते हैं। और यहीं रिसर्च के पास कहने को कुछ है।</p>
+<h2>रिसर्च असल में क्या कहती है</h2>
+<h3>दावा 1 — "फ़ुल से पहले X प्रोग्रेशन पूरी करनी ही होंगी"</h3>
+<p><strong>ग़लत।</strong></p>
+<p>किसी स्टडी ने कभी स्टेप की संख्या जाँची ही नहीं, क्योंकि अनुकूलन संख्या से नहीं, प्रोग्रेसिव ओवरलोड से आता है। और ओवरलोड एक से ज़्यादा तरीक़ों से जोड़ा जा सकता है। Chaves और साथियों (2024) ने 39 अप्रशिक्षित लोगों को 10 हफ़्ते तक एक टाँग बनाम दूसरी टाँग डिज़ाइन में ट्रेन किया: एक टाँग वज़न बढ़ाकर आगे बढ़ी, दूसरी रेप्स बढ़ाकर। लेग एक्सटेंशन का 1RM वज़न वाले तरीक़े से 52.9 से 69.1 किलो और रेप्स वाले से 51.7 से 66.8 किलो हुआ; वेस्टस लेटरालिस का क्रॉस-सेक्शन 21.3 से 23.5 वर्ग सेमी बनाम 21.1 से 23.4 वर्ग सेमी। दोनों तरीक़ों में कोई अंतर नहीं।</p>
+<p>फ्रंट लीवर की भाषा में: कठिन पोज़िशन पर जाना और जिस पोज़िशन में आप पहले से सहज हैं उसमें सेकंड जोड़ना — दोनों जायज़ तरीक़े हैं। आप कितनी प्रोग्रेशन से गुज़रते हैं, यह लोड की डोज़ का नतीजा है, नियम नहीं।</p>
+<h3>दावा 2 — "टक में बनी ताक़त फ़ुल में काम आती है"</h3>
+<p><strong>ग़लत, कम से कम आंशिक रूप से।</strong></p>
+<p>होल्ड ट्रेन करने वालों के लिए यह सबसे दिलचस्प स्टडी है। Lanza, Balshaw और Folland (2019) ने 13 लोगों से 4 हफ़्तों में 14 आइसोमेट्रिक सेशन कराए, घुटने का कोण सिर्फ़ एक (65 डिग्री), 9 कंट्रोल से तुलना की और फिर पाँच अलग-अलग कोणों पर ताक़त नापी।</p>
+<figure><div class="chart"><svg role="img" aria-label="बार चार्ट: सिर्फ़ एक कोण पर चार हफ़्ते की ट्रेनिंग के बाद अधिकतम आइसोमेट्रिक ताक़त में बढ़त — 35 डिग्री पर 5 प्रतिशत, 50 पर 11, प्रशिक्षित 65 डिग्री पर 12, 80 पर 7 और 95 डिग्री पर कोई सार्थक बढ़त नहीं" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">ताक़त दूसरे कोणों तक कितनी पहुँचती है</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">अधिकतम ताक़त में बढ़त (%)</text>
+<line x1="100" y1="360.0" x2="860" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="364.0" fill="#a0a0a0" font-size="13" text-anchor="end">0%</text>
+<line x1="100" y1="322.9" x2="860" y2="322.9" stroke="#262626" stroke-width="1"/>
+<text x="88" y="326.9" fill="#a0a0a0" font-size="13" text-anchor="end">2%</text>
+<line x1="100" y1="285.7" x2="860" y2="285.7" stroke="#262626" stroke-width="1"/>
+<text x="88" y="289.7" fill="#a0a0a0" font-size="13" text-anchor="end">4%</text>
+<line x1="100" y1="248.6" x2="860" y2="248.6" stroke="#262626" stroke-width="1"/>
+<text x="88" y="252.6" fill="#a0a0a0" font-size="13" text-anchor="end">6%</text>
+<line x1="100" y1="211.4" x2="860" y2="211.4" stroke="#262626" stroke-width="1"/>
+<text x="88" y="215.4" fill="#a0a0a0" font-size="13" text-anchor="end">8%</text>
+<line x1="100" y1="174.3" x2="860" y2="174.3" stroke="#262626" stroke-width="1"/>
+<text x="88" y="178.3" fill="#a0a0a0" font-size="13" text-anchor="end">10%</text>
+<line x1="100" y1="137.1" x2="860" y2="137.1" stroke="#262626" stroke-width="1"/>
+<text x="88" y="141.1" fill="#a0a0a0" font-size="13" text-anchor="end">12%</text>
+<line x1="100" y1="100.0" x2="860" y2="100.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="104.0" fill="#a0a0a0" font-size="13" text-anchor="end">14%</text>
+<rect x="136.5" y="267.1" width="79.0" height="92.9" fill="#aa8a2e" rx="3"/>
+<text x="176.0" y="255.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+5%</text>
+<text x="176.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">35°</text>
+<rect x="288.5" y="155.7" width="79.0" height="204.3" fill="#aa8a2e" rx="3"/>
+<text x="328.0" y="143.7" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+11%</text>
+<text x="328.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">50°</text>
+<rect x="440.5" y="137.1" width="79.0" height="222.9" fill="#d4af37" rx="3"/>
+<text x="480.0" y="125.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+12%</text>
+<text x="480.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">65° प्रशिक्षित</text>
+<rect x="592.5" y="230.0" width="79.0" height="130.0" fill="#aa8a2e" rx="3"/>
+<text x="632.0" y="218.0" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+7%</text>
+<text x="632.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">80°</text>
+<rect x="744.5" y="350.0" width="79.0" height="10" fill="none" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="784.0" y="340.0" fill="#a0a0a0" font-size="13" text-anchor="middle">कोई सार्थक बढ़त नहीं</text>
+<text x="784.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">95°</text>
+<line x1="100" y1="360" x2="860" y2="360" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">डेटा: Lanza et al., 2019 — 65° पर 14 आइसोमेट्रिक सेशन</text>
+</svg></div><figcaption class="cap">Nurvan चार्ट, डेटा Lanza et al., 2019 (Eur J Appl Physiol) से। मान मूल एब्स्ट्रैक्ट के अनुसार; 65 डिग्री पर ट्रेन हुए 13 लोग, 9 कंट्रोल, 4 हफ़्तों में 14 सेशन। 95 डिग्री पर कोई सार्थक बढ़त दर्ज नहीं हुई।</figcaption></figure>
+<p>ताक़त मुख्य रूप से वहीं बढ़ी जहाँ ट्रेन किया गया और दूर जाते-जाते कम होती गई: काम वाले कोण से 30 डिग्री आगे कुछ भी मापने लायक़ नहीं बचा। तुलना को ज़्यादा मत खींचिए — वह स्टडी घुटने का एक्सटेंशन नापती है, बार के नीचे कंधा नहीं — लेकिन सिद्धांत हर आइसोमेट्रिक पर लागू होता है: ट्रांसफ़र होता है, आंशिक होता है, और ट्रेन की गई पोज़िशन से दूरी के साथ घटता है। इसी वजह से <a href="/hi/blog/tempo-deadlift-ghutne-tak">घुटने तक टेम्पो डेडलिफ़्ट</a> पूरी लिफ़्ट को ट्रेन नहीं करती।</p>
+<p>इसीलिए कोई संख्या अनिवार्य न होने के बावजूद प्रोग्रेशन का मतलब है: अगर आप सिर्फ़ टक में रहेंगे, तो बनाई हुई ज़्यादातर ताक़त टक में ही रह जाएगी।</p>
+<h3>दावा 3 — "कितनी चाहिए, यह आपकी बनावट पर निर्भर है"</h3>
+<p><strong>इसमें सुधार चाहिए।</strong></p>
+<p>रास्ता व्यक्तिगत होता है, यह सच है, और सबसे ठोस आँकड़ा लीवर का नहीं बल्कि ट्रेनिंग रिस्पॉन्स का है। Hubal और साथियों (2005) ने 585 लोगों को बिल्कुल एक ही प्रोग्राम पर 12 हफ़्ते ट्रेन किया और पहले-बाद में एल्बो फ़्लेक्सर नापे।</p>
+<figure><div class="chart"><svg role="img" aria-label="रेंज चार्ट: एक ही प्रोग्राम के 12 हफ़्तों पर व्यक्तिगत प्रतिक्रिया — डायनेमिक 1RM 0 से +250 प्रतिशत, अधिकतम आइसोमेट्रिक ताक़त −32 से +149 प्रतिशत, बाइसेप्स क्रॉस-सेक्शन −2 से +59 प्रतिशत" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">एक ही प्रोग्राम, 585 लोग, उलटे नतीजे</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">12 हफ़्तों में बदलाव (%)</text>
+<line x1="346.1" y1="110" x2="346.1" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="346.1" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">-50%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="426.4" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">0%</text>
+<line x1="506.7" y1="110" x2="506.7" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="506.7" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">50%</text>
+<line x1="587.0" y1="110" x2="587.0" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="587.0" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">100%</text>
+<line x1="667.3" y1="110" x2="667.3" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="667.3" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">150%</text>
+<line x1="747.6" y1="110" x2="747.6" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="747.6" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">200%</text>
+<line x1="827.9" y1="110" x2="827.9" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="827.9" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">250%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="132.0" fill="#f0f0f0" font-size="15">डायनेमिक 1RM</text>
+<rect x="426.4" y="140.0" width="401.5" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="424.4" y="135.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="825.9" y="135.0" width="4" height="36" fill="#d4af37"/>
+<text x="416.4" y="159.0" fill="#a0a0a0" font-size="14" text-anchor="end">+0%</text>
+<text x="837.9" y="159.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+250%</text>
+<text x="40" y="204.0" fill="#f0f0f0" font-size="15">अधिकतम आइसोमेट्रिक ताक़त</text>
+<rect x="375.0" y="212.0" width="290.7" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="373.0" y="207.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="663.7" y="207.0" width="4" height="36" fill="#d4af37"/>
+<text x="365.0" y="231.0" fill="#a0a0a0" font-size="14" text-anchor="end">-32%</text>
+<text x="675.7" y="231.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+149%</text>
+<text x="40" y="276.0" fill="#f0f0f0" font-size="15">बाइसेप्स का क्रॉस-सेक्शन</text>
+<rect x="423.2" y="284.0" width="98.0" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="421.2" y="279.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="519.1" y="279.0" width="4" height="36" fill="#d4af37"/>
+<text x="413.2" y="303.0" fill="#a0a0a0" font-size="14" text-anchor="end">-2%</text>
+<text x="531.1" y="303.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+59%</text>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">डेटा: Hubal et al., 2005 — न्यूनतम से अधिकतम दायरा</text>
+</svg></div><figcaption class="cap">Nurvan चार्ट, डेटा Hubal et al., 2005 (Med Sci Sports Exerc) से। न्यूनतम से अधिकतम दायरे मूल एब्स्ट्रैक्ट के अनुसार; 585 प्रतिभागी, 342 महिलाएँ और 243 पुरुष, एक बाँह की 12 हफ़्ते की प्रोग्रेसिव ट्रेनिंग।</figcaption></figure>
+<p>एक ही प्रोग्राम, एक ही अवधि: किसी की ताक़त दोगुनी हो गई, कोई हिला तक नहीं। ऐसे आँकड़ों के साथ यह बताना कि किसी ख़ास व्यक्ति को कितने स्टेप चाहिए, बस मुमकिन नहीं।</p>
+<p>जिसमें सुधार चाहिए वह है "बनावट"। लीवर मायने रखता है, यह ज्यामिति है, राय नहीं: बराबर ताक़त पर लंबा धड़ और लंबी टाँगें यानी लंबा लीवर आर्म। लेकिन किसी स्टडी ने यह नहीं नापा कि अकेले शरीर के नाप से ज़रूरी प्रोग्रेशन की संख्या कितनी पक्की तरह बताई जा सकती है। यह एक वाजिब व्याख्या है, आँकड़ा नहीं।</p>
+<h3>दावा 4 — "आइसोमेट्रिक से असली ताक़त नहीं बनती"</h3>
+<p><strong>ग़लत।</strong></p>
+<p>Oranchuk और साथियों (2019) की सिस्टेमैटिक रिव्यू ने कम से कम 3 हफ़्ते की आइसोमेट्रिक ट्रेनिंग पर 26 अध्ययन जुटाए: हर जाँची गई तीव्रता पर हाइपरट्रॉफ़ी और अधिकतम ताक़त में ठोस सुधार। कैलिस्थेनिक्स के लिए दो बातें अहम हैं: ज़्यादा मांसपेशीय लंबाई पर ट्रेनिंग से ज़्यादा हाइपरट्रॉफ़ी मिली (प्रति हफ़्ता 0.86-1.69% बनाम छोटी लंबाई पर 0.08-0.83%) और डायनेमिक प्रदर्शन में बेहतर ट्रांसफ़र; जबकि टेंडन की संरचना और कार्य सुधारने के लिए 70% या उससे ऊपर की ऊँची तीव्रता चाहिए।</p>
+<h3>दावा 5 — "बॉडीवेट से वज़न जैसी ताक़त नहीं बनती"</h3>
+<p><strong>ग़लत।</strong></p>
+<p>Kotarsky और साथियों (2018) ने 23 ट्रेन्ड पुरुषों को 4 हफ़्ते, हफ़्ते में तीन सेशन, दो समूहों में बाँटा: एक कठिन होते पुश-अप वेरिएशन से आगे बढ़ा, दूसरा बेंच प्रेस से। बेंच का 1RM दोनों समूहों में बढ़ा, आपस में कोई अंतर नहीं। पुश-अप वाले समूह ने ज़्यादा सुधार सिर्फ़ पुश-अप प्रोग्रेशन में दिखाया: फिर वही विशिष्टता, उसी दिशा में जिसमें ट्रेन किया गया।</p>
+<h3>दावा 6 — "10-15 सेकंड होल्ड हो जाए तो अगली पर बढ़ो"</h3>
+<p><strong>जाँचा नहीं जा सकता।</strong></p>
+<p>कैलिस्थेनिक्स में पोज़िशन बदलने के मानदंड के रूप में सेकंड की किसी सीमा को किसी स्टडी ने परखा ही नहीं है। वीडियो में घूमती सीमा एक काम की परंपरा है, आँकड़ा नहीं। साहित्य जो देता है वह आइसोमेट्रिक के पैरामीटर हैं, और फ़ैसले के लिए वही बेहतर आधार हैं।</p>
+<h2>कितनी देर होल्ड करें और कितनी तीव्रता पर</h2>
+<p>Lum और Barbosa (2019) ने दो अलग लक्ष्यों के लिए आइसोमेट्रिक ट्रेनिंग के पैरामीटर समेटे। तीसरा कॉलम उन आँकड़ों का फ्रंट लीवर में मेरा अनुवाद है: अनुवाद मेरा है, स्टडी में नहीं।</p>
+<table><thead><tr><th>लक्ष्य</th><th>रिव्यू के पैरामीटर</th><th>होल्ड में इसका मतलब</th></tr></thead><tbody><tr><td>हाइपरट्रॉफ़ी</td><td>अधिकतम संकुचन का 70-75%, 3-30 सेकंड के होल्ड, प्रति सेशन कुल 80-150 सेकंड से ज़्यादा, 36 से अधिक सेशन तक</td><td>ऐसी पोज़िशन जो आप 10-20 सेकंड रोक सकें, कुल लगभग दो मिनट होल्ड तक दोहराई गई</td></tr><tr><td>अधिकतम ताक़त</td><td>अधिकतम संकुचन का 80-100%, 1-5 सेकंड के होल्ड, प्रति सेशन कुल 30-90 सेकंड, कई कोणों पर या लक्ष्य कोण पर</td><td>ऐसी पोज़िशन जिसमें 5-8 सेकंड में हाथ छूट जाए, बहुत छोटे होल्ड और लंबा आराम, कुल 30-90 सेकंड</td></tr></tbody></table>
+<p><em>Nurvan तालिका: कॉलम 1 और 2 में Lum और Barbosa, 2019 (Int J Sports Med) के बताए पैरामीटर; कॉलम 3 फ्रंट लीवर पर हमारा अपना अनुप्रयोग है, स्टडी में मापा नहीं गया।</em></p>
+<p>इस तरह पढ़ें तो "कितनी प्रोग्रेशन" सवाल बदल जाता है: बहुत भारी-बहुत छोटे काम और लंबे काम, दोनों को कवर करने के लिए मुझे कितनी पोज़िशन चाहिए? आम तौर पर दो काफ़ी हैं।</p>
+<h2>इसे कैसे लागू करें</h2>
+<ol class="steps"><li><strong>दो पोज़िशन चुनें, छह नहीं।</strong> एक जिसमें 5-8 सेकंड में हाथ छूट जाए (यह आपका ताक़त का काम है) और एक जिसे पीठ सीधी रखते हुए 10-20 सेकंड रोक सकें (यह आपका वॉल्यूम है)। टक और एडवांस्ड टक, या एडवांस्ड टक और एक टाँग — यह सिर्फ़ आपके स्तर पर निर्भर है।</li><li><strong>एक बार में एक ही चीज़ बदलें।</strong> या तो पोज़िशन या सेकंड। दोनों साथ बदलेंगे तो पता नहीं चलेगा कि काम किसने किया, और दस में नौ बार आप बहुत तेज़ चढ़ जाएँगे।</li><li><strong>लक्ष्य के पास भी काम करें।</strong> पोज़िशनों के बीच ट्रांसफ़र आंशिक है, इसलिए हर हफ़्ते सबसे कठिन पोज़िशन में कुछ सेकंड ज़रूर डालें जिसे आप रोक पाते हैं, चाहे वह बार से नियंत्रित उतरना ही क्यों न हो।</li><li><strong>कुल सेकंड गिनें, सेट नहीं।</strong> ताक़त वाले काम के लिए कुल तीस से नब्बे सेकंड, वॉल्यूम के लिए क़रीब 150: साहित्य यही इकाई इस्तेमाल करता है।</li><li><strong>लक्ष्य पोज़िशन हर 3-4 हफ़्ते में जाँचें,</strong> हर सेशन में नहीं। टेस्ट ख़ुद ट्रेनिंग खा जाता है।</li><li><strong>कोहनी या कंधे में दर्द हो तो रुकें और दिखाएँ।</strong> फ्रंट लीवर बाइसेप्स टेंडन और रोटेटर कफ़ पर खिंची हुई स्थिति में भार डालता है; दर्द प्रोग्रेशन की सीढ़ी नहीं है।</li></ol>
+<div class="app"><div><h3>Nurvan आज़माएँ — हर पोज़िशन का अपना रिकॉर्ड</h3><p>Nurvan में फ्रंट लीवर का हर वेरिएशन अलग एक्सरसाइज़ है: टक, एडवांस्ड टक और स्ट्रैडल के होल्ड, सेकंड और RIR अलग-अलग रहते हैं, तो दिखता है कि कौन-सी पोज़िशन सच में बढ़ रही है और कौन तीन हफ़्ते से अटकी है। वॉर्म-अप सेट अपने आप सुझाए जाते हैं और हिस्ट्री बताती है कि आप सेकंड जोड़ रहे हैं या सिर्फ़ सेट।</p></div><a class="cta" href="https://nurvan.app">Nurvan आज़माएँ</a></div>
+<h2>अक्सर पूछे जाने वाले सवाल</h2>
+<details><summary>फ्रंट लीवर के लिए सच में कितनी प्रोग्रेशन चाहिए?</summary><p>सबके लिए एक जैसी कोई संख्या नहीं है और किसी स्टडी ने कोई संख्या जाँची भी नहीं। इतनी पोज़िशन चाहिए कि छोटे-बहुत कठिन होल्ड और लंबे होल्ड दोनों ट्रेन हो सकें, और वे आपस में इतनी पास हों कि बिना छलाँग के आगे बढ़ा जा सके: व्यवहार में एक समय पर दो पोज़िशन, जो सुधार के साथ बदलती रहती हैं।</p></details>
+<details><summary>फ़ुल फ्रंट लीवर तक पहुँचने में कितना समय लगता है?</summary><p>किसी स्टडी ने यह नापा नहीं, इसलिए ऑनलाइन पढ़ा कोई भी "छह महीने" एक किस्सा भर है। डेटा जो कहता है वह यह है कि ट्रेनिंग रिस्पॉन्स में व्यक्तिगत फ़र्क़ बहुत बड़ा है (Hubal et al., 2005), इसलिए अपना समय किसी और से मिलाना बेकार है।</p></details>
+<details><summary>लंबे होल्ड बेहतर या बार से नेगेटिव?</summary><p>दोनों का काम अलग है। सह सकने वाली पोज़िशन में लंबे होल्ड वॉल्यूम देते हैं; लगभग नामुमकिन पोज़िशन में नेगेटिव और बहुत छोटे होल्ड वह ऊँची तीव्रता देते हैं जो ताक़त और टेंडन को चाहिए (Oranchuk et al., 2019)। समझदार प्रोग्राम में दोनों होते हैं।</p></details>
+<details><summary>क्या वज़न वाली एक्सरसाइज़ भी जोड़नी होंगी?</summary><p>ज़रूरी नहीं: संबंधित एक्सरसाइज़ों में बॉडीवेट प्रोग्रेशन बारबेल जितनी ही ताक़त बनाती है (Kotarsky et al., 2018)। वज़न की सुविधा यह है कि लोड बारीकी से सेट हो जाता है, जो लीवरेज से मोटे-मोटे क़दमों में ही होता है।</p></details>
+<h2>यह भी पढ़ें</h2>
+<ul><li><a href="/hi/blog/tempo-deadlift-ghutne-tak">घुटने तक टेम्पो डेडलिफ़्ट: क्या फ़ायदा है?</a> — एक और मामला जहाँ मूवमेंट का हिस्सा ट्रेन करना पूरा मूवमेंट ट्रेन करना नहीं है।</li><li><a href="/hi/blog/strength-muscle-cardio-ek-saath-training">ताक़त, मसल और कार्डियो एक साथ: हो सकता है?</a> — अलग-अलग लक्ष्य एक ही हफ़्ते में कैसे बिठाएँ बिना एक-दूसरे को काटे।</li><li><a href="/hi/blog/ai-se-banaya-workout-plan">AI से बना वर्कआउट प्लान: स्टडीज़ क्या कहती हैं</a> — अपनी प्रोग्रेशन लिखने के लिए किसी मॉडल पर कितना भरोसा करें।</li></ul>
+<h2>स्रोत</h2>
+<ul><li>Lanza MB, Balshaw TG, Folland JP, 2019. Is the joint-angle specificity of isometric resistance training real? And if so, does it have a neural basis? <em>European Journal of Applied Physiology</em> 119(11-12):2465-2476. PMID 31522276. <a href="https://doi.org/10.1007/s00421-019-04229-z">DOI</a></li><li>Oranchuk DJ, Storey AG, Nelson AR, Cronin JB, 2019. Isometric training and long-term adaptations: Effects of muscle length, intensity, and intent: A systematic review. <em>Scandinavian Journal of Medicine &amp; Science in Sports</em> 29(4):484-503. PMID 30580468. <a href="https://doi.org/10.1111/sms.13375">DOI</a></li><li>Lum D, Barbosa TM, 2019. Brief Review: Effects of Isometric Strength Training on Strength and Dynamic Performance. <em>International Journal of Sports Medicine</em> 40(6):363-375. PMID 30943568. <a href="https://doi.org/10.1055/a-0863-4539">DOI</a></li><li>Hubal MJ, Gordish-Dressman H, Thompson PD, et al., 2005. Variability in muscle size and strength gain after unilateral resistance training. <em>Medicine and Science in Sports and Exercise</em> 37(6):964-72. PMID 15947721. <a href="https://pubmed.ncbi.nlm.nih.gov/15947721/">PubMed</a></li><li>Kotarsky CJ, Christensen BK, Miller JS, Hackney KJ, 2018. Effect of Progressive Calisthenic Push-up Training on Muscle Strength and Thickness. <em>Journal of Strength and Conditioning Research</em> 32(3):651-659. PMID 29466268. <a href="https://doi.org/10.1519/JSC.0000000000002345">DOI</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>International Journal of Sports Medicine</em> 45(7):504-510. PMID 38286426. <a href="https://doi.org/10.1055/a-2256-5857">DOI</a></li></ul>
+<p>संदर्भ PubMed से लिए गए। शुरुआती बिंदु: <a href="https://www.instagram.com/p/DdqOETQjpuD/">Alessandro Mainente</a> की 24 सितंबर 2026 की पोस्ट। पोस्ट का इस्तेमाल सिर्फ़ विषय और जाँचने लायक़ दावे तय करने के लिए हुआ: उसका कोई टेक्स्ट, चित्र या ढाँचा दोबारा इस्तेमाल नहीं किया गया।</p>
+<p>Giammaria Loi, Nurvan के संस्थापक हैं। वे 2012 से वेट ट्रेनिंग करते हैं, 2013 से FIPE प्रमाणित पर्सनल ट्रेनर और कोच हैं और 2018 से राष्ट्रीय स्तर पर पावरलिफ़्टिंग में हिस्सा लेते हैं। उनका हर लेख वैज्ञानिक अध्ययनों से शुरू होकर वहीं पहुँचता है जो जिम में सच में काम करता है।</p>
+<p class="note">नोट: यह जानकारी भर है, यह किसी डॉक्टर या विशेषज्ञ की सलाह की जगह नहीं लेती।</p>
+</main>
+<footer>NURVAN · nurvan.app · 6 नवंबर 2026</footer>
+</body>
+</html>

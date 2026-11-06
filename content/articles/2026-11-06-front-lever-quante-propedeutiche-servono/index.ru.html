@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Фронт левер: сколько подводящих нужно | Nurvan</title>
+<meta name="description" content="Фиксированного числа подводящих к фронт леверу нет. Что говорят исследования изометрии: сколько позиций нужно и насколько сила переносится между ними.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Тренировки</div>
+<h1>Фронт левер: сколько подводящих нужно</h1>
+<p class="lede">Так, продвинутый так, одна нога, страддл, полулежа: списки подводящих к фронт леверу годами ходят по сети так, будто это лестница с фиксированным числом ступеней, одинаковая для всех. Вопрос всегда один и тот же: сколько их надо закрыть до полного фронт левера? Литература по изометрическим тренировкам числа не дает, но дает кое-что полезнее: какая часть силы, наработанной в одной позиции, реально остается с вами в следующей. И эта цифра меняет весь способ строить лестницу.</p>
+<div class="meta"><span>6 ноября 2026</span><span><b>11</b> мин чтения</span><span><b>6</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 6 ноября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Фронт левер: сколько подводящих нужно"><figcaption class="cap">Фото: KoolShooters — Pexels, лицензия Pexels (бесплатное использование)</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li>Ни одно исследование не предписывает количество подводящих: обязательных трех, четырех или шести шагов не существует ни для кого.</li><li>Изометрическая сила во многом специфична для позиции: при тренировке одного угла сила сильно растет именно там (+12%) и все меньше по мере удаления, а в 30 градусах от рабочего угла не растет вовсе (Lanza et al., 2019).</li><li>Значит, подводящие нужны — но не как коллекция галочек, а как способ покрыть позиции, в которых вы хотите быть сильными.</li><li>Число шагов индивидуально, потому что индивидуален отклик на тренировку: одна программа, 585 человек, прирост силы от 0 до +250% за 12 недель (Hubal et al., 2005).</li><li>Прогрессировать можно, усложняя позицию или добавляя секунды: по силе и массе оба пути равноценны (Chaves et al., 2024).</li></ul></div>
+<h2>Что на самом деле меняется от одной подводящей к другой</h2>
+<p>Во фронт левере тело горизонтально и висит на перекладине: плечи работают как точка опоры, а вес тела тянет вниз все, что находится перед ними. Трудность зависит не от того, сколько вы весите, а от того, насколько далеко центр масс от плеч. Колени к груди — расстояние короче; одна нога выпрямлена — длиннее; ноги в страддл — снова немного короче. Иначе говоря, подводящие — это одно и то же упражнение разной интенсивности: аналог блинов на штанге.</p>
+<p>Но есть важное отличие от штанги. Меняя рычаг, вы меняете не только нагрузку: меняются и углы в суставах, и позиция, в которой вы производите усилие. Вот здесь исследованиям есть что сказать.</p>
+<h2>Что говорят исследования</h2>
+<h3>Утверждение 1 — «До полного фронт левера надо закрыть X подводящих»</h3>
+<p><strong>Опровергнуто.</strong></p>
+<p>Ни одно исследование не проверяло количество шагов, потому что адаптацию создает не число, а прогрессивная перегрузка. А перегрузку можно добавлять по-разному. Chaves и коллеги (2024) 10 недель тренировали 39 нетренированных человек по схеме «нога против ноги»: одна нога прогрессировала через вес, другая — через повторения. Разовый максимум в разгибании ног вырос с 52,9 до 69,1 кг через вес и с 51,7 до 66,8 кг через повторения; сечение латеральной широкой мышцы — с 21,3 до 23,5 см² против 21,1 до 23,4 см². Разницы между методами нет.</p>
+<p>В переводе на фронт левер: перейти к более трудной позиции и добавить секунды к уже освоенной — два равно законных способа прогрессировать. Сколько подводящих вы пройдете — следствие дозировки, а не правило.</p>
+<h3>Утверждение 2 — «Сила из така переносится на полный фронт левер»</h3>
+<p><strong>Опровергнуто, по крайней мере отчасти.</strong></p>
+<p>Это самое интересное исследование для всех, кто тренирует статику. Lanza, Balshaw и Folland (2019) дали 13 участникам 14 изометрических тренировок за 4 недели под одним углом в колене (65 градусов), сравнили их с 9 участниками контроля, а затем измерили силу под пятью разными углами.</p>
+<figure><div class="chart"><svg role="img" aria-label="Столбчатая диаграмма: прирост максимальной изометрической силы после четырех недель тренировки под одним углом — плюс 5 процентов при 35 градусах, плюс 11 при 50, плюс 12 при тренируемом угле 65, плюс 7 при 80 и отсутствие значимого прироста при 95 градусах" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">Сколько силы переносится на другие углы</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">Прирост максимальной силы (%)</text>
+<line x1="100" y1="360.0" x2="860" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="364.0" fill="#a0a0a0" font-size="13" text-anchor="end">0%</text>
+<line x1="100" y1="322.9" x2="860" y2="322.9" stroke="#262626" stroke-width="1"/>
+<text x="88" y="326.9" fill="#a0a0a0" font-size="13" text-anchor="end">2%</text>
+<line x1="100" y1="285.7" x2="860" y2="285.7" stroke="#262626" stroke-width="1"/>
+<text x="88" y="289.7" fill="#a0a0a0" font-size="13" text-anchor="end">4%</text>
+<line x1="100" y1="248.6" x2="860" y2="248.6" stroke="#262626" stroke-width="1"/>
+<text x="88" y="252.6" fill="#a0a0a0" font-size="13" text-anchor="end">6%</text>
+<line x1="100" y1="211.4" x2="860" y2="211.4" stroke="#262626" stroke-width="1"/>
+<text x="88" y="215.4" fill="#a0a0a0" font-size="13" text-anchor="end">8%</text>
+<line x1="100" y1="174.3" x2="860" y2="174.3" stroke="#262626" stroke-width="1"/>
+<text x="88" y="178.3" fill="#a0a0a0" font-size="13" text-anchor="end">10%</text>
+<line x1="100" y1="137.1" x2="860" y2="137.1" stroke="#262626" stroke-width="1"/>
+<text x="88" y="141.1" fill="#a0a0a0" font-size="13" text-anchor="end">12%</text>
+<line x1="100" y1="100.0" x2="860" y2="100.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="104.0" fill="#a0a0a0" font-size="13" text-anchor="end">14%</text>
+<rect x="136.5" y="267.1" width="79.0" height="92.9" fill="#aa8a2e" rx="3"/>
+<text x="176.0" y="255.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+5%</text>
+<text x="176.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">35°</text>
+<rect x="288.5" y="155.7" width="79.0" height="204.3" fill="#aa8a2e" rx="3"/>
+<text x="328.0" y="143.7" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+11%</text>
+<text x="328.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">50°</text>
+<rect x="440.5" y="137.1" width="79.0" height="222.9" fill="#d4af37" rx="3"/>
+<text x="480.0" y="125.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+12%</text>
+<text x="480.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">65° тренируемый</text>
+<rect x="592.5" y="230.0" width="79.0" height="130.0" fill="#aa8a2e" rx="3"/>
+<text x="632.0" y="218.0" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+7%</text>
+<text x="632.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">80°</text>
+<rect x="744.5" y="350.0" width="79.0" height="10" fill="none" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="784.0" y="340.0" fill="#a0a0a0" font-size="13" text-anchor="middle">значимого прироста нет</text>
+<text x="784.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">95°</text>
+<line x1="100" y1="360" x2="860" y2="360" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">Данные: Lanza et al., 2019 — 14 изометрических тренировок при 65°</text>
+</svg></div><figcaption class="cap">График Nurvan по данным Lanza et al., 2019 (Eur J Appl Physiol). Значения — как в оригинальном абстракте; 13 человек тренировались при 65 градусах, 9 человек контроля, 14 занятий за 4 недели. При 95 градусах значимого прироста не сообщалось.</figcaption></figure>
+<p>Сила выросла прежде всего там, где тренировалась, и все меньше по мере удаления: уже в 30 градусах за рабочим углом ничего измеримого. Не стоит слишком растягивать аналогию — там измеряли разгибание колена, а не плечо под перекладиной, — но принцип верен для любой статики: перенос есть, он частичный и уменьшается с расстоянием от тренируемой позиции. По той же причине <a href="/ru/blog/stanovaya-tyaga-v-tempe-do-kolena">становая тяга в темпе до колена</a> не тренирует движение целиком.</p>
+<p>Поэтому подводящие имеют смысл, хотя никакое число не обязательно: останетесь только в таке — большая часть наработанного останется в таке.</p>
+<h3>Утверждение 3 — «Сколько их нужно, зависит от того, как вы сложены»</h3>
+<p><strong>Требует уточнения.</strong></p>
+<p>То, что путь индивидуален, — правда, и самые надежные данные касаются не рычагов, а отклика на тренировку. Hubal и коллеги (2005) 12 недель тренировали 585 человек по совершенно одинаковой программе и измеряли сгибатели локтя до и после.</p>
+<figure><div class="chart"><svg role="img" aria-label="Диаграмма интервалов: индивидуальный отклик на 12 недель одной и той же программы — динамический разовый максимум от 0 до плюс 250 процентов, максимальная изометрическая сила от минус 32 до плюс 149 процентов, сечение бицепса от минус 2 до плюс 59 процентов" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">Одна программа, 585 человек, противоположные результаты</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">Изменение за 12 недель (%)</text>
+<line x1="346.1" y1="110" x2="346.1" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="346.1" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">-50%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="426.4" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">0%</text>
+<line x1="506.7" y1="110" x2="506.7" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="506.7" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">50%</text>
+<line x1="587.0" y1="110" x2="587.0" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="587.0" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">100%</text>
+<line x1="667.3" y1="110" x2="667.3" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="667.3" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">150%</text>
+<line x1="747.6" y1="110" x2="747.6" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="747.6" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">200%</text>
+<line x1="827.9" y1="110" x2="827.9" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="827.9" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">250%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="132.0" fill="#f0f0f0" font-size="15">Динамический 1ПМ</text>
+<rect x="426.4" y="140.0" width="401.5" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="424.4" y="135.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="825.9" y="135.0" width="4" height="36" fill="#d4af37"/>
+<text x="416.4" y="159.0" fill="#a0a0a0" font-size="14" text-anchor="end">+0%</text>
+<text x="837.9" y="159.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+250%</text>
+<text x="40" y="204.0" fill="#f0f0f0" font-size="15">Максимальная изометрическая сила</text>
+<rect x="375.0" y="212.0" width="290.7" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="373.0" y="207.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="663.7" y="207.0" width="4" height="36" fill="#d4af37"/>
+<text x="365.0" y="231.0" fill="#a0a0a0" font-size="14" text-anchor="end">-32%</text>
+<text x="675.7" y="231.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+149%</text>
+<text x="40" y="276.0" fill="#f0f0f0" font-size="15">Сечение бицепса</text>
+<rect x="423.2" y="284.0" width="98.0" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="421.2" y="279.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="519.1" y="279.0" width="4" height="36" fill="#d4af37"/>
+<text x="413.2" y="303.0" fill="#a0a0a0" font-size="14" text-anchor="end">-2%</text>
+<text x="531.1" y="303.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+59%</text>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">Данные: Hubal et al., 2005 — диапазон от минимума до максимума</text>
+</svg></div><figcaption class="cap">График Nurvan по данным Hubal et al., 2005 (Med Sci Sports Exerc). Диапазоны от минимума до максимума — как в оригинальном абстракте; 585 участников, 342 женщины и 243 мужчины, 12 недель прогрессивной тренировки одной руки.</figcaption></figure>
+<p>Одна программа, один срок: кто-то удвоил силу, кто-то не сдвинулся. При таком разбросе предсказать, сколько шагов нужно конкретному человеку, попросту невозможно.</p>
+<p>Уточнения требует «как вы сложены». То, что рычаг имеет значение, — геометрия, а не мнение: при равной силе длинный корпус и длинные ноги означают более длинное плечо рычага. Но ни одно исследование не измеряло, насколько антропометрия сама по себе предсказывает нужное число подводящих. Это разумное объяснение, а не факт.</p>
+<h3>Утверждение 4 — «Статика не дает настоящей силы»</h3>
+<p><strong>Опровергнуто.</strong></p>
+<p>Систематический обзор Oranchuk и коллег (2019) собрал 26 работ по изометрическим тренировкам длительностью не менее 3 недель: существенный прирост гипертрофии и максимальной силы при всех изученных интенсивностях. Две детали важны для воркаута: тренировка при большей длине мышцы дала больше гипертрофии (0,86-1,69% в неделю против 0,08-0,83% при коротких длинах) и лучший перенос на динамику; а вот для улучшения структуры и функции сухожилия нужны высокие интенсивности — от 70% и выше.</p>
+<h3>Утверждение 5 — «Свой вес не дает такой силы, как железо»</h3>
+<p><strong>Опровергнуто.</strong></p>
+<p>Kotarsky и коллеги (2018) на 4 недели разделили 23 тренированных мужчин на две группы по три занятия в неделю: одна прогрессировала через все более трудные варианты отжиманий, другая — через жим лежа. Разовый максимум в жиме вырос в обеих группах без разницы между ними. А вот в самой лестнице отжиманий сильнее продвинулась группа отжиманий: снова специфичность, в ту сторону, в которую тренировались.</p>
+<h3>Утверждение 6 — «Переходи дальше, когда держишь 10-15 секунд»</h3>
+<p><strong>Непроверяемо.</strong></p>
+<p>Нет ни одного исследования, где порог в секундах проверялся бы как критерий смены позиции в воркауте. Порог из роликов — удобная условность, а не данные. Литература предлагает параметры изометрии, и это более надежная основа для решения.</p>
+<h2>Сколько держать и с какой интенсивностью</h2>
+<p>Lum и Barbosa (2019) свели параметры изометрической тренировки для двух разных целей. Третий столбец — мой перевод этих чисел на фронт левер: перевод мой, в исследовании его нет.</p>
+<table><thead><tr><th>Цель</th><th>Параметры из обзора</th><th>Как это выглядит в удержании</th></tr></thead><tbody><tr><td>Гипертрофия</td><td>70-75% максимального усилия, удержания 3-30 с, более 80-150 с суммарно за занятие, более 36 занятий</td><td>Позиция, которую вы держите 10-20 секунд, повторенная до примерно двух минут суммарного удержания</td></tr><tr><td>Максимальная сила</td><td>80-100% максимального усилия, удержания 1-5 с, 30-90 с суммарно за занятие, на нескольких углах или на целевом</td><td>Позиция, в которой вы срываетесь на 5-8 секунде, очень короткие удержания и длинный отдых, 30-90 секунд суммарно</td></tr></tbody></table>
+<p><em>Таблица Nurvan: столбцы 1 и 2 — параметры, приведенные Lum и Barbosa, 2019 (Int J Sports Med); столбец 3 — наше применение к фронт леверу, в исследовании не измерялось.</em></p>
+<p>При таком прочтении вопрос «сколько подводящих» превращается в другой: сколько позиций нужно, чтобы покрыть и очень тяжелую короткую работу, и более длинную? Обычно хватает двух.</p>
+<h2>Как применять</h2>
+<ol class="steps"><li><strong>Возьмите две позиции, а не шесть.</strong> Одну, в которой вы срываетесь на 5-8 секунде (это силовая работа), и одну, которую держите 10-20 секунд с ровной спиной (это объем). Так и продвинутый так или продвинутый так и одна нога — зависит только от вашего уровня.</li><li><strong>Меняйте по одной переменной.</strong> Либо позицию, либо секунды. Если менять обе, вы не поймете, что сработало, и в девяти случаях из десяти полезете вверх слишком быстро.</li><li><strong>Работайте и близко к цели.</strong> Поскольку перенос между позициями частичный, каждую неделю добавляйте несколько секунд в самой трудной доступной позиции, пусть даже это только контролируемое опускание с перекладины.</li><li><strong>Считайте суммарные секунды, а не подходы.</strong> Тридцать-девяносто секунд суммарно для силовой работы, около 150 для объемной: именно эту единицу использует литература.</li><li><strong>Проверяйте целевую позицию раз в 3-4 недели,</strong> а не каждую тренировку. Тест съедает тренировку.</li><li><strong>Появилась боль в локте или плече — остановитесь и покажитесь специалисту.</strong> Фронт левер нагружает сухожилие бицепса и вращательную манжету в растянутом положении; боль — не ступень прогрессии.</li></ol>
+<div class="app"><div><h3>Попробуйте Nurvan — у каждой позиции своя история</h3><p>В Nurvan каждый вариант фронт левера — отдельное упражнение: удержания, секунды и RIR не смешиваются между таком, продвинутым таком и страддлом, так что видно, какая позиция реально растет, а какая стоит три недели. Разминочные подходы предлагаются автоматически, а история показывает, добавляете вы секунды или только подходы.</p></div><a class="cta" href="https://nurvan.app">Попробуйте Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Сколько подводящих реально нужно для фронт левера?</summary><p>Числа, подходящего всем, не существует, и ни одно исследование его не проверяло. Нужно столько позиций, чтобы тренировать и короткие очень тяжелые удержания, и более длинные, и чтобы они были достаточно близки друг к другу для прогресса без скачков: на практике — две позиции одновременно, которые меняются по мере роста.</p></details>
+<details><summary>Сколько времени нужно, чтобы выйти в полный фронт левер?</summary><p>Это никто не измерял, так что любые «полгода» из интернета — анекдот. Данные говорят другое: индивидуальный разброс отклика на тренировку огромен (Hubal et al., 2005), поэтому сравнивать свои сроки с чужими бессмысленно.</p></details>
+<details><summary>Что лучше: длинные удержания или негативы с перекладины?</summary><p>Это разные задачи. Длинные удержания в посильной позиции дают объем; негативы и очень короткие удержания в почти невозможной позиции дают высокую интенсивность, нужную силе и сухожилиям (Oranchuk et al., 2019). В разумной программе есть и то, и другое.</p></details>
+<details><summary>Нужно ли добавлять работу с весами?</summary><p>Не обязательно: прогрессия с собственным весом дает столько же силы, сколько штанга в соответствующих упражнениях (Kotarsky et al., 2018). Веса удобны для тонкой дозировки, которую рычагами задать получается только грубо.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/stanovaya-tyaga-v-tempe-do-kolena">Становая тяга в темпе до колена: есть ли смысл?</a> — еще один случай, когда тренировка части движения не тренирует движение целиком.</li><li><a href="/ru/blog/trenirovka-sily-myshts-i-kardio-vmeste">Сила, мышцы и кардио вместе: получится?</a> — как уместить разные цели в одной неделе, не обнулив их.</li><li><a href="/ru/blog/plan-trenirovok-ot-ii">План тренировок от ИИ: что говорят исследования</a> — насколько можно доверить модели собственную прогрессию.</li></ul>
+<h2>Источники</h2>
+<ul><li>Lanza MB, Balshaw TG, Folland JP, 2019. Is the joint-angle specificity of isometric resistance training real? And if so, does it have a neural basis? <em>European Journal of Applied Physiology</em> 119(11-12):2465-2476. PMID 31522276. <a href="https://doi.org/10.1007/s00421-019-04229-z">DOI</a></li><li>Oranchuk DJ, Storey AG, Nelson AR, Cronin JB, 2019. Isometric training and long-term adaptations: Effects of muscle length, intensity, and intent: A systematic review. <em>Scandinavian Journal of Medicine &amp; Science in Sports</em> 29(4):484-503. PMID 30580468. <a href="https://doi.org/10.1111/sms.13375">DOI</a></li><li>Lum D, Barbosa TM, 2019. Brief Review: Effects of Isometric Strength Training on Strength and Dynamic Performance. <em>International Journal of Sports Medicine</em> 40(6):363-375. PMID 30943568. <a href="https://doi.org/10.1055/a-0863-4539">DOI</a></li><li>Hubal MJ, Gordish-Dressman H, Thompson PD, et al., 2005. Variability in muscle size and strength gain after unilateral resistance training. <em>Medicine and Science in Sports and Exercise</em> 37(6):964-72. PMID 15947721. <a href="https://pubmed.ncbi.nlm.nih.gov/15947721/">PubMed</a></li><li>Kotarsky CJ, Christensen BK, Miller JS, Hackney KJ, 2018. Effect of Progressive Calisthenic Push-up Training on Muscle Strength and Thickness. <em>Journal of Strength and Conditioning Research</em> 32(3):651-659. PMID 29466268. <a href="https://doi.org/10.1519/JSC.0000000000002345">DOI</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>International Journal of Sports Medicine</em> 45(7):504-510. PMID 38286426. <a href="https://doi.org/10.1055/a-2256-5857">DOI</a></li></ul>
+<p>Источники найдены через PubMed. Отправная точка: публикация <a href="https://www.instagram.com/p/DdqOETQjpuD/">Alessandro Mainente</a> от 24 сентября 2026 года. Содержание публикации использовано только для выбора темы и утверждений для проверки: ни текст, ни изображения, ни структура не заимствовались.</p>
+<p>Giammaria Loi — основатель Nurvan. Тренируется с отягощениями с 2012 года, с 2013 года работает персональным тренером с сертификацией FIPE, с 2018 года выступает в пауэрлифтинге на национальном уровне. Каждая его статья начинается с научных работ и заканчивается тем, что действительно работает в зале.</p>
+<p class="note">Примечание: информационный материал, он не заменяет консультацию врача или специалиста.</p>
+</main>
+<footer>NURVAN · nurvan.app · 6 ноября 2026</footer>
+</body>
+</html>

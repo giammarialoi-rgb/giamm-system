@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="pt" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Front lever: quantas progressões são precisas? | Nurvan</title>
+<meta name="description" content="Não existe um número fixo de progressões para o front lever. O que a investigação sobre isometria diz: quantas posições precisas e quanta força se transfere.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Treino</a><a href="#">Nutrição</a><a href="#">Suplementos</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descarregar a app</a></div></header>
+<main class="wrap" lang="pt">
+<div class="crumb">Blog · Treino</div>
+<h1>Front lever: quantas progressões são precisas?</h1>
+<p class="lede">Tuck, advanced tuck, uma perna, straddle, half lay: as listas de progressões do front lever circulam há anos como se fossem uma escada com um número fixo de degraus, igual para toda a gente. A pergunta é sempre a mesma: quantas tenho de completar antes do full? A literatura sobre treino isométrico não dá um número, mas dá algo mais útil: quanta da força construída numa posição fica mesmo na posição seguinte. E esse dado muda a forma de montar a escada.</p>
+<div class="meta"><span>6 de novembro de 2026</span><span><b>12</b> min de leitura</span><span><b>6</b> estudos citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · atualizado a 6 de novembro de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Front lever: quantas progressões são precisas?"><figcaption class="cap">Foto de KoolShooters — Pexels, licença Pexels (uso gratuito)</figcaption></figure>
+<div class="box"><h2>Em resumo</h2><ul><li>Nenhum estudo prescreve um número de progressões: não existem três, quatro ou seis passos obrigatórios, para ninguém.</li><li>A força isométrica é em grande parte específica da posição: treinando um só ângulo, a força sobe muito aí (+12%) e cada vez menos à medida que nos afastamos, até não subir nada a 30 graus de distância (Lanza et al., 2019).</li><li>As progressões servem, portanto, mas não como coleção a riscar: servem para cobrir as posições em que queres ser forte.</li><li>O número de passos é individual porque a resposta ao treino também é: mesmo programa, 585 pessoas, ganhos de força de 0 a +250% em 12 semanas (Hubal et al., 2005).</li><li>Podes progredir tornando a posição mais difícil ou somando segundos: na força e na massa os dois caminhos empatam (Chaves et al., 2024).</li></ul></div>
+<h2>O que muda realmente de uma progressão para outra</h2>
+<p>No front lever o corpo está na horizontal e pendurado na barra: os ombros funcionam como eixo e o peso do corpo puxa para baixo tudo o que está à frente deles. O esforço não depende de quanto pesas, mas da distância a que está o teu centro de massa dos ombros. Levar os joelhos ao peito encurta essa distância; esticar uma perna alonga-a; abrir as pernas em straddle volta a encurtá-la um pouco. As progressões, dito de outro modo, são o mesmo exercício em intensidades diferentes: o equivalente aos discos na barra.</p>
+<p>Mas há uma diferença importante em relação à barra. Ao mudar a alavanca não mudas só a carga: mudas também o ângulo das articulações e a posição em que produzes força. E é aí que a investigação tem algo a dizer.</p>
+<h2>O que a investigação diz mesmo</h2>
+<h3>Afirmação 1 — "Antes do full tens de completar X progressões"</h3>
+<p><strong>Desmentido.</strong></p>
+<p>Nenhum estudo testou um número de passos, porque não é um número que produz a adaptação: é a sobrecarga progressiva. E a sobrecarga pode ser acrescentada de várias maneiras. Chaves e colegas (2024) treinaram 39 pessoas não treinadas durante 10 semanas com um desenho de pernas separadas: uma perna progredia aumentando a carga, a outra aumentando as repetições. O 1RM na extensão de joelho passou de 52,9 para 69,1 kg com a carga e de 51,7 para 66,8 kg com as repetições; a secção do vasto lateral passou de 21,3 para 23,5 cm² contra 21,1 para 23,4 cm². Nenhuma diferença entre métodos.</p>
+<p>Traduzido para o front lever: passar a uma posição mais difícil e somar segundos à posição que já dominas são duas formas legítimas de progredir. Quantas progressões atravessas é consequência da dosagem, não uma regra.</p>
+<h3>Afirmação 2 — "A força do tuck transfere-se para o full"</h3>
+<p><strong>Desmentido, pelo menos em parte.</strong></p>
+<p>É o estudo mais interessante para quem treina isometrias. Lanza, Balshaw e Folland (2019) fizeram 13 pessoas realizar 14 sessões isométricas em 4 semanas num único ângulo de joelho (65 graus), compararam-nas com 9 controlos e depois mediram a força em cinco ângulos diferentes.</p>
+<figure><div class="chart"><svg role="img" aria-label="Gráfico de barras: aumento da força isométrica máxima após quatro semanas de treino num só ângulo, mais 5 por cento a 35 graus, mais 11 a 50, mais 12 no ângulo treinado de 65, mais 7 a 80 e nenhum aumento significativo a 95 graus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">Quanta força se transfere para outros ângulos</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">Aumento da força máxima (%)</text>
+<line x1="100" y1="360.0" x2="860" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="364.0" fill="#a0a0a0" font-size="13" text-anchor="end">0%</text>
+<line x1="100" y1="322.9" x2="860" y2="322.9" stroke="#262626" stroke-width="1"/>
+<text x="88" y="326.9" fill="#a0a0a0" font-size="13" text-anchor="end">2%</text>
+<line x1="100" y1="285.7" x2="860" y2="285.7" stroke="#262626" stroke-width="1"/>
+<text x="88" y="289.7" fill="#a0a0a0" font-size="13" text-anchor="end">4%</text>
+<line x1="100" y1="248.6" x2="860" y2="248.6" stroke="#262626" stroke-width="1"/>
+<text x="88" y="252.6" fill="#a0a0a0" font-size="13" text-anchor="end">6%</text>
+<line x1="100" y1="211.4" x2="860" y2="211.4" stroke="#262626" stroke-width="1"/>
+<text x="88" y="215.4" fill="#a0a0a0" font-size="13" text-anchor="end">8%</text>
+<line x1="100" y1="174.3" x2="860" y2="174.3" stroke="#262626" stroke-width="1"/>
+<text x="88" y="178.3" fill="#a0a0a0" font-size="13" text-anchor="end">10%</text>
+<line x1="100" y1="137.1" x2="860" y2="137.1" stroke="#262626" stroke-width="1"/>
+<text x="88" y="141.1" fill="#a0a0a0" font-size="13" text-anchor="end">12%</text>
+<line x1="100" y1="100.0" x2="860" y2="100.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="104.0" fill="#a0a0a0" font-size="13" text-anchor="end">14%</text>
+<rect x="136.5" y="267.1" width="79.0" height="92.9" fill="#aa8a2e" rx="3"/>
+<text x="176.0" y="255.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+5%</text>
+<text x="176.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">35°</text>
+<rect x="288.5" y="155.7" width="79.0" height="204.3" fill="#aa8a2e" rx="3"/>
+<text x="328.0" y="143.7" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+11%</text>
+<text x="328.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">50°</text>
+<rect x="440.5" y="137.1" width="79.0" height="222.9" fill="#d4af37" rx="3"/>
+<text x="480.0" y="125.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+12%</text>
+<text x="480.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">65° treinado</text>
+<rect x="592.5" y="230.0" width="79.0" height="130.0" fill="#aa8a2e" rx="3"/>
+<text x="632.0" y="218.0" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+7%</text>
+<text x="632.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">80°</text>
+<rect x="744.5" y="350.0" width="79.0" height="10" fill="none" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="784.0" y="340.0" fill="#a0a0a0" font-size="13" text-anchor="middle">sem aumento significativo</text>
+<text x="784.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">95°</text>
+<line x1="100" y1="360" x2="860" y2="360" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">Dados: Lanza et al., 2019 — 14 sessões isométricas a 65°</text>
+</svg></div><figcaption class="cap">Gráfico Nurvan sobre dados de Lanza et al., 2019 (Eur J Appl Physiol). Valores tal como reportados no resumo original; 13 sujeitos treinados a 65 graus, 9 controlos, 14 sessões em 4 semanas. A 95 graus não foi reportado qualquer aumento significativo.</figcaption></figure>
+<p>A força cresceu sobretudo onde foi treinada e cada vez menos à medida que nos afastamos: nada mensurável já a 30 graus além do ângulo de trabalho. Cuidado com o paralelo — aquele estudo mede extensão de joelho, não o ombro sob uma barra — mas o princípio vale para todas as isometrias: a transferência existe, é parcial e diminui com a distância à posição treinada. É o mesmo motivo pelo qual <a href="/pt/blog/levantamento-terra-com-tempo-ate-o-joelho">o levantamento terra com tempo até ao joelho</a> não treina o levantamento inteiro.</p>
+<p>É por isso que as progressões fazem sentido mesmo sem nenhum número obrigatório: se ficares só no tuck, quase tudo o que construíres fica no tuck.</p>
+<h3>Afirmação 3 — "Quantas são precisas depende de como és feito"</h3>
+<p><strong>A precisar.</strong></p>
+<p>Que o percurso seja individual é verdade, e o dado mais sólido não é sobre alavancas mas sobre resposta ao treino. Hubal e colegas (2005) treinaram 585 pessoas exatamente com o mesmo programa durante 12 semanas e mediram os flexores do cotovelo antes e depois.</p>
+<figure><div class="chart"><svg role="img" aria-label="Gráfico de intervalos: resposta individual a 12 semanas do mesmo programa, 1RM dinâmico de 0 a mais 250 por cento, força isométrica máxima de menos 32 a mais 149 por cento, secção do bíceps de menos 2 a mais 59 por cento" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">Mesmo programa, 585 pessoas, respostas opostas</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">Variação em 12 semanas (%)</text>
+<line x1="346.1" y1="110" x2="346.1" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="346.1" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">-50%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="426.4" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">0%</text>
+<line x1="506.7" y1="110" x2="506.7" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="506.7" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">50%</text>
+<line x1="587.0" y1="110" x2="587.0" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="587.0" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">100%</text>
+<line x1="667.3" y1="110" x2="667.3" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="667.3" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">150%</text>
+<line x1="747.6" y1="110" x2="747.6" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="747.6" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">200%</text>
+<line x1="827.9" y1="110" x2="827.9" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="827.9" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">250%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="132.0" fill="#f0f0f0" font-size="15">1RM dinâmico</text>
+<rect x="426.4" y="140.0" width="401.5" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="424.4" y="135.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="825.9" y="135.0" width="4" height="36" fill="#d4af37"/>
+<text x="416.4" y="159.0" fill="#a0a0a0" font-size="14" text-anchor="end">+0%</text>
+<text x="837.9" y="159.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+250%</text>
+<text x="40" y="204.0" fill="#f0f0f0" font-size="15">Força isométrica máxima</text>
+<rect x="375.0" y="212.0" width="290.7" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="373.0" y="207.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="663.7" y="207.0" width="4" height="36" fill="#d4af37"/>
+<text x="365.0" y="231.0" fill="#a0a0a0" font-size="14" text-anchor="end">-32%</text>
+<text x="675.7" y="231.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+149%</text>
+<text x="40" y="276.0" fill="#f0f0f0" font-size="15">Secção do bíceps</text>
+<rect x="423.2" y="284.0" width="98.0" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="421.2" y="279.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="519.1" y="279.0" width="4" height="36" fill="#d4af37"/>
+<text x="413.2" y="303.0" fill="#a0a0a0" font-size="14" text-anchor="end">-2%</text>
+<text x="531.1" y="303.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+59%</text>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">Dados: Hubal et al., 2005 — intervalo do mínimo ao máximo</text>
+</svg></div><figcaption class="cap">Gráfico Nurvan sobre dados de Hubal et al., 2005 (Med Sci Sports Exerc). Intervalos do mínimo ao máximo tal como reportados no resumo original; 585 sujeitos, 342 mulheres e 243 homens, 12 semanas de treino progressivo de um só braço.</figcaption></figure>
+<p>Mesmo programa, mesma duração: uns duplicaram a força, outros não se mexeram. Com números assim, prever quantos passos uma pessoa concreta precisa está simplesmente fora de alcance.</p>
+<p>O que é preciso precisar é o "como és feito". Que a alavanca conta é geometria, não opinião: com a mesma força, um tronco e pernas longos significam um braço de alavanca maior. Mas nenhum estudo mediu quanto a antropometria sozinha prevê o número de progressões necessárias. É uma explicação razoável, não um dado.</p>
+<h3>Afirmação 4 — "As isometrias não constroem força a sério"</h3>
+<p><strong>Desmentido.</strong></p>
+<p>A revisão sistemática de Oranchuk e colegas (2019) reuniu 26 trabalhos sobre treino isométrico de pelo menos 3 semanas: melhorias substanciais de hipertrofia e força máxima, em todas as intensidades estudadas. Dois detalhes importam na calistenia: treinar a comprimentos musculares maiores produziu mais hipertrofia (0,86-1,69% por semana contra 0,08-0,83% a comprimentos curtos) e melhor transferência para o desempenho dinâmico; já melhorar a estrutura e a função do tendão exige intensidades altas, iguais ou superiores a 70%.</p>
+<h3>Afirmação 5 — "O peso do corpo não dá força como os pesos"</h3>
+<p><strong>Desmentido.</strong></p>
+<p>Kotarsky e colegas (2018) dividiram 23 homens treinados em dois grupos durante 4 semanas, três sessões por semana: um progredia com variantes cada vez mais difíceis de flexões, o outro com supino. O 1RM de supino subiu nos dois grupos, sem diferenças entre eles. Onde o grupo das flexões melhorou mais foi na própria escala de flexões: outra vez especificidade, na direção treinada.</p>
+<h3>Afirmação 6 — "Passa à seguinte quando aguentares 10-15 segundos"</h3>
+<p><strong>Não verificável.</strong></p>
+<p>Não existe nenhum estudo que tenha testado um limiar de segundos como critério para mudar de posição na calistenia. O limiar que circula nos vídeos é uma convenção útil, não um dado. O que a literatura oferece são os parâmetros das isometrias, e é uma base melhor para decidir.</p>
+<h2>Quanto aguentar e a que intensidade</h2>
+<p>Lum e Barbosa (2019) resumiram os parâmetros do treino isométrico para dois objetivos diferentes. A terceira coluna é a minha tradução desses números para o front lever: a tradução é minha, não está no estudo.</p>
+<table><thead><tr><th>Objetivo</th><th>Parâmetros da revisão</th><th>Como se traduz numa suspensão</th></tr></thead><tbody><tr><td>Hipertrofia</td><td>70-75% da contração máxima, suspensões de 3-30 s, mais de 80-150 s totais por sessão, durante mais de 36 sessões</td><td>Uma posição que aguentes 10-20 segundos, repetida até chegares a cerca de dois minutos de tempo total</td></tr><tr><td>Força máxima</td><td>80-100% da contração máxima, suspensões de 1-5 s, 30-90 s totais por sessão, em vários ângulos ou no ângulo alvo</td><td>Uma posição em que falhas aos 5-8 segundos, suspensões muito curtas e muito descanso, 30-90 segundos no total</td></tr></tbody></table>
+<p><em>Tabela Nurvan: colunas 1 e 2 com os parâmetros reportados por Lum e Barbosa, 2019 (Int J Sports Med); a coluna 3 é uma aplicação nossa ao front lever, não medida no estudo.</em></p>
+<p>Lida assim, a pergunta "quantas progressões" torna-se outra: quantas posições preciso para cobrir tanto o trabalho pesado e curtíssimo como o mais longo? Normalmente duas chegam.</p>
+<h2>Como aplicar</h2>
+<ol class="steps"><li><strong>Escolhe duas posições, não seis.</strong> Uma em que falhes aos 5-8 segundos (é o teu trabalho de força) e outra que aguentes 10-20 segundos com as costas ainda planas (é o teu volume). Podem ser tuck e advanced tuck, ou advanced tuck e uma perna: depende só de onde estás.</li><li><strong>Muda uma variável de cada vez.</strong> Ou a posição ou os segundos. Se mexeres nas duas não saberás o que resultou, e nove em cada dez vezes subirás demasiado depressa.</li><li><strong>Trabalha também perto do alvo.</strong> Dada a transferência parcial entre posições, mete todas as semanas alguns segundos na posição mais difícil que aguentes, nem que seja só uma descida controlada a partir da barra.</li><li><strong>Conta os segundos totais, não as séries.</strong> Trinta a noventa segundos no total para o trabalho de força, cerca de 150 para o de volume: é a unidade que a literatura usa.</li><li><strong>Volta a testar a posição alvo a cada 3-4 semanas,</strong> não todos os treinos. Testar consome treino.</li><li><strong>Se aparecer dor no cotovelo ou no ombro, para e manda ver.</strong> O front lever carrega o tendão do bíceps e a coifa dos rotadores em posição alongada; a dor não é um degrau da progressão.</li></ol>
+<div class="app"><div><h3>Experimenta o Nurvan — cada posição tem o seu histórico</h3><p>No Nurvan cada variante do front lever é um exercício à parte: suspensões, segundos e RIR ficam separados entre tuck, advanced tuck e straddle, por isso vês que posição está mesmo a progredir e qual está parada há três semanas. As séries de aquecimento são propostas automaticamente e o histórico diz-te se estás a somar segundos ou apenas séries.</p></div><a class="cta" href="https://nurvan.app">Experimenta o Nurvan</a></div>
+<h2>Perguntas frequentes</h2>
+<details><summary>Quantas progressões são mesmo precisas para o front lever?</summary><p>Não existe um número válido para todos e nenhum estudo testou um. São precisas posições suficientes para treinar tanto suspensões curtas e muito difíceis como mais longas, e suficientemente próximas entre si para progredir sem saltos: na prática, duas posições de cada vez, que vão mudando à medida que melhoras.</p></details>
+<details><summary>Quanto tempo demora chegar ao full front lever?</summary><p>Nenhum estudo mediu isso, por isso qualquer "seis meses" lido online é uma anedota. O que os dados dizem é que a variabilidade individual da resposta ao treino é enorme (Hubal et al., 2005), por isso comparar os teus tempos com os de outra pessoa não informa nada.</p></details>
+<details><summary>Melhor suspensões longas ou negativas a partir da barra?</summary><p>Servem para coisas diferentes. As suspensões longas numa posição sustentável dão volume; as negativas e as suspensões curtíssimas numa posição quase impossível dão a intensidade alta de que a força e os tendões precisam (Oranchuk et al., 2019). Um programa sensato tem as duas.</p></details>
+<details><summary>Tenho de acrescentar pesos?</summary><p>Não é obrigatório: a progressão com peso do corpo constrói tanta força como a barra nos exercícios correspondentes (Kotarsky et al., 2018). Os pesos continuam cómodos para dosear a carga com precisão, coisa que com as alavancas é mais grosseira.</p></details>
+<h2>Leia também</h2>
+<ul><li><a href="/pt/blog/levantamento-terra-com-tempo-ate-o-joelho">Levantamento terra com tempo até ao joelho: serve?</a> — outro caso em que treinar um pedaço do movimento não treina o movimento todo.</li><li><a href="/pt/blog/treinar-forca-musculo-e-cardio-juntos">Força, músculo e cardio juntos: dá?</a> — como encaixar objetivos diferentes na mesma semana sem os anular.</li><li><a href="/pt/blog/treino-gerado-por-ia-estudos">Treino gerado por IA: o que dizem os estudos</a> — até que ponto confiar num modelo para escrever a tua progressão.</li></ul>
+<h2>Fontes</h2>
+<ul><li>Lanza MB, Balshaw TG, Folland JP, 2019. Is the joint-angle specificity of isometric resistance training real? And if so, does it have a neural basis? <em>European Journal of Applied Physiology</em> 119(11-12):2465-2476. PMID 31522276. <a href="https://doi.org/10.1007/s00421-019-04229-z">DOI</a></li><li>Oranchuk DJ, Storey AG, Nelson AR, Cronin JB, 2019. Isometric training and long-term adaptations: Effects of muscle length, intensity, and intent: A systematic review. <em>Scandinavian Journal of Medicine &amp; Science in Sports</em> 29(4):484-503. PMID 30580468. <a href="https://doi.org/10.1111/sms.13375">DOI</a></li><li>Lum D, Barbosa TM, 2019. Brief Review: Effects of Isometric Strength Training on Strength and Dynamic Performance. <em>International Journal of Sports Medicine</em> 40(6):363-375. PMID 30943568. <a href="https://doi.org/10.1055/a-0863-4539">DOI</a></li><li>Hubal MJ, Gordish-Dressman H, Thompson PD, et al., 2005. Variability in muscle size and strength gain after unilateral resistance training. <em>Medicine and Science in Sports and Exercise</em> 37(6):964-72. PMID 15947721. <a href="https://pubmed.ncbi.nlm.nih.gov/15947721/">PubMed</a></li><li>Kotarsky CJ, Christensen BK, Miller JS, Hackney KJ, 2018. Effect of Progressive Calisthenic Push-up Training on Muscle Strength and Thickness. <em>Journal of Strength and Conditioning Research</em> 32(3):651-659. PMID 29466268. <a href="https://doi.org/10.1519/JSC.0000000000002345">DOI</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>International Journal of Sports Medicine</em> 45(7):504-510. PMID 38286426. <a href="https://doi.org/10.1055/a-2256-5857">DOI</a></li></ul>
+<p>Referências recuperadas através da PubMed. Ponto de partida: uma publicação de <a href="https://www.instagram.com/p/DdqOETQjpuD/">Alessandro Mainente</a> de 24 de setembro de 2026. O conteúdo da publicação foi usado apenas para identificar o tema e as afirmações a verificar: nenhum texto, imagem ou estrutura foi reaproveitado.</p>
+<p>Giammaria Loi é o fundador do Nurvan. Treina com pesos desde 2012, trabalha como personal trainer e coach certificado FIPE desde 2013 e compete em powerlifting a nível nacional desde 2018. Cada artigo que assina parte dos estudos científicos e chega ao que funciona mesmo no ginásio.</p>
+<p class="note">Nota: conteúdo informativo, não substitui a opinião de um médico ou profissional.</p>
+</main>
+<footer>NURVAN · nurvan.app · 6 de novembro de 2026</footer>
+</body>
+</html>

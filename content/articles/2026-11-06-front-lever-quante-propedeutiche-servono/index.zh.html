@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>前水平：到底需要多少个过渡动作？ | Nurvan</title>
+<meta name="description" content="前水平没有固定数量的过渡动作。等长训练研究告诉你：真正需要几个姿势，以及力量在姿势之间能传递多少。">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">训练</a><a href="#">营养</a><a href="#">补剂</a><a href="#" class="on">博客</a></nav><a class="cta" href="https://nurvan.app">下载应用</a></div></header>
+<main class="wrap" lang="zh">
+<div class="crumb">博客 · 训练</div>
+<h1>前水平：到底需要多少个过渡动作？</h1>
+<p class="lede">团身、进阶团身、单腿、分腿、半展体：前水平的过渡动作清单流传多年，仿佛那是一把台阶数量固定、人人通用的梯子。问题也总是同一个——练完几个才能上全展体？等长训练的文献给不出数字，但给了更有用的东西：你在一个姿势里练出来的力量，有多少真的能带到下一个姿势。这个比例，决定了梯子该怎么搭。</p>
+<div class="meta"><span>2026 年 11 月 6 日</span><span><b>15</b> 分钟阅读</span><span><b>6</b> 篇参考研究</span><span>作者 <a href="/autore/giammaria-loi">Giammaria Loi</a> · 更新于 2026 年 11 月 6 日</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="前水平：到底需要多少个过渡动作？"><figcaption class="cap">照片：KoolShooters — Pexels，Pexels 许可（免费使用）</figcaption></figure>
+<div class="box"><h2>要点速览</h2><ul><li>没有任何研究规定过渡动作的数量：三个、四个、六个都不是任何人的必修课。</li><li>等长力量在很大程度上与姿势绑定：只练一个角度，力量在那里涨得最多（+12%），越远涨得越少，到 30 度之外就不再增长（Lanza et al., 2019）。</li><li>所以过渡动作有用，但不是用来打勾的清单：它们的作用是覆盖你想变强的那些姿势。</li><li>需要几个阶段因人而异，因为训练反应本身就因人而异：同一套计划、585 人，12 周的力量增幅从 0 到 +250%（Hubal et al., 2005）。</li><li>把姿势变难或者多加几秒都能进步：在力量和围度上，两条路打平（Chaves et al., 2024）。</li></ul></div>
+<h2>从一个过渡到下一个，真正变的是什么</h2>
+<p>做前水平时身体水平悬在杠下：肩关节是支点，体重把肩前方的一切往下拽。难度不取决于你有多重，而取决于重心离肩有多远。把膝盖收到胸前，这段距离变短；伸直一条腿，它变长；分腿打开，又短了一些。换句话说，过渡动作就是同一个动作的不同强度——相当于杠铃上的片。</p>
+<p>但和杠铃有一个关键差别。改变杠杆不只改变负荷：它同时改变关节角度，也改变你发力时所处的位置。研究要说的，正是这一点。</p>
+<h2>研究到底怎么说</h2>
+<h3>说法 1 ——「上全展体之前必须练完 X 个过渡」</h3>
+<p><strong>不成立。</strong></p>
+<p>没有研究检验过「几个阶段」，因为产生适应的不是数字，而是渐进超负荷。而超负荷有不止一种加法。Chaves 等人（2024）让 39 名未训练者进行 10 周双腿对照训练：一条腿靠加重量进步，另一条靠加次数。腿屈伸的 1RM 加重量组从 52.9 公斤升到 69.1 公斤，加次数组从 51.7 公斤升到 66.8 公斤；股外侧肌横截面从 21.3 升到 23.5 平方厘米，对比 21.1 升到 23.4 平方厘米。两种方法没有差别。</p>
+<p>换到前水平上：换更难的姿势，和在已经掌握的姿势上多加几秒，都是正当的进步方式。你会经过几个过渡动作，是剂量安排的结果，不是一条规则。</p>
+<h3>说法 2 ——「团身练出来的力量能带到全展体」</h3>
+<p><strong>不成立，至少不完全成立。</strong></p>
+<p>对练静力的人来说，这是最有意思的一项研究。Lanza、Balshaw 和 Folland（2019）让 13 人在 4 周内完成 14 次等长训练，膝角固定在 65 度，与 9 名对照者比较，然后在五个不同角度测力。</p>
+<figure><div class="chart"><svg role="img" aria-label="柱状图：只练一个角度四周后最大等长力量的增幅，35 度增加 5%，50 度增加 11%，训练角度 65 度增加 12%，80 度增加 7%，95 度没有显著提升" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">力量能传递到其他角度多少</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">最大力量增幅（%）</text>
+<line x1="100" y1="360.0" x2="860" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="364.0" fill="#a0a0a0" font-size="13" text-anchor="end">0%</text>
+<line x1="100" y1="322.9" x2="860" y2="322.9" stroke="#262626" stroke-width="1"/>
+<text x="88" y="326.9" fill="#a0a0a0" font-size="13" text-anchor="end">2%</text>
+<line x1="100" y1="285.7" x2="860" y2="285.7" stroke="#262626" stroke-width="1"/>
+<text x="88" y="289.7" fill="#a0a0a0" font-size="13" text-anchor="end">4%</text>
+<line x1="100" y1="248.6" x2="860" y2="248.6" stroke="#262626" stroke-width="1"/>
+<text x="88" y="252.6" fill="#a0a0a0" font-size="13" text-anchor="end">6%</text>
+<line x1="100" y1="211.4" x2="860" y2="211.4" stroke="#262626" stroke-width="1"/>
+<text x="88" y="215.4" fill="#a0a0a0" font-size="13" text-anchor="end">8%</text>
+<line x1="100" y1="174.3" x2="860" y2="174.3" stroke="#262626" stroke-width="1"/>
+<text x="88" y="178.3" fill="#a0a0a0" font-size="13" text-anchor="end">10%</text>
+<line x1="100" y1="137.1" x2="860" y2="137.1" stroke="#262626" stroke-width="1"/>
+<text x="88" y="141.1" fill="#a0a0a0" font-size="13" text-anchor="end">12%</text>
+<line x1="100" y1="100.0" x2="860" y2="100.0" stroke="#262626" stroke-width="1"/>
+<text x="88" y="104.0" fill="#a0a0a0" font-size="13" text-anchor="end">14%</text>
+<rect x="136.5" y="267.1" width="79.0" height="92.9" fill="#aa8a2e" rx="3"/>
+<text x="176.0" y="255.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+5%</text>
+<text x="176.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">35°</text>
+<rect x="288.5" y="155.7" width="79.0" height="204.3" fill="#aa8a2e" rx="3"/>
+<text x="328.0" y="143.7" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+11%</text>
+<text x="328.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">50°</text>
+<rect x="440.5" y="137.1" width="79.0" height="222.9" fill="#d4af37" rx="3"/>
+<text x="480.0" y="125.1" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+12%</text>
+<text x="480.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">65° 训练角度</text>
+<rect x="592.5" y="230.0" width="79.0" height="130.0" fill="#aa8a2e" rx="3"/>
+<text x="632.0" y="218.0" fill="#f3e5ab" font-size="18" font-weight="700" text-anchor="middle">+7%</text>
+<text x="632.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">80°</text>
+<rect x="744.5" y="350.0" width="79.0" height="10" fill="none" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="784.0" y="340.0" fill="#a0a0a0" font-size="13" text-anchor="middle">无显著提升</text>
+<text x="784.0" y="386.0" fill="#f0f0f0" font-size="14" text-anchor="middle">95°</text>
+<line x1="100" y1="360" x2="860" y2="360" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">数据：Lanza et al., 2019 — 在 65° 完成 14 次等长训练</text>
+</svg></div><figcaption class="cap">Nurvan 图表，数据来自 Lanza et al., 2019（Eur J Appl Physiol）。数值取自原始摘要；13 人在 65 度训练，9 人对照，4 周 14 次训练。95 度未报告显著提升。</figcaption></figure>
+<p>力量主要长在练过的地方，越远长得越少：超出工作角度 30 度就已经测不到了。别把类比拉得太远——那项研究测的是伸膝，不是杠下的肩——但原理适用于所有静力：迁移存在，是部分的，并且随着与训练姿势的距离而衰减。<a href="/zh/blog/yingla-manshu-zhi-xigai">硬拉慢速到膝盖</a>练不到整个动作，也是同一个道理。</p>
+<p>所以哪怕没有任何数字是必修的，过渡动作依然有意义：只待在团身里，你练出来的大部分也只留在团身里。</p>
+<h3>说法 3 ——「需要几个，取决于你的身体条件」</h3>
+<p><strong>需要补充。</strong></p>
+<p>路径因人而异是对的，但最扎实的证据不是关于杠杆，而是关于训练反应。Hubal 等人（2005）让 585 人用完全相同的计划训练 12 周，并在训练前后测量肘屈肌。</p>
+<figure><div class="chart"><svg role="img" aria-label="区间图：同一套计划 12 周后的个体反应，动态 1RM 从 0 到 +250%，最大等长力量从 −32% 到 +149%，肱二头肌横截面从 −2% 到 +59%" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 460" width="900" height="460" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="900" height="460" fill="#0c0c0c"/>
+<text x="40" y="48" fill="#f0f0f0" font-size="24" font-weight="700">同一套计划，585 人，结果天差地别</text>
+<text x="40" y="76" fill="#a0a0a0" font-size="14">12 周内的变化（%）</text>
+<line x1="346.1" y1="110" x2="346.1" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="346.1" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">-50%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="426.4" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">0%</text>
+<line x1="506.7" y1="110" x2="506.7" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="506.7" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">50%</text>
+<line x1="587.0" y1="110" x2="587.0" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="587.0" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">100%</text>
+<line x1="667.3" y1="110" x2="667.3" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="667.3" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">150%</text>
+<line x1="747.6" y1="110" x2="747.6" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="747.6" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">200%</text>
+<line x1="827.9" y1="110" x2="827.9" y2="350" stroke="#262626" stroke-width="1"/>
+<text x="827.9" y="372" fill="#a0a0a0" font-size="13" text-anchor="middle">250%</text>
+<line x1="426.4" y1="110" x2="426.4" y2="350" stroke="#a0a0a0" stroke-width="1.5"/>
+<text x="40" y="132.0" fill="#f0f0f0" font-size="15">动态 1RM</text>
+<rect x="426.4" y="140.0" width="401.5" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="424.4" y="135.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="825.9" y="135.0" width="4" height="36" fill="#d4af37"/>
+<text x="416.4" y="159.0" fill="#a0a0a0" font-size="14" text-anchor="end">+0%</text>
+<text x="837.9" y="159.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+250%</text>
+<text x="40" y="204.0" fill="#f0f0f0" font-size="15">最大等长力量</text>
+<rect x="375.0" y="212.0" width="290.7" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="373.0" y="207.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="663.7" y="207.0" width="4" height="36" fill="#d4af37"/>
+<text x="365.0" y="231.0" fill="#a0a0a0" font-size="14" text-anchor="end">-32%</text>
+<text x="675.7" y="231.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+149%</text>
+<text x="40" y="276.0" fill="#f0f0f0" font-size="15">肱二头肌横截面</text>
+<rect x="423.2" y="284.0" width="98.0" height="26" fill="#aa8a2e" rx="4"/>
+<rect x="421.2" y="279.0" width="4" height="36" fill="#f3e5ab"/>
+<rect x="519.1" y="279.0" width="4" height="36" fill="#d4af37"/>
+<text x="413.2" y="303.0" fill="#a0a0a0" font-size="14" text-anchor="end">-2%</text>
+<text x="531.1" y="303.0" fill="#d4af37" font-size="16" font-weight="700" text-anchor="start">+59%</text>
+<text x="40" y="430" fill="#a0a0a0" font-size="13">数据：Hubal et al., 2005 — 从最小值到最大值的区间</text>
+</svg></div><figcaption class="cap">Nurvan 图表，数据来自 Hubal et al., 2005（Med Sci Sports Exerc）。最小值到最大值的区间取自原始摘要；585 名受试者，342 名女性、243 名男性，12 周单臂渐进训练。</figcaption></figure>
+<p>同样的计划、同样的周期：有人力量翻倍，有人原地不动。面对这样的离散度，预测某个具体的人需要几个阶段，根本做不到。</p>
+<p>需要补充的是「身体条件」。杠杆有影响是几何问题，不是观点：力量相同时，躯干和腿越长，力臂就越长。但没有研究测量过，单凭身体比例能在多大程度上预测所需的过渡数量。这是个合理的解释，不是一项数据。</p>
+<h3>说法 4 ——「等长训练练不出真正的力量」</h3>
+<p><strong>不成立。</strong></p>
+<p>Oranchuk 等人（2019）的系统综述汇总了 26 项至少持续 3 周的等长训练研究：在所有研究过的强度下，肥大和最大力量都有实质性提升。其中两个细节对街头健身尤其重要：在更长的肌肉长度上训练带来更多肥大（每周 0.86%-1.69%，对比短长度的 0.08%-0.83%），对动态表现的迁移也更好；而要改善肌腱的结构与功能，则需要 70% 以上的高强度。</p>
+<h3>说法 5 ——「自重练不出铁片那样的力量」</h3>
+<p><strong>不成立。</strong></p>
+<p>Kotarsky 等人（2018）把 23 名有训练经验的男性分成两组，训练 4 周、每周三次：一组通过越来越难的俯卧撑变式进步，另一组练卧推。两组的卧推 1RM 都上升，组间没有差异。俯卧撑组真正提升更多的，是俯卧撑进阶本身：又一次特异性，朝着训练的方向。</p>
+<h3>说法 6 ——「能撑 10-15 秒就换下一个」</h3>
+<p><strong>无法验证。</strong></p>
+<p>没有任何研究把「撑住多少秒」当作换姿势的标准来检验过。视频里流传的门槛是一个好用的约定，不是数据。文献能提供的是等长训练的参数，那才是更好的决策依据。</p>
+<h2>撑多久、用多大强度</h2>
+<p>Lum 和 Barbosa（2019）总结了两种目标下的等长训练参数。第三列是我把这些数字翻译到前水平上的结果：翻译是我做的，研究里没有。</p>
+<table><thead><tr><th>目标</th><th>综述中的参数</th><th>在静力支撑上怎么落地</th></tr></thead><tbody><tr><td>肌肉肥大</td><td>最大收缩的 70%-75%，每次撑 3-30 秒，每次训练累计 80-150 秒以上，持续 36 次以上</td><td>选一个能撑 10-20 秒的姿势，重复到累计约两分钟</td></tr><tr><td>最大力量</td><td>最大收缩的 80%-100%，每次撑 1-5 秒，每次训练累计 30-90 秒，覆盖多个角度或目标角度</td><td>选一个 5-8 秒就掉下来的姿势，极短支撑、充分休息，累计 30-90 秒</td></tr></tbody></table>
+<p><em>Nurvan 表格：第 1、2 列为 Lum 和 Barbosa（2019，Int J Sports Med）报告的参数；第 3 列是我们对前水平的应用，研究中并未测量。</em></p>
+<p>这样一读，「需要多少个过渡」就变成了另一个问题：我需要几个姿势，才能同时覆盖极重极短的训练和较长的训练？通常两个就够。</p>
+<h2>怎么用</h2>
+<ol class="steps"><li><strong>选两个姿势，而不是六个。</strong> 一个让你在 5-8 秒掉下来（这是力量训练），一个你能保持背部平直撑住 10-20 秒（这是容量）。团身加进阶团身，或者进阶团身加单腿——取决于你现在在哪一级。</li><li><strong>一次只改一个变量。</strong> 要么改姿势，要么改秒数。两个一起动，你就分不清是什么起了作用，十有八九还会升得太快。</li><li><strong>也要靠近目标去练。</strong> 既然姿势之间只有部分迁移，每周都要在你能撑住的最难姿势上放几秒钟，哪怕只是从杠上控制着下放。</li><li><strong>数总秒数，不数组数。</strong> 力量训练累计三十到九十秒，容量训练约 150 秒：这才是文献使用的单位。</li><li><strong>每 3-4 周测一次目标姿势，</strong> 不要每次训练都测。测试本身会消耗训练。</li><li><strong>肘或肩出现疼痛就停下来去检查。</strong> 前水平会在拉长位置上给肱二头肌腱和肩袖施加负荷；疼痛不是进阶的一个台阶。</li></ol>
+<div class="app"><div><h3>试试 Nurvan —— 每个姿势都有自己的记录</h3><p>在 Nurvan 里，前水平的每个变式都是独立的动作：团身、进阶团身和分腿的支撑时间、秒数和 RIR 互不混淆，你能看出哪个姿势真的在进步，哪个已经停了三周。热身组会自动给出，历史记录会告诉你，你是在加秒数还是只在加组数。</p></div><a class="cta" href="https://nurvan.app">试试 Nurvan</a></div>
+<h2>常见问题</h2>
+<details><summary>练前水平到底需要几个过渡动作？</summary><p>没有适用于所有人的数字，也没有研究检验过。你需要足够多的姿势，既能练短而极难的支撑，也能练较长的支撑，而且彼此足够接近，才能不跳级地进步：实际操作中就是同时练两个姿势，随着水平提高而更换。</p></details>
+<details><summary>练到全展体前水平要多久？</summary><p>没有研究测量过，所以网上看到的「六个月」都是个人经历。数据说得清楚的是：个体训练反应的差异极大（Hubal et al., 2005），拿自己的进度和别人比没有参考价值。</p></details>
+<details><summary>长时间支撑好，还是从杠上做离心好？</summary><p>两者作用不同。在可承受姿势下的长支撑提供容量；在几乎做不到的姿势下做离心和极短支撑，提供力量与肌腱所需的高强度（Oranchuk et al., 2019）。合理的计划两者都有。</p></details>
+<details><summary>需要额外加负重训练吗？</summary><p>不是必须：在对应动作上，自重进阶带来的力量增长和杠铃相当（Kotarsky et al., 2018）。负重的好处是能精细调节，而靠杠杆调节只能是粗颗粒的。</p></details>
+<h2>延伸阅读</h2>
+<ul><li><a href="/zh/blog/yingla-manshu-zhi-xigai">硬拉慢速到膝盖：真的有用吗？</a> —— 另一个「练动作的一段并不等于练整个动作」的例子。</li><li><a href="/zh/blog/liliang-jirou-youyang-tongshi-xunlian">力量、肌肉和有氧能同时练吗？</a> —— 如何把不同目标塞进同一周而不互相抵消。</li><li><a href="/zh/blog/ai-shengcheng-jianshen-jihua">AI 生成健身计划：研究怎么说</a> —— 把自己的进阶交给模型，能信到什么程度。</li></ul>
+<h2>参考文献</h2>
+<ul><li>Lanza MB, Balshaw TG, Folland JP, 2019. Is the joint-angle specificity of isometric resistance training real? And if so, does it have a neural basis? <em>European Journal of Applied Physiology</em> 119(11-12):2465-2476. PMID 31522276. <a href="https://doi.org/10.1007/s00421-019-04229-z">DOI</a></li><li>Oranchuk DJ, Storey AG, Nelson AR, Cronin JB, 2019. Isometric training and long-term adaptations: Effects of muscle length, intensity, and intent: A systematic review. <em>Scandinavian Journal of Medicine &amp; Science in Sports</em> 29(4):484-503. PMID 30580468. <a href="https://doi.org/10.1111/sms.13375">DOI</a></li><li>Lum D, Barbosa TM, 2019. Brief Review: Effects of Isometric Strength Training on Strength and Dynamic Performance. <em>International Journal of Sports Medicine</em> 40(6):363-375. PMID 30943568. <a href="https://doi.org/10.1055/a-0863-4539">DOI</a></li><li>Hubal MJ, Gordish-Dressman H, Thompson PD, et al., 2005. Variability in muscle size and strength gain after unilateral resistance training. <em>Medicine and Science in Sports and Exercise</em> 37(6):964-72. PMID 15947721. <a href="https://pubmed.ncbi.nlm.nih.gov/15947721/">PubMed</a></li><li>Kotarsky CJ, Christensen BK, Miller JS, Hackney KJ, 2018. Effect of Progressive Calisthenic Push-up Training on Muscle Strength and Thickness. <em>Journal of Strength and Conditioning Research</em> 32(3):651-659. PMID 29466268. <a href="https://doi.org/10.1519/JSC.0000000000002345">DOI</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>International Journal of Sports Medicine</em> 45(7):504-510. PMID 38286426. <a href="https://doi.org/10.1055/a-2256-5857">DOI</a></li></ul>
+<p>文献通过 PubMed 检索。选题起点：<a href="https://www.instagram.com/p/DdqOETQjpuD/">Alessandro Mainente</a> 2026 年 9 月 24 日的帖子。该帖子仅用于确定主题和需要核查的说法：没有沿用其中任何文字、图片或结构。</p>
+<p>Giammaria Loi 是 Nurvan 的创始人。他自 2012 年开始力量训练，自 2013 年起担任 FIPE 认证私人教练，自 2018 年起参加全国级力量举比赛。他署名的每一篇文章都从科学研究出发，落到健身房里真正有效的做法。</p>
+<p class="note">注：本文为科普内容，不能替代医生或专业人士的意见。</p>
+</main>
+<footer>NURVAN · nurvan.app · 2026 年 11 月 6 日</footer>
+</body>
+</html>
