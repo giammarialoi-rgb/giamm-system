@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const SOURCE_DATE = '2026-11-02';
+const SOURCE_DATE = '2026-11-09';
 const SEASON = '2026/27';
 const BASE = 'https://hyrox.com/event/';
 
