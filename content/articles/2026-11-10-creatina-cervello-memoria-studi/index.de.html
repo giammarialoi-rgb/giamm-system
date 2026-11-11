@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kreatin und Gehirn: was die Studien wirklich zeigen | Nurvan</title>
+<meta name="description" content="Macht Kreatin wacher im Kopf? Die EFSA lehnte die Aussage ab, die meistzitierte Meta-Analyse steht in der Kritik. Was bleibt, für wen und in welcher Dosis.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Ernährung</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">App laden</a></div></header>
+<main class="wrap" lang="de">
+<div class="crumb">Blog · Supplements · Kreatin</div>
+<h1>Kreatin und Gehirn: was die Studien wirklich zeigen</h1>
+<p class="lede">Seit etwa einem Jahr ist Kreatin keine reine Gym-Sache mehr: Die Suchanfragen nach "creatine for brain" sind in zwölf Monaten um 118 % gestiegen, und der Messlöffel wird als mentales Upgrade verkauft. Im selben Zeitraum hat die europäische Lebensmittelbehörde die kognitive Aussage abgelehnt, und die meistzitierte Meta-Analyse geriet wegen eines Zählfehlers in die Kritik. Was davon bleibt, für wen und in welcher Dosis.</p>
+<div class="meta"><span><b>11</b> Min. Lesezeit</span><span><b>8</b> zitierte Studien</span><span>Von <a href="/autore/giammaria-loi">Giammaria Loi</a> · aktualisiert am 10. November 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Umgekippter weißer Messlöffel mit verstreutem Supplementpulver auf hellblauem Untergrund"><figcaption class="cap">Foto von Towfiqu barbhuiya — Pexels, Pexels-Lizenz (kostenlose Nutzung)</figcaption></figure>
+<div class="box"><h2>Kurz gefasst</h2><ul><li><strong>Die EFSA sagte Nein.</strong> 2024 kam das europäische Gremium zu dem Schluss, dass ein Ursache-Wirkungs-Zusammenhang zwischen Kreatin und verbesserter kognitiver Funktion <strong>nicht belegt ist</strong>.</li><li><strong>Die meistzitierte Meta-Analyse ist umstritten.</strong> Xu und Kollegen (2024) berichten einen Effekt auf das Gedächtnis (SMD 0,31), doch ein Kommentar von 2026 zeigt, dass dieselben Teilnehmenden mehrfach gezählt wurden: Die Beobachtungen übersteigen die Zahl der randomisierten Personen.</li><li><strong>Richtig gerechnet bleibt nur das Alter.</strong> Als derselbe Fehler in einer anderen Meta-Analyse korrigiert wurde, verschwand der Gedächtniseffekt bis auf ältere Menschen: <strong>SMD 0,88</strong> bei 66-76 Jahren gegenüber <strong>0,03</strong> bei Jüngeren.</li><li><strong>Die Dosen mit Signal sind nicht die aus dem Messlöffel.</strong> Die Signale stammen von 20 g täglich über 5-7 Tage oder von Einzeldosen von 0,2-0,35 g/kg — <strong>14 bis 24,5 g</strong> bei 70 kg Körpergewicht — und zwar nach einer schlaflosen Nacht.</li><li><strong>Der Engpass ist die Blut-Hirn-Schranke.</strong> In den Muskel gelangt Kreatin leicht, ins Gehirn deutlich weniger, und die gemessenen Anstiege bleiben moderat.</li></ul></div>
+<h2>Warum „Kreatin fürs Gehirn“ gerade überall ist</h2>
+<p>Das Signal ist messbar. Die englische Suchanfrage "creatine for brain" wuchs im Jahresvergleich um 118 % und liegt bei rund 22.000 Suchen pro Monat (Glimpse-Daten mit Stand April 2025). Im selben Zeitraum wanderte Kreatin vom Regal für Sportsupplemente in das für Gehirngesundheit, Stimmung und Wechseljahre.</p>
+<p>Die Forschung hat es bemerkt. 2025 veröffentlichte das <em>Journal of Nutrition</em> einen Perspektivbeitrag mit dem Titel, wörtlich, „Versprechen, Beleg und öffentliche Wahrnehmung“: Der Autor beschreibt eine öffentliche und kommerzielle Begeisterung, die Verkäufe, Verordnungen und Social-Media-Interaktionen hochschnellen ließ — bei einer Evidenzlage, die, seine Formulierung, paradoxerweise begrenzt geblieben ist (Eckert, 2025).</p>
+<p>Es geht hier nicht darum, Kreatin zu verteidigen oder anzugreifen. Für den Muskel bleibt es eines der am besten belegten Supplemente überhaupt, weshalb es in unserer <a href="/de/blog/kraftsport-supplemente-tier-list">Tier-List der Kraftsport-Supplemente</a> ganz oben steht. Die Frage ist enger: Wie viel von dem, was du über das Gehirn liest, trägt die Datenlage wirklich?</p>
+<h2>Muskel ja, Gehirn ist eine andere Baustelle</h2>
+<p>Der Grund, warum das eine nicht das andere bedeutet, ist anatomisch. Der Muskel nimmt Kreatin über einen eigenen Transporter auf, der Speicher steigt messbar. Das Gehirn liegt hinter der <strong>Blut-Hirn-Schranke</strong>, dem Filter, der entscheidet, was aus dem Blut ins Nervensystem gelangt — und dieser Filter lässt weit weniger Kreatin durch.</p>
+<p>Eine Übersicht von 2025 in <em>Nutrition and Health</em> stellt genau das in den Mittelpunkt: Die zentrale Unsicherheit ist, ob oral zugeführtes Kreatin in ausreichender Menge ins Gehirn gelangt, um den Stoffwechsel der Neurone zu verändern. Einige Studien zeigen moderate Anstiege des Hirnkreatins, doch methodische Grenzen, individuelle Variabilität und fehlende standardisierte Protokolle verhindern feste Schlüsse. Das Fazit des Autors ist unmissverständlich: Die Einnahme zu kognitiven Zwecken bei Älteren ist vorerst <strong>eine Hypothese, keine etablierte klinische Praxis</strong> (Machado, 2025).</p>
+<p>Behalte das beim Weiterlesen im Kopf. Die ganze Zahlendebatte beginnt mit einem Transportproblem: Wenn das Molekül nicht ankommt, kann es keinen Effekt geben, so elegant der Mechanismus auf dem Papier auch wirkt.</p>
+<h2>Die Meta-Analyse, die alle zitieren, hat ein Zählproblem</h2>
+<p>Wer nach „Kreatin und Gedächtnis“ sucht, landet fast immer bei der systematischen Übersicht mit Meta-Analyse von Xu und Kollegen, 2024 in <em>Frontiers in Nutrition</em> erschienen: 16 randomisierte Studien, 492 Teilnehmende zwischen 20,8 und 76,4 Jahren. Die Ergebnisse wirken eindeutig — Gedächtnis SMD 0,31 (95-%-KI: 0,18-0,44), Aufmerksamkeitszeit -0,31, Verarbeitungsgeschwindigkeit -0,51 — ohne Effekt auf die Gesamtkognition oder die exekutiven Funktionen.</p>
+<p>Im April 2026 veröffentlichte dieselbe Zeitschrift einen Kommentar, der die Methode zerlegt. Mehrere eingeschlossene Studien berichten mehrere korrelierte kognitive Messungen derselben Teilnehmenden — teils sieben oder mehr Gedächtnis-Subtests pro Person — und diese Messungen wurden als unabhängige Effektgrößen behandelt. Die Folge: In der gepoolten Analyse <strong>übersteigt die Zahl der Beobachtungen die Zahl der tatsächlich randomisierten Personen</strong> (Citherlet, 2026).</p>
+<p>Das nennt man Doppelzählung, ein Fehler in der Analyseeinheit. Er bläht Präzision und statistische Power künstlich auf: Das Konfidenzintervall fällt enger aus, als die Daten zulassen, und ein unsicherer Effekt wirkt sicher.</p>
+<p>Es ist keine Einzelkritik. Die EFSA hatte denselben Punkt schon 2024 angeführt: Das Zusammenfassen nicht unabhängiger kognitiver Ergebnisse in dieser Meta-Analyse habe die Stichprobengrößen aufgebläht, weshalb aus diesen Daten keine Schlüsse gezogen werden könnten.</p>
+<p>Am lehrreichsten ist jedoch eine frühere Arbeit. Die Meta-Analyse von Prokopidis und Kollegen aus dem Jahr 2023 zum Gedächtnis bei Gesunden hatte denselben Mangel. Als die Autoren die Analyse mit einer angemessenen Methode wiederholten, war der Gesamteffekt von Kreatin auf das Gedächtnis <strong>nicht mehr statistisch signifikant — außer bei Älteren</strong>.</p>
+<p>Dieses Detail erklärt einen Großteil der Verwirrung, und es war bereits in den 2023 publizierten Subgruppen sichtbar: Bei 66-76 Jahren lag der Gedächtniseffekt bei SMD 0,88 (95-%-KI: 0,22-1,55), bei 11-31 Jahren bei 0,03 (95-%-KI: -0,14 bis 0,20), also null. Dosis (2,2 bis 20 g täglich), Dauer (5 Tage bis 24 Wochen), Geschlecht und geografische Herkunft änderten daran nichts.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" role="img" aria-label="Punktdiagramm mit Konfidenzintervallen: Der Effekt von Kreatin auf das Gedächtnis liegt bei SMD 0,88 bei Älteren von 66 bis 76 Jahren, bei 0,29 über alle gesunden Erwachsenen und bei 0,03 bei Jüngeren von 11 bis 31 Jahren (nicht signifikant)">
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="28" y="40" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700">Kreatin und Gedächtnis: der Effekt hängt vom Alter ab</text>
+<text x="28" y="66" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13">Standardisierte Mittelwertdifferenz mit 95-%-Konfidenzintervall, 8 randomisierte Studien</text>
+<line x1="330.0" y1="98" x2="330.0" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="330.0" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">-0,4</text>
+<line x1="420.9" y1="98" x2="420.9" y2="340" stroke="#a0a0a0" stroke-width="1"/>
+<text x="420.9" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0</text>
+<line x1="511.8" y1="98" x2="511.8" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="511.8" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0,4</text>
+<line x1="602.7" y1="98" x2="602.7" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="602.7" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0,8</text>
+<line x1="693.6" y1="98" x2="693.6" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="693.6" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">1,2</text>
+<line x1="784.5" y1="98" x2="784.5" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="784.5" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">1,6</text>
+<text x="316" y="137" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Alle gesunden Erwachsenen</text>
+<line x1="430.0" y1="132" x2="541.4" y2="132" stroke="#d4af37" stroke-width="2"/>
+<line x1="430.0" y1="124" x2="430.0" y2="140" stroke="#d4af37" stroke-width="2"/>
+<line x1="541.4" y1="124" x2="541.4" y2="140" stroke="#d4af37" stroke-width="2"/>
+<circle cx="486.8" cy="132" r="7" fill="#d4af37"/>
+<text x="553.4" y="137" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,29</text>
+<text x="316" y="155" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">8 randomisierte Studien</text>
+<text x="316" y="213" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Ältere (66-76 Jahre)</text>
+<line x1="470.9" y1="208" x2="773.2" y2="208" stroke="#d4af37" stroke-width="2"/>
+<line x1="470.9" y1="200" x2="470.9" y2="216" stroke="#d4af37" stroke-width="2"/>
+<line x1="773.2" y1="200" x2="773.2" y2="216" stroke="#d4af37" stroke-width="2"/>
+<circle cx="620.9" cy="208" r="7" fill="#d4af37"/>
+<text x="785.2" y="213" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,88</text>
+<text x="316" y="231" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">Subgruppe</text>
+<text x="316" y="289" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Jüngere (11-31 Jahre)</text>
+<line x1="389.1" y1="284" x2="466.4" y2="284" stroke="#555555" stroke-width="2"/>
+<line x1="389.1" y1="276" x2="389.1" y2="292" stroke="#555555" stroke-width="2"/>
+<line x1="466.4" y1="276" x2="466.4" y2="292" stroke="#555555" stroke-width="2"/>
+<circle cx="427.7" cy="284" r="7" fill="#555555"/>
+<text x="478.4" y="289" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,03</text>
+<text x="316" y="307" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">Subgruppe</text>
+<text x="330" y="380" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11">Effektstärke (SMD)</text>
+<rect x="28" y="398" width="14" height="12" fill="#d4af37" rx="2"/>
+<text x="50" y="409" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">signifikant</text>
+<rect x="136" y="398" width="14" height="12" fill="#555555" rx="2"/>
+<text x="158" y="409" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">nicht signifikant</text>
+<text x="28" y="442" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Hinweis: In der Neuanalyse mit angemessener Methode war der Gesamteffekt nicht mehr signifikant, bei Älteren blieb er bestehen (Citherlet, 2026).</text>
+<text x="28" y="457" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Quelle: Prokopidis et al., 2023, Nutrition Reviews 81(4):416-427 (PMID 35984306). Werte aus dem Abstract.</text>
+<text x="872" y="40" fill="#aa8a2e" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div></figure>
+<h2>Warum die EFSA die Aussage abgelehnt hat</h2>
+<p>2024 beantragte ein Unternehmen bei der Europäischen Union, auf der Verpackung schreiben zu dürfen, dass Kreatin die kognitive Funktion verbessert. Das NDA-Gremium der EFSA prüfte 23 Interventionsstudien am Menschen und sagte Nein.</p>
+<p>Die Begründung ist wertvoller als das Urteil, denn sie ist eine Landkarte der Dosen. Der akute Effekt auf das Arbeitsgedächtnis zeigte sich in <strong>zwei Studien, bei 20 g täglich über 5-7 Tage</strong>. Bei Dosen zwischen 2,2 und 14 g täglich trat er nicht auf. Auch bei durchgehender Einnahme von <strong>5 g täglich über sechs Wochen</strong> nach einer fünftägigen Ladephase trat er nicht auf.</p>
+<p>Ein Effekt auf die Reaktionshemmung, ebenfalls bei 20 g täglich über 7 Tage, blieb ein isolierter Befund unter zehn Studien an Gesunden, ohne Wirkung auf andere kognitive Bereiche. Die drei Studien an Erkrankten stützten den Effekt nicht, und das Gremium bewertete auch die Plausibilität des Mechanismus als schwach. Im Wortlaut: <strong>ein Ursache-Wirkungs-Zusammenhang wurde nicht hergestellt</strong> (EFSA, 2024).</p>
+<p>Praktisch übersetzt: Die Dosis, die fast alle nehmen — der 5-Gramm-Messlöffel, der für den Muskel hervorragend funktioniert — ist nicht die Dosis, bei der jemand einen kognitiven Effekt gemessen hat.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" role="img" aria-label="Balkendiagramm: Dosen von 2,2 bis 14 g täglich zeigten keinen kognitiven Effekt, während 20 g täglich über 5-7 Tage und Einzeldosen von 0,2 und 0,35 g/kg (etwa 14 und 24,5 Gramm bei 70 kg) einen zeigten">
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="28" y="40" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700">Die Dosen mit Effekt sind nicht die aus dem Messlöffel</text>
+<text x="28" y="66" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13">Kreatin-Monohydrat: eingesetzte Dosis und kognitives Ergebnis in den Studien</text>
+<line x1="330.0" y1="98" x2="330.0" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="330.0" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0</text>
+<line x1="420.4" y1="98" x2="420.4" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="420.4" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">5</text>
+<line x1="510.8" y1="98" x2="510.8" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="510.8" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">10</text>
+<line x1="601.2" y1="98" x2="601.2" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="601.2" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">15</text>
+<line x1="691.5" y1="98" x2="691.5" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="691.5" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">20</text>
+<line x1="781.9" y1="98" x2="781.9" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="781.9" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">25</text>
+<text x="316" y="124" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">2,2 bis 14 g täglich</text>
+<text x="316" y="142" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">durchgehende Einnahme, 5 g über 6 Wochen eingeschlossen</text>
+<rect x="330" y="110" width="253.1" height="30" fill="#555555" rx="2"/>
+<text x="595.1" y="130" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">bis 14 g</text>
+<text x="316" y="186" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,2 g/kg als Einzeldosis</text>
+<text x="316" y="204" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">≈ 14 g bei 70 kg · nach 21 Stunden wach</text>
+<rect x="330" y="172" width="253.1" height="30" fill="#d4af37" rx="2"/>
+<text x="595.1" y="192" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">≈ 14 g</text>
+<text x="316" y="248" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">20 g täglich über 5-7 Tage</text>
+<text x="316" y="266" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">Arbeitsgedächtnis, 2 Studien</text>
+<rect x="330" y="234" width="361.5" height="30" fill="#d4af37" rx="2"/>
+<text x="703.5" y="254" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">20 g</text>
+<text x="316" y="310" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,35 g/kg als Einzeldosis</text>
+<text x="316" y="328" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">≈ 24,5 g bei 70 kg · nach 21 Stunden wach</text>
+<rect x="330" y="296" width="442.9" height="30" fill="#d4af37" rx="2"/>
+<text x="784.9" y="316" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">≈ 24,5 g</text>
+<text x="330" y="392" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11">Gramm Kreatin (Tagesdosis oder Einzeldosis)</text>
+<rect x="28" y="404" width="14" height="12" fill="#d4af37" rx="2"/>
+<text x="50" y="415" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">Effekt beobachtet</text>
+<rect x="169" y="404" width="14" height="12" fill="#555555" rx="2"/>
+<text x="191" y="415" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">kein Effekt</text>
+<text x="28" y="442" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Quellen: EFSA, 2024, EFSA Journal 22(11):e9100 (PMID 39564533); Gordji-Nejad et al., 2024 (PMID 38418482) und 2026 (PMID 42075005). Umrechnung von g/kg in Gramm für</text>
+<text x="28" y="457" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">70 kg: Berechnung von Nurvan.</text>
+<text x="872" y="40" fill="#aa8a2e" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div></figure>
+<h2>Das einzige Szenario mit überzeugenden Zahlen: die durchwachte Nacht</h2>
+<p>Es gibt eine Situation, in der die Daten interessanter werden, und sie ist zugleich die unglamouröseste: Schlafentzug.</p>
+<p>2024 verabreichte eine Gruppe des Forschungszentrums Jülich eine <strong>sehr hohe Einzeldosis</strong> Kreatin-Monohydrat — 0,35 g pro Kilogramm Körpergewicht — an Personen, die 21 Stunden wach gehalten wurden, und verfolgte per Magnetresonanzspektroskopie die energiereichen Phosphate im Gehirn. Kreatin veränderte diese Parameter, verhinderte den pH-Abfall und verbesserte kognitive Leistung und Verarbeitungsgeschwindigkeit gegenüber Placebo (Gordji-Nejad et al., 2024).</p>
+<p>2026 wiederholte dieselbe Gruppe das Experiment mit einer niedrigeren Dosis, 0,2 g pro Kilogramm, bei 29 Personen. Die durch das lange Wachbleiben verursachte kognitive Verschlechterung fiel bei logischen und numerischen Aufgaben, bei der sprachbezogenen Verarbeitungsgeschwindigkeit und im Test zur psychomotorischen Vigilanz geringer aus, mit einer Verbesserung von <strong>bis zu 12 %</strong>. Der Effekt war schwächer als bei der hohen Dosis, und Frauen profitierten in Logik, Vigilanz und Tempo stärker als Männer (Gordji-Nejad et al., 2026).</p>
+<p>Bevor du die große Dose bestellst, rechne nach. Bei 70 Kilogramm sind 0,2 g/kg <strong>14 Gramm</strong> auf einmal und 0,35 g/kg <strong>24,5 Gramm</strong>: fast drei und fast fünf Messlöffel zu 5 g. Das sind akute Laborprotokolle an kleinen Stichproben aus einer einzigen Forschungsgruppe, und sie messen die Erholung von einer schlaflosen Nacht — keine kognitive Steigerung bei jemandem, der normal schläft.</p>
+<p>Es gibt auch eine ehrlichere Lesart: Was du siehst, ist nicht Kreatin, das dich wacher macht, sondern Kreatin, das ein herbeigeführtes Energiedefizit teilweise ausgleicht. Interessant für Nachtschichten; kein Versprechen für besseres Lernen.</p>
+<h2>Was die Forschung wirklich sagt</h2>
+<table><thead><tr><th>Verbreitete Aussage</th><th>Urteil</th><th>Quelle</th></tr></thead><tbody><tr><td>„Kreatin verbessert die kognitive Funktion“</td><td><strong>Als Aussage abgelehnt</strong>: kein Ursache-Wirkungs-Zusammenhang belegt</td><td>EFSA, 2024</td></tr><tr><td>„Meta-Analysen belegen einen Gedächtniseffekt“</td><td><strong>Einzuschränken</strong>: Teilnehmende doppelt gezählt, eine Neuanalyse ist nötig</td><td>Citherlet, 2026; EFSA, 2024</td></tr><tr><td>„Wirkt in jedem Alter gleich“</td><td><strong>Widerlegt</strong>: SMD 0,88 bei 66-76 Jahren gegenüber 0,03 bei 11-31 Jahren</td><td>Prokopidis et al., 2023</td></tr><tr><td>„5 g täglich reichen auch fürs Gehirn“</td><td><strong>Nicht gestützt</strong>: kein Effekt bei 5 g/Tag über 6 Wochen; Signale liegen bei 20 g/Tag</td><td>EFSA, 2024</td></tr><tr><td>„Hilft nach einer schlaflosen Nacht“</td><td><strong>Im Labor bestätigt</strong>: bis zu +12 % mit einer Einzeldosis von 0,2 g/kg</td><td>Gordji-Nejad et al., 2024 und 2026</td></tr><tr><td>„Erreicht das Gehirn wie den Muskel“</td><td><strong>Widerlegt</strong>: die Blut-Hirn-Schranke begrenzt den Eintritt, Anstiege bleiben moderat</td><td>Machado, 2025</td></tr><tr><td>„Kreatin ist ein Nootropikum“</td><td><strong>Heute nicht überprüfbar</strong>: die öffentliche Begeisterung übersteigt die Evidenz deutlich</td><td>Eckert, 2025</td></tr></tbody></table>
+<h2>So setzt du es um</h2>
+<ol class="steps"><li><strong>Wenn du es für den Muskel nimmst, mach weiter.</strong> Nichts in diesem Artikel stellt die sportliche Nutzung von Kreatin infrage: Dort ist die Evidenz solide. Was nicht trägt, ist die kognitive Aussage.</li><li><strong>Erhöhe die Dosis nicht „fürs Gehirn“.</strong> Die Dosen, bei denen etwas gesehen wurde — 20 g täglich oder Einzeldosen von 14 bis 24,5 g — stammen aus überwachten Forschungsprotokollen, nicht aus einer Alltagsroutine. Außerhalb der Studie gibt es keinen Grund hochzugehen, und hohe Dosen bringen häufig Magen-Darm-Beschwerden mit sich.</li><li><strong>Über 65 bist du in der einzigen Subgruppe mit Signal.</strong> Es bleibt ein Signal, keine Therapie. Sprich vor dem Start mit deiner Ärztin oder deinem Arzt, besonders bei Nierenproblemen oder laufender Medikation.</li><li><strong>Erwarte null, wenn du gut schläfst.</strong> Bei jungen, ausgeruhten Erwachsenen ist der gemessene Gedächtniseffekt von null nicht zu unterscheiden. Schlaf bewegt dieselbe Variable tatsächlich — und kostet weniger.</li><li><strong>Sei skeptisch bei Produkten, die als „Kreatin für den Kopf“ verkauft werden.</strong> Wenn eine Formulierung mehr kostet, muss sie es belegen: Frag nach Dosis, Dauer und Population, in der der Effekt gemessen wurde.</li><li><strong>Protokolliere, was du tatsächlich nimmst.</strong> Zwischen dem, was du zu nehmen glaubst, und dem, was du nimmst, liegen vergessene Wochen und ungenaue Messlöffel. Wer wissen will, ob ein Supplement etwas bewirkt, muss die Daten festhalten. Und falls du noch bei der Form schwankst: Wir haben <a href="/de/blog/kreatin-gummies-wirksam">Gummies und Pulver verglichen</a>.</li></ol>
+<div class="app"><div><h3>Nurvan testen — Supplementierung, die du wirklich überprüfen kannst</h3><p>Das Supplement-Modul von Nurvan erfasst Form, Dosis und Uhrzeit dessen, was du nimmst, Kreatin eingeschlossen, und stellt es neben Lasten, Messwerte und Einheiten. Statt ein Supplement nach Gefühl zu beurteilen, siehst du Woche für Woche, was sich in der Zeit verändert hat, in der du es genommen hast.</p></div><a class="cta" href="https://nurvan.app">Nurvan testen</a></div>
+<h2>Häufige Fragen</h2>
+<details><summary>Verbessert Kreatin das Gedächtnis?</summary><p>Nicht so klar, dass man es behaupten könnte. Die Meta-Analysen mit positivem Befund haben dieselben Teilnehmenden mehrfach gezählt; nach der Korrektur blieb der Effekt nur bei Älteren. Die EFSA kam 2024 zu dem Schluss, dass der Ursache-Wirkungs-Zusammenhang nicht belegt ist.</p></details>
+<details><summary>Wie viel Kreatin braucht das Gehirn?</summary><p>Es gibt keine empfohlene Dosis, weil es keinen gesicherten Effekt gibt. In den Studien mit Befund lagen die Dosen bei 20 g täglich über 5-7 Tage oder bei Einzeldosen von 0,2-0,35 g/kg: weit mehr als der 5-g-Messlöffel, und unter kontrollierten Forschungsbedingungen. Das ist keine Anleitung zur Eigenanwendung.</p></details>
+<details><summary>Hilft Kreatin, wenn ich wenig schlafe?</summary><p>Zwei randomisierte Studien zu akutem Schlafentzug zeigten eine teilweise Erholung der kognitiven Leistung, bis zu 12 % mit einer Einzeldosis von 0,2 g/kg. Es sind kleine Stichproben aus derselben Forschungsgruppe, und sie betreffen eine durchwachte Nacht: Über Menschen mit normalem Schlaf sagen sie nichts.</p></details>
+<details><summary>Warum wirkt es im Muskel und nicht im Gehirn?</summary><p>Weil der Muskel es leicht aufnimmt, während das Gehirn durch die Blut-Hirn-Schranke geschützt ist, die deutlich weniger durchlässt. Die nach Supplementierung gemessenen Anstiege des Hirnkreatins bleiben moderat und schwanken stark zwischen Personen.</p></details>
+<h2>Mehr lesen</h2>
+<ul><li><a href="/de/blog/kreatin-gummies-wirksam">Kreatin Gummies: wirken sie wie Pulver?</a> — gleiches Molekül, teurere Form: was sich wirklich ändert.</li><li><a href="/de/blog/kreatin-ohne-training-ab-45">Kreatin ohne Training ab 45: was die Studie zeigt</a> — der andere Fall, in dem das Alter die Antwort auf ein Supplement verändert.</li><li><a href="/de/blog/kraftsport-supplemente-tier-list">Supplement-Tier-List für Kraft: was die Studien sagen</a> — wo Kreatin bei der Kraft steht und was daneben liegt.</li></ul>
+<h2>Quellen</h2>
+<ol class="refs"><li>EFSA Panel on Nutrition, Novel Foods and Food Allergens (Turck D, Bohn T, Cámara M, et al.), 2024. Creatine and improvement in cognitive function: Evaluation of a health claim pursuant to article 13(5) of regulation (EC) No 1924/2006. <em>EFSA Journal</em> 22(11):e9100. PMID 39564533. <a href="https://doi.org/10.2903/j.efsa.2024.9100">DOI 10.2903/j.efsa.2024.9100</a></li><li>Eckert I, 2025. Creatine Supplementation for Cognition: A Critical Perspective on Promise, Proof, and Public Perception. <em>The Journal of Nutrition</em> 155(10):3143-3147. PMID 40744234. <a href="https://doi.org/10.1016/j.tjnut.2025.07.016">DOI 10.1016/j.tjnut.2025.07.016</a></li><li>Citherlet T, 2026. Commentary: The effects of creatine supplementation on cognitive function in adults: a systematic review and meta-analysis. <em>Frontiers in Nutrition</em> 13:1716285. PMID 42039906. <a href="https://doi.org/10.3389/fnut.2026.1716285">DOI 10.3389/fnut.2026.1716285</a></li><li>Xu C, Bi S, Zhang W, Luo L, 2024. The effects of creatine supplementation on cognitive function in adults: a systematic review and meta-analysis. <em>Frontiers in Nutrition</em> 11:1424972. PMID 39070254. <a href="https://doi.org/10.3389/fnut.2024.1424972">DOI 10.3389/fnut.2024.1424972</a></li><li>Prokopidis K, Giannos P, Triantafyllidis KK, Kechagias KS, Forbes SC, Candow DG, 2023. Effects of creatine supplementation on memory in healthy individuals: a systematic review and meta-analysis of randomized controlled trials. <em>Nutrition Reviews</em> 81(4):416-427. PMID 35984306. <a href="https://doi.org/10.1093/nutrit/nuac064">DOI 10.1093/nutrit/nuac064</a></li><li>Gordji-Nejad A, Matusch A, Kleedörfer S, Jayeshkumar Patel H, Drzezga A, Elmenhorst D, Binkofski F, Bauer A, 2024. Single dose creatine improves cognitive performance and induces changes in cerebral high energy phosphates during sleep deprivation. <em>Scientific Reports</em> 14(1):4937. PMID 38418482. <a href="https://doi.org/10.1038/s41598-024-54249-9">DOI 10.1038/s41598-024-54249-9</a></li><li>Gordji-Nejad A, Matusch A, Hengstler L, Beer S, Kroll T, Klein S, Elmenhorst D, Bauer A, Drzezga A, 2026. Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance. <em>Nutrients</em> 18(8):1192. PMID 42075005. <a href="https://doi.org/10.3390/nu18081192">DOI 10.3390/nu18081192</a></li><li>Machado M, 2025. Creatine supplementation and cognitive aging: The challenge of crossing the blood-brain barrier. <em>Nutrition and Health</em> 32(3):761-763. PMID 41359040. <a href="https://doi.org/10.1177/02601060251404327">DOI 10.1177/02601060251404327</a></li></ol>
+<p>Literaturquellen über PubMed recherchiert. Thema aus einem Trendsignal gewählt: die Suchanfrage "creatine for brain", +118 % im Jahresvergleich und rund 22.000 Suchen pro Monat (Glimpse, Stand April 2025), zusammen mit dem kritischen Perspektivbeitrag im <em>Journal of Nutrition</em> 2025 über die Lücke zwischen Marketing und Evidenz.</p>
+<p><em>Giammaria Loi ist der Gründer von Nurvan. Er trainiert seit 2012 mit Gewichten, arbeitet seit 2013 als FIPE-zertifizierter Personal Trainer und Coach und startet seit 2018 national im Powerlifting. Jeder Artikel von ihm beginnt bei den Studien und endet bei dem, was im Gym wirklich funktioniert.</em></p>
+<p class="note">Hinweis: Informativer Inhalt, er ersetzt nicht den Rat einer Ärztin, eines Arztes oder einer Fachperson.</p>
+</main>
+<footer>NURVAN · nurvan.app · 10. November 2026</footer>
+</body>
+</html>

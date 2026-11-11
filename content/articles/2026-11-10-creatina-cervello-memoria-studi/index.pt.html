@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pt" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creatina e cérebro: o que dizem mesmo os estudos | Nurvan</title>
+<meta name="description" content="A creatina deixa a cabeça mais clara? A EFSA rejeitou a alegação e a meta-análise mais citada está contestada. O que se sustenta, em quem e em que dose.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Treino</a><a href="#">Nutrição</a><a href="#">Suplementos</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Descarregar a app</a></div></header>
+<main class="wrap" lang="pt">
+<div class="crumb">Blog · Suplementos · Creatina</div>
+<h1>Creatina e cérebro: o que dizem mesmo os estudos</h1>
+<p class="lede">Em cerca de um ano a creatina deixou de ser assunto de ginásio: as pesquisas por "creatina para o cérebro" cresceram 118% em doze meses e o medidor passou a ser vendido como melhoria mental. No mesmo período, a autoridade europeia para a segurança alimentar rejeitou a alegação cognitiva e a meta-análise mais citada foi apanhada num erro de contagem. Eis o que se sustenta, em quem e em que dose.</p>
+<div class="meta"><span><b>12</b> min de leitura</span><span><b>8</b> estudos citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · atualizado a 10 de novembro de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Medidor branco de suplemento virado com pó espalhado sobre fundo azul-claro"><figcaption class="cap">Foto de Towfiqu barbhuiya — Pexels, licença Pexels (uso gratuito)</figcaption></figure>
+<div class="box"><h2>Em resumo</h2><ul><li><strong>A EFSA disse que não.</strong> Em 2024 o painel europeu concluiu que <strong>não foi estabelecida</strong> uma relação de causa e efeito entre a suplementação com creatina e a melhoria da função cognitiva.</li><li><strong>A meta-análise mais citada está contestada.</strong> Xu e colegas (2024) relatam um efeito na memória (SMD 0,31), mas um comentário de 2026 mostra que os mesmos participantes foram contados várias vezes: as observações ultrapassam as pessoas aleatorizadas.</li><li><strong>Recalculada bem, sobra apenas a idade.</strong> Quando a mesma falha foi corrigida noutra meta-análise, o efeito na memória desapareceu exceto nos mais velhos: <strong>SMD 0,88</strong> entre os 66 e os 76 anos contra <strong>0,03</strong> nos jovens.</li><li><strong>As doses com sinal não são as do medidor.</strong> Os sinais vêm de 20 g por dia durante 5-7 dias ou de doses únicas de 0,2-0,35 g/kg — <strong>14 a 24,5 g</strong> para uma pessoa de 70 kg — e depois de uma noite sem dormir.</li><li><strong>O estrangulamento é a barreira hematoencefálica.</strong> A creatina entra com facilidade no músculo; no cérebro muito menos, e os aumentos medidos mantêm-se modestos.</li></ul></div>
+<h2>Porque é que «creatina para o cérebro» está em todo o lado</h2>
+<p>O sinal é mensurável. A pesquisa em inglês "creatine for brain" cresceu 118% em termos homólogos e ronda as 22.000 pesquisas por mês (dados Glimpse atualizados a abril de 2025). No mesmo período, a creatina passou da prateleira dos suplementos desportivos para a da saúde cerebral, do humor e da menopausa.</p>
+<p>A investigação reparou. Em 2025 o <em>Journal of Nutrition</em> publicou um artigo de perspetiva intitulado, literalmente, «promessa, prova e perceção pública»: o autor descreve um entusiasmo público e comercial que disparou vendas, prescrições e interação nas redes perante um corpo de evidência que — palavras dele — se manteve paradoxalmente limitado (Eckert, 2025).</p>
+<p>Não se trata de defender nem de atacar a creatina. Para o músculo continua a ser um dos suplementos com melhor suporte, e por isso lidera a nossa <a href="/pt/blog/ranking-suplementos-forca-tier-list">tier list de suplementos para a força</a>. A pergunta aqui é outra: quanto do que lê sobre o cérebro é realmente sustentado pelos dados?</p>
+<h2>No músculo sim, no cérebro é outra história</h2>
+<p>A razão por que uma coisa não implica a outra é anatómica. O músculo capta a creatina através de um transportador próprio e a reserva sobe de forma mensurável. O cérebro está protegido pela <strong>barreira hematoencefálica</strong>, o filtro que decide o que passa do sangue para o sistema nervoso, e esse filtro deixa entrar muito menos creatina.</p>
+<p>Uma revisão de 2025 na <em>Nutrition and Health</em> coloca exatamente isso no centro: a incerteza principal é se a creatina tomada por via oral chega ao cérebro em quantidade suficiente para alterar o metabolismo dos neurónios. Alguns estudos mostram aumentos modestos de creatina cerebral, mas limitações metodológicas, variabilidade individual e ausência de protocolos padronizados impedem conclusões firmes. O autor fecha sem rodeios: por agora, a suplementação com fim cognitivo em pessoas mais velhas deve ser considerada <strong>uma hipótese, não uma prática clínica estabelecida</strong> (Machado, 2025).</p>
+<p>Tenha isso presente ao ler o resto. Todo o debate sobre números parte de um problema de entrega: se a molécula não chega, o efeito não pode existir, por mais elegante que o mecanismo pareça no papel.</p>
+<h2>A meta-análise que toda a gente cita tem um problema de contagem</h2>
+<p>Se procurar «creatina e memória», a fonte que aparece quase sempre é a revisão sistemática com meta-análise de Xu e colegas, publicada em 2024 na <em>Frontiers in Nutrition</em>: 16 ensaios aleatorizados, 492 participantes entre os 20,8 e os 76,4 anos. Os resultados parecem claros — memória SMD 0,31 (IC 95%: 0,18-0,44), tempo de atenção -0,31, velocidade de processamento -0,51 — sem efeito na cognição global nem nas funções executivas.</p>
+<p>Em abril de 2026 a mesma revista publicou um comentário que desmonta o método. Vários estudos incluídos reportam múltiplas provas cognitivas correlacionadas dos mesmos participantes — nalguns casos sete ou mais subtestes de memória cada — e essas medidas foram tratadas como efeitos independentes. O resultado é que, na análise agregada, <strong>o número de observações ultrapassa o número de pessoas efetivamente aleatorizadas</strong> (Citherlet, 2026).</p>
+<p>Chama-se dupla contagem e é um erro de unidade de análise. Inflaciona artificialmente a precisão e a potência estatística: o intervalo de confiança sai mais estreito do que os dados permitem e um efeito incerto parece certo.</p>
+<p>Não é uma crítica isolada. A EFSA já tinha levantado o mesmo ponto em 2024, notando que agregar resultados cognitivos não independentes naquela meta-análise inflacionou as dimensões amostrais, e concluindo que daqueles dados não se podiam tirar conclusões.</p>
+<p>A parte mais instrutiva diz respeito, porém, a um trabalho anterior. A meta-análise de Prokopidis e colegas de 2023, sobre memória em pessoas saudáveis, tinha a mesma falha. Quando os autores refizeram a análise com um método apropriado, o efeito global da creatina na memória <strong>deixou de ser estatisticamente significativo — exceto nos mais velhos</strong>.</p>
+<p>Esse pormenor explica grande parte da confusão, e já se via nos subgrupos publicados em 2023: entre os 66 e os 76 anos o efeito na memória era SMD 0,88 (IC 95%: 0,22-1,55); entre os 11 e os 31 anos era 0,03 (IC 95%: de -0,14 a 0,20), ou seja zero. A dose (de 2,2 a 20 g por dia), a duração (de 5 dias a 24 semanas), o sexo e a origem geográfica não alteravam o resultado.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" role="img" aria-label="Gráfico de pontos com intervalos de confiança: o efeito da creatina na memória é SMD 0,29 em todos os adultos saudáveis, 0,88 nos mais velhos entre 66 e 76 anos e 0,03 nos jovens entre 11 e 31 anos (não significativo)">
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="28" y="40" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700">Creatina e memória: o efeito depende da idade</text>
+<text x="28" y="66" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13">Diferença média padronizada e intervalo de confiança de 95%, 8 ensaios aleatorizados</text>
+<line x1="330.0" y1="98" x2="330.0" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="330.0" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">-0,4</text>
+<line x1="420.9" y1="98" x2="420.9" y2="340" stroke="#a0a0a0" stroke-width="1"/>
+<text x="420.9" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0</text>
+<line x1="511.8" y1="98" x2="511.8" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="511.8" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0,4</text>
+<line x1="602.7" y1="98" x2="602.7" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="602.7" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0,8</text>
+<line x1="693.6" y1="98" x2="693.6" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="693.6" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">1,2</text>
+<line x1="784.5" y1="98" x2="784.5" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="784.5" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">1,6</text>
+<text x="316" y="137" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Todos os adultos saudáveis</text>
+<line x1="430.0" y1="132" x2="541.4" y2="132" stroke="#d4af37" stroke-width="2"/>
+<line x1="430.0" y1="124" x2="430.0" y2="140" stroke="#d4af37" stroke-width="2"/>
+<line x1="541.4" y1="124" x2="541.4" y2="140" stroke="#d4af37" stroke-width="2"/>
+<circle cx="486.8" cy="132" r="7" fill="#d4af37"/>
+<text x="553.4" y="137" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,29</text>
+<text x="316" y="155" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">8 ensaios aleatorizados</text>
+<text x="316" y="213" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Mais velhos (66-76 anos)</text>
+<line x1="470.9" y1="208" x2="773.2" y2="208" stroke="#d4af37" stroke-width="2"/>
+<line x1="470.9" y1="200" x2="470.9" y2="216" stroke="#d4af37" stroke-width="2"/>
+<line x1="773.2" y1="200" x2="773.2" y2="216" stroke="#d4af37" stroke-width="2"/>
+<circle cx="620.9" cy="208" r="7" fill="#d4af37"/>
+<text x="785.2" y="213" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,88</text>
+<text x="316" y="231" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">subgrupo</text>
+<text x="316" y="289" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Jovens (11-31 anos)</text>
+<line x1="389.1" y1="284" x2="466.4" y2="284" stroke="#555555" stroke-width="2"/>
+<line x1="389.1" y1="276" x2="389.1" y2="292" stroke="#555555" stroke-width="2"/>
+<line x1="466.4" y1="276" x2="466.4" y2="292" stroke="#555555" stroke-width="2"/>
+<circle cx="427.7" cy="284" r="7" fill="#555555"/>
+<text x="478.4" y="289" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,03</text>
+<text x="316" y="307" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">subgrupo</text>
+<text x="330" y="380" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11">dimensão do efeito (SMD)</text>
+<rect x="28" y="398" width="14" height="12" fill="#d4af37" rx="2"/>
+<text x="50" y="409" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">significativo</text>
+<rect x="147" y="398" width="14" height="12" fill="#555555" rx="2"/>
+<text x="169" y="409" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">não significativo</text>
+<text x="28" y="442" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Nota: na reanálise com método apropriado o efeito global deixou de ser significativo, mantendo-se nos mais velhos (Citherlet, 2026).</text>
+<text x="28" y="457" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Fonte: Prokopidis et al., 2023, Nutrition Reviews 81(4):416-427 (PMID 35984306). Valores do resumo.</text>
+<text x="872" y="40" fill="#aa8a2e" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div></figure>
+<h2>Porque é que a EFSA rejeitou a alegação</h2>
+<p>Em 2024 uma empresa pediu à União Europeia autorização para escrever na embalagem que a creatina melhora a função cognitiva. O painel NDA da EFSA analisou 23 estudos de intervenção em humanos e disse que não.</p>
+<p>O raciocínio vale mais do que o veredicto, porque é um mapa de doses. O efeito agudo na memória de trabalho foi observado em <strong>dois estudos, com 20 g por dia durante 5-7 dias</strong>. Não apareceu com doses entre 2,2 e 14 g por dia. Também não apareceu com a toma contínua de <strong>5 g por dia durante seis semanas</strong> depois de uma fase de carga de cinco dias.</p>
+<p>Um efeito na inibição da resposta, também com 20 g por dia durante 7 dias, foi um achado isolado entre dez estudos em pessoas saudáveis, sem efeitos nos restantes domínios cognitivos. Os três estudos em pessoas com doença não sustentavam o efeito, e o painel considerou fraca também a plausibilidade do mecanismo. Conclusão textual: <strong>não foi estabelecida uma relação de causa e efeito</strong> (EFSA, 2024).</p>
+<p>Traduzido para a prática: a dose que quase toda a gente toma — o medidor de 5 gramas, o que funciona muito bem para o músculo — não é a dose em que alguém mediu um efeito cognitivo.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" role="img" aria-label="Gráfico de barras: doses de 2,2 a 14 g por dia não mostraram efeitos cognitivos, enquanto 20 g por dia durante 5-7 dias e doses únicas de 0,2 e 0,35 g/kg (cerca de 14 e 24,5 gramas para 70 kg) mostraram">
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="28" y="40" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700">As doses com efeito não são as do medidor</text>
+<text x="28" y="66" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13">Creatina monohidratada: dose usada e resultado cognitivo nos estudos</text>
+<line x1="330.0" y1="98" x2="330.0" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="330.0" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0</text>
+<line x1="420.4" y1="98" x2="420.4" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="420.4" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">5</text>
+<line x1="510.8" y1="98" x2="510.8" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="510.8" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">10</text>
+<line x1="601.2" y1="98" x2="601.2" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="601.2" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">15</text>
+<line x1="691.5" y1="98" x2="691.5" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="691.5" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">20</text>
+<line x1="781.9" y1="98" x2="781.9" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="781.9" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">25</text>
+<text x="316" y="124" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">De 2,2 a 14 g por dia</text>
+<text x="316" y="142" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">toma contínua, 5 g durante 6 semanas incluídos</text>
+<rect x="330" y="110" width="253.1" height="30" fill="#555555" rx="2"/>
+<text x="595.1" y="130" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">até 14 g</text>
+<text x="316" y="186" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,2 g/kg em dose única</text>
+<text x="316" y="204" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">≈ 14 g para 70 kg · após 21 horas acordado</text>
+<rect x="330" y="172" width="253.1" height="30" fill="#d4af37" rx="2"/>
+<text x="595.1" y="192" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">≈ 14 g</text>
+<text x="316" y="248" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">20 g por dia durante 5-7 dias</text>
+<text x="316" y="266" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">memória de trabalho, 2 estudos</text>
+<rect x="330" y="234" width="361.5" height="30" fill="#d4af37" rx="2"/>
+<text x="703.5" y="254" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">20 g</text>
+<text x="316" y="310" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,35 g/kg em dose única</text>
+<text x="316" y="328" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">≈ 24,5 g para 70 kg · após 21 horas acordado</text>
+<rect x="330" y="296" width="442.9" height="30" fill="#d4af37" rx="2"/>
+<text x="784.9" y="316" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">≈ 24,5 g</text>
+<text x="330" y="392" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11">gramas de creatina (dose diária ou dose única)</text>
+<rect x="28" y="404" width="14" height="12" fill="#d4af37" rx="2"/>
+<text x="50" y="415" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">efeito observado</text>
+<rect x="164" y="404" width="14" height="12" fill="#555555" rx="2"/>
+<text x="186" y="415" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">sem efeito</text>
+<text x="28" y="442" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Fontes: EFSA, 2024, EFSA Journal 22(11):e9100 (PMID 39564533); Gordji-Nejad et al., 2024 (PMID 38418482) e 2026 (PMID 42075005). Conversão de g/kg para gramas em 70</text>
+<text x="28" y="457" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">kg: cálculo da Nurvan.</text>
+<text x="872" y="40" fill="#aa8a2e" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div></figure>
+<h2>O único cenário em que os números convencem: a noite em claro</h2>
+<p>Há uma situação em que os dados ficam mais interessantes, e é também a menos glamorosa: a privação de sono.</p>
+<p>Em 2024 um grupo do centro de investigação de Jülich administrou uma <strong>dose única muito elevada</strong> de creatina monohidratada — 0,35 g por quilo de peso — a pessoas mantidas acordadas durante 21 horas, acompanhando por espetroscopia de ressonância magnética os fosfatos de alta energia do cérebro. A creatina alterou esses parâmetros, evitou a descida do pH e melhorou o desempenho cognitivo e a velocidade de processamento face ao placebo (Gordji-Nejad et al., 2024).</p>
+<p>Em 2026 o mesmo grupo repetiu a experiência com uma dose mais baixa, 0,2 g por quilo, em 29 pessoas. A deterioração cognitiva provocada pela vigília prolongada foi atenuada em tarefas lógicas e numéricas, na velocidade de processamento da linguagem e no teste de vigilância psicomotora, com uma melhoria <strong>até 12%</strong>. O efeito foi menor do que com a dose alta, e as mulheres beneficiaram mais do que os homens em lógica, vigilância e velocidade (Gordji-Nejad et al., 2026).</p>
+<p>Antes de comprar o frasco grande, faça as contas. Para uma pessoa de 70 quilos, 0,2 g/kg são <strong>14 gramas</strong> de uma vez e 0,35 g/kg são <strong>24,5 gramas</strong>: quase três e quase cinco medidores de 5 g. São protocolos agudos de laboratório, com amostras pequenas, do mesmo grupo de investigação, e medem a recuperação de uma noite em claro — não um reforço cognitivo em quem dorme normalmente.</p>
+<p>Há ainda uma leitura mais honesta do dado: o que vê não é a creatina a torná-lo mais desperto, é a creatina a compensar em parte um défice energético induzido. Boa notícia para quem faz turnos noturnos; não é uma promessa para quem quer estudar melhor.</p>
+<h2>O que diz mesmo a investigação</h2>
+<table><thead><tr><th>Afirmação comum</th><th>Veredicto</th><th>Fonte</th></tr></thead><tbody><tr><td>«A creatina melhora a função cognitiva»</td><td><strong>Rejeitado como alegação</strong>: nenhuma relação de causa e efeito estabelecida</td><td>EFSA, 2024</td></tr><tr><td>«As meta-análises provam um efeito na memória»</td><td><strong>A matizar</strong>: dupla contagem de participantes, é preciso reanalisar</td><td>Citherlet, 2026; EFSA, 2024</td></tr><tr><td>«Funciona igual em qualquer idade»</td><td><strong>Desmentido</strong>: SMD 0,88 entre os 66 e os 76 anos contra 0,03 entre os 11 e os 31</td><td>Prokopidis et al., 2023</td></tr><tr><td>«5 g por dia chegam também para o cérebro»</td><td><strong>Sem suporte</strong>: sem efeito a 5 g/dia durante 6 semanas; os sinais estão nos 20 g/dia</td><td>EFSA, 2024</td></tr><tr><td>«Ajuda depois de uma noite sem dormir»</td><td><strong>Confirmado em laboratório</strong>: até +12% com 0,2 g/kg em dose única</td><td>Gordji-Nejad et al., 2024 e 2026</td></tr><tr><td>«Chega ao cérebro como chega ao músculo»</td><td><strong>Desmentido</strong>: a barreira hematoencefálica limita a entrada, aumentos modestos</td><td>Machado, 2025</td></tr><tr><td>«A creatina é um nootrópico»</td><td><strong>Hoje não verificável</strong>: o entusiasmo público ultrapassa de longe a evidência</td><td>Eckert, 2025</td></tr></tbody></table>
+<h2>Como aplicar</h2>
+<ol class="steps"><li><strong>Se a toma pelo músculo, continue.</strong> Nada neste artigo põe em causa o uso desportivo da creatina: é aí que a evidência é sólida. O que não se sustenta é a alegação cognitiva.</li><li><strong>Não aumente a dose «pelo cérebro».</strong> As doses em que se viu algo — 20 g por dia, ou doses únicas de 14 a 24,5 g — vêm de protocolos de investigação com monitorização, não de um hábito diário. Fora do estudo não há indicação para subir, e as doses altas trazem muitas vezes desconforto gastrointestinal.</li><li><strong>Se tem mais de 65 anos, está no único subgrupo com sinal.</strong> Continua a ser um sinal, não um tratamento. Fale com o seu médico antes de começar, sobretudo com problemas renais ou medicação em curso.</li><li><strong>Espere zero se dorme bem.</strong> Em adultos jovens e descansados o efeito medido na memória é indistinguível de zero. O sono, esse, mexe mesmo na mesma variável, e custa menos.</li><li><strong>Desconfie de produtos vendidos como «creatina para a mente».</strong> Se uma formulação custa mais, tem de o demonstrar: pergunte em que dose, durante quanto tempo e em que população o efeito foi medido.</li><li><strong>Registe o que toma mesmo.</strong> Entre o que julga tomar e o que toma há semanas esquecidas e medidores aproximados. Para perceber se um suplemento está a fazer alguma coisa, o dado tem de ser escrito. E se ainda está a escolher o formato, comparámos <a href="/pt/blog/gomas-de-creatina-funcionam">as gomas com o pó</a>.</li></ol>
+<div class="app"><div><h3>Experimente a Nurvan — a suplementação que controla mesmo</h3><p>O módulo de suplementação da Nurvan regista forma, dose e horário do que toma, creatina incluída, e coloca-o ao lado das cargas, das medidas e dos treinos. Deixa de avaliar um suplemento pela sensação e vê o que mudou, semana a semana, no período em que o tomou.</p></div><a class="cta" href="https://nurvan.app">Experimentar a Nurvan</a></div>
+<h2>Perguntas frequentes</h2>
+<details><summary>A creatina melhora a memória?</summary><p>Não o suficiente para se poder afirmar. As meta-análises que descrevem um efeito contaram várias vezes os mesmos participantes e, corrigido o problema, o efeito só se manteve nos mais velhos. A EFSA concluiu em 2024 que a relação de causa e efeito não está estabelecida.</p></details>
+<details><summary>Quanta creatina é precisa para o cérebro?</summary><p>Não há dose recomendada, porque não há efeito estabelecido. Nos estudos em que se viu alguma coisa as doses eram 20 g por dia durante 5-7 dias ou doses únicas de 0,2-0,35 g/kg: muito mais do que o medidor de 5 g, e em contextos de investigação controlados. Não é uma indicação para aplicar sozinho.</p></details>
+<details><summary>A creatina ajuda se eu dormir pouco?</summary><p>Dois ensaios aleatorizados sobre privação aguda de sono mostraram recuperação parcial do desempenho cognitivo, até 12% com 0,2 g/kg em dose única. São amostras pequenas, do mesmo grupo de investigação, e dizem respeito a uma noite em claro: nada dizem sobre quem dorme normalmente.</p></details>
+<details><summary>Porque funciona no músculo e não no cérebro?</summary><p>Porque o músculo capta-a com facilidade, enquanto o cérebro está protegido pela barreira hematoencefálica, que deixa passar muito menos. Os aumentos de creatina cerebral medidos depois da suplementação mantêm-se modestos e variam muito de pessoa para pessoa.</p></details>
+<h2>Leia também</h2>
+<ul><li><a href="/pt/blog/gomas-de-creatina-funcionam">Gomas de creatina: funcionam como o pó?</a> — a mesma molécula, num formato mais caro: o que muda mesmo.</li><li><a href="/pt/blog/creatina-sem-treino-depois-dos-45">Creatina sem treino depois dos 45: o que diz o estudo</a> — o outro caso em que a idade muda a resposta ao suplemento.</li><li><a href="/pt/blog/ranking-suplementos-forca-tier-list">Tier list de suplementos para força: a evidência</a> — onde fica a creatina quando se fala de força, e quem está ao lado.</li></ul>
+<h2>Fontes</h2>
+<ol class="refs"><li>EFSA Panel on Nutrition, Novel Foods and Food Allergens (Turck D, Bohn T, Cámara M, et al.), 2024. Creatine and improvement in cognitive function: Evaluation of a health claim pursuant to article 13(5) of regulation (EC) No 1924/2006. <em>EFSA Journal</em> 22(11):e9100. PMID 39564533. <a href="https://doi.org/10.2903/j.efsa.2024.9100">DOI 10.2903/j.efsa.2024.9100</a></li><li>Eckert I, 2025. Creatine Supplementation for Cognition: A Critical Perspective on Promise, Proof, and Public Perception. <em>The Journal of Nutrition</em> 155(10):3143-3147. PMID 40744234. <a href="https://doi.org/10.1016/j.tjnut.2025.07.016">DOI 10.1016/j.tjnut.2025.07.016</a></li><li>Citherlet T, 2026. Commentary: The effects of creatine supplementation on cognitive function in adults: a systematic review and meta-analysis. <em>Frontiers in Nutrition</em> 13:1716285. PMID 42039906. <a href="https://doi.org/10.3389/fnut.2026.1716285">DOI 10.3389/fnut.2026.1716285</a></li><li>Xu C, Bi S, Zhang W, Luo L, 2024. The effects of creatine supplementation on cognitive function in adults: a systematic review and meta-analysis. <em>Frontiers in Nutrition</em> 11:1424972. PMID 39070254. <a href="https://doi.org/10.3389/fnut.2024.1424972">DOI 10.3389/fnut.2024.1424972</a></li><li>Prokopidis K, Giannos P, Triantafyllidis KK, Kechagias KS, Forbes SC, Candow DG, 2023. Effects of creatine supplementation on memory in healthy individuals: a systematic review and meta-analysis of randomized controlled trials. <em>Nutrition Reviews</em> 81(4):416-427. PMID 35984306. <a href="https://doi.org/10.1093/nutrit/nuac064">DOI 10.1093/nutrit/nuac064</a></li><li>Gordji-Nejad A, Matusch A, Kleedörfer S, Jayeshkumar Patel H, Drzezga A, Elmenhorst D, Binkofski F, Bauer A, 2024. Single dose creatine improves cognitive performance and induces changes in cerebral high energy phosphates during sleep deprivation. <em>Scientific Reports</em> 14(1):4937. PMID 38418482. <a href="https://doi.org/10.1038/s41598-024-54249-9">DOI 10.1038/s41598-024-54249-9</a></li><li>Gordji-Nejad A, Matusch A, Hengstler L, Beer S, Kroll T, Klein S, Elmenhorst D, Bauer A, Drzezga A, 2026. Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance. <em>Nutrients</em> 18(8):1192. PMID 42075005. <a href="https://doi.org/10.3390/nu18081192">DOI 10.3390/nu18081192</a></li><li>Machado M, 2025. Creatine supplementation and cognitive aging: The challenge of crossing the blood-brain barrier. <em>Nutrition and Health</em> 32(3):761-763. PMID 41359040. <a href="https://doi.org/10.1177/02601060251404327">DOI 10.1177/02601060251404327</a></li></ol>
+<p>Fontes bibliográficas obtidas através da PubMed. Tema escolhido a partir de um sinal de tendência: a pesquisa "creatine for brain", com +118% em termos homólogos e cerca de 22.000 pesquisas mensais (Glimpse, dado de abril de 2025), em conjunto com o artigo de perspetiva crítica publicado no <em>Journal of Nutrition</em> em 2025 sobre a distância entre marketing e evidência.</p>
+<p><em>Giammaria Loi é o fundador da Nurvan. Treina com pesos desde 2012, trabalha como personal trainer e coach certificado FIPE desde 2013 e compete em powerlifting a nível nacional desde 2018. Cada artigo que assina parte dos estudos científicos e chega ao que funciona mesmo no ginásio.</em></p>
+<p class="note">Nota: conteúdo informativo, não substitui a opinião de um médico ou profissional.</p>
+</main>
+<footer>NURVAN · nurvan.app · 10 de novembro de 2026</footer>
+</body>
+</html>

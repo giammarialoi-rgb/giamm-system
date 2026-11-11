@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Креатин и мозг: что на самом деле говорят исследования | Nurvan</title>
+<meta name="description" content="Креатин делает голову яснее? EFSA отклонила заявление, а самый цитируемый метаанализ оспорен. Что выдерживает проверку, у кого и в каких дозах.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Добавки · Креатин</div>
+<h1>Креатин и мозг: что на самом деле говорят исследования</h1>
+<p class="lede">Примерно за год креатин перестал быть темой только для зала: запросы «креатин для мозга» выросли на 118% за двенадцать месяцев, а мерный совок продают как апгрейд для головы. В тот же период европейское ведомство по безопасности пищевых продуктов отклонило когнитивное заявление, а самый цитируемый метаанализ попался на ошибке подсчёта. Разбираем, что выдерживает проверку, у кого и в каких дозах.</p>
+<div class="meta"><span><b>11</b> мин чтения</span><span><b>8</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 10 ноября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Опрокинутый белый мерный совок с рассыпанным порошком добавки на светло-голубом фоне"><figcaption class="cap">Фото: Towfiqu barbhuiya — Pexels, лицензия Pexels (бесплатное использование)</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>EFSA сказала нет.</strong> В 2024 году европейская панель заключила, что причинно-следственная связь между приёмом креатина и улучшением когнитивных функций <strong>не установлена</strong>.</li><li><strong>Самый цитируемый метаанализ оспорен.</strong> Xu с соавторами (2024) сообщают об эффекте на память (SMD 0,31), но комментарий 2026 года показывает, что одних и тех же участников посчитали несколько раз: наблюдений больше, чем рандомизированных людей.</li><li><strong>При корректном пересчёте остаётся только возраст.</strong> Когда ту же ошибку исправили в другом метаанализе, эффект на память исчез везде, кроме пожилых: <strong>SMD 0,88</strong> в 66-76 лет против <strong>0,03</strong> у молодых.</li><li><strong>Дозы с сигналом — не те, что в совке.</strong> Сигналы получены при 20 г в день в течение 5-7 дней или при разовых дозах 0,2-0,35 г/кг — <strong>14-24,5 г</strong> для человека в 70 кг — и только после бессонной ночи.</li><li><strong>Узкое место — гематоэнцефалический барьер.</strong> В мышцу креатин попадает легко, в мозг — гораздо хуже, и измеренный прирост остаётся скромным.</li></ul></div>
+<h2>Почему «креатин для мозга» сейчас повсюду</h2>
+<p>Сигнал измерим. Англоязычный запрос "creatine for brain" вырос на 118% за год и держится около 22 000 запросов в месяц (данные Glimpse на апрель 2025 года). За тот же период креатин перебрался с полки спортивных добавок на полки «здоровье мозга», «настроение» и «менопауза».</p>
+<p>Наука это заметила. В 2025 году <em>Journal of Nutrition</em> опубликовал статью-перспективу с подзаголовком, буквально, «обещание, доказательство и общественное восприятие»: автор описывает общественный и коммерческий энтузиазм, который взвинтил продажи, назначения и вовлечённость в соцсетях — при массиве доказательств, который, его формулировка, парадоксальным образом остался ограниченным (Eckert, 2025).</p>
+<p>Речь не о том, чтобы защищать или ругать креатин. Для мышц это по-прежнему одна из самых хорошо обоснованных добавок, поэтому она и возглавляет наш <a href="/ru/blog/reyting-sportivnykh-dobavok-dlya-sily">тир-лист добавок для силы</a>. Вопрос другой: сколько из того, что вы читаете про мозг, действительно опирается на данные?</p>
+<h2>С мышцей да, с мозгом — другая история</h2>
+<p>Причина, по которой одно не следует из другого, анатомическая. Мышца забирает креатин через специальный переносчик, и запас растёт измеримо. Мозг защищён <strong>гематоэнцефалическим барьером</strong> — фильтром, который решает, что попадёт из крови в нервную систему, — и этот фильтр пропускает заметно меньше креатина.</p>
+<p>Обзор 2025 года в <em>Nutrition and Health</em> ставит именно это в центр: ключевая неопределённость в том, доходит ли принятый внутрь креатин до мозга в количестве, достаточном для изменения метаболизма нейронов. Некоторые работы показывают скромный прирост мозгового креатина, но методические ограничения, индивидуальная вариабельность и отсутствие стандартизированных протоколов не дают сделать твёрдые выводы. Вывод автора однозначен: пока приём ради когнитивных эффектов у пожилых следует считать <strong>гипотезой, а не устоявшейся клинической практикой</strong> (Machado, 2025).</p>
+<p>Держите это в голове дальше. Весь спор о цифрах начинается с проблемы доставки: если молекула не доходит, эффекта быть не может, каким бы изящным ни выглядел механизм на бумаге.</p>
+<h2>У метаанализа, который все цитируют, проблема с подсчётом</h2>
+<p>Если искать «креатин и память», почти всегда попадается систематический обзор с метаанализом Xu с соавторами, опубликованный в 2024 году в <em>Frontiers in Nutrition</em>: 16 рандомизированных исследований, 492 участника в возрасте от 20,8 до 76,4 лет. Результаты выглядят ясно — память SMD 0,31 (95% ДИ: 0,18-0,44), время внимания -0,31, скорость обработки -0,51 — без эффекта на общую когнитивную функцию и исполнительные функции.</p>
+<p>В апреле 2026 года тот же журнал опубликовал комментарий, разбирающий метод. Несколько включённых исследований сообщают о нескольких коррелированных когнитивных показателях у одних и тех же участников — местами по семь и более субтестов памяти на человека — и эти показатели трактовали как независимые размеры эффекта. В итоге в объединённом анализе <strong>число наблюдений превышает число реально рандомизированных участников</strong> (Citherlet, 2026).</p>
+<p>Это двойной счёт, ошибка единицы анализа. Он искусственно завышает точность и статистическую мощность: доверительный интервал выходит уже, чем позволяют данные, и неопределённый эффект выглядит достоверным.</p>
+<p>Критика не единичная. EFSA поднимала тот же вопрос ещё в 2024 году, отметив, что объединение неза­висимых только по видимости когнитивных результатов в этом метаанализе завысило объёмы выборок, и заключив, что из этих данных нельзя делать выводы.</p>
+<p>Самое поучительное, впрочем, касается более ранней работы. Метаанализ Prokopidis с соавторами 2023 года о памяти у здоровых людей имел тот же изъян. Когда авторы пересчитали всё корректным методом, общий эффект креатина на память <strong>перестал быть статистически значимым — кроме пожилых</strong>.</p>
+<p>Эта деталь объясняет почти всю путаницу, и её было видно уже в подгруппах, опубликованных в 2023 году: в 66-76 лет эффект на память составлял SMD 0,88 (95% ДИ: 0,22-1,55), в 11-31 год — 0,03 (95% ДИ: от -0,14 до 0,20), то есть ноль. Доза (от 2,2 до 20 г в день), длительность (от 5 дней до 24 недель), пол и география результат не меняли.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" role="img" aria-label="Точечный график с доверительными интервалами: эффект креатина на память составляет SMD 0,29 у всех здоровых взрослых, 0,88 у пожилых 66-76 лет и 0,03 у молодых 11-31 года (незначимо)">
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="28" y="40" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700">Креатин и память: эффект зависит от возраста</text>
+<text x="28" y="66" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13">Стандартизованная разность средних и 95% доверительный интервал, 8 рандомизированных исследований</text>
+<line x1="330.0" y1="98" x2="330.0" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="330.0" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">-0,4</text>
+<line x1="420.9" y1="98" x2="420.9" y2="340" stroke="#a0a0a0" stroke-width="1"/>
+<text x="420.9" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0</text>
+<line x1="511.8" y1="98" x2="511.8" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="511.8" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0,4</text>
+<line x1="602.7" y1="98" x2="602.7" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="602.7" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0,8</text>
+<line x1="693.6" y1="98" x2="693.6" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="693.6" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">1,2</text>
+<line x1="784.5" y1="98" x2="784.5" y2="340" stroke="#262626" stroke-width="1"/>
+<text x="784.5" y="358" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">1,6</text>
+<text x="316" y="137" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Все здоровые взрослые</text>
+<line x1="430.0" y1="132" x2="541.4" y2="132" stroke="#d4af37" stroke-width="2"/>
+<line x1="430.0" y1="124" x2="430.0" y2="140" stroke="#d4af37" stroke-width="2"/>
+<line x1="541.4" y1="124" x2="541.4" y2="140" stroke="#d4af37" stroke-width="2"/>
+<circle cx="486.8" cy="132" r="7" fill="#d4af37"/>
+<text x="553.4" y="137" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,29</text>
+<text x="316" y="155" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">8 рандомизированных исследований</text>
+<text x="316" y="213" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Пожилые (66-76 лет)</text>
+<line x1="470.9" y1="208" x2="773.2" y2="208" stroke="#d4af37" stroke-width="2"/>
+<line x1="470.9" y1="200" x2="470.9" y2="216" stroke="#d4af37" stroke-width="2"/>
+<line x1="773.2" y1="200" x2="773.2" y2="216" stroke="#d4af37" stroke-width="2"/>
+<circle cx="620.9" cy="208" r="7" fill="#d4af37"/>
+<text x="785.2" y="213" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,88</text>
+<text x="316" y="231" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">подгруппа</text>
+<text x="316" y="289" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">Молодые (11-31 год)</text>
+<line x1="389.1" y1="284" x2="466.4" y2="284" stroke="#555555" stroke-width="2"/>
+<line x1="389.1" y1="276" x2="389.1" y2="292" stroke="#555555" stroke-width="2"/>
+<line x1="466.4" y1="276" x2="466.4" y2="292" stroke="#555555" stroke-width="2"/>
+<circle cx="427.7" cy="284" r="7" fill="#555555"/>
+<text x="478.4" y="289" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">0,03</text>
+<text x="316" y="307" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">подгруппа</text>
+<text x="330" y="380" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11">величина эффекта (SMD)</text>
+<rect x="28" y="398" width="14" height="12" fill="#d4af37" rx="2"/>
+<text x="50" y="409" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">значимо</text>
+<rect x="113" y="398" width="14" height="12" fill="#555555" rx="2"/>
+<text x="135" y="409" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">незначимо</text>
+<text x="28" y="442" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Примечание: при пересчёте корректным методом общий эффект перестал быть значимым, у пожилых он сохранился (Citherlet, 2026).</text>
+<text x="28" y="457" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Источник: Prokopidis et al., 2023, Nutrition Reviews 81(4):416-427 (PMID 35984306). Значения из аннотации.</text>
+<text x="872" y="40" fill="#aa8a2e" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div></figure>
+<h2>Почему EFSA отклонила заявление</h2>
+<p>В 2024 году компания попросила Евросоюз разрешить писать на упаковке, что креатин улучшает когнитивные функции. Панель NDA в составе EFSA рассмотрела 23 интервенционных исследования на людях и ответила отказом.</p>
+<p>Рассуждение ценнее вердикта, потому что это карта доз. Острый эффект на рабочую память наблюдали в <strong>двух исследованиях, при 20 г в день в течение 5-7 дней</strong>. При дозах от 2,2 до 14 г в день он не появлялся. Не появился он и при непрерывном приёме <strong>5 г в день в течение шести недель</strong> после пятидневной фазы загрузки.</p>
+<p>Эффект на торможение реакции, опять же при 20 г в день в течение 7 дней, остался изолированной находкой среди десяти исследований на здоровых людях, без влияния на другие когнитивные домены. Три исследования на людях с заболеваниями эффект не подтверждали, а правдоподобность механизма панель тоже сочла слабой. Дословный вывод: <strong>причинно-следственная связь не установлена</strong> (EFSA, 2024).</p>
+<p>В переводе на практику: доза, которую принимают почти все, — совок на 5 граммов, прекрасно работающий для мышц, — это не та доза, на которой кто-то измерил когнитивный эффект.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" width="900" height="470" viewBox="0 0 900 470" role="img" aria-label="Столбчатая диаграмма: дозы от 2,2 до 14 г в день не дали когнитивного эффекта, тогда как 20 г в день в течение 5-7 дней и разовые дозы 0,2 и 0,35 г/кг (около 14 и 24,5 грамма при 70 кг) дали">
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="28" y="40" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700">Дозы, на которых виден эффект, — не те, что в совке</text>
+<text x="28" y="66" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13">Моногидрат креатина: применённая доза и когнитивный результат в исследованиях</text>
+<line x1="330.0" y1="98" x2="330.0" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="330.0" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">0</text>
+<line x1="420.4" y1="98" x2="420.4" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="420.4" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">5</text>
+<line x1="510.8" y1="98" x2="510.8" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="510.8" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">10</text>
+<line x1="601.2" y1="98" x2="601.2" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="601.2" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">15</text>
+<line x1="691.5" y1="98" x2="691.5" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="691.5" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">20</text>
+<line x1="781.9" y1="98" x2="781.9" y2="352" stroke="#262626" stroke-width="1"/>
+<text x="781.9" y="370" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle">25</text>
+<text x="316" y="124" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">От 2,2 до 14 г в день</text>
+<text x="316" y="142" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">непрерывный приём, включая 5 г в течение 6 недель</text>
+<rect x="330" y="110" width="253.1" height="30" fill="#555555" rx="2"/>
+<text x="595.1" y="130" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">до 14 г</text>
+<text x="316" y="186" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,2 г/кг разовой дозой</text>
+<text x="316" y="204" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">≈ 14 г при 70 кг · после 21 часа без сна</text>
+<rect x="330" y="172" width="253.1" height="30" fill="#d4af37" rx="2"/>
+<text x="595.1" y="192" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">≈ 14 г</text>
+<text x="316" y="248" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">20 г в день в течение 5-7 дней</text>
+<text x="316" y="266" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">рабочая память, 2 исследования</text>
+<rect x="330" y="234" width="361.5" height="30" fill="#d4af37" rx="2"/>
+<text x="703.5" y="254" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">20 г</text>
+<text x="316" y="310" fill="#f0f0f0" font-family="Helvetica,Arial,sans-serif" font-size="13" text-anchor="end">0,35 г/кг разовой дозой</text>
+<text x="316" y="328" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11" text-anchor="end">≈ 24,5 г при 70 кг · после 21 часа без сна</text>
+<rect x="330" y="296" width="442.9" height="30" fill="#d4af37" rx="2"/>
+<text x="784.9" y="316" fill="#f3e5ab" font-family="Helvetica,Arial,sans-serif" font-size="13" font-weight="700">≈ 24,5 г</text>
+<text x="330" y="392" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11">граммы креатина (суточная или разовая доза)</text>
+<rect x="28" y="404" width="14" height="12" fill="#d4af37" rx="2"/>
+<text x="50" y="415" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">эффект есть</text>
+<rect x="136" y="404" width="14" height="12" fill="#555555" rx="2"/>
+<text x="158" y="415" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="11.5">эффекта нет</text>
+<text x="28" y="442" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">Источники: EFSA, 2024, EFSA Journal 22(11):e9100 (PMID 39564533); Gordji-Nejad et al., 2024 (PMID 38418482) и 2026 (PMID 42075005). Пересчёт из г/кг в граммы для 70</text>
+<text x="28" y="457" fill="#a0a0a0" font-family="Helvetica,Arial,sans-serif" font-size="10.5">кг: расчёт Nurvan.</text>
+<text x="872" y="40" fill="#aa8a2e" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="end" letter-spacing="2">NURVAN</text>
+</svg></div></figure>
+<h2>Единственный сценарий, где цифры убеждают: бессонная ночь</h2>
+<p>Есть ситуация, в которой данные становятся интереснее, и она же наименее гламурная: депривация сна.</p>
+<p>В 2024 году группа из исследовательского центра Юлих дала <strong>очень высокую разовую дозу</strong> моногидрата креатина — 0,35 г на килограмм массы тела — людям, которых держали без сна 21 час, отслеживая магнитно-резонансной спектроскопией высокоэнергетические фосфаты мозга. Креатин изменил эти параметры, предотвратил падение pH и улучшил когнитивную работоспособность и скорость обработки по сравнению с плацебо (Gordji-Nejad et al., 2024).</p>
+<p>В 2026 году та же группа повторила эксперимент с меньшей дозой, 0,2 г на килограмм, на 29 людях. Ухудшение когнитивных функций от затянувшегося бодрствования было смягчено в логических и числовых задачах, в скорости обработки речи и в тесте психомоторной бдительности, с улучшением <strong>до 12%</strong>. Эффект был слабее, чем при высокой дозе, а женщины выигрывали больше мужчин в логике, бдительности и скорости (Gordji-Nejad et al., 2026).</p>
+<p>Прежде чем бежать за большой банкой, посчитайте. Для человека в 70 килограммов 0,2 г/кг — это <strong>14 граммов</strong> за раз, а 0,35 г/кг — <strong>24,5 грамма</strong>: почти три и почти пять совков по 5 г. Это острые лабораторные протоколы на малых выборках, из одной и той же исследовательской группы, и они измеряют восстановление после бессонной ночи, а не улучшение когнитивных функций у того, кто нормально спит.</p>
+<p>Есть и более честное прочтение: вы видите не креатин, который делает вас сообразительнее, а креатин, который частично компенсирует наведённый энергетический дефицит. Хорошая новость для ночных смен, но не обещание для тех, кто хочет лучше учиться.</p>
+<h2>Что на самом деле говорят исследования</h2>
+<table><thead><tr><th>Распространённое утверждение</th><th>Вердикт</th><th>Источник</th></tr></thead><tbody><tr><td>«Креатин улучшает когнитивные функции»</td><td><strong>Отклонено как заявление</strong>: причинно-следственная связь не установлена</td><td>EFSA, 2024</td></tr><tr><td>«Метаанализы доказывают эффект на память»</td><td><strong>Требует уточнения</strong>: двойной счёт участников, нужен пересчёт</td><td>Citherlet, 2026; EFSA, 2024</td></tr><tr><td>«Работает одинаково в любом возрасте»</td><td><strong>Опровергнуто</strong>: SMD 0,88 в 66-76 лет против 0,03 в 11-31 год</td><td>Prokopidis et al., 2023</td></tr><tr><td>«5 г в день хватает и для мозга»</td><td><strong>Не подтверждено</strong>: при 5 г/день в течение 6 недель эффекта нет; сигналы на 20 г/день</td><td>EFSA, 2024</td></tr><tr><td>«Помогает после бессонной ночи»</td><td><strong>Подтверждено в лаборатории</strong>: до +12% при разовой дозе 0,2 г/кг</td><td>Gordji-Nejad et al., 2024 и 2026</td></tr><tr><td>«В мозг попадает так же, как в мышцу»</td><td><strong>Опровергнуто</strong>: гематоэнцефалический барьер ограничивает вход, прирост скромный</td><td>Machado, 2025</td></tr><tr><td>«Креатин — ноотроп»</td><td><strong>Сегодня не проверяемо</strong>: общественный энтузиазм сильно опережает данные</td><td>Eckert, 2025</td></tr></tbody></table>
+<h2>Как применить</h2>
+<ol class="steps"><li><strong>Если принимаете ради мышц — продолжайте.</strong> Ничто в этой статье не ставит под сомнение спортивное применение креатина: здесь доказательная база прочная. Не выдерживает проверки именно когнитивное заявление.</li><li><strong>Не поднимайте дозу «ради мозга».</strong> Дозы, на которых что-то увидели, — 20 г в день или разовые 14-24,5 г — взяты из исследовательских протоколов с наблюдением, а не из бытовой привычки. Вне исследования поводов подниматься нет, а высокие дозы часто дают желудочно-кишечный дискомфорт.</li><li><strong>Если вам больше 65, вы в единственной подгруппе с сигналом.</strong> Это по-прежнему сигнал, а не лечение. Обсудите приём с врачом, особенно при проблемах с почками или текущей терапии.</li><li><strong>Ждите нуля, если высыпаетесь.</strong> У молодых отдохнувших взрослых измеренный эффект на память неотличим от нуля. А вот сон ту же переменную действительно двигает — и обходится дешевле.</li><li><strong>С осторожностью относитесь к продуктам «креатин для ума».</strong> Если формула стоит дороже, пусть это докажет: спросите, при какой дозе, как долго и в какой популяции измеряли эффект.</li><li><strong>Записывайте то, что реально принимаете.</strong> Между тем, что вы думаете, что принимаете, и тем, что принимаете, лежат забытые недели и приблизительные совки. Чтобы понять, делает ли добавка что-нибудь, данные надо фиксировать. А если ещё выбираете форму — мы сравнили <a href="/ru/blog/kreatin-zhevatelnye-marmeladki">жевательные формы с порошком</a>.</li></ol>
+<div class="app"><div><h3>Попробуйте Nurvan — добавки, которые реально под контролем</h3><p>Модуль добавок в Nurvan фиксирует форму, дозу и время приёма того, что вы пьёте, включая креатин, и ставит это рядом с рабочими весами, замерами и тренировками. Вместо оценки «по ощущениям» вы видите, что изменилось неделя за неделей за тот период, когда вы её принимали.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Улучшает ли креатин память?</summary><p>Недостаточно, чтобы это утверждать. Метаанализы с положительным результатом посчитали одних и тех же участников несколько раз, а после исправления эффект остался только у пожилых. EFSA в 2024 году заключила, что причинно-следственная связь не установлена.</p></details>
+<details><summary>Сколько креатина нужно для мозга?</summary><p>Рекомендованной дозы нет, потому что нет подтверждённого эффекта. В исследованиях, где что-то увидели, дозы были 20 г в день в течение 5-7 дней или разовые 0,2-0,35 г/кг: намного больше совка на 5 г и в контролируемых условиях. Это не инструкция для самостоятельного применения.</p></details>
+<details><summary>Помогает ли креатин, если мало сплю?</summary><p>Два рандомизированных исследования острой депривации сна показали частичное восстановление когнитивной работоспособности, до 12% при разовой дозе 0,2 г/кг. Это малые выборки из одной группы, и речь об одной бессонной ночи: о тех, кто спит нормально, они ничего не говорят.</p></details>
+<details><summary>Почему работает в мышце и не работает в мозге?</summary><p>Потому что мышца забирает креатин легко, а мозг защищён гематоэнцефалическим барьером, который пропускает намного меньше. Измеренный прирост мозгового креатина после приёма остаётся скромным и сильно различается у разных людей.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/kreatin-zhevatelnye-marmeladki">Жевательный креатин: работает как порошок?</a> — та же молекула в более дорогой форме: что меняется на самом деле.</li><li><a href="/ru/blog/kreatin-bez-trenirovok-posle-45">Креатин без тренировок после 45: что показало исследование</a> — другой случай, когда возраст меняет ответ на добавку.</li><li><a href="/ru/blog/reyting-sportivnykh-dobavok-dlya-sily">Тир-лист добавок для силы: что говорит наука</a> — где стоит креатин, когда речь о силе, и кто рядом с ним.</li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>EFSA Panel on Nutrition, Novel Foods and Food Allergens (Turck D, Bohn T, Cámara M, et al.), 2024. Creatine and improvement in cognitive function: Evaluation of a health claim pursuant to article 13(5) of regulation (EC) No 1924/2006. <em>EFSA Journal</em> 22(11):e9100. PMID 39564533. <a href="https://doi.org/10.2903/j.efsa.2024.9100">DOI 10.2903/j.efsa.2024.9100</a></li><li>Eckert I, 2025. Creatine Supplementation for Cognition: A Critical Perspective on Promise, Proof, and Public Perception. <em>The Journal of Nutrition</em> 155(10):3143-3147. PMID 40744234. <a href="https://doi.org/10.1016/j.tjnut.2025.07.016">DOI 10.1016/j.tjnut.2025.07.016</a></li><li>Citherlet T, 2026. Commentary: The effects of creatine supplementation on cognitive function in adults: a systematic review and meta-analysis. <em>Frontiers in Nutrition</em> 13:1716285. PMID 42039906. <a href="https://doi.org/10.3389/fnut.2026.1716285">DOI 10.3389/fnut.2026.1716285</a></li><li>Xu C, Bi S, Zhang W, Luo L, 2024. The effects of creatine supplementation on cognitive function in adults: a systematic review and meta-analysis. <em>Frontiers in Nutrition</em> 11:1424972. PMID 39070254. <a href="https://doi.org/10.3389/fnut.2024.1424972">DOI 10.3389/fnut.2024.1424972</a></li><li>Prokopidis K, Giannos P, Triantafyllidis KK, Kechagias KS, Forbes SC, Candow DG, 2023. Effects of creatine supplementation on memory in healthy individuals: a systematic review and meta-analysis of randomized controlled trials. <em>Nutrition Reviews</em> 81(4):416-427. PMID 35984306. <a href="https://doi.org/10.1093/nutrit/nuac064">DOI 10.1093/nutrit/nuac064</a></li><li>Gordji-Nejad A, Matusch A, Kleedörfer S, Jayeshkumar Patel H, Drzezga A, Elmenhorst D, Binkofski F, Bauer A, 2024. Single dose creatine improves cognitive performance and induces changes in cerebral high energy phosphates during sleep deprivation. <em>Scientific Reports</em> 14(1):4937. PMID 38418482. <a href="https://doi.org/10.1038/s41598-024-54249-9">DOI 10.1038/s41598-024-54249-9</a></li><li>Gordji-Nejad A, Matusch A, Hengstler L, Beer S, Kroll T, Klein S, Elmenhorst D, Bauer A, Drzezga A, 2026. Single-Dose Creatine Reduces Sleep Deprivation-Induced Deterioration in Cognitive Performance. <em>Nutrients</em> 18(8):1192. PMID 42075005. <a href="https://doi.org/10.3390/nu18081192">DOI 10.3390/nu18081192</a></li><li>Machado M, 2025. Creatine supplementation and cognitive aging: The challenge of crossing the blood-brain barrier. <em>Nutrition and Health</em> 32(3):761-763. PMID 41359040. <a href="https://doi.org/10.1177/02601060251404327">DOI 10.1177/02601060251404327</a></li></ol>
+<p>Библиографические источники найдены через PubMed. Тема выбрана по трендовому сигналу: запрос "creatine for brain" с ростом 118% за год и примерно 22 000 запросов в месяц (Glimpse, данные на апрель 2025 года), вместе с критической статьёй-перспективой в <em>Journal of Nutrition</em> 2025 года о разрыве между маркетингом и доказательствами.</p>
+<p><em>Джаммария Лои — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и коучем с сертификатом FIPE с 2013 года и выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных исследований и заканчивается тем, что действительно работает в зале.</em></p>
+<p class="note">Примечание: информационный материал, он не заменяет консультацию врача или специалиста.</p>
+</main>
+<footer>NURVAN · nurvan.app · 10 ноября 2026</footer>
+</body>
+</html>
