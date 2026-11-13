@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quanta fibra por dia? O que o fibermaxxing não diz | Nurvan</title>
+<meta name="description" content="O fibermaxxing pede o máximo possível. Nos estudos o grosso do benefício está entre 25 e 29 g por dia, e a necessidade sobe junto com as calorias.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Treino</a><a href="#">Nutrição</a><a href="#">Suplementação</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Baixar o app</a></div></header>
+<main class="wrap" lang="pt">
+<div class="crumb">Blog · Nutrição · Fibra</div>
+<h1>Quanta fibra por dia? O que o fibermaxxing não diz</h1>
+<p class="lede">Depois de anos de "proteína em tudo", o novo nutriente da moda é a fibra: o <em>fibermaxxing</em> manda empurrá-la o mais alto possível, uma colher de chia atrás da outra. O nutriente certo, puxado na direção errada. A evidência sobre fibra é das mais sólidas de toda a nutrição, mas esses mesmos estudos dizem duas coisas que a tendência ignora: existe uma faixa onde se concentra o grosso do benefício, e essa faixa não é a mesma para quem come 1.800 kcal e para quem come 3.200.</p>
+<div class="meta"><span><b>12</b> min de leitura</span><span><b>8</b> estudos citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · atualizado em 13 de novembro de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Tigela decorada cheia de grão-de-bico seco sobre madeira rústica, com especiarias ao redor"><figcaption class="cap">Foto de Paula Berken — Pexels, licença Pexels (uso gratuito)</figcaption></figure>
+<div class="box"><h2>Em resumo</h2><ul><li><strong>O grosso do benefício está entre 25 e 29 g por dia.</strong> Na revisão publicada no <em>Lancet</em> sobre 185 estudos prospectivos e 58 ensaios, a redução de risco de mortalidade total, doença cardíaca, AVC, diabetes tipo 2 e câncer colorretal é máxima nessa faixa.</li><li><strong>"Pelo menos 25 g" não é o seu número se você treina muito.</strong> As LARN italianas também fixam uma referência por energia: 12,6-16,7 g a cada 1.000 kcal. Com 3.000 kcal viram 38-50 g por dia.</li><li><strong>A média italiana é de cerca de 17 g por dia</strong> segundo os dados do CREA: o problema real não é o excesso, é o buraco.</li><li><strong>Aumentar rápido incha de verdade.</strong> Nos ensaios com suplementos de fibra a flatulência é significativamente maior nos grupos de fibra: não é impressão, é efeito medido.</li><li><strong>A fibra dos alimentos e a do pó não fazem a mesma coisa.</strong> A primeira mostrou efeito sobre glicemia <em>e</em> pressão, a segunda sobretudo sobre glicemia e colesterol.</li></ul></div>
+<h2>De onde vem o fibermaxxing</h2>
+<p>O mecanismo é o mesmo que levou a proteína para todo lado: um nutriente com boas credenciais, o sufixo <em>-maxxing</em> e a conclusão implícita de que, se um pouco faz bem, muito fará melhor. A diferença é que aqui o ponto de partida está certo: quase ninguém chega ao mínimo recomendado, e subir a fibra é a mudança com a melhor relação entre esforço e benefício que uma pessoa média pode fazer à mesa.</p>
+<p>O problema nasce na passagem de "quase todo mundo come pouca" para "quanto mais, melhor". São duas frases diferentes, e os estudos sustentam apenas a primeira.</p>
+<h2>Quanta fibra é realmente necessária</h2>
+<p>A fonte mais sólida é a série de revisões sistemáticas publicada no <em>Lancet</em> em 2019: 185 estudos prospectivos, pouco menos de 135 milhões de pessoas-ano, mais 58 ensaios controlados com 4.635 adultos. Comparando quem come mais com quem come menos, os dados observacionais mostram redução de 15-30% na mortalidade total e cardiovascular, na doença coronariana, no AVC, no diabetes tipo 2 e no câncer colorretal.</p>
+<p>E aqui vem o número que a tendência não cita: <strong>a redução de risco foi máxima com uma ingestão entre 25 e 29 g por dia</strong>. As curvas dose-resposta sugerem que acima dessa faixa ainda há algum ganho para cardiovascular, diabetes e alguns tumores, mas o salto grande é o que leva você <em>para dentro</em> da faixa, não o que leva além dela.</p>
+<p>A meta-análise dose-resposta de 2023 na <em>Frontiers in Nutrition</em> confirma: risco relativo de mortalidade total 0,90 (IC 95% 0,86-0,93), cardiovascular 0,87, por câncer 0,91, com relação <strong>não linear</strong> para a mortalidade total. Não linear significa exatamente isso: a curva achata.</p>
+<p>Há dois casos em que subir mais tem sentido medido. Em pessoas com diabetes, passar de 19 para 35 g por dia está associado a 14 mortes a menos a cada 1.000 (IC 95% 4-19). Em hipertensos, aumentar a fibra baixou a sistólica em 4,3 mmHg e a diastólica em 3,1 mmHg, com certeza alta e independentemente dos medicamentos em uso. Mas são populações clínicas: ali quem decide o número é o médico, não um carrossel.</p>
+<h2>Sua necessidade sobe com as calorias</h2>
+<p>Esta é a parte que falta em praticamente todo lugar, e a mais relevante para quem treina.</p>
+<p>As LARN da Sociedade Italiana de Nutrição Humana não dão apenas o limiar de "pelo menos 25 g por dia": dão também uma referência relacionada à energia, <strong>12,6-16,7 g de fibra a cada 1.000 kcal</strong>. É uma escolha lógica, porque a fibra vem do alimento, e quem come mais come mais alimento.</p>
+<p>Aplicada às calorias reais, essa referência muda o alvo, como se vê no gráfico acima. Para uma pessoa sedentária de 1.800 kcal, o intervalo é 23-30 g. Para quem treina quatro vezes por semana e come 3.000 kcal, vira <strong>38-50 g</strong>. Em fase de ganho, com 3.500 kcal, 44-58 g. Quem repete "25 g bastam" está dando a um powerlifter de 95 kg o número de alguém que come metade; e quem faz fibermaxxing com 1.600 kcal em definição está empurrando um número que para ele já é alto.</p>
+<p>De onde tirar essas calorias é uma conversa que cruza com a qualidade dos carboidratos: falamos disso em <a href="/pt/blog/carboidratos-engordam-gordura-escondida">carboidratos engordam?</a>.</p>
+<h2>O que a pesquisa diz de verdade</h2>
+<table><thead><tr><th>Afirmação comum</th><th>Veredito</th><th>Fonte</th></tr></thead><tbody><tr><td>"Mais fibra é sempre melhor"</td><td><strong>A precisar</strong>: o grosso do benefício está entre 25 e 29 g, depois a curva achata</td><td>Reynolds et al., 2019; Yao et al., 2023</td></tr><tr><td>"25 g por dia bastam para todo mundo"</td><td><strong>A precisar</strong>: as LARN também dão 12,6-16,7 g por 1.000 kcal</td><td>LARN SINU; Marconi et al., 2025</td></tr><tr><td>"A fibra desincha a barriga"</td><td><strong>Desmentido</strong> no curto prazo: mais fibra, mais flatulência (SMD 0,80)</td><td>van der Schoot et al., 2022</td></tr><tr><td>"Um scoop de psyllium resolve"</td><td><strong>A precisar</strong>: funciona na regularidade, mas a fibra dos alimentos mostrou efeitos mais amplos</td><td>van der Schoot 2022; Jiang et al., 2025</td></tr><tr><td>"Antes de treinar, quanto mais fibra melhor"</td><td><strong>Desmentido</strong>: reduzi-la é a estratégia mais usada contra sintomas gastrointestinais no exercício</td><td>Scrivin et al., 2022</td></tr></tbody></table>
+<h3>Por que no começo incha (e a culpa não é sua)</h3>
+<p>Na meta-análise sobre 16 ensaios controlados e 1.251 adultos com constipação crônica, a fibra funcionou: responderam ao tratamento 66% dos participantes (311 de 473) contra 41% dos controles (134 de 329), risco relativo 1,48. Mas no mesmo trabalho a <strong>flatulência foi significativamente maior nos grupos de fibra</strong>, com diferença média padronizada de 0,80 (IC 95% 0,47-1,13), um efeito grande.</p>
+<p>É por isso que "aumentei os vegetais e inchei" não é fracasso: é a resposta esperada a uma mudança rápida. No mesmo trabalho, as melhorias em frequência e consistência das evacuações só apareceram com duração de pelo menos quatro semanas. O inchaço é a primeira semana, o benefício vem da quarta em diante. A consequência prática é uma só: <strong>suba em degraus</strong>, 3-5 g por semana.</p>
+<h3>Suplemento ou comida</h3>
+<p>O pó não é um atalho equivalente. Na comparação mais clara que temos, uma meta-análise de 2025 com 30 ensaios e 1.140 participantes separou a fibra <strong>intrínseca</strong> (a que está dentro do alimento integral) da fibra <strong>isolada</strong> (extraída e adicionada). A primeira reduziu a glicemia de jejum e a pressão sistólica (-2,86 mmHg). A segunda reduziu glicemia e colesterol total, mas não a pressão.</p>
+<p>Não é um argumento contra suplementos: o psyllium tem bons dados sobre regularidade, em doses acima de 10 g por dia e por pelo menos quatro semanas. É um argumento contra a ideia de que um scoop substitui um prato de leguminosas. A matriz do alimento conta, como também acontece quando se <a href="/pt/blog/proteina-vegetal-ou-animal-para-musculos">compara proteína vegetal e animal</a>.</p>
+<h3>Fibra e treino: a hora importa</h3>
+<p>Um detalhe que o fibermaxxing não considera é o <em>quando</em>. Num estudo com 137 atletas de endurance com histórico de sintomas gastrointestinais associados ao exercício, entre 277 estratégias relatadas a <strong>redução da fibra foi a estratégia alimentar mais usada</strong> (15,2%, 42 relatos) e uma das mais bem avaliadas, com eficácia mediana de 4 em 5. Depois vinham a exclusão de laticínios e a dieta com baixo teor de FODMAP.</p>
+<p>Duas ressalvas honestas: esses dados vêm de atletas de endurance, não de quem levanta peso, e os sintomas da corrida têm componentes mecânicos que não existem na academia. Mas a lógica se sustenta também debaixo da barra: um prato com 15 g de fibra duas horas antes de uma sessão pesada de agachamento é discutível; o mesmo prato no jantar não incomoda ninguém.</p>
+<h2>Como aplicar</h2>
+<p>Primeira regra: pare de olhar as listas "por 100 gramas". No banco de dados do CREA a pimenta-do-reino tem 25,9 g de fibra por 100 g, mas a porção é de 1 grama: são 0,26 g de fibra. O que conta é quanta fibra existe numa porção que você comeria de verdade.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="Fibra por porcao real, nao por 100 gramas"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Fibra por porcao real, nao por 100 gramas</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Gramas de fibra em uma porcao padrao CREA. Dados CREA 2019, calculo Nurvan</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">gramas de fibra por porcao</text>
+<line x1="314.0" y1="96" x2="314.0" y2="422" stroke="#262626" stroke-width="1"/>
+<text x="314.0" y="90" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">0</text>
+<line x1="461.8" y1="96" x2="461.8" y2="422" stroke="#262626" stroke-width="1"/>
+<text x="461.8" y="90" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">5</text>
+<line x1="609.6" y1="96" x2="609.6" y2="422" stroke="#262626" stroke-width="1"/>
+<text x="609.6" y="90" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">10</text>
+<line x1="757.3" y1="96" x2="757.3" y2="422" stroke="#262626" stroke-width="1"/>
+<text x="757.3" y="90" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">15</text>
+<rect x="314" y="112" width="496.5" height="20" fill="#d4af37" rx="3"/>
+<text x="306" y="127" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Grao-de-bico cozido, 290 g</text>
+<text x="818.5" y="127" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">16,8 g</text>
+<rect x="314" y="144" width="437.4" height="20" fill="#d4af37" rx="3"/>
+<text x="306" y="159" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Alcachofras cozidas, 200 g</text>
+<text x="759.4" y="159" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">14,8 g</text>
+<rect x="314" y="176" width="375.4" height="20" fill="#d4af37" rx="3"/>
+<text x="306" y="191" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Farelo de trigo, 30 g</text>
+<text x="697.4" y="191" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">12,7 g</text>
+<rect x="314" y="208" width="366.5" height="20" fill="#d4af37" rx="3"/>
+<text x="306" y="223" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Lentilhas cozidas, 150 g</text>
+<text x="688.5" y="223" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">12,4 g</text>
+<rect x="314" y="240" width="328.1" height="20" fill="#d4af37" rx="3"/>
+<text x="306" y="255" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Framboesas, 150 g</text>
+<text x="650.1" y="255" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">11,1 g</text>
+<rect x="314" y="272" width="186.2" height="20" fill="#aa8a2e" rx="3"/>
+<text x="306" y="287" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Macarrao integral cozido, 180 g</text>
+<text x="508.2" y="287" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">6,3 g</text>
+<rect x="314" y="304" width="115.3" height="20" fill="#aa8a2e" rx="3"/>
+<text x="306" y="319" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Maca com casca, 150 g</text>
+<text x="437.3" y="319" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">3,9 g</text>
+<rect x="314" y="336" width="94.6" height="20" fill="#aa8a2e" rx="3"/>
+<text x="306" y="351" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Pao integral, 50 g</text>
+<text x="416.6" y="351" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">3,2 g</text>
+<rect x="314" y="368" width="53.2" height="20" fill="#6b5a24" rx="3"/>
+<text x="306" y="383" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Macarrao branco cozido, 200 g</text>
+<text x="375.2" y="383" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">1,8 g</text>
+<rect x="314" y="400" width="14.8" height="20" fill="#6b5a24" rx="3"/>
+<text x="306" y="415" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="end">Arroz branco cozido, 260 g</text>
+<text x="336.8" y="415" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="start">0,5 g</text>
+<text x="24" y="456" fill="#aa8a2e" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">nurvan.app</text>
+</svg></div><figcaption class="cap">Gráfico Nurvan sobre as tabelas CREA — Centro di ricerca Alimenti e Nutrizione, atualização de 2019. Fibra por porção calculada por nós como (fibra por 100 g × porção CREA) ÷ 100.</figcaption></figure>
+<p>Segunda regra: os grandes saltos vêm de poucas trocas, não de vinte pequenos ajustes.</p>
+<table><thead><tr><th>Troca</th><th>Antes</th><th>Depois</th><th>Ganho</th></tr></thead><tbody><tr><td>O acompanhamento de amido</td><td>Arroz branco cozido, 260 g: <strong>0,5 g</strong></td><td>Macarrão integral cozido, 180 g: <strong>6,3 g</strong></td><td><strong>+5,8 g</strong></td></tr><tr><td>O pão</td><td>Pão branco, 50 g: <strong>1,9 g</strong></td><td>Pão integral, 50 g: <strong>3,2 g</strong></td><td><strong>+1,3 g</strong></td></tr><tr><td>Um prato a mais</td><td>—</td><td>Lentilhas cozidas, 150 g: <strong>12,4 g</strong></td><td><strong>+12,4 g</strong></td></tr><tr><td></td><td></td><td></td><td><strong>+19,5 g no total</strong></td></tr></tbody></table>
+<p><em>Elaboração Nurvan com dados CREA 2019. Partindo dos 17 g da média italiana, essas três trocas levam a cerca de 36-37 g por dia.</em></p>
+<p>Terceira regra: a casca conta mais do que você pensa. Uma maçã de 150 g com casca dá 3,9 g de fibra, a mesma maçã descascada 3,0 g: um quarto vai embora com a faca.</p>
+<p>Quatro pontos práticos:</p>
+<ol><li><strong>Ache o seu número, não o genérico.</strong> Multiplique suas calorias por 0,0126 e por 0,0167: esse é o seu intervalo. Com 2.500 kcal são 32-42 g.</li><li><strong>Suba 3-5 g por semana.</strong> O inchaço inicial é real e passa, mas só se você der tempo a ele.</li><li><strong>Um prato de leguminosas rende mais que todo o resto junto.</strong> 150 g de lentilhas cozidas valem quatro maçãs.</li><li><strong>Afaste a fibra do treino.</strong> A refeição pré-treino é a única em que vale a pena mantê-la baixa; recupere a fibra do dia no jantar.</li></ol>
+<p>E se você já conta a proteína por refeição, a fibra é o segundo número a colocar ao lado: <a href="/pt/blog/quanta-proteina-por-refeicao-limite">quanta proteína por refeição</a> é o texto irmão deste.</p>
+<div class="box"><h2>Nurvan: a fibra você vê, não adivinha</h2><p>A seção de nutrição do Nurvan usa o banco de dados CREA, as mesmas tabelas de onde vêm os números deste artigo: cada alimento que você lança traz junto a sua fibra, e o total do dia se atualiza ao lado de calorias e proteínas. Com a sua necessidade energética já no app, você vê na hora se as suas 3.000 kcal chegam a 38 g ou param em 18. <a href="https://nurvan.app">Experimente o Nurvan</a></p></div>
+<h2>Perguntas frequentes</h2>
+<p><strong>Quanta fibra devo comer por dia?</strong></p>
+<p>O mínimo da LARN e da EFSA é 25 g por dia para um adulto. Nas revisões, o grosso da redução de risco se concentra entre 25 e 29 g. Se você treina e come bastante, a referência LARN relacionada à energia (12,6-16,7 g por 1.000 kcal) é mais útil: com 3.000 kcal são 38-50 g.</p>
+<p><strong>Fibermaxxing faz mal?</strong></p>
+<p>Nos estudos, o efeito medido do aumento rápido é mais flatulência, não um dano. O risco real é prático: subir rápido demais gera desconforto que faz você desistir, e nenhum estudo mostra que ir muito além da faixa de 25-29 g traga benefício proporcional. Se você tem uma condição intestinal diagnosticada, a quantidade de fibra não é decisão para tomar sozinho.</p>
+<p><strong>Melhor fibra de suplemento ou de comida?</strong></p>
+<p>As duas funcionam, para objetivos diferentes. Na meta-análise de 2025 a fibra dentro dos alimentos integrais reduziu glicemia de jejum e pressão sistólica; a isolada reduziu glicemia e colesterol total, mas não a pressão. O psyllium tem boa evidência para a regularidade, acima de 10 g por dia e por pelo menos quatro semanas.</p>
+<p><strong>A fibra me incha antes de treinar: o que faço?</strong></p>
+<p>Afaste o grosso da fibra da sessão e deixe leve a refeição pré-treino. Em atletas de endurance com sintomas gastrointestinais, reduzir a fibra é a estratégia alimentar mais usada e uma das mais eficazes.</p>
+<h2>Leia também</h2>
+<ul><li><a href="/pt/blog/quanta-proteina-por-refeicao-limite">Quanta proteína por refeição: existe um limite?</a> — o outro número que vale contar refeição a refeição.</li><li><a href="/pt/blog/carboidratos-engordam-gordura-escondida">Carboidratos engordam? A gordura escondida</a> — de onde vêm de verdade as calorias a mais.</li><li><a href="/pt/blog/proteina-vegetal-ou-animal-para-musculos">Proteína vegetal ou animal para os músculos?</a> — por que a matriz do alimento conta.</li></ul>
+<h2>Fontes</h2>
+<ol><li>Reynolds A, Mann J, Cummings J, et al., 2019. Carbohydrate quality and human health: a series of systematic reviews and meta-analyses. <em>Lancet</em> 393(10170):434-445. <a href="https://pubmed.ncbi.nlm.nih.gov/30638909/">PMID 30638909</a> · <a href="https://doi.org/10.1016/S0140-6736(18">DOI 10.1016/S0140-6736(18)31809-9</a>31809-9)</li><li>Yao F, Ma J, Cui Y, et al., 2023. Dietary intake of total, vegetable, fruit, cereal, soluble and insoluble fiber and risk of all-cause, cardiovascular, and cancer mortality. <em>Front Nutr</em> 10:1153165. <a href="https://pubmed.ncbi.nlm.nih.gov/37854351/">PMID 37854351</a> · <a href="https://doi.org/10.3389/fnut.2023.1153165">DOI 10.3389/fnut.2023.1153165</a></li><li>Reynolds AN, Akerman AP, Mann J, 2020. Dietary fibre and whole grains in diabetes management: systematic review and meta-analyses. <em>PLoS Med</em> 17(3):e1003053. <a href="https://pubmed.ncbi.nlm.nih.gov/32142510/">PMID 32142510</a> · <a href="https://doi.org/10.1371/journal.pmed.1003053">DOI 10.1371/journal.pmed.1003053</a></li><li>Reynolds AN, Akerman A, Kumar S, et al., 2022. Dietary fibre in hypertension and cardiovascular disease management: systematic review and meta-analyses. <em>BMC Med</em> 20(1):139. <a href="https://pubmed.ncbi.nlm.nih.gov/35449060/">PMID 35449060</a> · <a href="https://doi.org/10.1186/s12916-022-02328-x">DOI 10.1186/s12916-022-02328-x</a></li><li>van der Schoot A, Drysdale C, Whelan K, Dimidi E, 2022. The effect of fiber supplementation on chronic constipation in adults: an updated systematic review and meta-analysis of randomized controlled trials. <em>Am J Clin Nutr</em> 116(4):953-969. <a href="https://pubmed.ncbi.nlm.nih.gov/35816465/">PMID 35816465</a> · <a href="https://doi.org/10.1093/ajcn/nqac184">DOI 10.1093/ajcn/nqac184</a></li><li>Jiang S, Cai C, Deehan EC, et al., 2025. The physiological effects of intrinsic and isolated arabinoxylans on human immunometabolic response: a systematic review and meta-analysis. <em>Food Res Int</em> 218:116866. <a href="https://pubmed.ncbi.nlm.nih.gov/40790673/">PMID 40790673</a> · <a href="https://doi.org/10.1016/j.foodres.2025.116866">DOI 10.1016/j.foodres.2025.116866</a></li><li>Marconi S, Gilberti G, Romele E, et al., 2025. Translation and cross-cultural adaptation of a validated questionnaire to assess dietary fiber intake among the Italian population. <em>Nutrients</em> 17(6):1084. <a href="https://pubmed.ncbi.nlm.nih.gov/40292515/">PMID 40292515</a> · <a href="https://doi.org/10.3390/nu17061084">DOI 10.3390/nu17061084</a></li><li>Scrivin R, Costa RJS, Pelly F, Lis D, Slater G, 2022. An exploratory study of the management strategies reported by endurance athletes with exercise-associated gastrointestinal symptoms. <em>Front Nutr</em> 9:1003445. <a href="https://pubmed.ncbi.nlm.nih.gov/36438762/">PMID 36438762</a> · <a href="https://doi.org/10.3389/fnut.2022.1003445">DOI 10.3389/fnut.2022.1003445</a></li></ol>
+<p>Valores de referência: LARN — Livelli di Assunzione di Riferimento di Nutrienti ed energia, SINU, IV revisão (pelo menos 25 g por dia; 12,6-16,7 g por 1.000 kcal); EFSA, parecer de 26 de março de 2010 (25 g por dia adequados para a função intestinal normal em adultos). Dados alimentares: tabelas CREA — Centro di ricerca Alimenti e Nutrizione, atualização de 2019. Tema escolhido a partir de sinais de tendência de novembro de 2026 sobre o "fibermaxxing" (cobertura na imprensa internacional e italiana, e primeira página de busca ocupada por conteúdos genéricos que não relacionam a necessidade às calorias). Fontes científicas consultadas através do PubMed.</p>
+<p>*Giammaria Loi é o fundador do Nurvan. Treina com pesos desde 2012, trabalha como personal trainer e coach certificado pela FIPE desde 2013 e compete em powerlifting em nível nacional desde 2018. Cada artigo que assina parte dos estudos científicos e chega ao que funciona de verdade na academia. <a href="/autore/giammaria-loi">Página do autor</a>*</p>
+<p class="note">Nota: conteúdo informativo, não substitui a opinião de um médico ou de um profissional qualificado.</p>
+</main>
+<footer>NURVAN · nurvan.app · 13 de novembro de 2026</footer>
+</body>
+</html>
