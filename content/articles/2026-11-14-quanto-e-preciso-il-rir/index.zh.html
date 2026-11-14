@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>你的 RIR 估得准吗？研究怎么说 | Nurvan</title>
+<meta name="description" content="你说「还剩两次」的时候，平均其实还剩三次。而在深蹲 5 RIR 上，实测误差是 5 次：RIR 到底在哪里管用。">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">训练</a><a href="#">营养</a><a href="#">补剂</a><a href="#" class="on">博客</a></nav><a class="cta" href="https://nurvan.app">下载应用</a></div></header>
+<main class="wrap" lang="zh">
+<div class="crumb">博客 · 训练 · RIR</div>
+<h1>你的 RIR 估得准吗？研究怎么说</h1>
+<p class="lede">“离力竭还剩两次就停。”这是现代训练计划里最常见的一句指令，我自己写的计划也一样，而它成立有一个前提：你得认得出那个点。关于这件事，研究已经攒了十年的数据，而真实的图景比流传的版本更有意思：我们估得并不算离谱，但我们<strong>几乎总是朝同一个方向错</strong>，而且错得有规律。知道误差集中在哪里，才是“有用的 RIR”和“写在训练日志里凑数的一个数字”之间的分界线。</p>
+<div class="meta"><span><b>3</b> 分钟阅读</span><span><b>10</b> 篇研究</span><span>作者：<a href="/autore/giammaria-loi">Giammaria Loi</a> · 更新于 2026 年 11 月 14 日</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="现代健身房里，一名肌肉发达的男性侧身推起上满杠铃片的平板卧推"><figcaption class="cap">照片：Andrea Piacquadio — Pexels，Pexels 许可（可免费使用）</figcaption></figure>
+<div class="box"><h2>要点速览</h2><ul><li><strong>平均来说我们会低估大约 1 次。</strong> 汇总 12 项研究、414 名受试者的荟萃分析里，平均误差是 0.95 次（95% CI 0.17-1.73）：你剩下的次数几乎总比你以为的多。</li><li><strong>离力竭越远，误差越大。</strong> 在 70% 最大重量的深蹲里，预测次数和实际次数的差值是 1 RIR 时 2.05 次、3 RIR 时 3.65 次、<strong>5 RIR 时 5.15 次</strong>：到了 5 RIR，这个数字已经不表示任何东西。</li><li><strong>长组会毁掉估计。</strong> 每组超过 12 次之后，每多做一次，误差增加 0.47 次；短组里是 0.06 次。快八倍。</li><li><strong>经验解决不了这件事。</strong> 研究里训练水平不影响准确度，而六周带反馈的练习也没有改善绝对误差。</li><li><strong>在它管用的地方，它真的管用。</strong> 卧推上，1 RIR 和 3 RIR 时训练有素的运动员平均只错了 0.65 ± 0.78 次。可用窗口很窄，但在窗口之内，这个工具站得住。</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="距离力竨越远，估计误差越大"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">距离力竨越远，估计误差越大</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">预测与实际次数之差，70% 1RM 深踲 · Zourdos et al., 2021</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">误差（次）</text>
+<line x1="140" y1="400.0" x2="860" y2="400.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="404.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="332.5" x2="860" y2="332.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="336.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">2</text>
+<line x1="140" y1="265.0" x2="860" y2="265.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="269.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">4</text>
+<line x1="140" y1="197.5" x2="860" y2="197.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="201.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">6</text>
+<line x1="140" y1="130.0" x2="860" y2="130.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="134.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">8</text>
+<rect x="230.0" y="330.8" width="120" height="69.2" fill="#f3e5ab" rx="3"/>
+<line x1="290.0" y1="272.4" x2="290.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="272.4" x2="304.0" y2="272.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="389.2" x2="304.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<text x="290.0" y="262.425" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">2.05</text>
+<text x="290.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">1 RIR</text>
+<rect x="440.0" y="276.8" width="120" height="123.2" fill="#d4af37" rx="3"/>
+<line x1="500.0" y1="193.8" x2="500.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="193.8" x2="514.0" y2="193.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="359.8" x2="514.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<text x="500.0" y="183.78750000000002" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">3.65</text>
+<text x="500.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">3 RIR</text>
+<rect x="650.0" y="226.2" width="120" height="173.8" fill="#aa8a2e" rx="3"/>
+<line x1="710.0" y1="127.6" x2="710.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="127.6" x2="724.0" y2="127.6" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="324.7" x2="724.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="710.0" y="117.63749999999999" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">5.15</text>
+<text x="710.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">5 RIR</text>
+<line x1="140" y1="400" x2="860" y2="400" stroke="#262626" stroke-width="1.5"/>
+<line x1="140" y1="366.2" x2="860" y2="366.2" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="24" y="452" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">误差线：标准差 · 误差 1 次：可用阈值</text>
+</svg></div><figcaption class="cap">Nurvan 图表，数据来自 Zourdos 等，2021（25 名训练有素的男性，70% 最大重量深蹲，做到力竭的组为 16 ± 4 次）。竖线为标准差。虚线是 1 次误差，也就是一个估计还能拿来用的边界。</figcaption></figure>
+<h2>RIR 测的是什么，为什么它成了核心数字</h2>
+<p>RIR 是 <em>repetitions in reserve</em>，储备次数：在技术性力竭之前你认为自己还剩下的次数。它是最简单的强度处方方式，不必依赖当天的最大重量——而最大重量会随睡眠、压力和一杯咖啡而变。2024 年一篇纳入 31 项研究、855 名受试者的综述确认，RIR 量表在调节强度上可行且有用，而文献里最主流的用法恰恰就是训练计划里的那一种：定一个目标 RIR，再据此调负重。</p>
+<p>它的软肋在于，RIR 不是一次测量，而是一次<strong>预测</strong>。而预测只有一种评价方式：拿它跟真实发生的事情比。</p>
+<h2>我们到底错多少</h2>
+<p>最好的参照是 Halperin 等人发表在 <em>Sports Medicine</em> 上的荟萃分析：12 项研究，414 名受试者，262 个效应量。主要结果是，受试者把“到力竭还剩几次”平均<strong>低估</strong>了 0.95 次（95% CI 0.17-1.73）。</p>
+<p>一次的误差听上去不多，某种程度上也确实不多。但有两个细节比这个平均值更重要。</p>
+<p>第一个是异质性：97.9%。意思是这个平均值概括的是彼此差别很大的一堆情境，“大约一次”并不是你每做一组的误差。相反，人与人之间的变异并不大：标准差 1.45 次。并不存在很多“RIR 天才”——误差取决于情境，不取决于你是谁。</p>
+<p>第二个是方向。低估意味着，当你认为还剩 2 次而停下时，实际上还剩 3 次。这不是会互相抵消的随机误差：它让你<strong>系统性地比计划写的更远离力竭</strong>。</p>
+<p>同样的误差方向在单项研究里也能看到，数值更大。在 141 人完成的一次全身训练测试里，测量标准误落在 2.64 到 3.38 次之间。在一项针对至少有一年训练经验者的欺骗设计实验里，腿屈伸上的低估是 2.0 次（95% CI 0.0-4.0）。</p>
+<h2>RIR 在哪里管用，在哪里不管用</h2>
+<p>这里是研究真正有用的贡献，也是同类内容普遍跳过的部分：准确度<strong>不是人的属性，而是情境的属性</strong>。</p>
+<p>有三个条件会明确地让它变差。</p>
+<p><strong>离力竭的距离。</strong> 在 70% 最大重量深蹲的那项研究里，25 名训练有素的男性（平均 4.7 年训练经验）需要在自己感觉离力竭还有 5 次、3 次、1 次时报出来，然后继续做到真正的力竭。报告点离力竭越远，误差越大：1 RIR 时 2.05 ± 1.73 次，3 RIR 时 3.65 ± 2.46 次，5 RIR 时 5.15 ± 2.92 次。在一个能做 16 次的深蹲里写“5 RIR”，实际上什么也没规定。</p>
+<p><strong>组的长度。</strong> 这是荟萃分析里最清晰的调节因素。在不超过 12 次的组里，每执行一次，误差增加 0.06 次（95% CI 0.04-0.09）；超过 12 次之后，增加 0.47 次（95% CI 0.44-0.49）。在深蹲那项研究里，总次数与误差的相关性在 5 RIR 时是 r = 0.65，在 1 RIR 时是 r = 0.01：组越长，估计越差，而训练经验并不能预测这件事。</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="长组的估计更不准"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">长组的估计更不准</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">该组每多做一次，误差增加的幅度 · Halperin et al., 2022</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">额外误差（次）</text>
+<line x1="170" y1="360.0" x2="850" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="364.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.0</text>
+<line x1="170" y1="318.2" x2="850" y2="318.2" stroke="#262626" stroke-width="1"/>
+<text x="158" y="322.1818181818182" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.1</text>
+<line x1="170" y1="276.4" x2="850" y2="276.4" stroke="#262626" stroke-width="1"/>
+<text x="158" y="280.3636363636364" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.2</text>
+<line x1="170" y1="234.5" x2="850" y2="234.5" stroke="#262626" stroke-width="1"/>
+<text x="158" y="238.54545454545456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.3</text>
+<line x1="170" y1="192.7" x2="850" y2="192.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="196.72727272727272" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.4</text>
+<line x1="170" y1="150.9" x2="850" y2="150.9" stroke="#262626" stroke-width="1"/>
+<text x="158" y="154.9090909090909" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.5</text>
+<rect x="263.3" y="334.9" width="200" height="25.1" fill="#aa8a2e" rx="3"/>
+<line x1="363.3" y1="322.4" x2="363.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="322.4" x2="377.3" y2="322.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="343.3" x2="377.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<text x="363.3333333333333" y="310.3636363636364" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0.06</text>
+<text x="363.3333333333333" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">12 次以内的组</text>
+<rect x="556.7" y="163.5" width="200" height="196.5" fill="#d4af37" rx="3"/>
+<line x1="656.7" y1="155.1" x2="656.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="155.1" x2="670.7" y2="155.1" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="176.0" x2="670.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="656.6666666666666" y="143.0909090909091" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0.47</text>
+<text x="656.6666666666666" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">超过 12 次的组</text>
+<line x1="170" y1="360" x2="850" y2="360" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">误差线：95% 置信区间</text>
+</svg></div><figcaption class="cap">Nurvan 图表，基于 Halperin 等，2022 的元回归系数（12 项研究，414 名受试者）。竖线是 95% 置信区间。数值表示组内每多执行一次，估计误差增加多少。</figcaption></figure>
+<p><strong>第几组。</strong> 同一次训练里，越往后的组估计会略微变好（每组误差少 0.07 次），大概是因为第一组留下的参照重新校准了感知。效应很小，但方向有用：一个动作的第一组是最不可靠的那一组。</p>
+<p>还有一个条件反而让它变好：<strong>靠近力竭</strong>，再加上不会制造超长组的动作和负重。在 75% 最大重量的卧推上，24 名训练有素的运动员（12 名男性、12 名女性）报出 1 RIR 和 3 RIR 时，平均绝对误差是 0.65 ± 0.78 次，在 ±1 次范围内达到统计等效，而且与性别、训练年数或相对力量都没有关系。在器械上的单关节动作里，58 名有训练和无训练者的估计在靠近力竭时、以及在后面的组里更准，男女之间和不同动作之间都没有差别。</p>
+<p>翻译成人话：RIR 并不是“不准”。它在<strong>3 以下、而且组不太长</strong>的时候很准，在其他地方就变成噪声。</p>
+<h2>经验救不了你（这会改变你用它的方式）</h2>
+<p>这是练了多年的人里最普遍的一个信念：“RIR 是能练出感觉的。”数据不支持这句话。</p>
+<p>荟萃分析里训练水平不影响准确度（β = -0.006，95% CI -0.02 到 0.007）。深蹲那项研究里，训练年龄并不能预测估计的好坏。在器械上，训练经验和“报 RIR 的具体经验”都没有产生效果。</p>
+<p>最直接的检验来自一项针对 9 名训练有素男性的研究：他们每周卧推三次、持续六周，在每次训练的最后一组报出 4 RIR 和 1 RIR。六周之后，<strong>绝对</strong>误差没有显著改善；变的是方向——在后期的训练和更长的组里，低估的倾向更强。</p>
+<p>只有一个相反方向的信号，来自那项 141 人的研究：随经验出现改善的趋势。是趋势，不是明确的效应。老实的结论是，有经验的教练和新手错得差不多，而解决办法不是等着“练出眼力”，而是把 RIR 放在它可靠的地方，并且去验证它。</p>
+<h2>一个错掉的数字，为什么会改变结果</h2>
+<p>这取决于你想要什么，而文献在这一点上出乎意料地清楚。</p>
+<p>对<strong>力量</strong>来说，离力竭的距离影响很小：在 2024 年那组元回归里，估计 RIR 对应斜率的置信区间包含零，也就是与力量增长的关系可以忽略。如果你训练的是力量，你的估计误差代价不大。</p>
+<p>对<strong>肌肉增长</strong>，同一份分析得到的斜率为负，而且区间不包含零：组越接近力竭，肌肉生长越多。但别把它变成“练到力竭更好”：2023 年那篇纳入 15 项研究的荟萃分析没有发现技术性力竭优于非力竭（ES 0.12；95% CI -0.13 到 0.37），也没有发现高速度损失阈值优于中等阈值，并提出这个关系是<strong>非线性</strong>的。</p>
+<p>把两件事放在一起：系统性的低估把你推向在增肌上要付代价的那个方向（比计划更远离力竭），而对策不是去练力竭，而是降低不确定性。围绕这个强度该安排多少次数、多长休息，我们另写过一篇：<a href="/zh/blog/duoshao-cishu-zengji">增肌该做多少次数</a>。</p>
+<h2>研究到底怎么说</h2>
+<table><thead><tr><th>流行说法</th><th>判定</th><th>来源</th></tr></thead><tbody><tr><td>“练到 2 RIR，你就知道自己在干什么”</td><td><strong>需要修正</strong>：1-3 RIR 时估计站得住（误差 0.65-2 次），5 RIR 时不行（5.15）</td><td>Refalo 等，2024；Zourdos 等，2021</td></tr><tr><td>“有了经验就能感觉出 RIR”</td><td><strong>不成立</strong>：训练水平不影响准确度，六周练习也没有减少绝对误差</td><td>Halperin 等，2022；Remmert 等，2023</td></tr><tr><td>“我要是错，两个方向都会错”</td><td><strong>不成立</strong>：误差是系统性地偏向低估（平均 0.95 次）</td><td>Halperin 等，2022</td></tr><tr><td>“每一组的 RIR 价值都一样”</td><td><strong>不成立</strong>：超过 12 次之后，误差增长快八倍</td><td>Halperin 等，2022</td></tr><tr><td>“离力竭远一点没什么区别”</td><td><strong>需要修正</strong>：对力量可以忽略，对增肌可以测到</td><td>Robinson 等，2024；Refalo 等，2023</td></tr><tr><td>“杠铃速度能解决这个问题”</td><td>在六角杠硬拉上<strong>不成立</strong>：没有一个条件通过了准确性标准</td><td>Chen 等，2026</td></tr></tbody></table>
+<h3>那技术手段呢？</h3>
+<p>多年来被提出的替代方案是测杠铃速度：速度会随着接近力竭而下降，所以一个速度阈值应该能告诉你还剩几次。《Journal of Strength and Conditioning Research》2026 年 11 月号发表的一项研究在六角杠硬拉上检验了这个想法：19 名训练良好的男性，在 65% 和 85% 最大重量下做到力竭的组，以及三条事先声明的标准（误差中位数 ≤ 2 次，并且“估计可接受”和“速度阈值真的出现”两件事的概率都至少 75%）。</p>
+<p>没有任何一个条件同时满足三条标准，而且预期阈值出现的概率低到让这些模型无法实时使用。这只适用于那个动作和那个场景，不能推及整个速度依据训练，但教训是通用的：就算是客观工具，也需要在你实际使用的那个动作上先被验证。</p>
+<h2>怎么落地</h2>
+<ol><li><strong>只在 3 以下处方 RIR。</strong> 超过 3 RIR 就用固定负重和次数，或者用百分比：要求“停在 5 RIR”，等于要求一个在研究里会错 5 次的数字。</li><li><strong>把“按 RIR 做”的组控制在 10-12 次以内。</strong> 这是误差开始加速的门槛。一组 20 次还标着 RIR，是记账上的虚构。</li><li><strong>先报，后验。</strong> 在你收尾那一组的<em>当时</em>写下预测的 RIR，而不是晚上补日志时再填：事后回忆的估计不是同一回事。</li><li><strong>每 4-6 周校准一次。</strong> 在一个安全的动作上（器械，或带保护杠的卧推）做一组到技术性力竭，并在结束前两次左右把预测报出来。预测和实际之间的差，就是你个人的偏差，而且要这样读：如果你报 2 却做了 4，你的“2”实际上等于 4。</li><li><strong>别信第一组。</strong> 它是一次训练里最不准的。如果要调负重，按第二组来调。</li><li><strong>如果目标是增肌，就往正确方向修正。</strong> 既然倾向是停得太早，那么在一个安全动作的最后几组上“比感觉多做一次”，就能让现实重新对齐计划。</li></ol>
+<h3>如果你在线带别人训练</h3>
+<p>学员写给你的 RIR 不是数据，是一次翻译。三个会改变你收到的信息质量的做法：</p>
+<ul><li><strong>问次数，不要问分数。</strong> “你还能再做几次？”比“你那组是几 RIR？”得到的回答更有用，因为后一个问题只是在请人填一个字段。</li><li><strong>把高 RIR 当成噪声。</strong> 报上来的 4 或 5 只说明“我离力竭不近”，别的什么也不说明。不要在它上面搭一条加重计划。</li><li><strong>把校准写进计划，而不是等人要求。</strong> 每月一次安排好的测试组，给你的是学员的偏差，给他的是“我当时并没有快到力竭”的证据。关于多久值得重新审视计划和负重，我们在<a href="/zh/blog/duojiu-genghuan-xunlian-jihua">多久换一次训练计划</a>里谈过。</li></ul>
+<div class="box"><h2>Nurvan：预测的 RIR 和真实的 RIR 并排放着</h2><p>在 Nurvan 里，你可以逐组记录 RIR 和负重；在校准组里，你把预测和实际完成的次数都记下来。这样一来，偏差留在这个动作的历史记录里，而不是留在记忆里。一个说出口的数字，就这样变成一个能用的数据——给你自己，或者给带你的教练。<a href="https://nurvan.app">试用 Nurvan</a></p></div>
+<h2>常见问题</h2>
+<p><strong>RIR 估计准不准？</strong></p>
+<p>平均会低估大约 1 次（0.95 次；414 名受试者的荟萃分析里 95% CI 0.17-1.73），但这个平均值藏了很多东西。靠近力竭、组又短的时候，误差会降到一次以下；而在深蹲上离力竭 5 次时，误差是 5.15 次。</p>
+<p><strong>练到 RIR 2 好还是练到力竭好？</strong></p>
+<p>对力量来说差别可以忽略。对增肌来说，收尾更靠近力竭的组显示出略多一点的生长，但在纳入 15 项研究的荟萃分析里，技术性力竭并没有优于非力竭：这个关系看起来是非线性的。在 1-3 RIR 之间训练、再加上几组验证，是文献支持得最好的折中。</p>
+<p><strong>怎么知道自己的 RIR 估得对不对？</strong></p>
+<p>用一组校准：在结束前两次左右报出 RIR，然后在一个安全的动作上做到技术性力竭。预测和现实之间的差就是你的偏差，而它往往偏向低估。</p>
+<p><strong>新手适合用 RIR 吗？</strong></p>
+<p>在现有数据里，估计的准确度不取决于训练水平：新手和进阶者错得差不多。差别在动作执行的安全性上，不在估计上：刚开始的人最好把 RIR 限制在器械和简单动作上。</p>
+<h2>延伸阅读</h2>
+<ul><li><a href="/zh/blog/duoshao-cishu-zengji">增肌该做多少次数：8-12 的神话</a> —— 你正在试图测量的那份努力，该放在哪里。</li><li><a href="/zh/blog/duojiu-genghuan-xunlian-jihua">多久换一次训练计划？</a> —— 一个计划要保持多久不变，才能看出它有没有用。</li><li><a href="/zh/blog/ai-shengcheng-jianshen-jihua">用 AI 生成健身计划：研究怎么说</a> —— 算法能替你决定什么，又不能替你决定什么。</li></ul>
+<h2>参考文献</h2>
+<ol><li>Halperin I, Malleron T, Har-Nir I, Androulakis-Korakakis P, Wolf M, Fisher J, Steele J, 2022. Accuracy in Predicting Repetitions to Task Failure in Resistance Exercise: A Scoping Review and Exploratory Meta-analysis. <em>Sports Med</em> 52(2):377-390. <a href="https://pubmed.ncbi.nlm.nih.gov/34542869/">PMID 34542869</a> · <a href="https://doi.org/10.1007/s40279-021-01559-x">DOI 10.1007/s40279-021-01559-x</a></li><li>Zourdos MC, Goldsmith JA, Helms ER, et al., 2021. Proximity to Failure and Total Repetitions Performed in a Set Influences Accuracy of Intraset Repetitions in Reserve-Based Rating of Perceived Exertion. <em>J Strength Cond Res</em> 35(Suppl 1):S158-S165. <a href="https://pubmed.ncbi.nlm.nih.gov/30747900/">PMID 30747900</a> · <a href="https://doi.org/10.1519/JSC.0000000000002995">DOI 10.1519/JSC.0000000000002995</a></li><li>Refalo MC, Remmert JF, Pelland JC, Robinson ZP, Zourdos MC, Hamilton DL, Fyfe JJ, Helms ER, 2024. Accuracy of Intraset Repetitions-in-Reserve Predictions During the Bench Press Exercise in Resistance-Trained Male and Female Subjects. <em>J Strength Cond Res</em> 38(3):e78-e85. <a href="https://pubmed.ncbi.nlm.nih.gov/37967832/">PMID 37967832</a> · <a href="https://doi.org/10.1519/JSC.0000000000004653">DOI 10.1519/JSC.0000000000004653</a></li><li>Steele J, Endres A, Fisher J, Gentil P, Giessing J, 2017. Ability to predict repetitions to momentary failure is not perfectly accurate, though improves with resistance training experience. <em>PeerJ</em> 5:e4105. <a href="https://pubmed.ncbi.nlm.nih.gov/29204323/">PMID 29204323</a> · <a href="https://doi.org/10.7717/peerj.4105">DOI 10.7717/peerj.4105</a></li><li>Armes C, Standish-Hunt H, Androulakis-Korakakis P, et al., 2020. "Just One More Rep!" - Ability to Predict Proximity to Task Failure in Resistance Trained Persons. <em>Front Psychol</em> 11:565416. <a href="https://pubmed.ncbi.nlm.nih.gov/33424678/">PMID 33424678</a> · <a href="https://doi.org/10.3389/fpsyg.2020.565416">DOI 10.3389/fpsyg.2020.565416</a></li><li>Remmert JF, Laurson KR, Zourdos MC, 2023. Accuracy of Predicted Intraset Repetitions in Reserve (RIR) in Single- and Multi-Joint Resistance Exercises Among Trained and Untrained Men and Women. <em>Percept Mot Skills</em> 130(3):1239-1254. <a href="https://pubmed.ncbi.nlm.nih.gov/37036795/">PMID 37036795</a> · <a href="https://doi.org/10.1177/00315125231169868">DOI 10.1177/00315125231169868</a></li><li>Remmert JF, Robinson ZP, Pelland JC, et al., 2023. Changes in Intraset Repetitions in Reserve Prediction Accuracy During Six Weeks of Bench Press Training in Trained Men. <em>Percept Mot Skills</em> 130(5):2139-2160. <a href="https://pubmed.ncbi.nlm.nih.gov/37436724/">PMID 37436724</a> · <a href="https://doi.org/10.1177/00315125231189098">DOI 10.1177/00315125231189098</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ, 2023. Influence of Resistance Training Proximity-to-Failure on Skeletal Muscle Hypertrophy: A Systematic Review with Meta-analysis. <em>Sports Med</em> 53(3):649-665. <a href="https://pubmed.ncbi.nlm.nih.gov/36334240/">PMID 36334240</a> · <a href="https://doi.org/10.1007/s40279-022-01784-y">DOI 10.1007/s40279-022-01784-y</a></li><li>Chen W, Zhang H, Li R, et al., 2026. Velocity-Based Monitoring Lacks Both Accuracy and Applicability for Estimating Repetitions in Reserve During the Hexagonal Bar Deadlift. <em>J Strength Cond Res</em> 40(11):1335-1341. <a href="https://pubmed.ncbi.nlm.nih.gov/42328880/">PMID 42328880</a> · <a href="https://doi.org/10.1519/JSC.0000000000005549">DOI 10.1519/JSC.0000000000005549</a></li></ol>
+<p>另外查阅的来源：Bastos V, Machado S, Teixeira DS, 2024. Feasibility and Usefulness of Repetitions-In-Reserve Scales for Selecting Exercise Intensity: A Scoping Review. <em>Percept Mot Skills</em> 131(3):940-970. <a href="https://pubmed.ncbi.nlm.nih.gov/38563729/">PMID 38563729</a>。选题来自 2026 年 11 月关于“按 RIR 衡量强度”和“力竭对比 RIR”的趋势信号，而同类内容都在给出一个目标 RIR，却不说我们估这个数字有多准。科学文献通过 PubMed 检索。</p>
+<p><em>Giammaria Loi 是 Nurvan 的创始人。他自 2012 年起进行力量训练，自 2013 年起作为 FIPE 认证私人教练和教练工作，并自 2018 年起在国家级别参加力量举比赛。他署名的每一篇文章都从科学研究出发，落到健身房里真正有效的做法。</em></p>
+<p class="note">注：本文为科普内容，不能替代医生或专业人士的意见。</p>
+</main>
+<footer>NURVAN · nurvan.app · 2026年11月14日</footer>
+</body>
+</html>

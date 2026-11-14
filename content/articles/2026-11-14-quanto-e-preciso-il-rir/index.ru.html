@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Насколько точен ваш RIR? Что говорят исследования | Nurvan</title>
+<meta name="description" content="Вы говорите «оставалось два», а в среднем оставалось ещё одно. А на 5 RIR в приседе ошибка была 5 повторений: разбираем, где RIR действительно работает.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Тренировки · RIR</div>
+<h1>Насколько точен ваш RIR? Что говорят исследования</h1>
+<p class="lede">«Остановись за 2 повторения до отказа». Это самая частая формулировка в современных программах, включая мои, и она работает при одном условии: вы должны узнавать эту точку. На этот счёт исследования накопили десять лет данных, и картина интереснее, чем о ней рассказывают: мы ошибаемся не сильно, но ошибаемся <strong>всегда в одну сторону</strong> и предсказуемо. Понимание того, где накапливается ошибка, отличает полезный RIR от цифры, которую пишут в дневник по привычке.</p>
+<div class="meta"><span><b>8</b> мин чтения</span><span><b>10</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Джаммария Лои</a> · обновлено 14 ноября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Мускулистый мужчина в профиль жмёт загруженную штангу на горизонтальной скамье в современном зале"><figcaption class="cap">Фото: Andrea Piacquadio — Pexels, лицензия Pexels (бесплатное использование)</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>В среднем мы недооцениваем примерно на 1 повторение.</strong> В метаанализе по 12 исследованиям и 414 участникам средняя ошибка — 0,95 повторения (95% ДИ 0,17-1,73): запас почти всегда был больше, чем вам казалось.</li><li><strong>Ошибка растёт с удалением от отказа.</strong> В приседе с 70% от максимума разница между прогнозом и реальностью составила 2,05 повторения на 1 RIR, 3,65 на 3 RIR и <strong>5,15 на 5 RIR</strong>: на 5 RIR цифра уже ничего не значит.</li><li><strong>Длинные подходы ломают оценку.</strong> После 12 повторений в подходе ошибка растёт на 0,47 повторения с каждым дополнительным повторением против 0,06 в коротких подходах — в восемь раз быстрее.</li><li><strong>Опыт не решает проблему.</strong> В исследованиях тренировочный стаж не влияет на точность, а шесть недель практики с обратной связью не улучшили абсолютную ошибку.</li><li><strong>Там, где RIR работает, он работает хорошо.</strong> В жиме лёжа на 1 и 3 RIR тренированные атлеты ошибались в среднем на 0,65 ± 0,78 повторения. Полезное окно узкое, но внутри него инструмент держится.</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="Чем дальше от отказа, тем больше ошибка"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Чем дальше от отказа, тем больше ошибка</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Разница между прогнозом и реальным числом повторений, приседания с 70% от 1ПМ · Zourdos et al., 2021</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">повторений ошибки</text>
+<line x1="140" y1="400.0" x2="860" y2="400.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="404.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="332.5" x2="860" y2="332.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="336.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">2</text>
+<line x1="140" y1="265.0" x2="860" y2="265.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="269.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">4</text>
+<line x1="140" y1="197.5" x2="860" y2="197.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="201.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">6</text>
+<line x1="140" y1="130.0" x2="860" y2="130.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="134.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">8</text>
+<rect x="230.0" y="330.8" width="120" height="69.2" fill="#f3e5ab" rx="3"/>
+<line x1="290.0" y1="272.4" x2="290.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="272.4" x2="304.0" y2="272.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="389.2" x2="304.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<text x="290.0" y="262.425" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">2,05</text>
+<text x="290.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">1 RIR</text>
+<rect x="440.0" y="276.8" width="120" height="123.2" fill="#d4af37" rx="3"/>
+<line x1="500.0" y1="193.8" x2="500.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="193.8" x2="514.0" y2="193.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="359.8" x2="514.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<text x="500.0" y="183.78750000000002" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">3,65</text>
+<text x="500.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">3 RIR</text>
+<rect x="650.0" y="226.2" width="120" height="173.8" fill="#aa8a2e" rx="3"/>
+<line x1="710.0" y1="127.6" x2="710.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="127.6" x2="724.0" y2="127.6" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="324.7" x2="724.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="710.0" y="117.63749999999999" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">5,15</text>
+<text x="710.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">5 RIR</text>
+<line x1="140" y1="400" x2="860" y2="400" stroke="#262626" stroke-width="1.5"/>
+<line x1="140" y1="366.2" x2="860" y2="366.2" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="24" y="452" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">усы: стандартное отклонение · 1 повторение ошибки: рабочий порог</text>
+</svg></div><figcaption class="cap">График Nurvan по данным Zourdos et al., 2021 (25 тренированных мужчин, присед с 70% от максимума, подходы до отказа по 16 ± 4 повторения). Вертикальные линии — стандартное отклонение. Пунктирная линия: одно повторение ошибки, предел, внутри которого оценка остаётся рабочей.</figcaption></figure>
+<h2>Что измеряет RIR и почему он стал главной цифрой</h2>
+<p>RIR — это <em>repetitions in reserve</em>, повторения, которые, как вам кажется, остались до технического отказа. Это самый простой способ задать усилие, не завязываясь на максимум конкретного дня, который меняется от сна, стресса и кофе. Обзор 2024 года по 31 исследованию и 855 участникам подтверждает, что шкалы RIR применимы и полезны для регулировки интенсивности и что в литературе их используют именно так, как в программах: задают целевой RIR и подбирают под него вес.</p>
+<p>Слабое место в том, что RIR — не измерение, а <strong>прогноз</strong>. А прогноз оценивают единственным способом: сравнивают с тем, что происходит в реальности.</p>
+<h2>Насколько мы ошибаемся на самом деле</h2>
+<p>Лучший ориентир — метаанализ Halperin с коллегами в <em>Sports Medicine</em>: 12 исследований, 414 участников, 262 эффекта. Главный результат: участники <strong>недооценивают</strong> остающиеся до отказа повторения в среднем на 0,95 повторения (95% ДИ 0,17-1,73).</p>
+<p>Одно повторение ошибки кажется немногим, и отчасти это так. Но две детали важнее средней величины.</p>
+<p>Первая — гетерогенность: 97,9%. Это значит, что среднее собрало вместе очень разные ситуации и что «примерно одно повторение» — не ваша ошибка в каждом подходе. А вот разброс между людьми небольшой: стандартное отклонение 1,45 повторения. «Талантов RIR» почти не бывает: ошибка зависит от ситуации, а не от того, кто вы.</p>
+<p>Вторая — направление. Недооценивать значит, что, когда вы останавливаетесь в уверенности, что в запасе 2 повторения, на деле их было 3. Это не случайная ошибка, которая компенсируется: она <strong>систематически уводит вас дальше от отказа</strong>, чем написано в программе.</p>
+<p>Тот же знак ошибки виден в отдельных работах, только с большими числами. У 141 человека в тесте на тренировке на всё тело стандартная ошибка измерения оказалась между 2,64 и 3,38 повторения. В эксперименте с обманным дизайном у тех, кто тренировался минимум год, недооценка в разгибании ног составила 2,0 повторения (95% ДИ 0,0-4,0).</p>
+<h2>Где RIR работает, а где нет</h2>
+<p>Здесь и есть полезный вклад науки — и ровно эту часть материалы по теме пропускают: точность <strong>не свойство человека, а свойство ситуации</strong>.</p>
+<p>Три условия задокументированно её ухудшают.</p>
+<p><strong>Расстояние до отказа.</strong> В исследовании приседа с 70% от максимума 25 тренированных мужчин (в среднем 4,7 года опыта) должны были объявлять, когда до отказа остаётся 5, 3 и 1 повторение, а затем продолжать до настоящего отказа. Ошибка росла по мере того, как точка объявления отодвигалась от отказа: 2,05 ± 1,73 повторения на 1 RIR, 3,65 ± 2,46 на 3 RIR, 5,15 ± 2,92 на 5 RIR. Указание «5 RIR» в приседе на 16 повторений на практике не указывает ничего.</p>
+<p><strong>Длина подхода.</strong> Это самый отчётливый модератор в метаанализе. В подходах до 12 повторений ошибка растёт на 0,06 повторения с каждым выполненным повторением (95% ДИ 0,04-0,09); свыше 12 повторений — на 0,47 (95% ДИ 0,44-0,49). В исследовании приседа корреляция между общим числом повторений и ошибкой была r = 0,65 на 5 RIR и r = 0,01 на 1 RIR: чем длиннее подход, тем хуже оценка, а тренировочный опыт ничего не предсказывал.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="В длинных подходах оценка хуже"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">В длинных подходах оценка хуже</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Рост ошибки на каждое дополнительное повторение в подходе · Halperin et al., 2022</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">дополнительных повторений ошибки</text>
+<line x1="170" y1="360.0" x2="850" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="364.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,0</text>
+<line x1="170" y1="318.2" x2="850" y2="318.2" stroke="#262626" stroke-width="1"/>
+<text x="158" y="322.1818181818182" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,1</text>
+<line x1="170" y1="276.4" x2="850" y2="276.4" stroke="#262626" stroke-width="1"/>
+<text x="158" y="280.3636363636364" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,2</text>
+<line x1="170" y1="234.5" x2="850" y2="234.5" stroke="#262626" stroke-width="1"/>
+<text x="158" y="238.54545454545456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,3</text>
+<line x1="170" y1="192.7" x2="850" y2="192.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="196.72727272727272" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,4</text>
+<line x1="170" y1="150.9" x2="850" y2="150.9" stroke="#262626" stroke-width="1"/>
+<text x="158" y="154.9090909090909" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,5</text>
+<rect x="263.3" y="334.9" width="200" height="25.1" fill="#aa8a2e" rx="3"/>
+<line x1="363.3" y1="322.4" x2="363.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="322.4" x2="377.3" y2="322.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="343.3" x2="377.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<text x="363.3333333333333" y="310.3636363636364" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0,06</text>
+<text x="363.3333333333333" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">Подходы до</text>
+<text x="363.3333333333333" y="406" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">12 повторений</text>
+<rect x="556.7" y="163.5" width="200" height="196.5" fill="#d4af37" rx="3"/>
+<line x1="656.7" y1="155.1" x2="656.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="155.1" x2="670.7" y2="155.1" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="176.0" x2="670.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="656.6666666666666" y="143.0909090909091" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0,47</text>
+<text x="656.6666666666666" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">Подходы более</text>
+<text x="656.6666666666666" y="406" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">12 повторений</text>
+<line x1="170" y1="360" x2="850" y2="360" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">усы: 95% доверительный интервал</text>
+</svg></div><figcaption class="cap">График Nurvan по коэффициентам метарегрессии Halperin et al., 2022 (12 исследований, 414 участников). Вертикальные линии — 95-процентный доверительный интервал. Значение показывает, насколько увеличивается ошибка оценки с каждым дополнительным выполненным повторением в подходе.</figcaption></figure>
+<p><strong>Номер подхода.</strong> Оценки слегка улучшаются в последующих подходах той же тренировки (на 0,07 повторения меньше ошибки на подход) — вероятно, потому что первый подход перекалибровывает восприятие. Эффект маленький, но в полезную сторону: первый подход в упражнении — наименее надёжный.</p>
+<p>И одно условие, которое оценку улучшает: <strong>близость к отказу</strong> вместе с упражнениями и весами, которые не дают очень длинных подходов. В жиме лёжа с 75% от максимума у 24 тренированных атлетов (12 мужчин и 12 женщин), объявлявших 1 и 3 RIR, средняя абсолютная ошибка составила 0,65 ± 0,78 повторения — со статистической эквивалентностью в пределах ±1 повторения и без связи с полом, стажем и относительной силой. В односуставных упражнениях на тренажёрах у 58 тренированных и нетренированных людей оценки были точнее ближе к отказу и в последующих подходах, без различий между мужчинами и женщинами и между упражнениями.</p>
+<p>Если перевести: RIR не «неточен». Он точен <strong>от 3 и ниже, в не слишком длинных подходах</strong>, а в остальных случаях превращается в шум.</p>
+<h2>Опыт не спасает (и это меняет способ применения)</h2>
+<p>Это самое распространённое убеждение среди тех, кто тренируется годами: «RIR учишься чувствовать». Данные его не поддерживают.</p>
+<p>В метаанализе тренировочный стаж не влияет на точность (β = -0,006; 95% ДИ от -0,02 до 0,007). В исследовании приседа тренировочный возраст не предсказывал качество оценок. На тренажёрах ни общий опыт тренировок, ни конкретный опыт в объявлении RIR эффекта не дали.</p>
+<p>Самая прямая проверка — работа с 9 тренированными мужчинами, которые шесть недель жали лёжа трижды в неделю и объявляли 4 RIR и 1 RIR в последнем подходе каждой тренировки. Через шесть недель <strong>абсолютная</strong> ошибка значимо не улучшилась; изменилось направление: в поздних тренировках и в более длинных подходах недооценка стала сильнее.</p>
+<p>Единственный сигнал в обратную сторону — из работы с 141 человеком: тенденция к улучшению с опытом. Тенденция, а не отчётливый эффект. Честный итог такой: опытный тренер и новичок ошибаются похоже, и решение не в том, чтобы ждать, пока «набьётся глаз», а в том, чтобы использовать RIR там, где он надёжен, и проверять его.</p>
+<h2>Почему неверная цифра меняет результат</h2>
+<p>Зависит от того, что вам нужно, и здесь литература на удивление однозначна.</p>
+<p>Для <strong>силы</strong> расстояние до отказа почти не важно: в серии метарегрессий 2024 года доверительные интервалы наклонов для оценённого RIR включают ноль, то есть связь с прибавкой силы пренебрежимая. Если вы тренируете силу, ваша ошибка оценки стоит немного.</p>
+<p>Для <strong>гипертрофии</strong> тот же анализ находит отрицательные наклоны с интервалами, которые ноль не включают: рост мышц увеличивается по мере того, как подходы заканчиваются ближе к отказу. Но не стоит превращать это в «тренироваться до отказа лучше»: метаанализ 2023 года по 15 исследованиям не находит преимущества технического отказа над работой без отказа (ES 0,12; 95% ДИ от -0,13 до 0,37), как и высоких порогов потери скорости над умеренными, и предполагает <strong>нелинейную</strong> зависимость.</p>
+<p>Если сложить два вывода: систематическая недооценка смещает вас в ту сторону, которая стоит чего-то в гипертрофии (дальше от отказа, чем задумано), и лекарство тут не в походе до отказа, а в снижении неопределённости. О том, сколько повторений и сколько отдыха ставить вокруг этого усилия, у нас есть отдельный материал: <a href="/ru/blog/skolko-povtoreniy-dlya-massy">сколько повторений делать для массы</a>.</p>
+<h2>Что на самом деле говорят исследования</h2>
+<table><thead><tr><th>Распространённое утверждение</th><th>Вердикт</th><th>Источник</th></tr></thead><tbody><tr><td>«Тренируйся на 2 RIR и будешь понимать, что делаешь»</td><td><strong>Требует уточнения</strong>: на 1-3 RIR оценка держится (ошибка 0,65-2 повторения), на 5 RIR нет (5,15)</td><td>Refalo et al., 2024; Zourdos et al., 2021</td></tr><tr><td>«С опытом учишься чувствовать RIR»</td><td><strong>Опровергнуто</strong>: тренировочный стаж не влияет на точность, а 6 недель практики не снизили абсолютную ошибку</td><td>Halperin et al., 2022; Remmert et al., 2023</td></tr><tr><td>«Если ошибаюсь, то в обе стороны»</td><td><strong>Опровергнуто</strong>: ошибка систематически идёт в недооценку (0,95 повторения в среднем)</td><td>Halperin et al., 2022</td></tr><tr><td>«RIR одинаково работает в любом подходе»</td><td><strong>Опровергнуто</strong>: свыше 12 повторений ошибка растёт в 8 раз быстрее</td><td>Halperin et al., 2022</td></tr><tr><td>«Остановиться далеко от отказа ничего не меняет»</td><td><strong>Требует уточнения</strong>: пренебрежимо для силы, измеримо для гипертрофии</td><td>Robinson et al., 2024; Refalo et al., 2023</td></tr><tr><td>«Скорость штанги решает проблему»</td><td><strong>Опровергнуто</strong> на тяге с шестигранной штангой: ни одно условие не прошло критерии точности</td><td>Chen et al., 2026</td></tr></tbody></table>
+<h3>А техника?</h3>
+<p>Альтернатива, которую предлагают годами, — измерять скорость штанги: скорость падает по мере приближения к отказу, значит порог скорости должен подсказывать, сколько повторений осталось. Работа в ноябрьском выпуске <em>Journal of Strength and Conditioning Research</em> за 2026 год проверила идею на тяге с шестигранной штангой: 19 хорошо тренированных мужчин, подходы до отказа с 65% и 85% от максимума, три заранее объявленных критерия (медианная ошибка ≤ 2 повторения и не менее 75% вероятности как приемлемой оценки, так и того, что порог скорости действительно появится).</p>
+<p>Ни одно условие не выполнило все три критерия, а вероятность появления ожидаемого порога была настолько низкой, что модели оказались непригодны в реальном времени. Это касается того упражнения и того контекста, а не всего тренинга по скорости, но урок общий: даже объективный инструмент нужно валидировать на том упражнении, где вы его применяете.</p>
+<h2>Как это применить</h2>
+<ol><li><strong>Задавайте RIR только от 3 и ниже.</strong> Выше 3 RIR используйте фиксированный вес и число повторений или процент: просьба «остановись на 5 RIR» — это просьба о цифре, которая в исследованиях ошибается на 5.</li><li><strong>Держите «подходы на RIR» в пределах 10-12 повторений.</strong> Это порог, после которого ошибка ускоряется. Подходы на 20 повторений с объявленным RIR — бухгалтерская фикция.</li><li><strong>Сначала объявите, потом проверьте.</strong> Записывайте прогноз RIR <em>пока</em> закрываете подход, а не вечером при заполнении дневника: оценка по памяти — это другое.</li><li><strong>Калибруйте каждые 4-6 недель.</strong> Один подход до технического отказа в безопасном упражнении (тренажёр или жим со страховочными упорами), с прогнозом, объявленным за пару повторений до конца. Разница между прогнозом и фактом — ваше личное смещение, и его надо читать: если вы объявляете 2, а делаете 4, ваша «двойка» — это четвёрка.</li><li><strong>Не доверяйте первому подходу.</strong> Он самый неточный за тренировку. Если нужно подобрать вес, подбирайте по второму.</li><li><strong>Если цель — гипертрофия, корректируйте в нужную сторону.</strong> Зная, что тенденция — останавливаться слишком рано, установка «на одно повторение больше, чем кажется» в последних подходах безопасного упражнения возвращает реальность к программе.</li></ol>
+<h3>Если вы тренируете других онлайн</h3>
+<p>RIR, который клиент вам пишет, — не данные, а перевод. Три приёма, которые меняют качество получаемой информации:</p>
+<ul><li><strong>Спрашивайте про повторения, а не про балл.</strong> «Сколько бы ты сделал ещё?» даёт более полезные ответы, чем «на каком RIR ты был?»: второй вопрос приглашает просто заполнить поле.</li><li><strong>Относитесь к высоким RIR как к шуму.</strong> Сообщённые 4 или 5 означают «я был далеко от отказа» и ничего больше. Не стройте на этом прогрессию веса.</li><li><strong>Ставьте калибровку в программу, а не по запросу.</strong> Запланированный раз в месяц тестовый подход даёт вам смещение клиента, а ему — доказательство, что он был не «почти в отказе». О том, как часто вообще имеет смысл пересматривать программу и веса, мы писали в материале <a href="/ru/blog/kak-chasto-menyat-programmu-trenirovok">как часто менять программу тренировок</a>.</li></ul>
+<div class="box"><h2>Nurvan: прогноз RIR рядом с фактом</h2><p>В Nurvan вы вносите RIR подход за подходом вместе с весом, а в калибровочных подходах записываете прогноз и фактические повторения: смещение остаётся в истории упражнения, а не в памяти. Так объявленная цифра становится рабочими данными — для вас или для коуча, который вас ведёт. <a href="https://nurvan.app">Попробовать Nurvan</a></p></div>
+<h2>Частые вопросы</h2>
+<p><strong>Насколько точен RIR?</strong></p>
+<p>В среднем запас недооценивают примерно на 1 повторение (0,95; 95% ДИ 0,17-1,73 в метаанализе по 414 участникам), но среднее многое скрывает. Рядом с отказом и в коротких подходах ошибка падает ниже одного повторения; за 5 повторений до отказа в приседе она составила 5,15 повторения.</p>
+<p><strong>Что лучше: тренироваться на RIR 2 или до отказа?</strong></p>
+<p>Для силы разница пренебрежима. Для гипертрофии подходы, которые заканчиваются ближе к отказу, показывают немного больший рост, но технический отказ не оказался лучше работы без отказа в метаанализе по 15 исследованиям: зависимость выглядит нелинейной. Работать на 1-3 RIR с несколькими проверочными подходами — компромисс, который литература поддерживает лучше всего.</p>
+<p><strong>Как понять, верен ли мой RIR?</strong></p>
+<p>Калибровочным подходом: вы объявляете RIR за пару повторений до конца, а затем идёте до технического отказа в безопасном упражнении. Разница между прогнозом и реальностью — ваше смещение, и обычно оно идёт в сторону недооценки.</p>
+<p><strong>Работает ли RIR у новичков?</strong></p>
+<p>По доступным данным точность оценок не зависит от тренировочного стажа: новички и продвинутые ошибаются похоже. Разница в безопасности выполнения, а не в оценке: тем, кто начинает, лучше ограничить RIR тренажёрами и простыми упражнениями.</p>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/skolko-povtoreniy-dlya-massy">Сколько повторений делать для массы: миф о 8-12</a> — куда вкладывать то усилие, которое вы пытаетесь измерить.</li><li><a href="/ru/blog/kak-chasto-menyat-programmu-trenirovok">Как часто менять программу тренировок?</a> — сколько держать программу неизменной, чтобы понять, работает ли она.</li><li><a href="/ru/blog/plan-trenirovok-ot-ii">План тренировок от ИИ: что говорят исследования</a> — что алгоритм может и чего не может решить за вас.</li></ul>
+<h2>Источники</h2>
+<ol><li>Halperin I, Malleron T, Har-Nir I, Androulakis-Korakakis P, Wolf M, Fisher J, Steele J, 2022. Accuracy in Predicting Repetitions to Task Failure in Resistance Exercise: A Scoping Review and Exploratory Meta-analysis. <em>Sports Med</em> 52(2):377-390. <a href="https://pubmed.ncbi.nlm.nih.gov/34542869/">PMID 34542869</a> · <a href="https://doi.org/10.1007/s40279-021-01559-x">DOI 10.1007/s40279-021-01559-x</a></li><li>Zourdos MC, Goldsmith JA, Helms ER, et al., 2021. Proximity to Failure and Total Repetitions Performed in a Set Influences Accuracy of Intraset Repetitions in Reserve-Based Rating of Perceived Exertion. <em>J Strength Cond Res</em> 35(Suppl 1):S158-S165. <a href="https://pubmed.ncbi.nlm.nih.gov/30747900/">PMID 30747900</a> · <a href="https://doi.org/10.1519/JSC.0000000000002995">DOI 10.1519/JSC.0000000000002995</a></li><li>Refalo MC, Remmert JF, Pelland JC, Robinson ZP, Zourdos MC, Hamilton DL, Fyfe JJ, Helms ER, 2024. Accuracy of Intraset Repetitions-in-Reserve Predictions During the Bench Press Exercise in Resistance-Trained Male and Female Subjects. <em>J Strength Cond Res</em> 38(3):e78-e85. <a href="https://pubmed.ncbi.nlm.nih.gov/37967832/">PMID 37967832</a> · <a href="https://doi.org/10.1519/JSC.0000000000004653">DOI 10.1519/JSC.0000000000004653</a></li><li>Steele J, Endres A, Fisher J, Gentil P, Giessing J, 2017. Ability to predict repetitions to momentary failure is not perfectly accurate, though improves with resistance training experience. <em>PeerJ</em> 5:e4105. <a href="https://pubmed.ncbi.nlm.nih.gov/29204323/">PMID 29204323</a> · <a href="https://doi.org/10.7717/peerj.4105">DOI 10.7717/peerj.4105</a></li><li>Armes C, Standish-Hunt H, Androulakis-Korakakis P, et al., 2020. "Just One More Rep!" - Ability to Predict Proximity to Task Failure in Resistance Trained Persons. <em>Front Psychol</em> 11:565416. <a href="https://pubmed.ncbi.nlm.nih.gov/33424678/">PMID 33424678</a> · <a href="https://doi.org/10.3389/fpsyg.2020.565416">DOI 10.3389/fpsyg.2020.565416</a></li><li>Remmert JF, Laurson KR, Zourdos MC, 2023. Accuracy of Predicted Intraset Repetitions in Reserve (RIR) in Single- and Multi-Joint Resistance Exercises Among Trained and Untrained Men and Women. <em>Percept Mot Skills</em> 130(3):1239-1254. <a href="https://pubmed.ncbi.nlm.nih.gov/37036795/">PMID 37036795</a> · <a href="https://doi.org/10.1177/00315125231169868">DOI 10.1177/00315125231169868</a></li><li>Remmert JF, Robinson ZP, Pelland JC, et al., 2023. Changes in Intraset Repetitions in Reserve Prediction Accuracy During Six Weeks of Bench Press Training in Trained Men. <em>Percept Mot Skills</em> 130(5):2139-2160. <a href="https://pubmed.ncbi.nlm.nih.gov/37436724/">PMID 37436724</a> · <a href="https://doi.org/10.1177/00315125231189098">DOI 10.1177/00315125231189098</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ, 2023. Influence of Resistance Training Proximity-to-Failure on Skeletal Muscle Hypertrophy: A Systematic Review with Meta-analysis. <em>Sports Med</em> 53(3):649-665. <a href="https://pubmed.ncbi.nlm.nih.gov/36334240/">PMID 36334240</a> · <a href="https://doi.org/10.1007/s40279-022-01784-y">DOI 10.1007/s40279-022-01784-y</a></li><li>Chen W, Zhang H, Li R, et al., 2026. Velocity-Based Monitoring Lacks Both Accuracy and Applicability for Estimating Repetitions in Reserve During the Hexagonal Bar Deadlift. <em>J Strength Cond Res</em> 40(11):1335-1341. <a href="https://pubmed.ncbi.nlm.nih.gov/42328880/">PMID 42328880</a> · <a href="https://doi.org/10.1519/JSC.0000000000005549">DOI 10.1519/JSC.0000000000005549</a></li></ol>
+<p>Дополнительно изученный источник: Bastos V, Machado S, Teixeira DS, 2024. Feasibility and Usefulness of Repetitions-In-Reserve Scales for Selecting Exercise Intensity: A Scoping Review. <em>Percept Mot Skills</em> 131(3):940-970. <a href="https://pubmed.ncbi.nlm.nih.gov/38563729/">PMID 38563729</a>. Тема выбрана по трендовым сигналам ноября 2026 года об интенсивности, заданной через RIR, и о сравнении отказа с RIR, где конкурирующие материалы задают целевой RIR, не сообщая, насколько точно мы его оцениваем. Научные источники найдены через PubMed.</p>
+<p><em>Джаммария Лои — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и коучем с сертификацией FIPE с 2013 года и выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных работ и заканчивается тем, что действительно работает в зале. <a href="/autore/giammaria-loi">Страница автора</a></em></p>
+<p class="note">Примечание: информационный материал, он не заменяет консультацию врача или квалифицированного специалиста.</p>
+</main>
+<footer>NURVAN · nurvan.app · 14 ноября 2026</footer>
+</body>
+</html>

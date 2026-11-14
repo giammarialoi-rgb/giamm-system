@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ما مدى دقة تقديرك لـ RIR؟ ما تقوله الدراسات | Nurvan</title>
+<meta name="description" content="حين تقول «بقيت لي تكرارتان» كان المتبقّي في المتوسط ثلاثة. وفي السكوات عند 5 RIR بلغ الخطأ المقيس 5 تكرارات: إليك المدى الذي ينفع فيه RIR فعلًا.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">التدريب</a><a href="#">التغذية</a><a href="#">المكملات</a><a href="#" class="on">المدونة</a></nav><a class="cta" href="https://nurvan.app">حمّل التطبيق</a></div></header>
+<main class="wrap" lang="ar">
+<div class="crumb">المدونة · التدريب · RIR</div>
+<h1>ما مدى دقة تقديرك لـ RIR؟ ما تقوله الدراسات</h1>
+<p class="lede">«توقّف وقد بقي لك تكرارتان قبل الفشل.» هذه أشهر تعليمة في البرامج الحديثة، وبرامجي منها، وهي تنفع بشرط واحد: أن تعرف التعرّف على تلك النقطة. وفي هذا تحديدًا جمعت الأبحاث عشر سنوات من البيانات، والصورة أطرف من الرواية الشائعة: نحن لا نخطئ كثيرًا، لكننا نخطئ <strong>دائمًا في الاتجاه نفسه</strong> وبشكل متوقَّع. ومعرفة مكان تمركز الخطأ هي ما يفصل RIR نافعًا عن رقم يُكتب في المفكرة بحكم العادة.</p>
+<div class="meta"><span><b>8</b> دقيقة قراءة</span><span><b>10</b> دراسات</span><span>بقلم <a href="/autore/giammaria-loi">جياماريا لوي</a> · حُدِّث في 14 نوفمبر 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="رجل مفتول العضلات من الجانب وهو يدفع بارًا محمّلًا على بنش مستوٍ في نادٍ رياضي حديث"><figcaption class="cap">صورة: Andrea Piacquadio — Pexels، رخصة Pexels (استخدام مجاني)</figcaption></figure>
+<div class="box"><h2>باختصار</h2><ul><li><strong>في المتوسط نقلّل التقدير بنحو تكرار واحد.</strong> في التحليل البعدي الذي ضمّ 12 دراسة و414 مشاركًا كان الخطأ المتوسط 0,95 تكرار (فاصل ثقة 95%: 0,17-1,73): كان المتبقّي لديك أكثر مما ظننت في كل مرة تقريبًا.</li><li><strong>الخطأ يكبر مع البعد عن الفشل.</strong> في السكوات عند 70% من الحد الأقصى بلغ الفارق بين التكرارات المتوقّعة والفعلية 2,05 عند 1 RIR، و3,65 عند 3 RIR، و<strong>5,15 عند 5 RIR</strong>: عند 5 RIR لم يبقَ للرقم أي معنى.</li><li><strong>المجموعات الطويلة تُفسد التقدير.</strong> فوق 12 تكرارًا في المجموعة يزيد الخطأ 0,47 تكرار مع كل تكرار إضافي، مقابل 0,06 في المجموعات القصيرة: أسرع بثماني مرات.</li><li><strong>الخبرة لا تحلّ المسألة.</strong> في الدراسات لا تؤثّر حالة التدريب في الدقة، وستة أسابيع من التدريب مع تغذية راجعة لم تُحسّن الخطأ المطلق.</li><li><strong>وحيث ينفع RIR، ينفع جيدًا.</strong> في البنش عند 1 و3 RIR أخطأ رياضيون مدرَّبون بمقدار 0,65 ± 0,78 تكرار في المتوسط. النافذة ضيقة، لكن الأداة تصمد داخلها.</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="يزداد الخطأ كلما ابتعدت عن نقطة الفشل"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">يزداد الخطأ كلما ابتعدت عن نقطة الفشل</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">الفرق بين التكرارات المتوقعة والفعلية، سكوات بـ 70% من أقصى وزن · Zourdos et al., 2021</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">تكرارات الخطأ</text>
+<line x1="140" y1="400.0" x2="860" y2="400.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="404.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="332.5" x2="860" y2="332.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="336.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">2</text>
+<line x1="140" y1="265.0" x2="860" y2="265.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="269.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">4</text>
+<line x1="140" y1="197.5" x2="860" y2="197.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="201.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">6</text>
+<line x1="140" y1="130.0" x2="860" y2="130.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="134.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">8</text>
+<rect x="230.0" y="330.8" width="120" height="69.2" fill="#f3e5ab" rx="3"/>
+<line x1="290.0" y1="272.4" x2="290.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="272.4" x2="304.0" y2="272.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="389.2" x2="304.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<text x="290.0" y="262.425" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">2,05</text>
+<text x="290.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">1 RIR</text>
+<rect x="440.0" y="276.8" width="120" height="123.2" fill="#d4af37" rx="3"/>
+<line x1="500.0" y1="193.8" x2="500.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="193.8" x2="514.0" y2="193.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="359.8" x2="514.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<text x="500.0" y="183.78750000000002" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">3,65</text>
+<text x="500.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">3 RIR</text>
+<rect x="650.0" y="226.2" width="120" height="173.8" fill="#aa8a2e" rx="3"/>
+<line x1="710.0" y1="127.6" x2="710.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="127.6" x2="724.0" y2="127.6" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="324.7" x2="724.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="710.0" y="117.63749999999999" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">5,15</text>
+<text x="710.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">5 RIR</text>
+<line x1="140" y1="400" x2="860" y2="400" stroke="#262626" stroke-width="1.5"/>
+<line x1="140" y1="366.2" x2="860" y2="366.2" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="24" y="452" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">الأعمدة: الانحراف المعياري · خطأ تكرار واحد: الحد المفيد</text>
+</svg></div><figcaption class="cap">رسم Nurvan على بيانات Zourdos وزملائه، 2021 (25 رجلًا مدرَّبًا، سكوات عند 70% من الحد الأقصى، مجموعات حتى الفشل بمتوسط 16 ± 4 تكرارًا). الأعمدة الرأسية هي الانحراف المعياري. الخط المتقطّع: خطأ بمقدار تكرار واحد، وهو الهامش الذي يبقى التقدير داخله قابلًا للاستخدام.</figcaption></figure>
+<h2>ما الذي يقيسه RIR، ولماذا صار الرقم المركزي</h2>
+<p>RIR اختصار لـ <em>repetitions in reserve</em>، أي التكرارات التي تظن أنها بقيت لك قبل الفشل الفني. وهي أبسط طريقة لوصف المجهود دون الاعتماد على الحد الأقصى في ذلك اليوم، وهو حدّ يتغيّر مع النوم والتوتر والقهوة. مراجعة من 2024 على 31 دراسة و855 مشاركًا تؤكد أن مقاييس RIR قابلة للتطبيق ونافعة في ضبط الشدة، وأن استخدامها الغالب في المراجع هو بالضبط استخدام البرامج: تحديد RIR مستهدف وتحريك الوزن وفقًا له.</p>
+<p>نقطة الضعف أن RIR ليس قياسًا، بل <strong>توقّعًا</strong>. والتوقّع لا يُقيَّم إلا بطريقة واحدة: مقارنته بما يحدث فعلًا.</p>
+<h2>كم نخطئ فعلًا</h2>
+<p>أفضل مرجع هو التحليل البعدي لـ Halperin وزملائه في <em>Sports Medicine</em>: 12 دراسة، 414 مشاركًا، 262 أثرًا. النتيجة الأساسية: المشاركون <strong>يقلّلون تقدير</strong> التكرارات الباقية حتى الفشل بمقدار 0,95 تكرار في المتوسط (فاصل ثقة 95%: 0,17-1,73).</p>
+<p>خطأ بمقدار تكرار واحد يبدو قليلًا، وهو كذلك جزئيًا. لكن هناك تفصيلين أهمّ من المتوسط نفسه.</p>
+<p>الأول هو التباين: 97,9%. ومعناه أن هذا المتوسط يلخّص حالات مختلفة جدًا بعضها عن بعض، وأن «تكرارًا واحدًا تقريبًا» ليس خطأك في كل مجموعة تؤديها. أما التباين بين الأشخاص فمحدود: انحراف معياري قدره 1,45 تكرار. لا يوجد كثير من «الموهوبين في RIR»: الخطأ يتبع الموقف، لا هوية الشخص.</p>
+<p>الثاني هو الاتجاه. تقليل التقدير يعني أنك حين تتوقّف مقتنعًا بأن لديك تكرارين في المخزون، كان المتبقّي ثلاثة. وهذا ليس خطأً عشوائيًا يعوّض نفسه: إنه يُدرّبك <strong>بعيدًا عن الفشل بصورة منهجية</strong> أكثر مما ينصّ البرنامج.</p>
+<p>ويظهر الاتجاه نفسه في الأعمال المفردة بأرقام أكبر. في 141 شخصًا خُضعوا لاختبار في حصة شاملة للجسم كله، جاء الخطأ المعياري للقياس بين 2,64 و3,38 تكرار. وفي تجربة بتصميم مخادع على من لديهم سنة تدريب على الأقل، كان تقليل التقدير 2,0 تكرار (فاصل ثقة 95%: 0,0-4,0) في تمرين بسط الساقين.</p>
+<h2>حيث ينفع RIR وحيث لا ينفع</h2>
+<p>هنا تكمن إضافة الأبحاث النافعة، وهي الجزء الذي يتخطّاه المحتوى المتداول: الدقة <strong>ليست صفة في الشخص، بل صفة في الموقف</strong>.</p>
+<p>ثلاثة شروط تُسوّئها بشكل موثّق.</p>
+<p><strong>البعد عن الفشل.</strong> في دراسة السكوات عند 70% من الحد الأقصى، كان على 25 رجلًا مدرَّبًا (بخبرة متوسطها 4,7 سنوات) أن يعلنوا لحظة وصولهم إلى 5 و3 و1 تكرار من الفشل، ثم يكملوا حتى الفشل الحقيقي. وكبر الخطأ كلما ابتعدت نقطة الإعلان عن الفشل: 2,05 ± 1,73 تكرار عند 1 RIR، و3,65 ± 2,46 عند 3 RIR، و5,15 ± 2,92 عند 5 RIR. ووصف «5 RIR» في سكوات من 16 تكرارًا لا يصف شيئًا في الواقع.</p>
+<p><strong>طول المجموعة.</strong> وهو أوضح معدِّل في التحليل البعدي. في المجموعات حتى 12 تكرارًا يزيد الخطأ 0,06 تكرار مع كل تكرار يُنفَّذ (فاصل ثقة 95%: 0,04-0,09)؛ وفوق 12 تكرارًا يزيد 0,47 (فاصل ثقة 95%: 0,44-0,49). وفي دراسة السكوات كان الارتباط بين مجموع التكرارات والخطأ r = 0,65 عند 5 RIR وr = 0,01 عند 1 RIR: كلما طالت المجموعة ساء التقدير، ولم تكن خبرة التدريب عاملًا تنبؤيًا.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="في المجموعات الطويلة يسوء التقدير"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">في المجموعات الطويلة يسوء التقدير</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">زيادة الخطأ مع كل تكرار إضافي في المجموعة · Halperin et al., 2022</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">تكرارات خطأ إضافية</text>
+<line x1="170" y1="360.0" x2="850" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="364.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,0</text>
+<line x1="170" y1="318.2" x2="850" y2="318.2" stroke="#262626" stroke-width="1"/>
+<text x="158" y="322.1818181818182" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,1</text>
+<line x1="170" y1="276.4" x2="850" y2="276.4" stroke="#262626" stroke-width="1"/>
+<text x="158" y="280.3636363636364" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,2</text>
+<line x1="170" y1="234.5" x2="850" y2="234.5" stroke="#262626" stroke-width="1"/>
+<text x="158" y="238.54545454545456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,3</text>
+<line x1="170" y1="192.7" x2="850" y2="192.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="196.72727272727272" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,4</text>
+<line x1="170" y1="150.9" x2="850" y2="150.9" stroke="#262626" stroke-width="1"/>
+<text x="158" y="154.9090909090909" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,5</text>
+<rect x="263.3" y="334.9" width="200" height="25.1" fill="#aa8a2e" rx="3"/>
+<line x1="363.3" y1="322.4" x2="363.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="322.4" x2="377.3" y2="322.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="343.3" x2="377.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<text x="363.3333333333333" y="310.3636363636364" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0,06</text>
+<text x="363.3333333333333" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">مجموعات حتى</text>
+<text x="363.3333333333333" y="406" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">12 تكرارا</text>
+<rect x="556.7" y="163.5" width="200" height="196.5" fill="#d4af37" rx="3"/>
+<line x1="656.7" y1="155.1" x2="656.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="155.1" x2="670.7" y2="155.1" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="176.0" x2="670.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="656.6666666666666" y="143.0909090909091" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0,47</text>
+<text x="656.6666666666666" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">مجموعات أكثر من</text>
+<text x="656.6666666666666" y="406" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">12 تكرارا</text>
+<line x1="170" y1="360" x2="850" y2="360" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">الأعمدة: فاصل ثقة 95%</text>
+</svg></div><figcaption class="cap">رسم Nurvan على معاملات الانحدار البعدي لدى Halperin وزملائه، 2022 (12 دراسة، 414 مشاركًا). الأعمدة الرأسية هي فاصل الثقة 95%. القيمة تبيّن مقدار زيادة خطأ التقدير مع كل تكرار إضافي يُنفَّذ في المجموعة.</figcaption></figure>
+<p><strong>رقم المجموعة.</strong> تتحسّن التقديرات قليلًا في المجموعات التالية داخل الحصة نفسها (0,07 تكرار أقل من الخطأ لكل مجموعة)، ربما لأن مرجع المجموعة الأولى يعيد معايرة الإحساس. أثر صغير لكنه في الاتجاه النافع: المجموعة الأولى من أي تمرين هي الأقل موثوقية.</p>
+<p>وهناك شرط يُحسّنها بالمقابل: <strong>القرب من الفشل</strong> مقترنًا بتمارين وأوزان لا تُنتج مجموعات طويلة جدًا. في البنش عند 75% من الحد الأقصى، ومع 24 رياضيًا مدرَّبًا (12 رجلًا و12 امرأة) أعلنوا 1 و3 RIR، كان متوسط الخطأ المطلق 0,65 ± 0,78 تكرار، بتكافؤ إحصائي داخل ±1 تكرار ودون أي علاقة بالجنس أو سنوات الخبرة أو القوة النسبية. وفي تمارين المفصل الواحد على الأجهزة، ومع 58 شخصًا بين مدرَّبين وغير مدرَّبين، جاءت التقديرات أدقّ قرب الفشل وفي المجموعات التالية، دون فروق بين الرجال والنساء ولا بين التمارين.</p>
+<p>بعبارة أخرى: RIR ليس «غير دقيق». إنه دقيق <strong>من 3 نزولًا وفي مجموعات غير طويلة</strong>، ويتحوّل إلى ضجيج في غير ذلك.</p>
+<h2>الخبرة لن تنقذك (وهذا يغيّر طريقة استخدامه)</h2>
+<p>هذا أشيع اعتقاد بين من يتمرّنون منذ سنوات: «الإحساس بـ RIR يُتعلَّم.» البيانات لا تسنده.</p>
+<p>في التحليل البعدي لا تؤثّر حالة التدريب في الدقة (β = -0,006، فاصل ثقة 95%: -0,02 إلى 0,007). وفي دراسة السكوات لم يتنبّأ عمر التدريب بجودة التقديرات. وعلى الأجهزة لم يكن لخبرة التدريب ولا للخبرة المحدَّدة في إعطاء RIR أي أثر.</p>
+<p>وأوضح اختبار مباشر هو عمل على 9 رجال مدرَّبين أدّوا البنش ثلاث مرات أسبوعيًا لمدة ستة أسابيع، معلنين 4 RIR و1 RIR في المجموعة الأخيرة من كل حصة. وبعد ستة أسابيع لم يتحسّن الخطأ <strong>المطلق</strong> بفارق معتدّ به؛ ما تغيّر هو الاتجاه، بميل أكبر إلى تقليل التقدير في الحصص الأخيرة وفي المجموعات الأطول.</p>
+<p>وثمة إشارة واحدة معاكسة، من العمل على 141 شخصًا: ميل إلى التحسّن مع الخبرة. ميل، لا أثر صريح. والحصيلة الأمينة أن المدرّب الخبير والمبتدئ يخطئان بصورة متشابهة، وأن الحل ليس انتظار «تكوّن الإحساس»، بل بناء RIR حيث يكون موثوقًا والتحقّق منه.</p>
+<h2>لماذا يغيّر رقم خاطئ النتائج</h2>
+<p>يعتمد على ما تبحث عنه، والمراجع هنا واضحة بصورة مفاجئة.</p>
+<p>لـ<strong>القوة</strong> لا يهمّ البعد عن الفشل كثيرًا: في سلسلة الانحدارات البعدية لعام 2024 تحتوي فواصل الثقة لميول RIR المقدَّر على الصفر، أي علاقة مهملة بمكاسب القوة. إن كنت تدرّب القوة فخطأ تقديرك يكلّفك قليلًا.</p>
+<p>ولـ<strong>تضخّم العضلات</strong> يجد التحليل نفسه ميولًا سلبية بفواصل لا تحتوي على الصفر: النمو العضلي يزيد كلما انتهت المجموعات أقرب إلى الفشل. لكن احذر من تحويل ذلك إلى «التمرين حتى الفشل أفضل»: التحليل البعدي لعام 2023 على 15 دراسة لا يجد ميزة للفشل الفني على عدم الفشل (ES 0,12؛ فاصل ثقة 95%: -0,13 إلى 0,37)، ولا لعتبات فقد السرعة المرتفعة على المعتدلة، ويفترض علاقة <strong>غير خطية</strong>.</p>
+<p>وبجمع الأمرين: تقليل التقدير المنهجي يدفعك في الاتجاه الذي يكلّف شيئًا في التضخّم (أبعد عن الفشل مما هو مقرَّر)، والعلاج ليس الذهاب إلى الفشل بل تقليل عدم اليقين. وعن عدد التكرارات ومدة الراحة المناسبين حول هذا المجهود كتبنا مقالًا منفصلًا: <a href="/ar/blog/kam-takrar-lilkutla-aladalia">كم تكرارًا للكتلة العضلية</a>.</p>
+<h2>ماذا تقول الأبحاث فعلًا</h2>
+<table><thead><tr><th>العبارة الشائعة</th><th>الحكم</th><th>المصدر</th></tr></thead><tbody><tr><td>«تمرّن عند 2 RIR وستعرف ما تفعل»</td><td><strong>يحتاج إلى تدقيق</strong>: بين 1 و3 RIR يصمد التقدير (خطأ 0,65-2 تكرار)، وعند 5 RIR لا يصمد (5,15)</td><td>Refalo وزملاؤه، 2024؛ Zourdos وزملاؤه، 2021</td></tr><tr><td>«مع الخبرة تتعلّم الإحساس بـ RIR»</td><td><strong>غير صحيح</strong>: حالة التدريب لا تؤثّر في الدقة، وستة أسابيع من التدريب لم تُقلّص الخطأ المطلق</td><td>Halperin وزملاؤه، 2022؛ Remmert وزملاؤه، 2023</td></tr><tr><td>«إن أخطأت فأنا أخطئ في الاتجاهين»</td><td><strong>غير صحيح</strong>: الخطأ منهجي نحو تقليل التقدير (0,95 تكرار في المتوسط)</td><td>Halperin وزملاؤه، 2022</td></tr><tr><td>«RIR يصلح بالقدر نفسه في كل مجموعة»</td><td><strong>غير صحيح</strong>: فوق 12 تكرارًا يكبر الخطأ أسرع بثماني مرات</td><td>Halperin وزملاؤه، 2022</td></tr><tr><td>«التوقّف بعيدًا عن الفشل لا يغيّر شيئًا»</td><td><strong>يحتاج إلى تدقيق</strong>: مهمل للقوة، وقابل للقياس للتضخّم</td><td>Robinson وزملاؤه، 2024؛ Refalo وزملاؤه، 2023</td></tr><tr><td>«سرعة البار تحلّ المسألة»</td><td><strong>غير صحيح</strong> في الديدليفت بالبار السداسي: لم يستوفِ أي شرط معايير الدقة</td><td>Chen وزملاؤه، 2026</td></tr></tbody></table>
+<h3>وماذا عن التقنية؟</h3>
+<p>البديل المطروح منذ سنوات هو قياس سرعة البار: السرعة تنخفض مع الاقتراب من الفشل، فيُفترض أن عتبة سرعة معيّنة تخبرك بعدد التكرارات الباقية. عمل نُشر في عدد نوفمبر 2026 من <em>Journal of Strength and Conditioning Research</em> اختبر الفكرة في الديدليفت بالبار السداسي: 19 رجلًا جيّدي التدريب، ومجموعات حتى الفشل عند 65% و85% من الحد الأقصى، وثلاثة معايير مُعلنة مسبقًا (خطأ وسيط ≤ 2 تكرار، واحتمال 75% على الأقل لكلٍّ من أن يكون التقدير مقبولًا وأن تظهر عتبة السرعة فعلًا).</p>
+<p>لم يستوفِ أي شرط المعايير الثلاثة جميعًا، وكان احتمال ظهور العتبة المتوقَّعة منخفضًا إلى حدّ يجعل النماذج غير قابلة للاستخدام في الزمن الحقيقي. هذا يصحّ على ذلك التمرين وذلك السياق، لا على التدريب القائم على السرعة كله، لكن الدرس عام: حتى الأداة الموضوعية تحتاج إلى التحقّق منها على التمرين الذي تستخدمها فيه.</p>
+<h2>كيف تطبّق ذلك</h2>
+<ol><li><strong>لا تصف RIR إلا من 3 نزولًا.</strong> فوق 3 RIR استخدم وزنًا وتكرارات ثابتة أو نسبة مئوية: أن تطلب «توقّف عند 5 RIR» هو أن تطلب رقمًا يخطئ بـ5 في الدراسات.</li><li><strong>أبقِ مجموعات «الـ RIR» داخل 10 إلى 12 تكرارًا.</strong> هذه هي العتبة التي يتسارع الخطأ بعدها. مجموعة من 20 تكرارًا مع RIR معلن هي خيال محاسبي.</li><li><strong>أعلن أولًا وتحقّق لاحقًا.</strong> اكتب RIR المتوقَّع <em>أثناء</em> إغلاق المجموعة، لا عند تدوين المفكرة مساءً: التقدير بأثر رجعي شيء آخر.</li><li><strong>عاير نفسك كل 4 إلى 6 أسابيع.</strong> مجموعة واحدة حتى الفشل الفني على تمرين آمن (جهاز، أو بنش بالمصدّات) مع إعلان التوقّع قبل تكرارين أو نحو ذلك. والفارق بين المتوقَّع والفعلي هو انحيازك الشخصي، ويُقرأ هكذا: إن أعلنت 2 وأدّيت 4، فإن «2» عندك تساوي 4.</li><li><strong>لا تثق بالمجموعة الأولى.</strong> هي الأقل دقة في الحصة. وإن كان عليك ضبط الوزن فاضبطه على الثانية.</li><li><strong>إن كان الهدف التضخّم فصحّح في الاتجاه الصحيح.</strong> وبما أن الميل هو التوقّف مبكرًا، فإن «تكرارًا واحدًا أكثر مما يبدو لي» في المجموعات الأخيرة من تمرين آمن يعيد مواءمة الواقع مع البرنامج.</li></ol>
+<h3>إن كنت تدرّب آخرين عن بُعد</h3>
+<p>الـ RIR الذي يكتبه لك المتدرّب ليس معطى، بل ترجمة. ثلاث احتياطات تغيّر جودة المعلومات التي تصلك:</p>
+<ul><li><strong>اطلب التكرارات، لا الدرجة.</strong> «كم تكرارًا كنت ستؤدّي بعد؟» يعطي إجابات أنفع من «على أي RIR كنت؟»، لأن السؤال الثاني يدعو إلى تعبئة خانة.</li><li><strong>تعامل مع قيم RIR المرتفعة كضجيج.</strong> الرقم 4 أو 5 المُبلَّغ يقول «لم أكن قريبًا من الفشل» ولا شيء غير ذلك. لا تبنِ عليه تدرّجًا في الأوزان.</li><li><strong>ضع المعايرة داخل البرنامج، لا عند الطلب.</strong> مجموعة اختبار مجدولة كل شهر تعطيك انحياز المتدرّب وتعطيه الدليل على أنه لم يكن «قريبًا من الفشل». وعن الإيقاع الذي يستحق عنده إعادة النظر في البرنامج والأوزان تحدثنا في <a href="/ar/blog/kam-marra-tughayir-barnamij-altadrib">كم مرة تغيّر برنامج التدريب</a>.</li></ul>
+<div class="box"><h2>Nurvan: الـ RIR المتوقَّع إلى جانب الفعلي</h2><p>في Nurvan تسجّل RIR مجموعةً بمجموعة مع الوزن، وفي مجموعات المعايرة تدوّن التوقّع والتكرارات الفعلية: فيبقى الفارق في سجل التمرين لا في الذاكرة. بهذا يتحوّل رقم معلن إلى معطى قابل للاستخدام، لك أو للمدرّب الذي يتابعك. <a href="https://nurvan.app">جرّب Nurvan</a></p></div>
+<h2>أسئلة شائعة</h2>
+<p><strong>ما مدى دقة تقدير RIR؟</strong></p>
+<p>في المتوسط يقلّ التقدير بنحو تكرار واحد (0,95؛ فاصل ثقة 95%: 0,17-1,73 في التحليل البعدي على 414 مشاركًا)، لكن المتوسط يخفي كثيرًا. قرب الفشل وفي المجموعات القصيرة ينزل الخطأ تحت التكرار الواحد؛ وعلى بعد 5 تكرارات من الفشل، في السكوات، كان 5,15 تكرار.</p>
+<p><strong>هل الأفضل التمرين عند RIR 2 أم حتى الفشل؟</strong></p>
+<p>للقوة الفارق مهمل. وللتضخّم تُظهر المجموعات التي تنتهي أقرب إلى الفشل نموًا أكبر قليلًا، لكن الفشل الفني لم يتفوّق على عدم الفشل في التحليل البعدي على 15 دراسة: العلاقة تبدو غير خطية. والعمل بين 1 و3 RIR مع بعض مجموعات التحقّق هو الحل الوسط الذي تسنده المراجع أكثر من غيره.</p>
+<p><strong>كيف أعرف أن RIR عندي صحيح؟</strong></p>
+<p>بمجموعة معايرة: تعلن RIR قبل النهاية بتكرارين تقريبًا ثم تمضي إلى الفشل الفني على تمرين آمن. والفارق بين التوقّع والواقع هو انحيازك، وهو يميل عادة إلى تقليل التقدير.</p>
+<p><strong>هل ينفع RIR للمبتدئين أيضًا؟</strong></p>
+<p>في البيانات المتاحة لا تتبع دقة التقديرات حالة التدريب: المبتدئون والمتقدّمون يخطئون بصورة متشابهة. الفرق في أمان الأداء لا في التقدير: من يبدأ يُحسن به أن يحصر RIR في الأجهزة والتمارين البسيطة.</p>
+<h2>اقرأ أيضًا</h2>
+<ul><li><a href="/ar/blog/kam-takrar-lilkutla-aladalia">كم تكرارًا للكتلة العضلية: أسطورة 8-12</a> — أين تضع المجهود الذي تحاول قياسه.</li><li><a href="/ar/blog/kam-marra-tughayir-barnamij-altadrib">كم مرة تغيّر برنامج التدريب؟</a> — كم تُبقي البرنامج ثابتًا حتى ترى إن كان ينفع.</li><li><a href="/ar/blog/barnamij-tadrib-bialdhakaa-alistinaei">برنامج تدريب بالذكاء الاصطناعي: ما تقوله الدراسات</a> — ما يستطيع الخوارزم أن يقرّره عنك وما لا يستطيع.</li></ul>
+<h2>المصادر</h2>
+<ol><li>Halperin I, Malleron T, Har-Nir I, Androulakis-Korakakis P, Wolf M, Fisher J, Steele J, 2022. Accuracy in Predicting Repetitions to Task Failure in Resistance Exercise: A Scoping Review and Exploratory Meta-analysis. <em>Sports Med</em> 52(2):377-390. <a href="https://pubmed.ncbi.nlm.nih.gov/34542869/">PMID 34542869</a> · <a href="https://doi.org/10.1007/s40279-021-01559-x">DOI 10.1007/s40279-021-01559-x</a></li><li>Zourdos MC, Goldsmith JA, Helms ER, et al., 2021. Proximity to Failure and Total Repetitions Performed in a Set Influences Accuracy of Intraset Repetitions in Reserve-Based Rating of Perceived Exertion. <em>J Strength Cond Res</em> 35(Suppl 1):S158-S165. <a href="https://pubmed.ncbi.nlm.nih.gov/30747900/">PMID 30747900</a> · <a href="https://doi.org/10.1519/JSC.0000000000002995">DOI 10.1519/JSC.0000000000002995</a></li><li>Refalo MC, Remmert JF, Pelland JC, Robinson ZP, Zourdos MC, Hamilton DL, Fyfe JJ, Helms ER, 2024. Accuracy of Intraset Repetitions-in-Reserve Predictions During the Bench Press Exercise in Resistance-Trained Male and Female Subjects. <em>J Strength Cond Res</em> 38(3):e78-e85. <a href="https://pubmed.ncbi.nlm.nih.gov/37967832/">PMID 37967832</a> · <a href="https://doi.org/10.1519/JSC.0000000000004653">DOI 10.1519/JSC.0000000000004653</a></li><li>Steele J, Endres A, Fisher J, Gentil P, Giessing J, 2017. Ability to predict repetitions to momentary failure is not perfectly accurate, though improves with resistance training experience. <em>PeerJ</em> 5:e4105. <a href="https://pubmed.ncbi.nlm.nih.gov/29204323/">PMID 29204323</a> · <a href="https://doi.org/10.7717/peerj.4105">DOI 10.7717/peerj.4105</a></li><li>Armes C, Standish-Hunt H, Androulakis-Korakakis P, et al., 2020. "Just One More Rep!" - Ability to Predict Proximity to Task Failure in Resistance Trained Persons. <em>Front Psychol</em> 11:565416. <a href="https://pubmed.ncbi.nlm.nih.gov/33424678/">PMID 33424678</a> · <a href="https://doi.org/10.3389/fpsyg.2020.565416">DOI 10.3389/fpsyg.2020.565416</a></li><li>Remmert JF, Laurson KR, Zourdos MC, 2023. Accuracy of Predicted Intraset Repetitions in Reserve (RIR) in Single- and Multi-Joint Resistance Exercises Among Trained and Untrained Men and Women. <em>Percept Mot Skills</em> 130(3):1239-1254. <a href="https://pubmed.ncbi.nlm.nih.gov/37036795/">PMID 37036795</a> · <a href="https://doi.org/10.1177/00315125231169868">DOI 10.1177/00315125231169868</a></li><li>Remmert JF, Robinson ZP, Pelland JC, et al., 2023. Changes in Intraset Repetitions in Reserve Prediction Accuracy During Six Weeks of Bench Press Training in Trained Men. <em>Percept Mot Skills</em> 130(5):2139-2160. <a href="https://pubmed.ncbi.nlm.nih.gov/37436724/">PMID 37436724</a> · <a href="https://doi.org/10.1177/00315125231189098">DOI 10.1177/00315125231189098</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ, 2023. Influence of Resistance Training Proximity-to-Failure on Skeletal Muscle Hypertrophy: A Systematic Review with Meta-analysis. <em>Sports Med</em> 53(3):649-665. <a href="https://pubmed.ncbi.nlm.nih.gov/36334240/">PMID 36334240</a> · <a href="https://doi.org/10.1007/s40279-022-01784-y">DOI 10.1007/s40279-022-01784-y</a></li><li>Chen W, Zhang H, Li R, et al., 2026. Velocity-Based Monitoring Lacks Both Accuracy and Applicability for Estimating Repetitions in Reserve During the Hexagonal Bar Deadlift. <em>J Strength Cond Res</em> 40(11):1335-1341. <a href="https://pubmed.ncbi.nlm.nih.gov/42328880/">PMID 42328880</a> · <a href="https://doi.org/10.1519/JSC.0000000000005549">DOI 10.1519/JSC.0000000000005549</a></li></ol>
+<p>مصدر إضافي روجع: Bastos V, Machado S, Teixeira DS, 2024. Feasibility and Usefulness of Repetitions-In-Reserve Scales for Selecting Exercise Intensity: A Scoping Review. <em>Percept Mot Skills</em> 131(3):940-970. <a href="https://pubmed.ncbi.nlm.nih.gov/38563729/">PMID 38563729</a>. اختير الموضوع من مؤشرات اتجاهات نوفمبر 2026 حول الشدة مقيسة بـ RIR وحول المقارنة بين الفشل وRIR، مع محتوى منافس يصف RIR مستهدفًا دون أن يذكر كم نحن دقيقون في تقديره. روجعت المصادر العلمية عبر PubMed.</p>
+<p><em>جياماريا لوي هو مؤسس Nurvan. يتدرّب بالأثقال منذ 2012، ويعمل مدربًا شخصيًا ومدرّبًا معتمدًا من FIPE منذ 2013، وينافس في رفع القوة على المستوى الوطني منذ 2018. كل مقال يوقّعه يبدأ من الدراسات العلمية وينتهي عند ما ينفع فعلًا في النادي.</em></p>
+<p class="note">ملاحظة: محتوى إعلامي، لا يغني عن رأي الطبيب أو المختص.</p>
+</main>
+<footer>NURVAN · nurvan.app · 14 نوفمبر 2026</footer>
+</body>
+</html>

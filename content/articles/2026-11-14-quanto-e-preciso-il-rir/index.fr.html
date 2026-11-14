@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Le RIR est-il fiable ? Ce que disent les études | Nurvan</title>
+<meta name="description" content="Quand vous dites « il m&#x27;en restait deux », il vous en restait une de plus. Et à 5 RIR au squat l&#x27;erreur mesurée était de 5 répétitions : voici où le RIR tient.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Entraînement</a><a href="#">Nutrition</a><a href="#">Compléments</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Télécharger l’app</a></div></header>
+<main class="wrap" lang="fr">
+<div class="crumb">Blog · Entraînement · RIR</div>
+<h1>Le RIR est-il fiable ? Ce que disent les études</h1>
+<p class="lede">« Arrêtez-vous à 2 répétitions de l'échec. » C'est la consigne la plus courante des programmes modernes, les miens compris, et elle fonctionne à une condition : que vous sachiez reconnaître ce point. Sur ce terrain, la recherche a accumulé dix ans de données, et le tableau est plus intéressant que ce qu'on en raconte : nous ne nous trompons pas tant que ça, mais nous nous trompons <strong>toujours dans le même sens</strong>, et de façon prévisible. Savoir où l'erreur se concentre, c'est ce qui sépare un RIR utile d'un chiffre noté dans le carnet par habitude.</p>
+<div class="meta"><span><b>11</b> min de lecture</span><span><b>10</b> études citées</span><span>Par <a href="/autore/giammaria-loi">Giammaria Loi</a> · mis à jour le 14 novembre 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Homme musclé de profil poussant une barre chargée au développé couché à plat dans une salle de sport moderne"><figcaption class="cap">Photo de Andrea Piacquadio — Pexels, licence Pexels (utilisation gratuite)</figcaption></figure>
+<div class="box"><h2>En bref</h2><ul><li><strong>En moyenne, nous sous-estimons d'environ 1 répétition.</strong> Dans la méta-analyse portant sur 12 études et 414 participants, l'erreur moyenne est de 0,95 répétition (IC 95 % 0,17-1,73) : il vous en restait presque toujours plus que vous ne le pensiez.</li><li><strong>L'erreur grandit avec la distance à l'échec.</strong> Au squat à 70 % du maximum, l'écart entre répétitions prévues et réelles était de 2,05 à 1 RIR, 3,65 à 3 RIR et <strong>5,15 à 5 RIR</strong> : à 5 RIR, le chiffre ne veut plus rien dire.</li><li><strong>Les séries longues ruinent l'estimation.</strong> Au-delà de 12 répétitions par série, l'erreur augmente de 0,47 répétition par répétition supplémentaire, contre 0,06 dans les séries courtes : huit fois plus vite.</li><li><strong>L'expérience ne règle rien.</strong> Dans les études, le niveau d'entraînement n'influence pas la précision, et six semaines de pratique avec retour d'information n'ont pas amélioré l'erreur absolue.</li><li><strong>Là où le RIR fonctionne, il fonctionne bien.</strong> Au développé couché, à 1 et 3 RIR, des athlètes entraînés se sont trompés en moyenne de 0,65 ± 0,78 répétition. La fenêtre utile est étroite, mais dedans l'outil tient.</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="L'erreur augmente quand on s'éloigne de l'échec"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">L'erreur augmente quand on s'éloigne de l'échec</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Écart entre répétitions prévues et réelles, squat à 70% du 1RM · Zourdos et al., 2021</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">répétitions d'erreur</text>
+<line x1="140" y1="400.0" x2="860" y2="400.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="404.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="332.5" x2="860" y2="332.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="336.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">2</text>
+<line x1="140" y1="265.0" x2="860" y2="265.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="269.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">4</text>
+<line x1="140" y1="197.5" x2="860" y2="197.5" stroke="#262626" stroke-width="1"/>
+<text x="128" y="201.5" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">6</text>
+<line x1="140" y1="130.0" x2="860" y2="130.0" stroke="#262626" stroke-width="1"/>
+<text x="128" y="134.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">8</text>
+<rect x="230.0" y="330.8" width="120" height="69.2" fill="#f3e5ab" rx="3"/>
+<line x1="290.0" y1="272.4" x2="290.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="272.4" x2="304.0" y2="272.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="276.0" y1="389.2" x2="304.0" y2="389.2" stroke="#f0f0f0" stroke-width="2"/>
+<text x="290.0" y="262.425" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">2,05</text>
+<text x="290.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">1 RIR</text>
+<rect x="440.0" y="276.8" width="120" height="123.2" fill="#d4af37" rx="3"/>
+<line x1="500.0" y1="193.8" x2="500.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="193.8" x2="514.0" y2="193.8" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="486.0" y1="359.8" x2="514.0" y2="359.8" stroke="#f0f0f0" stroke-width="2"/>
+<text x="500.0" y="183.78750000000002" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">3,65</text>
+<text x="500.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">3 RIR</text>
+<rect x="650.0" y="226.2" width="120" height="173.8" fill="#aa8a2e" rx="3"/>
+<line x1="710.0" y1="127.6" x2="710.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="127.6" x2="724.0" y2="127.6" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="696.0" y1="324.7" x2="724.0" y2="324.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="710.0" y="117.63749999999999" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">5,15</text>
+<text x="710.0" y="426" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">5 RIR</text>
+<line x1="140" y1="400" x2="860" y2="400" stroke="#262626" stroke-width="1.5"/>
+<line x1="140" y1="366.2" x2="860" y2="366.2" stroke="#a0a0a0" stroke-width="1.5" stroke-dasharray="7 5"/>
+<text x="24" y="452" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">barres : écart-type · 1 répétition d'erreur : seuil utile</text>
+</svg></div><figcaption class="cap">Graphique Nurvan d'après les données de Zourdos et al., 2021 (25 hommes entraînés, squat à 70 % du maximum, séries à l'échec de 16 ± 4 répétitions). Les barres verticales sont l'écart type. Ligne en pointillés : une répétition d'erreur, la marge dans laquelle une estimation reste utilisable.</figcaption></figure>
+<h2>Ce que mesure le RIR, et pourquoi il est devenu le chiffre central</h2>
+<p>RIR signifie <em>repetitions in reserve</em> : les répétitions que vous pensez avoir encore avant l'échec technique. C'est la façon la plus simple de prescrire l'effort sans dépendre du maximum du jour, qui bouge avec le sommeil, le stress et le café. Une revue de 2024 portant sur 31 études et 855 participants confirme que les échelles RIR sont praticables et utiles pour régler l'intensité, et que leur usage dominant dans la littérature est exactement celui des programmes : fixer un RIR cible et déplacer la charge en conséquence.</p>
+<p>Le point faible, c'est que le RIR n'est pas une mesure, c'est une <strong>prévision</strong>. Et une prévision ne s'évalue que d'une seule façon : en la comparant à ce qui se passe vraiment.</p>
+<h2>À quel point nous nous trompons</h2>
+<p>La meilleure référence est la méta-analyse de Halperin et de ses collègues dans <em>Sports Medicine</em> : 12 études, 414 participants, 262 effets. Résultat principal : les participants <strong>sous-estiment</strong> les répétitions restantes jusqu'à l'échec de 0,95 répétition en moyenne (IC 95 % 0,17-1,73).</p>
+<p>Une répétition d'erreur, cela paraît peu, et ça l'est en partie. Mais deux détails comptent plus que la moyenne.</p>
+<p>Le premier, c'est l'hétérogénéité : 97,9 %. Cela veut dire que cette moyenne résume des situations très différentes entre elles, et qu'« environ une répétition » n'est pas votre erreur sur chaque série que vous faites. La variabilité entre personnes, en revanche, est contenue : un écart type de 1,45 répétition. Il n'existe pas beaucoup de « talents du RIR » : l'erreur dépend de la situation, pas de qui vous êtes.</p>
+<p>Le second, c'est le sens de l'erreur. Sous-estimer signifie que quand vous arrêtez convaincu d'avoir 2 répétitions en réserve, vous en aviez en réalité 3. Ce n'est pas une erreur aléatoire qui se compense : elle vous entraîne <strong>systématiquement plus loin de l'échec</strong> que ce que dit le programme.</p>
+<p>Le même signe revient dans les travaux isolés, avec des chiffres plus gros. Sur 141 personnes testées lors d'une séance full body, l'erreur standard de mesure se situe entre 2,64 et 3,38 répétitions. Dans une expérience à protocole trompeur menée sur des pratiquants ayant au moins un an d'entraînement, la sous-estimation a été de 2,0 répétitions (IC 95 % 0,0-4,0) à la leg extension.</p>
+<h2>Où le RIR fonctionne et où il ne fonctionne pas</h2>
+<p>C'est là l'apport utile de la recherche, et la partie que les contenus sur le sujet sautent : la précision <strong>n'est pas une propriété de la personne, c'est une propriété de la situation</strong>.</p>
+<p>Trois conditions la dégradent, et c'est documenté.</p>
+<p><strong>La distance à l'échec.</strong> Dans l'étude sur le squat à 70 % du maximum, 25 hommes entraînés (4,7 ans d'expérience en moyenne) devaient signaler le moment où ils se trouvaient à 5, 3 puis 1 répétition de l'échec, avant de continuer jusqu'au véritable échec. L'erreur a grandi à mesure que le point d'annonce s'éloignait de l'échec : 2,05 ± 1,73 répétition à 1 RIR, 3,65 ± 2,46 à 3 RIR, 5,15 ± 2,92 à 5 RIR. Une prescription « 5 RIR » sur un squat de 16 répétitions ne prescrit, dans les faits, rien du tout.</p>
+<p><strong>La longueur de la série.</strong> C'est le modérateur le plus net de la méta-analyse. Dans les séries allant jusqu'à 12 répétitions, l'erreur grandit de 0,06 répétition par répétition exécutée (IC 95 % 0,04-0,09) ; au-delà de 12 répétitions, elle grandit de 0,47 (IC 95 % 0,44-0,49). Dans l'étude sur le squat, la corrélation entre répétitions totales et erreur était de r = 0,65 à 5 RIR et r = 0,01 à 1 RIR : plus la série est longue, plus l'estimation est mauvaise, et l'expérience d'entraînement n'était pas prédictive.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="Séries longues, estimations moins fiables"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Séries longues, estimations moins fiables</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Augmentation de l'erreur par répétition supplémentaire dans la série · Halperin et al., 2022</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">répétitions d'erreur en plus</text>
+<line x1="170" y1="360.0" x2="850" y2="360.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="364.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,0</text>
+<line x1="170" y1="318.2" x2="850" y2="318.2" stroke="#262626" stroke-width="1"/>
+<text x="158" y="322.1818181818182" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,1</text>
+<line x1="170" y1="276.4" x2="850" y2="276.4" stroke="#262626" stroke-width="1"/>
+<text x="158" y="280.3636363636364" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,2</text>
+<line x1="170" y1="234.5" x2="850" y2="234.5" stroke="#262626" stroke-width="1"/>
+<text x="158" y="238.54545454545456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,3</text>
+<line x1="170" y1="192.7" x2="850" y2="192.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="196.72727272727272" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,4</text>
+<line x1="170" y1="150.9" x2="850" y2="150.9" stroke="#262626" stroke-width="1"/>
+<text x="158" y="154.9090909090909" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,5</text>
+<rect x="263.3" y="334.9" width="200" height="25.1" fill="#aa8a2e" rx="3"/>
+<line x1="363.3" y1="322.4" x2="363.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="322.4" x2="377.3" y2="322.4" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="349.3" y1="343.3" x2="377.3" y2="343.3" stroke="#f0f0f0" stroke-width="2"/>
+<text x="363.3333333333333" y="310.3636363636364" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0,06</text>
+<text x="363.3333333333333" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">Séries jusqu'à</text>
+<text x="363.3333333333333" y="406" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">12 répétitions</text>
+<rect x="556.7" y="163.5" width="200" height="196.5" fill="#d4af37" rx="3"/>
+<line x1="656.7" y1="155.1" x2="656.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="155.1" x2="670.7" y2="155.1" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="642.7" y1="176.0" x2="670.7" y2="176.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="656.6666666666666" y="143.0909090909091" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">0,47</text>
+<text x="656.6666666666666" y="386" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">Séries de plus</text>
+<text x="656.6666666666666" y="406" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="middle">de 12 répétitions</text>
+<line x1="170" y1="360" x2="850" y2="360" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">barres : intervalle de confiance à 95%</text>
+</svg></div><figcaption class="cap">Graphique Nurvan d'après les coefficients de la méta-régression de Halperin et al., 2022 (12 études, 414 participants). Les barres verticales sont l'intervalle de confiance à 95 %. La valeur indique de combien augmente l'erreur d'estimation pour chaque répétition supplémentaire exécutée dans la série.</figcaption></figure>
+<p><strong>Le numéro de la série.</strong> Les estimations s'améliorent légèrement dans les séries suivantes de la même séance (0,07 répétition d'erreur en moins par série), probablement parce que le repère de la première série recalibre la perception. Un petit effet, mais dans le sens utile : la première série d'un exercice est la moins fiable.</p>
+<p>Et une condition qui l'améliore, elle : la <strong>proximité de l'échec</strong> combinée à des exercices et des charges qui ne produisent pas de séries interminables. Au développé couché à 75 % du maximum, avec 24 athlètes entraînés (12 hommes et 12 femmes) annonçant 1 et 3 RIR, l'erreur absolue moyenne a été de 0,65 ± 0,78 répétition, avec équivalence statistique à ±1 répétition près et aucune relation avec le sexe, les années d'expérience ou la force relative. Sur les exercices mono-articulaires aux machines, chez 58 personnes entraînées et non entraînées, les estimations se sont révélées plus précises près de l'échec et dans les séries suivantes, sans différence entre hommes et femmes ni entre exercices.</p>
+<p>Traduit : le RIR n'est pas « imprécis ». Il est précis <strong>de 3 vers le bas, dans des séries pas trop longues</strong>, et il devient du bruit ailleurs.</p>
+<h2>L'expérience ne vous sauve pas (et ça change la façon de l'utiliser)</h2>
+<p>C'est la croyance la plus répandue chez ceux qui s'entraînent depuis des années : « le RIR, ça s'apprend au ressenti ». Les données ne la soutiennent pas.</p>
+<p>Dans la méta-analyse, le niveau d'entraînement n'influence pas la précision (β = -0,006, IC 95 % de -0,02 à 0,007). Dans l'étude sur le squat, l'âge d'entraînement ne prédisait pas la qualité des estimations. Aux machines, ni l'expérience d'entraînement ni l'expérience spécifique de l'annonce d'un RIR n'ont eu d'effet.</p>
+<p>Le test le plus direct est un travail sur 9 hommes entraînés qui ont fait du développé couché trois fois par semaine pendant six semaines, en annonçant 4 RIR puis 1 RIR sur la série finale de chaque séance. Au bout de six semaines, l'erreur <strong>absolue</strong> ne s'était pas améliorée de façon significative ; ce qui avait changé, c'est le sens, avec une tendance plus marquée à sous-estimer lors des dernières séances et dans les séries les plus longues.</p>
+<p>Un seul signal à contre-courant, issu du travail sur 141 personnes : une tendance à l'amélioration avec l'expérience. Une tendance, pas un effet net. Le bilan honnête, c'est que le coach expérimenté et le débutant se trompent de façon comparable, et que la solution n'est pas d'attendre de « se faire l'œil » : c'est de placer le RIR là où il est fiable, puis de le vérifier.</p>
+<h2>Pourquoi un mauvais chiffre change les résultats</h2>
+<p>Cela dépend de ce que vous cherchez, et là la littérature est étonnamment claire.</p>
+<p>Pour la <strong>force</strong>, la distance à l'échec compte peu : dans la série de méta-régressions de 2024, les intervalles de confiance des pentes pour le RIR estimé contiennent zéro, c'est-à-dire une relation négligeable avec les gains de force. Si vous entraînez la force, votre erreur d'estimation coûte peu.</p>
+<p>Pour l'<strong>hypertrophie</strong>, la même analyse trouve des pentes négatives avec des intervalles qui ne contiennent pas zéro : la croissance musculaire augmente à mesure que les séries finissent plus près de l'échec. Attention toutefois à ne pas en faire « s'entraîner à l'échec, c'est mieux » : la méta-analyse de 2023 sur 15 études ne trouve pas d'avantage de l'échec technique par rapport au non-échec (TE 0,12 ; IC 95 % de -0,13 à 0,37), ni de seuils élevés de perte de vitesse par rapport aux seuils modérés, et elle avance une relation <strong>non linéaire</strong>.</p>
+<p>En mettant les deux ensemble : la sous-estimation systématique vous déplace dans le sens qui coûte quelque chose en hypertrophie (plus loin de l'échec que prévu), et le remède n'est pas d'aller à l'échec, c'est de réduire l'incertitude. Sur le nombre de répétitions et le temps de repos à mettre autour de cet effort, nous avons écrit un article à part : <a href="/fr/blog/combien-de-repetitions-masse-musculaire">combien de répétitions pour la masse musculaire</a>.</p>
+<h2>Ce que dit vraiment la recherche</h2>
+<table><thead><tr><th>Affirmation courante</th><th>Verdict</th><th>Source</th></tr></thead><tbody><tr><td>« Entraînez-vous à 2 RIR et vous savez ce que vous faites »</td><td><strong>À nuancer</strong> : à 1-3 RIR l'estimation tient (erreur 0,65-2 répétitions), à 5 RIR non (5,15)</td><td>Refalo et al., 2024 ; Zourdos et al., 2021</td></tr><tr><td>« Avec l'expérience, on apprend à sentir le RIR »</td><td><strong>Démenti</strong> : le niveau d'entraînement n'influence pas la précision et 6 semaines de pratique n'ont pas réduit l'erreur absolue</td><td>Halperin et al., 2022 ; Remmert et al., 2023</td></tr><tr><td>« Si je me trompe, je me trompe dans les deux sens »</td><td><strong>Démenti</strong> : l'erreur est systématique vers la sous-estimation (0,95 répétition en moyenne)</td><td>Halperin et al., 2022</td></tr><tr><td>« Le RIR vaut pareil dans chaque série »</td><td><strong>Démenti</strong> : au-delà de 12 répétitions, l'erreur grandit 8 fois plus vite</td><td>Halperin et al., 2022</td></tr><tr><td>« S'arrêter loin de l'échec ne change rien »</td><td><strong>À nuancer</strong> : négligeable pour la force, mesurable pour l'hypertrophie</td><td>Robinson et al., 2024 ; Refalo et al., 2023</td></tr><tr><td>« La vitesse de la barre règle le problème »</td><td><strong>Démenti</strong> au soulevé de terre à la barre hexagonale : aucune condition n'a passé les critères de précision</td><td>Chen et al., 2026</td></tr></tbody></table>
+<h3>Et la technologie ?</h3>
+<p>L'alternative proposée depuis des années consiste à mesurer la vitesse de la barre : la vitesse baisse à l'approche de l'échec, donc un seuil de vitesse devrait indiquer à combien de répétitions vous êtes. Un travail publié dans le numéro de novembre 2026 du <em>Journal of Strength and Conditioning Research</em> a testé l'idée sur le soulevé de terre à la barre hexagonale : 19 hommes bien entraînés, séries à l'échec à 65 % et à 85 % du maximum, trois critères annoncés à l'avance (erreur médiane ≤ 2 répétitions et au moins 75 % de probabilité à la fois d'une estimation acceptable et d'une apparition réelle du seuil de vitesse).</p>
+<p>Aucune condition n'a satisfait les trois critères, et la probabilité que le seuil attendu apparaisse était si faible qu'elle rendait les modèles inutilisables en temps réel. Cela vaut pour cet exercice et ce contexte, pas pour tout l'entraînement basé sur la vitesse, mais la leçon est générale : même l'outil objectif doit être validé sur l'exercice où vous l'utilisez.</p>
+<h2>Comment l'appliquer</h2>
+<ol><li><strong>Ne prescrivez le RIR que de 3 vers le bas.</strong> Au-delà de 3 RIR, utilisez une charge et des répétitions fixes, ou un pourcentage : demander « arrête-toi à 5 RIR » revient à demander un chiffre que les études ratent de 5.</li><li><strong>Gardez les séries « à RIR » dans les 10-12 répétitions.</strong> C'est le seuil au-delà duquel l'erreur accélère. Une série de 20 avec un RIR annoncé est une fiction comptable.</li><li><strong>Annoncez avant, vérifiez après.</strong> Notez le RIR prévu <em>pendant</em> que vous terminez la série, pas le soir en remplissant le carnet : l'estimation rétrospective n'est pas la même chose.</li><li><strong>Calibrez toutes les 4-6 semaines.</strong> Une série jusqu'à l'échec technique sur un exercice sûr (machine, ou développé couché avec les butées), avec la prévision annoncée deux répétitions avant. L'écart entre prévu et réel est votre décalage personnel, et il se lit comme tel : si vous annoncez 2 et que vous en faites 4, votre « 2 » vaut 4.</li><li><strong>Ne faites pas confiance à la première série.</strong> C'est la moins précise de la séance. Si vous devez régler la charge, réglez-la sur la deuxième.</li><li><strong>Si l'objectif est l'hypertrophie, corrigez dans le bon sens.</strong> Sachant que la tendance est de s'arrêter trop tôt, « une répétition de plus que ce qu'il me semble » sur les dernières séries d'un exercice sûr réaligne la réalité sur le programme.</li></ol>
+<h3>Si vous coachez d'autres personnes à distance</h3>
+<p>Le RIR qu'un client vous écrit n'est pas une donnée, c'est une traduction. Trois précautions qui changent la qualité des informations que vous recevez :</p>
+<ul><li><strong>Demandez les répétitions, pas la note.</strong> « Combien tu en aurais fait encore ? » produit des réponses plus utiles que « à quel RIR tu étais ? », parce que la seconde question invite à remplir une case.</li><li><strong>Traitez les RIR élevés comme du bruit.</strong> Un 4 ou un 5 rapporté dit « je n'étais pas près de l'échec » et rien de plus. Ne construisez pas de progression de charge là-dessus.</li><li><strong>Mettez une calibration dans le programme, pas à la demande.</strong> Une série de test planifiée chaque mois vous donne le décalage du client, et lui donne la preuve qu'il n'était pas « presque à l'échec ». Sur le rythme auquel il vaut la peine de revoir programme et charges, nous en avons parlé dans <a href="/fr/blog/a-quelle-frequence-changer-son-programme">à quelle fréquence changer son programme</a>.</li></ul>
+<div class="box"><h2>Nurvan : le RIR prévu à côté du RIR réel</h2><p>Dans Nurvan, vous enregistrez le RIR série par série en même temps que la charge, et dans les séries de calibration vous notez la prévision et les répétitions réelles : le décalage reste dans l'historique de l'exercice, pas dans votre mémoire. C'est ainsi qu'un chiffre annoncé devient une donnée utilisable, pour vous ou pour le coach qui vous suit. <a href="https://nurvan.app">Essayez Nurvan</a></p></div>
+<h2>Questions fréquentes</h2>
+<p><strong>Le RIR est-il fiable ?</strong></p>
+<p>En moyenne, on sous-estime d'environ 1 répétition (0,95 ; IC 95 % 0,17-1,73 dans la méta-analyse sur 414 participants), mais la moyenne cache beaucoup de choses. Près de l'échec et dans des séries courtes, l'erreur descend sous la répétition ; à 5 répétitions de l'échec, au squat, elle a été de 5,15 répétitions.</p>
+<p><strong>Mieux vaut s'entraîner à 2 RIR ou à l'échec ?</strong></p>
+<p>Pour la force, la différence est négligeable. Pour l'hypertrophie, les séries qui finissent plus près de l'échec montrent une croissance légèrement supérieure, mais l'échec technique ne s'est pas révélé supérieur au non-échec dans la méta-analyse sur 15 études : la relation semble non linéaire. Travailler à 1-3 RIR avec quelques séries de vérification est le compromis que la littérature soutient le mieux.</p>
+<p><strong>Comment savoir si mon RIR est juste ?</strong></p>
+<p>Avec une série de calibration : vous annoncez le RIR deux répétitions avant la fin, puis vous allez à l'échec technique sur un exercice sûr. L'écart entre prévision et réalité est votre décalage, et il va plutôt dans le sens de la sous-estimation.</p>
+<p><strong>Le RIR fonctionne-t-il aussi pour les débutants ?</strong></p>
+<p>Dans les données disponibles, la précision des estimations ne dépend pas du niveau d'entraînement : débutants et avancés se trompent de façon comparable. La différence est dans la sécurité d'exécution, pas dans l'estimation : si vous débutez, mieux vaut limiter le RIR aux machines et aux exercices simples.</p>
+<h2>À lire aussi</h2>
+<ul><li><a href="/fr/blog/combien-de-repetitions-masse-musculaire">Combien de répétitions pour la masse musculaire : le mythe du 8-12</a> — où placer l'effort que vous essayez de mesurer.</li><li><a href="/fr/blog/a-quelle-frequence-changer-son-programme">À quelle fréquence changer son programme d'entraînement ?</a> — combien de temps garder un programme stable pour voir s'il fonctionne.</li><li><a href="/fr/blog/programme-entrainement-genere-par-ia">Programme d'entraînement généré par IA : ce que disent les études</a> — ce qu'un algorithme peut et ne peut pas décider à votre place.</li></ul>
+<h2>Sources</h2>
+<ol><li>Halperin I, Malleron T, Har-Nir I, Androulakis-Korakakis P, Wolf M, Fisher J, Steele J, 2022. Accuracy in Predicting Repetitions to Task Failure in Resistance Exercise: A Scoping Review and Exploratory Meta-analysis. <em>Sports Med</em> 52(2):377-390. <a href="https://pubmed.ncbi.nlm.nih.gov/34542869/">PMID 34542869</a> · <a href="https://doi.org/10.1007/s40279-021-01559-x">DOI 10.1007/s40279-021-01559-x</a></li><li>Zourdos MC, Goldsmith JA, Helms ER, et al., 2021. Proximity to Failure and Total Repetitions Performed in a Set Influences Accuracy of Intraset Repetitions in Reserve-Based Rating of Perceived Exertion. <em>J Strength Cond Res</em> 35(Suppl 1):S158-S165. <a href="https://pubmed.ncbi.nlm.nih.gov/30747900/">PMID 30747900</a> · <a href="https://doi.org/10.1519/JSC.0000000000002995">DOI 10.1519/JSC.0000000000002995</a></li><li>Refalo MC, Remmert JF, Pelland JC, Robinson ZP, Zourdos MC, Hamilton DL, Fyfe JJ, Helms ER, 2024. Accuracy of Intraset Repetitions-in-Reserve Predictions During the Bench Press Exercise in Resistance-Trained Male and Female Subjects. <em>J Strength Cond Res</em> 38(3):e78-e85. <a href="https://pubmed.ncbi.nlm.nih.gov/37967832/">PMID 37967832</a> · <a href="https://doi.org/10.1519/JSC.0000000000004653">DOI 10.1519/JSC.0000000000004653</a></li><li>Steele J, Endres A, Fisher J, Gentil P, Giessing J, 2017. Ability to predict repetitions to momentary failure is not perfectly accurate, though improves with resistance training experience. <em>PeerJ</em> 5:e4105. <a href="https://pubmed.ncbi.nlm.nih.gov/29204323/">PMID 29204323</a> · <a href="https://doi.org/10.7717/peerj.4105">DOI 10.7717/peerj.4105</a></li><li>Armes C, Standish-Hunt H, Androulakis-Korakakis P, et al., 2020. "Just One More Rep!" - Ability to Predict Proximity to Task Failure in Resistance Trained Persons. <em>Front Psychol</em> 11:565416. <a href="https://pubmed.ncbi.nlm.nih.gov/33424678/">PMID 33424678</a> · <a href="https://doi.org/10.3389/fpsyg.2020.565416">DOI 10.3389/fpsyg.2020.565416</a></li><li>Remmert JF, Laurson KR, Zourdos MC, 2023. Accuracy of Predicted Intraset Repetitions in Reserve (RIR) in Single- and Multi-Joint Resistance Exercises Among Trained and Untrained Men and Women. <em>Percept Mot Skills</em> 130(3):1239-1254. <a href="https://pubmed.ncbi.nlm.nih.gov/37036795/">PMID 37036795</a> · <a href="https://doi.org/10.1177/00315125231169868">DOI 10.1177/00315125231169868</a></li><li>Remmert JF, Robinson ZP, Pelland JC, et al., 2023. Changes in Intraset Repetitions in Reserve Prediction Accuracy During Six Weeks of Bench Press Training in Trained Men. <em>Percept Mot Skills</em> 130(5):2139-2160. <a href="https://pubmed.ncbi.nlm.nih.gov/37436724/">PMID 37436724</a> · <a href="https://doi.org/10.1177/00315125231189098">DOI 10.1177/00315125231189098</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Refalo MC, Helms ER, Trexler ET, Hamilton DL, Fyfe JJ, 2023. Influence of Resistance Training Proximity-to-Failure on Skeletal Muscle Hypertrophy: A Systematic Review with Meta-analysis. <em>Sports Med</em> 53(3):649-665. <a href="https://pubmed.ncbi.nlm.nih.gov/36334240/">PMID 36334240</a> · <a href="https://doi.org/10.1007/s40279-022-01784-y">DOI 10.1007/s40279-022-01784-y</a></li><li>Chen W, Zhang H, Li R, et al., 2026. Velocity-Based Monitoring Lacks Both Accuracy and Applicability for Estimating Repetitions in Reserve During the Hexagonal Bar Deadlift. <em>J Strength Cond Res</em> 40(11):1335-1341. <a href="https://pubmed.ncbi.nlm.nih.gov/42328880/">PMID 42328880</a> · <a href="https://doi.org/10.1519/JSC.0000000000005549">DOI 10.1519/JSC.0000000000005549</a></li></ol>
+<p>Source supplémentaire consultée : Bastos V, Machado S, Teixeira DS, 2024. Feasibility and Usefulness of Repetitions-In-Reserve Scales for Selecting Exercise Intensity: A Scoping Review. <em>Percept Mot Skills</em> 131(3):940-970. <a href="https://pubmed.ncbi.nlm.nih.gov/38563729/">PMID 38563729</a>. Sujet choisi à partir des signaux de tendance de novembre 2026 sur l'intensité mesurée en RIR et sur la comparaison échec/RIR, avec des contenus concurrents qui prescrivent un RIR cible sans indiquer à quel point nous savons l'estimer. Sources scientifiques consultées via PubMed.</p>
+<p><em>Giammaria Loi est le fondateur de Nurvan. Il s'entraîne avec des poids depuis 2012, travaille comme coach et entraîneur personnel certifié FIPE depuis 2013 et compète en powerlifting au niveau national depuis 2018. Chaque article qu'il signe part des études scientifiques et arrive à ce qui fonctionne vraiment en salle.</em> <a href="/autore/giammaria-loi">Page auteur</a></p>
+<p class="note">Note : contenu informatif, il ne remplace pas l'avis d'un médecin ou d'un professionnel qualifié.</p>
+</main>
+<footer>NURVAN · nurvan.app · 14 novembre 2026</footer>
+</body>
+</html>
