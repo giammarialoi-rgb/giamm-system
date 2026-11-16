@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ЧМ equipped 2026: результаты и третья попытка | Nurvan</title>
+<meta name="description" content="Стамбул-2026: кто выиграл ЧМ IPF в экипировке, 32 мировых рекорда и цифра о третьих попытках, которая меняет подход к выбору рабочих весов на тренировке.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+table tbody tr:first-child td{color:var(--fg);font-weight:600}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · События · Тренировки</div>
+<h1>ЧМ equipped 2026: результаты и третья попытка</h1>
+<p class="lede">В воскресенье 15 ноября в Стамбуле завершился чемпионат мира IPF Open Equipped, и в тот же день IPF опубликовала официальные протоколы. Я выгрузил оба полных документа — мужской и женский — и положил рядом протоколы июньского чемпионата мира без экипировки. Помимо подиумов из них вышла цифра, которая в зале значит больше любого рекорда: как часто третья попытка остаётся на помосте.</p>
+<div class="meta"><span><b>12</b> мин чтения</span><span><b>8</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 16 ноября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="ЧМ equipped 2026: результаты и третья попытка"><figcaption class="cap">U.S. Army Reserve, фото Sgt. 1st Class Abel M. Aungst — Wikimedia Commons, общественное достояние (PD-USGov-Military-Army)</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Украина и Канада забирают командные титулы.</strong> У мужчин побеждает Украина с 51 очком, опередив Китайский Тайбэй (42) и Японию (38); у женщин — Канада с 43 очками впереди Китайского Тайбэя (42) и Бразилии (34).</li><li><strong>32 мировых рекорда за семь дней</strong>: 17 у мужчин и 15 у женщин, в дивизионах Open (9), Master 1 (9), Master 2 (9) и Junior (5).</li><li><strong>Тяга — движение, которое чаще всего не получается.</strong> В Стамбуле <strong>60,5%</strong> спортсменов заказали на третью тягу вес выше того, с которым в итоге закончили. На классическом чемпионате — 47,1%.</li><li><strong>Каждый третий отрыв на подиуме укладывается в погрешность измерения</strong>: 31% отрывов между соседними местами составил 6,09 кг или меньше — это стандартная ошибка измерения суммы (Amdi et al., 2026).</li><li><strong>Экипировка куда жёстче наказывает за просчёт</strong>: 13,4% заявленных в Стамбуле закончили без зачётной суммы против 1,4% на классическом чемпионате.</li></ul></div>
+<figure><img src="images/cover.jpg" alt="Спортсмен выполняет соревновательную тягу на турнире по пауэрлифтингу" loading="lazy"></figure>
+<h2>Кто победил в Стамбуле</h2>
+<p>Чемпионат мира Open Equipped прошёл в Стамбуле, Турция, <strong>с 9 по 15 ноября 2026 года</strong>. В официальных протоколах IPF — <strong>179 спортсменов из 34 стран</strong>, в восьми мужских и восьми женских весовых категориях.</p>
+<p>Лучший результат турнира у украинца <strong>Костянтина Мусиенко</strong>: <strong>1064,5 кг</strong> в категории 93 кг и 115,44 очка IPF GL, с мировыми рекордами Open в жиме (352,0 кг) и в сумме. За ним, в той же категории, соотечественник Володимир Рысиев с 1025 кг.</p>
+<p>У женщин лучшая оценка — у <strong>Келси Маккарти</strong> (США), 69 кг: <strong>655,0 кг</strong> и 113,88 очка IPF GL, мировой рекорд Open. Годом ранее в Клуж-Напоке она выиграла ту же категорию с 652,5 кг: прибавила 2,5 кг, и этого хватило на рекорд.</p>
+<p>В командном зачёте <strong>Украина</strong> подтверждает мужской титул (51 очко, впереди Тайбэя с 42 и Японии с 38, третьей по очкам пяти лучших впереди Норвегии). Женский титул переходит к <strong>Канаде</strong> (43 очка), Тайбэй второй с 42, Бразилия третья с 34.</p>
+<p>Больше всего меня зацепил результат в мужской категории 74 кг: победил <strong>Ярослав Олех</strong>, поляк <strong>1974</strong> года рождения. Пятьдесят два года, дивизион Open — то есть против спортсменов, годящихся ему в сыновья — и 865 кг в сумме, с тремя мировыми рекордами Master 2 (присед 360 кг, жим 205 кг, сумма 865 кг). Следом Лоусон Лилло из США, 2006 года рождения: двадцать лет, 852,5 кг и юниорский мировой рекорд в сумме. Тридцать два года разницы в возрасте и 12,5 кг разницы в сумме. Подробнее о возрасте и силе я писал в тексте о <a href="/ru/blog/chempionat-mastersov-2026-sila-i-vozrast">чемпионате мира среди мастеров в Рино</a>.</p>
+<h2>Италия в Стамбуле: бронза и шесть спортсменов</h2>
+<table><thead><tr><th>Спортсмен</th><th>Категория</th><th>Место</th><th>Сумма</th></tr></thead><tbody><tr><td>Джованни Манчинелли</td><td>120 кг</td><td>3-е</td><td>972,5 кг</td></tr><tr><td>Стефано Канео</td><td>66 кг</td><td>5-е</td><td>652,5 кг</td></tr><tr><td>Давиде Чеккетти</td><td>93 кг</td><td>8-е</td><td>852,5 кг</td></tr><tr><td>Диего Милани</td><td>74 кг</td><td>9-е</td><td>760,0 кг</td></tr><tr><td>Катерина Караваджо</td><td>69 кг</td><td>5-е</td><td>552,5 кг</td></tr><tr><td>Сильвия Маростика</td><td>76 кг</td><td>10-е</td><td>530,0 кг</td></tr></tbody></table>
+<p>Медаль — у <strong>Джованни Манчинелли</strong>, третьего в категории 120 кг с приседом 410 кг, жимом 257,5 и тягой 305. Мужская команда девятая с 19 очками, женская — девятнадцатая с 7.</p>
+<figure><img src="images/prima-del-tentativo.jpg" alt="Спортсмен натирает руки магнезией в ожидании своей попытки в жиме лёжа" loading="lazy"></figure>
+<h2>Цифра, которой нет в нарезках: третья попытка</h2>
+<p>На помосте у вас три попытки в каждом движении. Третья решает турнир — и её видно меньше всего: в роликах показывают засчитанные подходы, а не штанги, которые остались лежать.</p>
+<p>В протоколах есть всё. Если вес, заявленный на третью попытку, больше итогового результата спортсмена, попытка не засчитана — и это можно пересчитать построчно. Я сделал это по обоим чемпионатам мира 2026 года: экипировочному в Стамбуле и <a href="/ru/blog/chempionat-equipped-2026-chto-daet-ekipirovka">классическому в Друскининкае</a> в июне.</p>
+<figure><div class="chart"><svg role="img" aria-label="Доля неудачных третьих попыток по движениям, ЧМ equipped 2026 против ЧМ classic 2026" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 416" width="100%" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="760" height="416" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-size="20" font-weight="700">Третья попытка не удалась: equipped и classic</text>
+<rect x="24" y="50" width="13" height="13" fill="#d4af37" rx="2"/>
+<text x="44" y="60" fill="#a0a0a0" font-size="12.5">ЧМ equipped 2026 (Стамбул)</text>
+<rect x="248" y="50" width="13" height="13" fill="#aa8a2e" rx="2"/>
+<text x="268" y="60" fill="#a0a0a0" font-size="12.5">ЧМ classic 2026 (Друскининкай)</text>
+<text x="176" y="108" fill="#f0f0f0" font-size="14.5" text-anchor="end">Приседание</text>
+<rect x="190" y="90" width="298.4" height="24" fill="#d4af37" rx="3"/>
+<text x="497.4" y="107" fill="#f3e5ab" font-size="13.5" font-weight="600">42,6%</text>
+<rect x="190" y="124" width="212.2" height="24" fill="#aa8a2e" rx="3"/>
+<text x="411.2" y="141" fill="#f3e5ab" font-size="13.5" font-weight="600">30,3%</text>
+<line x1="24" y1="152" x2="736" y2="152" stroke="#262626" stroke-width="1"/>
+<text x="176" y="184" fill="#f0f0f0" font-size="14.5" text-anchor="end">Жим лёжа</text>
+<rect x="190" y="166" width="304.0" height="24" fill="#d4af37" rx="3"/>
+<text x="503.0" y="183" fill="#f3e5ab" font-size="13.5" font-weight="600">43,4%</text>
+<rect x="190" y="200" width="300.5" height="24" fill="#aa8a2e" rx="3"/>
+<text x="499.5" y="217" fill="#f3e5ab" font-size="13.5" font-weight="600">42,9%</text>
+<line x1="24" y1="228" x2="736" y2="228" stroke="#262626" stroke-width="1"/>
+<text x="176" y="260" fill="#f0f0f0" font-size="14.5" text-anchor="end">Тяга</text>
+<rect x="190" y="242" width="423.7" height="24" fill="#d4af37" rx="3"/>
+<text x="622.7" y="259" fill="#f3e5ab" font-size="13.5" font-weight="600">60,5%</text>
+<rect x="190" y="276" width="329.9" height="24" fill="#aa8a2e" rx="3"/>
+<text x="528.9" y="293" fill="#f3e5ab" font-size="13.5" font-weight="600">47,1%</text>
+<text x="24" y="330" fill="#a0a0a0" font-size="11.5">Доля атлетов, у которых третья попытка была тяжелее итогового результата. Расчёт Nurvan по официальным протоколам</text>
+<text x="24" y="345" fill="#a0a0a0" font-size="11.5">IPF.</text>
+<text x="736" y="404" fill="#5a5a5a" font-size="11" text-anchor="end">NURVAN</text>
+</svg></div><figcaption class="cap">Расчёт Nurvan по официальным протоколам IPF чемпионатов мира Open Equipped 2026 (Стамбул) и Open Classic 2026 (Друскининкай).</figcaption></figure>
+<p>Видно три вещи.</p>
+<p><strong>Тяга проваливается чаще всего, и в экипировке заметно чаще.</strong> В Стамбуле 60,5% третьих тяг (92 из 152) были тяжелее итогового результата; в классике — 47,1% (162 из 344). Логично: тяга закрывает день, в ней разыгрывается медаль, и именно в ней экипировка помогает меньше всего.</p>
+<p><strong>В жиме не меняется ничего.</strong> 43,4% в Стамбуле, 42,9% в Друскининкае: жимовая майка позволяет брать больше, но доля неудачных третьих попыток идентична. Спортсмены выходят на край своих возможностей, где бы этот край ни находился.</p>
+<p><strong>В приседе в экипировке ошибаются чаще</strong>: 42,6% против 30,3%. В комбинезоне и бинтах зазор между зачётной глубиной и незачётом уже, а провалённый третий присед в начале дня тянет за собой всё остальное.</p>
+<p>Есть и четвёртая, более жёсткая цифра: в Стамбуле <strong>24 спортсмена из 179 (13,4%) закончили без зачётной суммы</strong>. На июньском классическом чемпионате — 5 из 351, то есть 1,4%. В экипировке ошибка в выборе веса стоит всего турнира почти в десять раз чаще.</p>
+<h2>Подиум решается внутри погрешности измерения</h2>
+<p>Здесь в дело вступает исследование, вышедшее несколько недель назад. Amdi и коллеги (2026) измерили, насколько максимальная сила пауэрлифтеров регионального и национального уровня меняется от недели к неделе, и получили стандартную ошибку измерения: <strong>4,16 кг в приседе, 2,60 кг в жиме, 4,07 кг в тяге и 6,09 кг в сумме</strong>. Затем они разобрали пятнадцать лет турниров IPF, чтобы понять, сколько килограммов нужно, чтобы подняться на одно место: от 14,3 до 44,2 кг в сумме, в зависимости от уровня и места. Их вывод: <strong>в большинстве соревновательных ситуаций разница между соседними местами лежит внутри погрешности измерения</strong>, и особенно это заметно на чемпионатах мира.</p>
+<p>Я проверил эту фразу на данных Стамбула. В каждой из 16 категорий я взял отрывы между соседними местами подиума (1-2, 2-3, 3-4): всего 48 отрывов.</p>
+<figure><div class="chart"><svg role="img" aria-label="Распределение отрывов на подиуме относительно погрешности измерения, ЧМ equipped и classic 2026" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 416" width="100%" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<rect width="760" height="416" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-size="20" font-weight="700">Отрывы на подиуме и погрешность измерения</text>
+<rect x="24" y="50" width="13" height="13" fill="#d4af37" rx="2"/>
+<text x="44" y="60" fill="#a0a0a0" font-size="12.5">ЧМ equipped 2026 (Стамбул)</text>
+<rect x="248" y="50" width="13" height="13" fill="#aa8a2e" rx="2"/>
+<text x="268" y="60" fill="#a0a0a0" font-size="12.5">ЧМ classic 2026 (Друскининкай)</text>
+<text x="176" y="108" fill="#f0f0f0" font-size="14.5" text-anchor="end">до 6,1 кг</text>
+<rect x="190" y="90" width="328.4" height="24" fill="#d4af37" rx="3"/>
+<text x="527.4" y="107" fill="#f3e5ab" font-size="13.5" font-weight="600">31%</text>
+<rect x="190" y="124" width="349.6" height="24" fill="#aa8a2e" rx="3"/>
+<text x="548.6" y="141" fill="#f3e5ab" font-size="13.5" font-weight="600">33%</text>
+<line x1="24" y1="152" x2="736" y2="152" stroke="#262626" stroke-width="1"/>
+<text x="176" y="184" fill="#f0f0f0" font-size="14.5" text-anchor="end">от 6,1 до 16,9 кг</text>
+<rect x="190" y="166" width="307.2" height="24" fill="#d4af37" rx="3"/>
+<text x="506.2" y="183" fill="#f3e5ab" font-size="13.5" font-weight="600">29%</text>
+<rect x="190" y="200" width="307.2" height="24" fill="#aa8a2e" rx="3"/>
+<text x="506.2" y="217" fill="#f3e5ab" font-size="13.5" font-weight="600">29%</text>
+<line x1="24" y1="228" x2="736" y2="228" stroke="#262626" stroke-width="1"/>
+<text x="176" y="260" fill="#f0f0f0" font-size="14.5" text-anchor="end">более 16,9 кг</text>
+<rect x="190" y="242" width="423.7" height="24" fill="#d4af37" rx="3"/>
+<text x="622.7" y="259" fill="#f3e5ab" font-size="13.5" font-weight="600">40%</text>
+<rect x="190" y="276" width="402.5" height="24" fill="#aa8a2e" rx="3"/>
+<text x="601.5" y="293" fill="#f3e5ab" font-size="13.5" font-weight="600">38%</text>
+<text x="24" y="330" fill="#a0a0a0" font-size="11.5">48 отрывов между соседними местами подиума на турнир. Пороги: стандартная ошибка измерения суммы (6,09 кг) и</text>
+<text x="24" y="345" fill="#a0a0a0" font-size="11.5">минимально выявляемая разница (16,9 кг) по Amdi et al., 2026.</text>
+<text x="736" y="404" fill="#5a5a5a" font-size="11" text-anchor="end">NURVAN</text>
+</svg></div><figcaption class="cap">Расчёт Nurvan по официальным протоколам IPF. Пороговые значения по Amdi et al., 2026: стандартная ошибка измерения суммы 6,09 кг, минимально выявляемая разница около 16,9 кг.</figcaption></figure>
+<p><strong>31% отрывов на подиуме — 6,09 кг или меньше</strong>, 60% уложились в 16,9 кг, медиана — 12,5 кг. Июньский классический чемпионат даёт почти ту же картину (33% и 62%): это не особенность экипировки, это устройство пауэрлифтинга высокого уровня.</p>
+<p>В шести случаях отрыв оказался ровно <strong>нулевым</strong>. В женской категории 76 кг три спортсменки набрали по 610,0 кг, и их развёл только собственный вес. В категории 47 кг Вэй-Лин Чэнь и Франкмари Дуно показали по 480,0 кг: золото у Чэнь, потому что она была легче на 450 граммов. В мужской категории 105 кг Иэн Белл и Ники Ленц-Нильсен закончили с одинаковыми 1050,0 кг.</p>
+<p>Проще говоря: на этом уровне никто не выигрывает с запасом в 20 кг. Выигрывает тот, кто в этот день промахнулся на одну попытку меньше.</p>
+<h2>Что на самом деле говорят исследования</h2>
+<p><strong>«В экипировке третья попытка почти бесплатная, снаряжение вытащит» — Опровергнуто.</strong> 60,5% третьих тяг и 42,6% третьих приседов в Стамбуле не были засчитаны, а 13,4% спортсменов остались без суммы против 1,4% в классике. Экипировка поднимает потолок, а не запас прочности.</p>
+<p><strong>«На чемпионате мира выигрывает просто сильнейший» — Нужно уточнить.</strong> В 31% случаев отрыв на подиуме был меньше погрешности, с которой измеряется сумма (6,09 кг по Amdi et al., 2026), а в шести случаях равнялся нулю.</p>
+<p><strong>«Чтобы стать сильным, надо всегда работать до отказа» — Опровергнуто.</strong> В мета-регрессиях Robinson и коллег (2024) прирост силы был схожим в широком диапазоне повторений в запасе: ближе к отказу улучшается гипертрофия, а не максимальная сила. Обзор по жиму лёжа приходит к тому же практическому совету: RPE/RIR, скорость штанги и авторегуляция вместо подходов до отказа (Motlagh и Lipps, 2024).</p>
+<p><strong>«RIR слишком неточен, чтобы выбирать по нему веса» — Нужно уточнить.</strong> Odgers и коллеги (2021) измерили ошибку оценки у тренированных спортсменов: при RPE 9, у предела, средняя ошибка составила 0,09-0,25 повторения; при RPE 6 она росла до 0,71-1,19. RIR неточен вдали от отказа и надёжен рядом с ним — ровно наоборот тому, как его обычно используют. Подробнее в тексте <a href="/ru/blog/naskolko-tochen-rir">насколько точен RIR</a>.</p>
+<p><strong>«После 50 дивизион Open уже не для вас» — Опровергнуто.</strong> Ярослав Олех, 1974 года рождения, выиграл категорию 74 кг Open с суммой 865 кг.</p>
+<h2>Как применить это, даже если вы не выступаете</h2>
+<p>Третья попытка на помосте — то же самое, что ваш тяжёлый подход в понедельник: единичное повторение у предела, где ошибка в 5 кг меняет результат. Что забрать с собой.</p>
+<ol class="steps"><li><strong>Выбирайте вес по предыдущему подходу, а не по таблице.</strong> Если вторая попытка — или первый тяжёлый подход — вышла медленной и грязной, уменьшите шаг. Те, кто остался без суммы в Стамбуле, не были слабыми: они назвали число до того, как узнали, какой сегодня день.</li><li><strong>Держите маленькие шаги рядом с максимумом.</strong> Выше 90% естественная погрешность уже стоит 4-6 кг (Amdi et al., 2026): прибавка 15 кг к максимуму в 160 — это ставка, а не прогрессия.</li><li><strong>Не гоняйтесь за отказом на тренировке.</strong> Для силы он не нужен (Robinson et al., 2024) и повышает риск перегрузки (Motlagh и Lipps, 2024). Останавливайтесь за 1-2 повторения до предела, а остальное оставьте турниру или тесту.</li><li><strong>Доверяйте RIR там, где он работает.</strong> Рядом с отказом оценка точна; за 4-5 повторений до предела вы промахнётесь больше чем на повторение (Odgers et al., 2021). Для лёгких весов используйте проценты или скорость, а не ощущения.</li><li><strong>Разминайтесь как будто собираете информацию.</strong> Подводящие подходы — не только страховка от травм: они говорят вам до рабочего веса, ваш ли сегодня день.</li></ol>
+<div class="app"><div><h3>Выбирайте вес по данным, а не по ощущениям</h3><p>Nurvan записывает вес, повторения и RIR каждого подхода, сам строит разминочные подходы от рабочего веса дня и показывает, держится ли прогрессия или вы просто добавляете блины. Это решение о третьей попытке, применённое к каждой тренировке.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Когда прошёл ЧМ equipped 2026 и кто победил?</summary><p>В Стамбуле, Турция, с 9 по 15 ноября 2026 года. Командные титулы достались Украине у мужчин и Канаде у женщин; лучшие личные результаты — у Костянтина Мусиенко (1064,5 кг в категории 93 кг) и Келси Маккарти (655,0 кг в категории 69 кг).</p></details>
+<details><summary>Сколько установлено мировых рекордов?</summary><p>Тридцать два по официальным протоколам IPF: 17 у мужчин и 15 у женщин, в дивизионах Open, Junior, Master 1 и Master 2.</p></details>
+<details><summary>Чем пауэрлифтинг в экипировке отличается от классического?</summary><p>В экипировке разрешены комбинезон для приседа и тяги, жимовая майка и бинты на колени; в классике выступают с поясом, наколенниками и кистевыми бинтами. Насколько при этом меняются цифры, я измерил в тексте <a href="/ru/blog/chempionat-equipped-2026-chto-daet-ekipirovka">что даёт экипировка</a>.</p></details>
+<details><summary>Насколько надо прибавить, чтобы подняться на одно место?</summary><p>От 14,3 до 44,2 кг в сумме в зависимости от пола, уровня турнира и места (Amdi et al., 2026). На мировом уровне многие из этих разниц лежат внутри погрешности измерения.</p></details>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/chempionat-equipped-2026-chto-daet-ekipirovka">ЧМ equipped 2026: что на самом деле даёт экипировка</a> — сравнение по категориям между экипировкой и классикой.</li><li><a href="/ru/blog/chempionat-mastersov-2026-sila-i-vozrast">ЧМ среди мастеров 2026: что возраст делает с силой</a> — 443 спортсмена от 40 до 82 лет, разбор по официальным данным.</li><li><a href="/ru/blog/naskolko-tochen-rir">Насколько точен ваш RIR? Что говорят исследования</a> — где оценка работает, а где нет.</li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>International Powerlifting Federation, 2026. Men's Results — 2026 IPF World Open Equipped Powerlifting Championships, Стамбул, 09-15.11.2026. <a href="https://www.powerlifting.sport/fileadmin/ipf/data/results/2026/equipped/Men_Results_2026_IPF_World_Open_Equipped_Powerlifting_Championships_2026-11-15.pdf">Официальный протокол PDF</a></li><li>International Powerlifting Federation, 2026. Women's Results — 2026 IPF World Open Equipped Powerlifting Championships, Стамбул. <a href="https://www.powerlifting.sport/fileadmin/ipf/data/results/2026/equipped/Women_Results_2026_IPF_World_Open_Equipped_Powerlifting_Championships_2026-11-15.pdf">Официальный протокол PDF</a></li><li>International Powerlifting Federation, 2026. Men's и Women's Team Points — 2026 IPF World Open Equipped Powerlifting Championships. <a href="https://www.powerlifting.sport/championships/results/2026/world-open-equipped-powerlifting-championships-2026">Официальная страница результатов</a></li><li>International Powerlifting Federation, 2026. Results — 2026 IPF World Classic Powerlifting Championships, Друскининкай, 13-21.06.2026. <a href="https://www.powerlifting.sport/championships/results/2026/world-open-classic-powerlifting-championships-2026">Официальная страница результатов</a></li><li>Amdi CH, Korakakis PA, Zourdos MC, Helms ER, Spence AJ, Robinson ZP, 2026. Reliability of Maximal Strength in Powerlifters and Performance Differences Required to Improve Competition Placing. Journal of Strength and Conditioning Research. PMID 42862018 — <a href="https://doi.org/10.1519/JSC.0000000000005591">doi:10.1519/JSC.0000000000005591</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. Sports Medicine. PMID 38970765 — <a href="https://doi.org/10.1007/s40279-024-02069-2">doi:10.1007/s40279-024-02069-2</a></li><li>Odgers JB, Zourdos MC, Helms ER, Candow DG, Dahlstrom B, Bruno P, Sousa CA, 2021. Rating of Perceived Exertion and Velocity Relationships Among Trained Males and Females in the Front Squat and Hexagonal Bar Deadlift. Journal of Strength and Conditioning Research. PMID 33629974 — <a href="https://doi.org/10.1519/JSC.0000000000003905">doi:10.1519/JSC.0000000000003905</a></li><li>Motlagh JG, Lipps DB, 2024. The Contribution of Muscular Fatigue and Shoulder Biomechanics to Shoulder Injury Incidence During the Bench Press Exercise: A Narrative Review. Journal of Strength and Conditioning Research. PMID 39808810 — <a href="https://doi.org/10.1519/JSC.0000000000004973">doi:10.1519/JSC.0000000000004973</a></li></ol>
+<p>Источники 5-8 найдены через PubMed. Расчёты по третьим попыткам, незачётным суммам и отрывам на подиуме — оригинальная работа Nurvan по официальным протоколам IPF, указанным в пунктах 1-4.</p>
+<p>Джаммария Лои — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и коучем с сертификатом FIPE с 2013 года и выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных исследований и заканчивается тем, что действительно работает в зале.</p>
+<p class="note">Примечание: информационный материал, он не заменяет консультацию врача или профильного специалиста.</p>
+</main>
+<footer>NURVAN · nurvan.app · 16 ноября 2026</footer>
+</body>
+</html>
