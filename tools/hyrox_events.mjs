@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..');
-const SOURCE_DATE = '2026-11-09';
+const SOURCE_DATE = '2026-11-16';
 const SEASON = '2026/27';
 const BASE = 'https://hyrox.com/event/';
 
@@ -28,7 +28,7 @@ Seul | KR | 2026-11-13 | 2026-11-15 | hyrox-seoul
 Il Cairo | EG | 2026-11-14 | 2026-11-15 | hyrox-cairo
 Dallas | US | 2026-11-18 | 2026-11-22 | hyrox-dallas
 Poznań | PL | 2026-11-20 | 2026-11-22 | hyrox-poznan
-Guangzhou | CN | 2026-11-21 | 2026-11-22 | hyrox-guangzhou
+Guangzhou | CN | 2026-11-20 | 2026-11-22 | hyrox-guangzhou
 Rio de Janeiro | BR | 2026-11-21 | 2026-11-22 | hyrox-rio-de-janeiro
 Singapore | SG | 2026-11-26 | 2026-11-29 | aia-hyrox-singapore
 Johannesburg | ZA | 2026-11-26 | 2026-11-29 | virgin-active-hyrox-johannesburg-26-27
@@ -66,6 +66,7 @@ Cancún | MX | 2027-02-19 | 2027-02-21 | hyrox-cancun
 Phoenix | US | 2027-02-25 | 2027-02-28 | inbody-hyrox-phoenix-26-27
 Mechelen | BE | 2027-03-03 | 2027-03-07 | hyrox-mechelen
 Hanoi | VN | 2027-03-06 | 2027-03-07 | hyrox-hanoi
+Santiago | CL | 2027-03-06 | 2027-03-06 | hyrox-santiago
 Glasgow | GB | 2027-03-10 | 2027-03-14 | hyrox-glasgow-2
 Taipei | TW | 2027-03-12 | 2027-03-14 | hyrox-taipei
 Las Vegas | US | 2027-03-12 | 2027-03-14 | hyrox-las-vegas-26-27
@@ -74,7 +75,7 @@ Guadalajara | MX | 2027-03-19 | 2027-03-21 | hyrox-guadalajara
 Buenos Aires | AR | 2027-03-20 | 2027-03-21 | hyrox-buenos-aires
 Copenaghen | DK | 2027-03-25 | 2027-03-28 | hyrox-copenhagen
 Miami Beach | US | 2027-03-26 | 2027-03-28 | sweat-pals-hyrox-miami-beach-26-27
-Città del Capo | ZA | 2027-03-26 | 2027-03-28 | virgin-active-hyrox-cape-town
+Città del Capo | ZA | 2027-03-25 | 2027-03-28 | virgin-active-hyrox-cape-town
 Brisbane | AU | 2027-03-31 | 2027-04-05 | hyrox-brisbane
 Rotterdam | NL | 2027-04-01 | 2027-04-04 | hyrox-rotterdam
 Houston | US | 2027-04-01 | 2027-04-04 | hyrox-houston-26-27
@@ -89,6 +90,7 @@ Monterrey | MX | 2027-04-16 | 2027-04-18 | hyrox-monterrey
 Ottawa | CA | 2027-04-21 | 2027-04-25 | hyrox-ottawa-26-27
 Atlanta | US | 2027-04-23 | 2027-04-25 | factor_-hyrox-atlanta
 Cracovia | PL | 2027-05-07 | 2027-05-09 | hyrox-krakow-26-27
+Minneapolis | US | 2027-05-07 | 2027-05-09 | hyrox-minneapolis-26-27
 San Paolo | BR | 2027-05-08 | 2027-05-09 | hyrox-sao-paulo
 Lione | FR | 2027-05-12 | 2027-05-16 | hyrox-lyon-s26-27
 Bengaluru | IN | 2027-05-19 | 2027-05-23 | hyrox-bengaluru
@@ -103,7 +105,7 @@ New York | US | | | hyrox-new-york
 `;
 
 const COUNTRIES = {
-  AE: 'Emirati Arabi Uniti', AR: 'Argentina', AT: 'Austria', AU: 'Australia', BE: 'Belgio', BR: 'Brasile', CA: 'Canada', CH: 'Svizzera',
+  AE: 'Emirati Arabi Uniti', AR: 'Argentina', AT: 'Austria', AU: 'Australia', BE: 'Belgio', BR: 'Brasile', CA: 'Canada', CH: 'Svizzera', CL: 'Cile',
   CN: 'Cina', DE: 'Germania', DK: 'Danimarca', EG: 'Egitto', ES: 'Spagna', FI: 'Finlandia', FR: 'Francia', GB: 'Regno Unito', HK: 'Hong Kong',
   HU: 'Ungheria', IE: 'Irlanda', IN: 'India', IT: 'Italia', JP: 'Giappone', KR: 'Corea del Sud', LV: 'Lettonia', MX: 'Messico', MY: 'Malesia',
   NL: 'Paesi Bassi', NZ: 'Nuova Zelanda', PL: 'Polonia', SE: 'Svezia', SG: 'Singapore', TH: 'Thailandia', TW: 'Taiwan', US: 'Stati Uniti', VN: 'Vietnam', ZA: 'Sudafrica'
