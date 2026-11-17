@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progressive overload: do you need more weight? | Nurvan</title>
+<meta name="description" content="Three controlled trials pitted load progression against rep progression: same muscle growth, near-identical strength. Here is when adding weight matters.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Nutrition</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Get the app</a></div></header>
+<main class="wrap" lang="en">
+<div class="crumb">Blog · Training · Progression</div>
+<h1>Progressive overload: do you need more weight?</h1>
+<p class="lede">"If the bar doesn't get heavier, you don't grow." It is the most repeated rule in the gym, and it starts from a correct principle: adaptation needs a demand that keeps rising. The leap is in the word <em>heavier</em>. Three controlled trials have compared the two routes head to head — more load or more reps — and the answer changes how you should write a program.</p>
+<div class="meta"><span><b>9</b> min read</span><span><b>6</b> studies cited</span><span>By <a href="/autore/giammaria-loi">Giammaria Loi</a> · updated 17 November 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Man in a gym sliding a plate onto a loaded barbell on the floor before a set"><figcaption class="cap">Photo by Ketut Subiyanto — Pexels, Pexels licence (free to use)</figcaption></figure>
+<div class="box"><h2>The short version</h2><ul><li><strong>Adding reps works like adding weight.</strong> Over 10 weeks in beginners, one-rep max rose 30.5% with load progression and 29.3% with rep progression; muscle cross-section rose 10.3% and 11.0%.</li><li><strong>The same holds in trained lifters.</strong> After 8 weeks the between-group differences were 2.8 mm in the rectus femoris (favouring reps) and 2.0 kg on the squat max (favouring load) — both confidence intervals cross zero.</li><li><strong>External load does not decide hypertrophy.</strong> With effort matched, 8-12 reps at 70-80% of max and 20-25 reps at 30-40% produced the same growth in the same person.</li><li><strong>Progressive overload does not make progress linear.</strong> In that same trial, protein synthesis above rest fell from 0.27 to 0.10 %/day between week 1 and week 10 while the loads kept climbing.</li><li><strong>What has to grow is the demand, not the number on the bar.</strong> Reps, sets, proximity to failure and movement quality are all legitimate levers — and for maximal strength, load stays the most specific one.</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="Adding load or adding reps: same outcome"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Adding load or adding reps: same outcome</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">39 beginners, 10 weeks of leg extension, one leg per protocol · Chaves et al., 2024</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">increase from baseline</text>
+<rect x="470" y="76" width="14" height="14" fill="#d4af37" rx="2"/>
+<text x="492" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">load progression</text>
+<rect x="680" y="76" width="14" height="14" fill="#f3e5ab" rx="2"/>
+<text x="702" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">rep progression</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1"/>
+<text x="138" y="396.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0%</text>
+<line x1="150" y1="316.4" x2="860" y2="316.4" stroke="#262626" stroke-width="1"/>
+<text x="138" y="320.44444444444446" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">10%</text>
+<line x1="150" y1="240.9" x2="860" y2="240.9" stroke="#262626" stroke-width="1"/>
+<text x="138" y="244.88888888888889" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">20%</text>
+<line x1="150" y1="165.3" x2="860" y2="165.3" stroke="#262626" stroke-width="1"/>
+<text x="138" y="169.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">30%</text>
+<rect x="230.0" y="161.6" width="96" height="230.4" fill="#d4af37" rx="3"/>
+<text x="278.0" y="149.55555555555554" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+30.5%</text>
+<rect x="340.0" y="170.6" width="96" height="221.4" fill="#f3e5ab" rx="3"/>
+<text x="388.0" y="158.6222222222222" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+29.3%</text>
+<text x="333.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">One-rep max</text>
+<rect x="580.0" y="314.2" width="96" height="77.8" fill="#d4af37" rx="3"/>
+<text x="628.0" y="302.17777777777775" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+10.3%</text>
+<rect x="690.0" y="308.9" width="96" height="83.1" fill="#f3e5ab" rx="3"/>
+<text x="738.0" y="296.8888888888889" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+11.0%</text>
+<text x="683.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Cross-sectional area</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Nurvan calculation from the mean pre/post values in the abstract. No difference between protocols (p &gt; 0.05).</text>
+</svg>
+</div><figcaption class="cap">Nurvan chart from Chaves et al., 2024 (39 beginners, within-subject design: each leg randomised to load or rep progression). Values calculated from the mean pre/post figures in the abstract: one-rep max 52.90 → 69.05 kg and 51.67 → 66.82 kg; vastus lateralis cross-section 21.34 → 23.53 cm² and 21.08 → 23.39 cm². No value read off a figure.</figcaption></figure>
+<h2>What the principle actually asks for</h2>
+<p>Progressive overload says one thing: for adaptation to continue, the demand you place on the muscle has to rise over time. It does not say <em>how</em>. You have at least five levers: load, reps per set, number of sets, proximity to failure, and range or control of the movement.</p>
+<p>In practice the first lever swallowed the rest, for a mundane reason: load is the only one you can read off the bar. If the plan says 4×8 and last week was 60 kg, then 62.5 kg today looks like progress, while 60 kg for 10 reps feels like "nothing changed". That is an accounting illusion — the second option raised total work by more.</p>
+<p>The useful question is not philosophical. Three trials put the two routes against each other, with matched sets and frequency, and measured both strength and muscle.</p>
+<h2>The three trials that compared the two routes</h2>
+<table><thead><tr><th>Study</th><th>Who</th><th>Length</th><th>Comparison</th><th>Result</th></tr></thead><tbody><tr><td>Plotkin et al., 2022</td><td>43 lifters with ≥1 year of training</td><td>8 weeks</td><td>load ↑ vs reps ↑</td><td>trivial differences, intervals including zero</td></tr><tr><td>Chaves et al., 2024</td><td>39 beginners, one leg per protocol</td><td>10 weeks</td><td>load ↑ vs reps ↑</td><td>no difference in strength or muscle size</td></tr><tr><td>Lees et al., 2025</td><td>20 young men, one limb per load</td><td>10 weeks</td><td>heavy vs light load, effort matched</td><td>hypertrophy independent of load</td></tr></tbody></table>
+<p><em>Nurvan table built from the three studies listed in the sources below.</em></p>
+<h3>Trained lifters: the differences are smaller than the uncertainty</h3>
+<p>Plotkin and colleagues had 43 people with at least a year of lower-body training do 4 sets of 4 exercises, twice a week, for 8 weeks. One group raised the load and held reps constant; the other raised reps and held the load constant.</p>
+<p>The <strong>between-group</strong> differences, adjusted for baseline and sex, were 2.8 mm on the summed rectus femoris sites in favour of reps (95% confidence interval -0.5 to 5.8) and 2.0 kg on the Smith machine squat max in favour of load (-2.4 to 7.8). Both intervals contain zero: with these numbers you cannot say one method beat the other. Everything else was even closer — muscle thicknesses under a millimetre, endurance under 1%, jump height 0.1 cm.</p>
+<h3>Beginners: one person, two legs, two protocols</h3>
+<p>Chaves and colleagues used a cleaner design: 39 untrained men and women, each leg randomised to load or rep progression, 10 weeks of leg extension. Every participant acts as their own control, which removes the problem of comparing people who respond differently.</p>
+<p>One-rep max went from 52.90 to 69.05 kg with load progression and from 51.67 to 66.82 kg with rep progression; vastus lateralis cross-section from 21.34 to 23.53 cm² and from 21.08 to 23.39 cm². No statistical difference between protocols.</p>
+<h3>Load does not drive growth — effort does</h3>
+<p>The newest piece comes from the <em>Journal of Physiology</em>: 20 young men, 10 weeks, unilateral curls and knee extensions with one limb heavy (8-12 reps, 70-80% of max) and the other light (20-25 reps, 30-40%), every set taken to volitional fatigue.</p>
+<p>Hypertrophy was unaffected by load, and it was conserved <strong>within</strong> each individual: someone who grew well in the arm also grew well in the leg, whatever the weight. The variability that matters is between people, not between loads. One more detail worth keeping if you compare your numbers with anyone else's: in the same study, shared variance between size gains and strength gains was negligible. Growing and getting strong are not the same measurement.</p>
+<h2>Why progress slows down anyway</h2>
+<p>Here is the part the principle never promised. In the <em>Journal of Physiology</em> study, researchers used deuterated water to measure myofibrillar protein synthesis — how fast the muscle builds contractile protein — in week 1 and week 10.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="The response fades even while the weight goes up"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">The response fades even while the weight goes up</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">20 men, 10 weeks, three sessions a week with progressive overload · Lees et al., 2025</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">myofibrillar protein synthesis above rest (%/day)</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="354.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.0</text>
+<line x1="170" y1="296.7" x2="860" y2="296.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="300.6666666666667" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.1</text>
+<line x1="170" y1="243.3" x2="860" y2="243.3" stroke="#262626" stroke-width="1"/>
+<text x="158" y="247.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.2</text>
+<line x1="170" y1="190.0" x2="860" y2="190.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="194.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.3</text>
+<line x1="170" y1="136.7" x2="860" y2="136.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="140.66666666666669" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0.4</text>
+<rect x="300.0" y="206.0" width="130" height="144.0" fill="#d4af37" rx="3"/>
+<line x1="365.0" y1="147.3" x2="365.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="147.3" x2="379.0" y2="147.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="264.7" x2="379.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="365.0" y="137.33333333333334" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0.27</text>
+<text x="365.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Week 1</text>
+<rect x="580.0" y="296.7" width="130" height="53.3" fill="#aa8a2e" rx="3"/>
+<line x1="645.0" y1="222.0" x2="645.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="222.0" x2="659.0" y2="222.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="350.0" x2="659.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="645.0" y="212.0" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0.10</text>
+<text x="645.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Week 10</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Vertical bars: standard deviation. Difference between weeks 0.16 ± 0.18 %/day (p &lt; 0.001).</text>
+</svg>
+</div><figcaption class="cap">Nurvan chart from Lees et al., 2025 (20 men, 10 weeks, three sessions a week). Values reported in the abstract as the increase above rest: 0.27 ± 0.11 %/day in week 1 (p &lt; 0.0001) and 0.10 ± 0.14 %/day in week 10 (p = 0.009); difference between them 0.16 ± 0.18 %/day (p &lt; 0.001). No value read off a figure.</figcaption></figure>
+<p>Above resting level, synthesis ran at 0.27 %/day at the start and 0.10 %/day by week 10: the response faded by roughly two thirds <strong>while the programme was applying progressive overload</strong>. That is not a programming mistake, it is how adaptation works — the same stimulus, repeated, is worth less each time. Adding weight does not cancel the curve, and expecting linear progress for months means judging your training with the wrong ruler. On how long to leave a programme alone before changing it, see <a href="/en/blog/how-often-change-workout-program">how often to change your workout program</a>.</p>
+<h2>What the research actually says</h2>
+<div class="verdict"><div class="v"><span class="pill no">Busted</span><p>"If the weight doesn't go up, you don't grow"<br><span class="cap">Plotkin et al., 2022; Chaves et al., 2024 — progressing reps at a fixed load produced the same muscle growth</span></p></div><div class="v"><span class="pill no">Busted</span><p>"More external load means more hypertrophy"<br><span class="cap">Lees et al., 2025 — with effort matched, 70-80% and 30-40% of max grew the same muscle in the same person</span></p></div><div class="v"><span class="pill part">Needs nuance</span><p>"Load and reps are interchangeable for any goal"<br><span class="cap">Plotkin et al., 2022 — the estimate favours load on the one-rep max (+2.0 kg) but the interval crosses zero; specificity still applies</span></p></div><div class="v"><span class="pill no">Busted</span><p>"With progressive overload, progress stays linear"<br><span class="cap">Lees et al., 2025 — protein synthesis above rest fell from 0.27 to 0.10 %/day between weeks 1 and 10</span></p></div><div class="v"><span class="pill part">Needs nuance</span><p>"You have to train to failure to progress"<br><span class="cap">Robinson et al., 2024 — hypertrophy improves closer to failure, strength does not; Ruple et al., 2023 — with volume matched, 0-1 and 4-6 RIR gave the same results over 5 weeks</span></p></div><div class="v"><span class="pill part">Needs nuance</span><p>"The progression has to be written down and followed exactly"<br><span class="cap">Larsen et al., 2021 — across 14 studies and 356 participants, every autoregulated protocol increased the one-rep max</span></p></div></div>
+<h2>How to apply it</h2>
+<ol class="steps"><li><strong>Pick one lever and hold the others still.</strong> For each exercise, decide whether this block raises load or raises reps. Moving everything at once makes it impossible to know what worked.</li><li><strong>Use double progression.</strong> Set a range (say 8-12 reps): add reps until you hit the top of the range on every set, then add load and drop back to the bottom. It is the simplest way to get both routes without choosing.</li><li><strong>For maximal strength, favour load.</strong> If you compete or want a bigger one-rep max, specificity matters: heavy sets need to be heavy. On the rest of the session, reps will do.</li><li><strong>For hypertrophy, effort is the currency.</strong> Growth improves when sets end close to failure, and that is available at any load. On how many reps and how much rest to build around that effort, see <a href="/en/blog/how-many-reps-build-muscle">how many reps build muscle</a>.</li><li><strong>Log load, reps and effort together.</strong> A line with only the weight cannot tell you whether demand went up. Three numbers can. On how well we estimate that effort, see <a href="/en/blog/how-accurate-is-rir">how accurate your RIR is</a>.</li><li><strong>When the load stalls for three weeks, don't force it.</strong> Add reps, add a set, or cut volume for a week and try again. The data say the second route leads to the same place; the third is for when it is fatigue, not stimulus, that is missing.</li></ol>
+<h3>If you coach people remotely</h3>
+<p>Load progression is the easiest thing to prescribe and the easiest for a client to get wrong. Two habits that change the quality of what you get back:</p>
+<ul><li><strong>Prescribe the range, not the weight.</strong> "8-12 reps; go up in load once you hit 12 on every set" is a rule a client can run alone, even in a week of bad sleep. A fixed weight is a rule that breaks at the first disruption.</li><li><strong>Read progression as total work, not as a max.</strong> A client going from 60×8 to 60×11 has improved more than one going from 60×8 to 62.5×8. Look only at the load column and the first one looks stuck.</li></ul>
+<div class="app"><div><h3>Nurvan: see whether the demand actually went up</h3><p>In Nurvan every set carries load, reps and RIR, and the exercise history lines your sessions up side by side — so you can tell in two seconds whether you are progressing in weight, in reps, or not at all. That is the data you pick your next lever from, for yourself or for the coach who programmes for you.</p></div><a class="cta" href="https://nurvan.app">Try Nurvan</a></div>
+<h2>FAQ</h2>
+<details><summary>Do I have to add weight every week?</summary><p>No, and no study has shown it is necessary. In the three trials that compared the routes directly, adding reps at a fixed load produced the same muscle growth and almost identical strength gains (30.5% versus 29.3% on the one-rep max over 10 weeks). What has to rise over time is the overall demand.</p></details>
+<details><summary>Is it better to add load or add reps?</summary><p>It depends on the goal. For hypertrophy the two levers are equivalent in the available data. For maximal strength the estimate slightly favours load (a 2.0 kg between-group difference, interval -2.4 to 7.8), and specificity argues for keeping heavy sets heavy if a bigger max is the point. Double progression uses both.</p></details>
+<details><summary>What is double progression?</summary><p>It is the rule that raises reps first and load second. Pick a range, say 8-12: stay at that weight until you complete 12 reps on every prescribed set, then add the smallest increment available and start again at 8. It needs no maths on your one-rep max and it absorbs bad days.</p></details>
+<details><summary>Why have I stopped progressing even though I keep adding weight?</summary><p>Because adaptation slows on its own: in the deuterated-water study, protein synthesis above rest went from 0.27 to 0.10 %/day over ten weeks while loads rose. When the load stalls, the problem is usually recovery or total volume rather than the weight itself. If the plateau lasts weeks and comes with physical symptoms, it is worth talking to a doctor rather than pushing through.</p></details>
+</div>
+<h2>Read next</h2>
+<ul><li><a href="/en/blog/how-many-reps-build-muscle">How many reps build muscle? The 8-12 myth</a> — where to place the effort you are trying to grow.</li><li><a href="/en/blog/how-accurate-is-rir">How accurate is your RIR? What the studies say</a> — the effort lever only works if you can measure it.</li><li><a href="/en/blog/how-often-change-workout-program">How often should you change your workout program?</a> — how long to leave a programme alone before judging it.</li></ul>
+<h2>Sources</h2>
+<ol class="refs"><li>Plotkin D, Coleman M, Van Every D, Maldonado J, Oberlin D, Israetel M, Feather J, Alto A, Vigotsky AD, Schoenfeld BJ, 2022. Progressive overload without progressing load? The effects of load or repetition progression on muscular adaptations. <em>PeerJ</em> 10:e14142. <a href="https://pubmed.ncbi.nlm.nih.gov/36199287/">PMID 36199287</a> · <a href="https://doi.org/10.7717/peerj.14142">DOI 10.7717/peerj.14142</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>Int J Sports Med</em> 45(7):504-510. <a href="https://pubmed.ncbi.nlm.nih.gov/38286426/">PMID 38286426</a> · <a href="https://doi.org/10.1055/a-2256-5857">DOI 10.1055/a-2256-5857</a></li><li>Lees MJ, Mcleod JC, Morton RW, et al., 2025. Resistance training load does not determine resistance training-induced hypertrophy across upper and lower limbs in healthy young males. <em>J Physiol</em>. <a href="https://pubmed.ncbi.nlm.nih.gov/41474371/">PMID 41474371</a> · <a href="https://doi.org/10.1113/JP289684">DOI 10.1113/JP289684</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Ruple BA, Plotkin DL, Smith MA, et al., 2023. The effects of resistance training to near failure on strength, hypertrophy, and motor unit adaptations in previously trained adults. <em>Physiol Rep</em> 11(9):e15679. <a href="https://pubmed.ncbi.nlm.nih.gov/37144554/">PMID 37144554</a> · <a href="https://doi.org/10.14814/phy2.15679">DOI 10.14814/phy2.15679</a></li><li>Larsen S, Kristiansen E, van den Tillaar R, 2021. Effects of subjective and objective autoregulation methods for intensity and volume on enhancing maximal strength during resistance-training interventions: a systematic review. <em>PeerJ</em> 9:e10663. <a href="https://pubmed.ncbi.nlm.nih.gov/33520457/">PMID 33520457</a> · <a href="https://doi.org/10.7717/peerj.10663">DOI 10.7717/peerj.10663</a></li></ol>
+<p>Topic chosen from November 2026 trend signals on load progression, where competing content presents a weekly weight increase as the only form of progressive overload. Scientific sources retrieved through PubMed.</p>
+<p class="note"><strong>Giammaria Loi</strong> is the founder of Nurvan. He has been lifting since 2012, has worked as a FIPE-certified personal trainer and coach since 2013, and has competed in powerlifting at national level since 2018. Every article he writes starts from the research and ends with what actually works in the gym. <a href="/autore/giammaria-loi">Author page</a></p>
+<p class="note">Note: educational content. It does not replace advice from a doctor or qualified professional.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

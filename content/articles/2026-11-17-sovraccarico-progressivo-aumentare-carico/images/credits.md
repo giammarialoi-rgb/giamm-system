@@ -1,0 +1,15 @@
+# Crediti immagini — Sovraccarico progressivo: devi aumentare il carico? (2026-11-17)
+
+| File | Descrizione / alt | Autore | Fonte | Licenza |
+|---|---|---|---|---|
+| cover.jpg (1600x900) | IT: Uomo in palestra che infila un disco sul bilanciere appoggiato a terra prima della serie · EN: Man in a gym sliding a plate onto a loaded barbell on the floor before a set | Ketut Subiyanto | [Pexels — Man in Blue Shorts Putting in Weights on Barbell](https://www.pexels.com/photo/man-in-blue-shorts-putting-in-weights-on-barbell-4720795/) | Licenza Pexels (uso gratuito anche commerciale, attribuzione non obbligatoria; citata comunque). Servita da Pexels in ritaglio 1600x900. |
+| grafico-carico-vs-ripetizioni.\<lang\>.svg (900x470, 10 lingue) | IT: Grafico a barre raggruppate con l'aumento percentuale di massimale e sezione trasversa del muscolo dopo 10 settimane con progressione di carico (+30,5% e +10,3%) e con progressione di ripetizioni (+29,3% e +11,0%) | Nurvan (grafico originale) | Elaborazione Nurvan sui valori medi pre/post riportati nell'abstract di **Chaves TS et al., 2024**, *Int J Sports Med* 45(7):504-510, [PMID 38286426](https://pubmed.ncbi.nlm.nih.gov/38286426/), DOI 10.1055/a-2256-5857. Massimale 52,90 → 69,05 kg (LOADprog) e 51,67 → 66,82 kg (REPSprog); sezione trasversa del vasto laterale 21,34 → 23,53 cm² e 21,08 → 23,39 cm²; 39 principianti, disegno entro-soggetto, 10 settimane di leg extension. Nessun valore letto da una figura | Grafico originale Nurvan |
+| grafico-risposta-attenuata.\<lang\>.svg (900x430, 10 lingue) | IT: Grafico a barre con la sintesi proteica miofibrillare sopra il riposo alla settimana 1 (0,27 ± 0,11 %/giorno) e alla settimana 10 (0,10 ± 0,14 %/giorno), con deviazione standard | Nurvan (grafico originale) | Valori riportati nell'abstract di **Lees MJ et al., 2025**, *J Physiol*, [PMID 41474371](https://pubmed.ncbi.nlm.nih.gov/41474371/), DOI 10.1113/JP289684; 20 uomini giovani, 10 settimane, 3 sedute a settimana, misura con acqua deuterata. Differenza fra le due settimane 0,16 ± 0,18 %/giorno (p < 0,001). Nessun valore letto da una figura | Grafico originale Nurvan |
+
+## Note
+
+- Nessuna immagine proviene da social, federazioni, agenzie, organizzatori di eventi o produttori di integratori. Nessuno screenshot di contenuti altrui è stato scaricato o riprodotto.
+- Nella copertina è leggibile il marchio del disco (produttore di attrezzatura, non citato nel testo): la foto è pubblicata con licenza Pexels, che ne consente l'uso commerciale, e l'articolo non fa alcun riferimento né endorsement a quel marchio.
+- I valori dei due grafici sono quelli numerici riportati negli abstract delle pubblicazioni citate: nessun valore è stato letto da una figura o stimato. Le percentuali del primo grafico sono calcolate da noi dalle medie pre/post pubblicate.
+- Separatore decimale: virgola in it, es, fr, pt, de, ru, ar; punto in en, zh, hi.
+- I colori dei grafici seguono la palette Nurvan: sfondo #0c0c0c, oro #d4af37, oro scuro #aa8a2e, oro chiaro #f3e5ab, testo #f0f0f0, secondario #a0a0a0, griglia #262626.

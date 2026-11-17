@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прогрессия нагрузки: нужно ли увеличивать вес? | Nurvan</title>
+<meta name="description" content="Три исследования сравнили рост веса и рост повторений: одинаковая гипертрофия и почти одинаковая сила. Когда добавлять вес действительно имеет смысл.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Тренировки · Прогрессия</div>
+<h1>Прогрессия нагрузки: нужно ли увеличивать вес?</h1>
+<p class="lede">«Не растёт вес на штанге — не растут мышцы.» Это самое повторяемое правило в зале, и начинается оно с верного принципа: чтобы адаптация продолжалась, требование к телу должно расти. Подмена происходит в слове <em>вес</em>. Три контролируемых исследования сравнили два пути — больше веса или больше повторений — и результат меняет то, как стоит писать программу.</p>
+<div class="meta"><span><b>9</b> мин чтения</span><span><b>6</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 17 ноября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Мужчина в зале надевает диск на лежащую на полу штангу перед подходом"><figcaption class="cap">Фото: Ketut Subiyanto — Pexels, лицензия Pexels (свободное использование)</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Добавлять повторения работает как добавлять вес.</strong> За 10 недель у новичков максимум вырос на 30,5% при прогрессии веса и на 29,3% при прогрессии повторений; сечение мышцы — на 10,3% и 11,0%.</li><li><strong>У тренированных то же самое.</strong> Через 8 недель различия между группами составили 2,8 мм по прямой мышце бедра (в пользу повторений) и 2,0 кг в максимуме приседа (в пользу веса): оба доверительных интервала пересекают ноль.</li><li><strong>Внешний вес не определяет гипертрофию.</strong> При равном усилии 8-12 повторений с 70-80% от максимума и 20-25 с 30-40% дали одинаковый рост у одного и того же человека.</li><li><strong>Прогрессия нагрузки не делает прогресс линейным.</strong> В том же исследовании синтез белка выше покоя упал с 0,27 до 0,10 %/день между 1-й и 10-й неделей, пока веса росли.</li><li><strong>Расти должно требование, а не цифра на штанге.</strong> Повторения, подходы, близость к отказу и качество движения — законные рычаги, а для максимальной силы вес остаётся самым специфичным.</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="Растить вес или повторения: результат одинаковый"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Растить вес или повторения: результат одинаковый</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">39 новичков, 10 недель разгибаний ног, по одной ноге на протокол · Chaves et al., 2024</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">прирост относительно старта</text>
+<rect x="470" y="76" width="14" height="14" fill="#d4af37" rx="2"/>
+<text x="492" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">прогрессия веса</text>
+<rect x="680" y="76" width="14" height="14" fill="#f3e5ab" rx="2"/>
+<text x="702" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">прогрессия повторений</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1"/>
+<text x="138" y="396.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0%</text>
+<line x1="150" y1="316.4" x2="860" y2="316.4" stroke="#262626" stroke-width="1"/>
+<text x="138" y="320.44444444444446" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">10%</text>
+<line x1="150" y1="240.9" x2="860" y2="240.9" stroke="#262626" stroke-width="1"/>
+<text x="138" y="244.88888888888889" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">20%</text>
+<line x1="150" y1="165.3" x2="860" y2="165.3" stroke="#262626" stroke-width="1"/>
+<text x="138" y="169.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">30%</text>
+<rect x="230.0" y="161.6" width="96" height="230.4" fill="#d4af37" rx="3"/>
+<text x="278.0" y="149.55555555555554" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+30,5%</text>
+<rect x="340.0" y="170.6" width="96" height="221.4" fill="#f3e5ab" rx="3"/>
+<text x="388.0" y="158.6222222222222" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+29,3%</text>
+<text x="333.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Максимум (1ПМ)</text>
+<rect x="580.0" y="314.2" width="96" height="77.8" fill="#d4af37" rx="3"/>
+<text x="628.0" y="302.17777777777775" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+10,3%</text>
+<rect x="690.0" y="308.9" width="96" height="83.1" fill="#f3e5ab" rx="3"/>
+<text x="738.0" y="296.8888888888889" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+11,0%</text>
+<text x="683.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Сечение мышцы</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Расчёт Nurvan по средним значениям до/после из резюме. Различий между протоколами нет (p &gt; 0,05).</text>
+</svg>
+</div><figcaption class="cap">График Nurvan по данным Chaves et al., 2024 (39 новичков, внутрисубъектный дизайн: каждая нога случайно отнесена к прогрессии веса или повторений). Значения рассчитаны по средним до/после из резюме: максимум 52,90 → 69,05 кг и 51,67 → 66,82 кг; сечение латеральной широкой мышцы 21,34 → 23,53 см² и 21,08 → 23,39 см². Ни одно значение не считано с рисунка.</figcaption></figure>
+<h2>Чего на самом деле требует принцип</h2>
+<p>Прогрессия нагрузки говорит одно: чтобы адаптация продолжалась, требование к мышце должно расти со временем. Она не говорит <em>как</em>. Рычагов как минимум пять: вес, повторения в подходе, число подходов, близость к отказу и амплитуда или контроль движения.</p>
+<p>На практике первый рычаг вытеснил остальные по банальной причине: только вес виден на штанге. Если в программе 4×8, а на прошлой неделе было 60 кг, то сегодняшние 62,5 кг выглядят прогрессом, а 60 кг на 10 повторений — как будто «ничего не изменилось». Это бухгалтерская иллюзия: во втором случае работа выросла сильнее.</p>
+<p>Полезный вопрос не философский. Три исследования столкнули два пути при одинаковом числе подходов и одинаковой частоте и измерили силу и мышцу.</p>
+<h2>Три исследования, которые сравнили оба пути</h2>
+<table><thead><tr><th>Исследование</th><th>Кто</th><th>Длительность</th><th>Сравнение</th><th>Результат</th></tr></thead><tbody><tr><td>Plotkin et al., 2022</td><td>43 человека со стажем не менее 1 года</td><td>8 недель</td><td>вес ↑ vs повторения ↑</td><td>различия незначительны, интервалы включают ноль</td></tr><tr><td>Chaves et al., 2024</td><td>39 новичков, по ноге на протокол</td><td>10 недель</td><td>вес ↑ vs повторения ↑</td><td>нет различий ни в силе, ни в размере мышцы</td></tr><tr><td>Lees et al., 2025</td><td>20 молодых мужчин, по конечности на вес</td><td>10 недель</td><td>большой вес vs малый при равном усилии</td><td>гипертрофия не зависит от веса</td></tr></tbody></table>
+<p><em>Таблица Nurvan по трём исследованиям из списка источников.</em></p>
+<h3>Тренированные: различия меньше, чем неопределённость</h3>
+<p>В работе Плоткина с коллегами 43 человека со стажем не менее года тренировок низа тела выполняли 4 подхода в 4 упражнениях дважды в неделю на протяжении 8 недель. Одна группа повышала вес при постоянных повторениях, другая — повторения при постоянном весе.</p>
+<p>Различия <strong>между группами</strong>, скорректированные по исходным значениям и полу, составили 2,8 мм по сумме точек прямой мышцы бедра в пользу повторений (95% доверительный интервал от -0,5 до 5,8) и 2,0 кг в максимуме приседа в машине Смита в пользу веса (от -2,4 до 7,8). Оба интервала содержат ноль: с такими числами нельзя сказать, что один метод победил. Во всём остальном различия были ещё меньше: толщина мышц — доли миллиметра, выносливость — меньше 1%, прыжок — 0,1 см.</p>
+<h3>Новички: один человек, две ноги, два протокола</h3>
+<p>Чавес с коллегами выбрали более чистый дизайн: 39 новичков, каждая нога случайно отнесена к прогрессии веса или повторений, 10 недель разгибаний ног. Так каждый участник служит контролем самому себе, и исчезает проблема сравнения людей с разной отзывчивостью.</p>
+<p>Максимум вырос с 52,90 до 69,05 кг при прогрессии веса и с 51,67 до 66,82 кг при прогрессии повторений; сечение латеральной широкой мышцы — с 21,34 до 23,53 см² и с 21,08 до 23,39 см². Статистических различий между протоколами нет.</p>
+<h3>Рост определяет не вес, а усилие</h3>
+<p>Самый свежий фрагмент — из <em>Journal of Physiology</em>: 20 молодых мужчин, 10 недель, односторонние сгибания на бицепс и разгибания ног, одна конечность с большим весом (8-12 повторений, 70-80% от максимума), другая с малым (20-25 повторений, 30-40%), все подходы до произвольного утомления.</p>
+<p>Вес не повлиял на гипертрофию, и она сохранялась <strong>внутри</strong> человека: кто хорошо рос рукой, хорошо рос и ногой, независимо от веса. Значимая изменчивость — между людьми, а не между весами. Ещё одна деталь, полезная при сравнении своих цифр с чужими: в том же исследовании общая дисперсия прироста размера и прироста силы оказалась ничтожной. Расти и становиться сильнее — разные измерения.</p>
+<h2>Почему прогресс всё равно замедляется</h2>
+<p>Вот часть, которую принцип никогда не обещал. В исследовании <em>Journal of Physiology</em> миофибриллярный синтез белка — скорость, с которой мышца строит сократительный белок — измеряли дейтерированной водой на 1-й и на 10-й неделе.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="Отклик слабеет, даже когда вес растёт"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Отклик слабеет, даже когда вес растёт</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">20 мужчин, 10 недель, три тренировки в неделю с прогрессией нагрузки · Lees et al., 2025</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">миофибриллярный синтез белка выше покоя (%/день)</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="354.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,0</text>
+<line x1="170" y1="296.7" x2="860" y2="296.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="300.6666666666667" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,1</text>
+<line x1="170" y1="243.3" x2="860" y2="243.3" stroke="#262626" stroke-width="1"/>
+<text x="158" y="247.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,2</text>
+<line x1="170" y1="190.0" x2="860" y2="190.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="194.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,3</text>
+<line x1="170" y1="136.7" x2="860" y2="136.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="140.66666666666669" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,4</text>
+<rect x="300.0" y="206.0" width="130" height="144.0" fill="#d4af37" rx="3"/>
+<line x1="365.0" y1="147.3" x2="365.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="147.3" x2="379.0" y2="147.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="264.7" x2="379.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="365.0" y="137.33333333333334" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0,27</text>
+<text x="365.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Неделя 1</text>
+<rect x="580.0" y="296.7" width="130" height="53.3" fill="#aa8a2e" rx="3"/>
+<line x1="645.0" y1="222.0" x2="645.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="222.0" x2="659.0" y2="222.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="350.0" x2="659.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="645.0" y="212.0" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0,10</text>
+<text x="645.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Неделя 10</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Вертикальные отрезки: стандартное отклонение. Разница между неделями 0,16 ± 0,18 %/день (p &lt; 0,001).</text>
+</svg>
+</div><figcaption class="cap">График Nurvan по данным Lees et al., 2025 (20 мужчин, 10 недель, три тренировки в неделю). Значения из резюме как прирост над покоем: 0,27 ± 0,11 %/день на 1-й неделе (p &lt; 0,0001) и 0,10 ± 0,14 %/день на 10-й (p = 0,009); разница между ними 0,16 ± 0,18 %/день (p &lt; 0,001). Ни одно значение не считано с рисунка.</figcaption></figure>
+<p>Над уровнем покоя синтез составлял 0,27 %/день в начале и 0,10 %/день на 10-й неделе: отклик ослаб примерно на две трети, <strong>пока программа применяла прогрессию нагрузки</strong>. Это не ошибка планирования, а то, как устроена адаптация: один и тот же стимул с каждым повтором стоит меньше. Добавление веса не отменяет эту кривую, а ждать линейного прогресса месяцами — значит мерить тренировки не той линейкой. О том, как часто пересматривать программу, — <a href="/ru/blog/kak-chasto-menyat-programmu-trenirovok">как часто менять программу тренировок</a>.</p>
+<h2>Что на самом деле говорит наука</h2>
+<div class="verdict"><div class="v"><span class="pill no">Опровергнуто</span><p>«Не растёт вес — не растут мышцы»<br><span class="cap">Plotkin et al., 2022; Chaves et al., 2024 — прогрессия повторений при фиксированном весе дала такой же рост мышц</span></p></div><div class="v"><span class="pill no">Опровергнуто</span><p>«Больше внешний вес — больше гипертрофия»<br><span class="cap">Lees et al., 2025 — при равном усилии 70-80% и 30-40% от максимума дали одинаковый рост у одного человека</span></p></div><div class="v"><span class="pill part">Требует уточнения</span><p>«Вес и повторения взаимозаменяемы для любой цели»<br><span class="cap">Plotkin et al., 2022 — в максимуме оценка в пользу веса (+2,0 кг), но интервал пересекает ноль; принцип специфичности сохраняется</span></p></div><div class="v"><span class="pill no">Опровергнуто</span><p>«С прогрессией нагрузки прогресс остаётся линейным»<br><span class="cap">Lees et al., 2025 — синтез белка над покоем с 0,27 до 0,10 %/день между 1-й и 10-й неделей</span></p></div><div class="v"><span class="pill part">Требует уточнения</span><p>«Чтобы прогрессировать, нужно доходить до отказа»<br><span class="cap">Robinson et al., 2024 — гипертрофия растёт ближе к отказу, сила нет; Ruple et al., 2023 — при равном объёме 0-1 и 4-6 RIR дали одинаковый результат за 5 недель</span></p></div><div class="v"><span class="pill part">Требует уточнения</span><p>«Прогрессию нужно расписать и соблюдать дословно»<br><span class="cap">Larsen et al., 2021 — в 14 исследованиях и у 356 участников все саморегулируемые протоколы повысили максимум</span></p></div></div>
+<h2>Как это применять</h2>
+<ol class="steps"><li><strong>Выберите один рычаг и не трогайте остальные.</strong> Для каждого упражнения решите, что растёт в этом блоке: вес или повторения. Двигать всё сразу — значит не понять, что сработало.</li><li><strong>Используйте двойную прогрессию.</strong> Задайте диапазон (например, 8-12 повторений): добавляйте повторения, пока не закроете верх диапазона во всех подходах, затем поднимите вес и вернитесь к низу. Самый простой способ получить оба пути, не выбирая.</li><li><strong>Для максимальной силы приоритет у веса.</strong> Если вы выступаете или хотите поднять максимум, специфичность важна: тяжёлые подходы должны быть тяжёлыми. На остальной части тренировки хватит повторений.</li><li><strong>Для гипертрофии валюта — усилие.</strong> Рост лучше, когда подходы заканчиваются близко к отказу, и это достижимо с любым весом. О том, сколько повторений и отдыха ставить вокруг этого усилия, — <a href="/ru/blog/skolko-povtoreniy-dlya-massy">сколько повторений для массы</a>.</li><li><strong>Записывайте вес, повторения и усилие вместе.</strong> Строка с одним весом не скажет, выросло ли требование. Три числа — скажут. О том, насколько точно мы оцениваем усилие, — <a href="/ru/blog/naskolko-tochen-rir">насколько точен ваш RIR</a>.</li><li><strong>Если вес стоит три недели, не продавливайте.</strong> Добавьте повторения, добавьте подход или снизьте объём на неделю и попробуйте снова. Данные говорят, что второй путь приводит туда же; третий нужен, когда не хватает восстановления, а не стимула.</li></ol>
+<h3>Если вы тренируете людей онлайн</h3>
+<p>Прогрессия веса проще всего прописывается и проще всего ломается у клиента. Две привычки, которые меняют качество обратной связи:</p>
+<ul><li><strong>Прописывайте диапазон, а не вес.</strong> «8-12 повторений; поднимайте вес, когда сделаете 12 во всех подходах» — правило, которое клиент применит сам даже в неделю с плохим сном. Фиксированный вес ломается на первой же помехе.</li><li><strong>Читайте прогресс как общую работу, а не как максимум.</strong> Клиент, перешедший с 60×8 на 60×11, прибавил больше, чем тот, кто перешёл с 60×8 на 62,5×8. Если смотреть только на колонку веса, первый кажется стоящим на месте.</li></ul>
+<div class="app"><div><h3>Nurvan: проверьте, выросло ли требование на самом деле</h3><p>В Nurvan каждый подход хранит вес, повторения и RIR, а история упражнения выстраивает тренировки в ряд: за две секунды видно, растёте вы в весе, в повторениях или нигде. Это и есть данные, по которым выбирают следующий рычаг — для себя или для тренера, который пишет вам программу.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<details><summary>Нужно ли каждую неделю увеличивать вес?</summary><p>Нет, и ни одно исследование не показало такой необходимости. В трёх работах, где пути сравнивали напрямую, рост повторений при фиксированном весе дал такой же рост мышц и почти идентичную прибавку силы (30,5% против 29,3% в максимуме за 10 недель). Со временем расти должно общее требование.</p></details>
+<details><summary>Что лучше — поднимать вес или повторения?</summary><p>Зависит от цели. Для гипертрофии в имеющихся данных оба рычага равноценны. Для максимальной силы оценка чуть в пользу веса (разница между группами 2,0 кг, интервал от -2,4 до 7,8), и специфичность советует держать тяжёлые подходы тяжёлыми, если цель — больший максимум. Двойная прогрессия использует оба.</p></details>
+<details><summary>Что такое двойная прогрессия?</summary><p>Это правило, по которому сначала растут повторения, а потом вес. Выберите диапазон, например 8-12: работаете с этим весом, пока не закроете 12 повторений во всех запланированных подходах, затем прибавляете минимальный доступный шаг и начинаете с 8. Не требует расчётов по максимуму и переносит плохие дни.</p></details>
+<details><summary>Почему я перестал прогрессировать, хотя добавляю вес?</summary><p>Потому что адаптация замедляется сама: в исследовании с дейтерированной водой синтез белка над покоем упал с 0,27 до 0,10 %/день за десять недель, пока веса росли. Когда вес встаёт, причина обычно в восстановлении или общем объёме, а не в самом весе. Если застой длится неделями и сопровождается физическими симптомами, разумнее обсудить это с врачом, чем продавливать дальше.</p></details>
+</div>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/skolko-povtoreniy-dlya-massy">Сколько повторений для массы: миф о 8-12</a> — куда помещать усилие, которое вы пытаетесь нарастить.</li><li><a href="/ru/blog/naskolko-tochen-rir">Насколько точен ваш RIR? Что говорят исследования</a> — рычаг усилия работает, только если вы умеете его измерять.</li><li><a href="/ru/blog/kak-chasto-menyat-programmu-trenirovok">Как часто менять программу тренировок?</a> — сколько держать программу, прежде чем судить о ней.</li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>Plotkin D, Coleman M, Van Every D, Maldonado J, Oberlin D, Israetel M, Feather J, Alto A, Vigotsky AD, Schoenfeld BJ, 2022. Progressive overload without progressing load? The effects of load or repetition progression on muscular adaptations. <em>PeerJ</em> 10:e14142. <a href="https://pubmed.ncbi.nlm.nih.gov/36199287/">PMID 36199287</a> · <a href="https://doi.org/10.7717/peerj.14142">DOI 10.7717/peerj.14142</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>Int J Sports Med</em> 45(7):504-510. <a href="https://pubmed.ncbi.nlm.nih.gov/38286426/">PMID 38286426</a> · <a href="https://doi.org/10.1055/a-2256-5857">DOI 10.1055/a-2256-5857</a></li><li>Lees MJ, Mcleod JC, Morton RW, et al., 2025. Resistance training load does not determine resistance training-induced hypertrophy across upper and lower limbs in healthy young males. <em>J Physiol</em>. <a href="https://pubmed.ncbi.nlm.nih.gov/41474371/">PMID 41474371</a> · <a href="https://doi.org/10.1113/JP289684">DOI 10.1113/JP289684</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Ruple BA, Plotkin DL, Smith MA, et al., 2023. The effects of resistance training to near failure on strength, hypertrophy, and motor unit adaptations in previously trained adults. <em>Physiol Rep</em> 11(9):e15679. <a href="https://pubmed.ncbi.nlm.nih.gov/37144554/">PMID 37144554</a> · <a href="https://doi.org/10.14814/phy2.15679">DOI 10.14814/phy2.15679</a></li><li>Larsen S, Kristiansen E, van den Tillaar R, 2021. Effects of subjective and objective autoregulation methods for intensity and volume on enhancing maximal strength during resistance-training interventions: a systematic review. <em>PeerJ</em> 9:e10663. <a href="https://pubmed.ncbi.nlm.nih.gov/33520457/">PMID 33520457</a> · <a href="https://doi.org/10.7717/peerj.10663">DOI 10.7717/peerj.10663</a></li></ol>
+<p>Тема выбрана по трендовым сигналам ноября 2026 года о прогрессии нагрузки: конкурирующие материалы подают еженедельную прибавку веса как единственную форму прогрессии. Научные источники найдены через PubMed.</p>
+<p class="note"><strong>Giammaria Loi</strong> — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и коучем с сертификатом FIPE с 2013 года и выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных работ и заканчивается тем, что действительно работает в зале. <a href="/autore/giammaria-loi">Страница автора</a></p>
+<p class="note">Примечание: информационный материал, он не заменяет консультацию врача или квалифицированного специалиста.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

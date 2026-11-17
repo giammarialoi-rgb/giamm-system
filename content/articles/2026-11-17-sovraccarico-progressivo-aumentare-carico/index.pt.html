@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pt" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sobrecarga progressiva: precisa aumentar a carga? | Nurvan</title>
+<meta name="description" content="Três estudos compararam progredir em carga e em repetições: a mesma hipertrofia e quase a mesma força. Veja quando aumentar o peso faz diferença de verdade.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Treino</a><a href="#">Nutrição</a><a href="#">Suplementos</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">Baixar o app</a></div></header>
+<main class="wrap" lang="pt">
+<div class="crumb">Blog · Treino · Progressão</div>
+<h1>Sobrecarga progressiva: precisa aumentar a carga?</h1>
+<p class="lede">"Se a barra não fica mais pesada, você não cresce." É a regra mais repetida na academia e parte de um princípio correto: para se adaptar, o corpo precisa de uma demanda que aumente. O salto está na palavra <em>pesada</em>. Três estudos controlados compararam as duas vias — mais carga ou mais repetições — e o resultado muda a forma de escrever um treino.</p>
+<div class="meta"><span><b>9</b> min de leitura</span><span><b>6</b> estudos citados</span><span>Por <a href="/autore/giammaria-loi">Giammaria Loi</a> · atualizado em 17 de novembro de 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Homem na academia encaixando uma anilha na barra apoiada no chão antes da série"><figcaption class="cap">Foto de Ketut Subiyanto — Pexels, licença Pexels (uso gratuito)</figcaption></figure>
+<div class="box"><h2>Em resumo</h2><ul><li><strong>Aumentar repetições funciona como aumentar peso.</strong> Em 10 semanas com iniciantes, o máximo subiu 30,5% progredindo em carga e 29,3% progredindo em repetições; a secção do músculo, 10,3% e 11,0%.</li><li><strong>O mesmo vale para quem já treina.</strong> Depois de 8 semanas, as diferenças entre grupos foram de 2,8 mm no reto femoral (a favor das repetições) e 2,0 kg no máximo do agachamento (a favor da carga): os dois intervalos de confiança cruzam o zero.</li><li><strong>A carga externa não decide a hipertrofia.</strong> Com o esforço igualado, 8-12 repetições a 70-80% do máximo e 20-25 a 30-40% produziram o mesmo crescimento na mesma pessoa.</li><li><strong>A sobrecarga progressiva não torna o progresso linear.</strong> No mesmo estudo, a síntese proteica acima do repouso caiu de 0,27 para 0,10 %/dia entre a semana 1 e a 10 enquanto as cargas subiam.</li><li><strong>O que precisa crescer é a demanda, não o número na barra.</strong> Repetições, séries, proximidade da falha e qualidade de execução são alavancas legítimas, e para a força máxima a carga continua sendo a mais específica.</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="Aumentar carga ou repetições: o mesmo resultado"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Aumentar carga ou repetições: o mesmo resultado</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">39 iniciantes, 10 semanas de cadeira extensora, uma perna por protocolo · Chaves et al., 2024</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">aumento em relação ao início</text>
+<rect x="470" y="76" width="14" height="14" fill="#d4af37" rx="2"/>
+<text x="492" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">progressão de carga</text>
+<rect x="680" y="76" width="14" height="14" fill="#f3e5ab" rx="2"/>
+<text x="702" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">progressão de repetições</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1"/>
+<text x="138" y="396.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0%</text>
+<line x1="150" y1="316.4" x2="860" y2="316.4" stroke="#262626" stroke-width="1"/>
+<text x="138" y="320.44444444444446" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">10%</text>
+<line x1="150" y1="240.9" x2="860" y2="240.9" stroke="#262626" stroke-width="1"/>
+<text x="138" y="244.88888888888889" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">20%</text>
+<line x1="150" y1="165.3" x2="860" y2="165.3" stroke="#262626" stroke-width="1"/>
+<text x="138" y="169.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">30%</text>
+<rect x="230.0" y="161.6" width="96" height="230.4" fill="#d4af37" rx="3"/>
+<text x="278.0" y="149.55555555555554" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+30,5%</text>
+<rect x="340.0" y="170.6" width="96" height="221.4" fill="#f3e5ab" rx="3"/>
+<text x="388.0" y="158.6222222222222" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+29,3%</text>
+<text x="333.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Máximo (1RM)</text>
+<rect x="580.0" y="314.2" width="96" height="77.8" fill="#d4af37" rx="3"/>
+<text x="628.0" y="302.17777777777775" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+10,3%</text>
+<rect x="690.0" y="308.9" width="96" height="83.1" fill="#f3e5ab" rx="3"/>
+<text x="738.0" y="296.8888888888889" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+11,0%</text>
+<text x="683.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Secção transversa</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Cálculo Nurvan sobre as médias pré/pós do resumo. Sem diferença entre protocolos (p &gt; 0,05).</text>
+</svg>
+</div><figcaption class="cap">Gráfico Nurvan com dados de Chaves et al., 2024 (39 iniciantes, desenho intrassujeito: cada perna sorteada para progressão de carga ou de repetições). Valores calculados a partir das médias pré/pós do resumo: máximo 52,90 → 69,05 kg e 51,67 → 66,82 kg; secção do vasto lateral 21,34 → 23,53 cm² e 21,08 → 23,39 cm². Nenhum valor lido de uma figura.</figcaption></figure>
+<h2>O que o princípio realmente exige</h2>
+<p>A sobrecarga progressiva diz uma coisa só: para a adaptação continuar, a demanda imposta ao músculo precisa aumentar ao longo do tempo. Ela não diz <em>como</em>. Existem pelo menos cinco alavancas: a carga, as repetições por série, o número de séries, a proximidade da falha e a amplitude ou o controle do movimento.</p>
+<p>Na prática, a primeira engoliu as outras por um motivo banal: a carga é a única que se lê na barra. Se o treino pede 4×8 e na semana passada foram 60 kg, hoje 62,5 kg parece progresso, enquanto 60 kg por 10 repetições parece "não ter mudado nada". É uma ilusão contábil: no segundo caso o trabalho subiu mais.</p>
+<p>A pergunta útil não é filosófica. Três estudos colocaram as duas vias frente a frente, com o mesmo número de séries e a mesma frequência, e mediram força e músculo.</p>
+<h2>Os três estudos que compararam as duas vias</h2>
+<table><thead><tr><th>Estudo</th><th>Quem</th><th>Duração</th><th>Comparação</th><th>Resultado</th></tr></thead><tbody><tr><td>Plotkin et al., 2022</td><td>43 pessoas com pelo menos 1 ano de treino</td><td>8 semanas</td><td>carga ↑ vs repetições ↑</td><td>diferenças triviais, intervalos que incluem o zero</td></tr><tr><td>Chaves et al., 2024</td><td>39 iniciantes, uma perna por protocolo</td><td>10 semanas</td><td>carga ↑ vs repetições ↑</td><td>sem diferença em força nem em tamanho do músculo</td></tr><tr><td>Lees et al., 2025</td><td>20 homens jovens, um membro por carga</td><td>10 semanas</td><td>carga alta vs baixa com esforço igualado</td><td>hipertrofia independente da carga</td></tr></tbody></table>
+<p><em>Tabela Nurvan construída com os três estudos listados nas fontes.</em></p>
+<h3>Quem já treina: as diferenças são menores que a incerteza</h3>
+<p>No trabalho de Plotkin e colegas, 43 pessoas com pelo menos um ano de treino de membros inferiores fizeram 4 séries de 4 exercícios, duas vezes por semana, durante 8 semanas. Um grupo aumentava a carga mantendo as repetições; o outro aumentava as repetições mantendo a carga.</p>
+<p>As diferenças <strong>entre grupos</strong>, ajustadas pelos valores iniciais e pelo sexo, foram de 2,8 mm na soma dos pontos do reto femoral a favor das repetições (intervalo de confiança de 95% de -0,5 a 5,8) e de 2,0 kg no máximo do agachamento no Smith a favor da carga (de -2,4 a 7,8). Os dois intervalos contêm o zero: com esses números não dá para dizer que um método venceu. No resto, as diferenças eram ainda menores: espessuras musculares abaixo de um milímetro, resistência abaixo de 1%, salto vertical 0,1 cm.</p>
+<h3>Iniciantes: a mesma pessoa, duas pernas, dois protocolos</h3>
+<p>Chaves e colegas usaram um desenho mais limpo: 39 iniciantes, cada perna sorteada para progressão de carga ou de repetições, 10 semanas de cadeira extensora. Assim cada participante é o próprio controle e some o problema de comparar pessoas que respondem de forma diferente.</p>
+<p>O máximo foi de 52,90 para 69,05 kg com progressão de carga e de 51,67 para 66,82 kg com progressão de repetições; a secção do vasto lateral, de 21,34 para 23,53 cm² e de 21,08 para 23,39 cm². Sem diferença estatística entre os protocolos.</p>
+<h3>A carga não comanda o crescimento, o esforço sim</h3>
+<p>A peça mais recente vem do <em>Journal of Physiology</em>: 20 homens jovens, 10 semanas, rosca e extensão de joelho unilaterais com um membro em carga alta (8-12 repetições, 70-80% do máximo) e o oposto em carga baixa (20-25 repetições, 30-40%), todas as séries até a fadiga voluntária.</p>
+<p>A hipertrofia não foi influenciada pela carga e se conservou <strong>dentro</strong> do indivíduo: quem crescia bem no braço crescia bem na perna, com qualquer peso. A variabilidade que importa está entre pessoas, não entre cargas. Mais um detalhe útil se você compara seus números com os de outra pessoa: no mesmo estudo, a variância compartilhada entre ganho de tamanho e ganho de força foi desprezível. Crescer e ficar forte não são a mesma medida.</p>
+<h2>Por que o progresso desacelera mesmo assim</h2>
+<p>Aqui vem a parte que o princípio nunca prometeu. No estudo do <em>Journal of Physiology</em>, a síntese proteica miofibrilar — a velocidade com que o músculo constrói proteína contrátil — foi medida com água deuterada na semana 1 e na semana 10.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="A resposta diminui mesmo com a carga subindo"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">A resposta diminui mesmo com a carga subindo</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">20 homens, 10 semanas, três sessões por semana com sobrecarga progressiva · Lees et al., 2025</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">síntese proteica miofibrilar acima do repouso (%/dia)</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="354.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,0</text>
+<line x1="170" y1="296.7" x2="860" y2="296.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="300.6666666666667" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,1</text>
+<line x1="170" y1="243.3" x2="860" y2="243.3" stroke="#262626" stroke-width="1"/>
+<text x="158" y="247.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,2</text>
+<line x1="170" y1="190.0" x2="860" y2="190.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="194.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,3</text>
+<line x1="170" y1="136.7" x2="860" y2="136.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="140.66666666666669" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,4</text>
+<rect x="300.0" y="206.0" width="130" height="144.0" fill="#d4af37" rx="3"/>
+<line x1="365.0" y1="147.3" x2="365.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="147.3" x2="379.0" y2="147.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="264.7" x2="379.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="365.0" y="137.33333333333334" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0,27</text>
+<text x="365.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Semana 1</text>
+<rect x="580.0" y="296.7" width="130" height="53.3" fill="#aa8a2e" rx="3"/>
+<line x1="645.0" y1="222.0" x2="645.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="222.0" x2="659.0" y2="222.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="350.0" x2="659.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="645.0" y="212.0" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0,10</text>
+<text x="645.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Semana 10</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Barras verticais: desvio padrão. Diferença entre as semanas 0,16 ± 0,18 %/dia (p &lt; 0,001).</text>
+</svg>
+</div><figcaption class="cap">Gráfico Nurvan com dados de Lees et al., 2025 (20 homens, 10 semanas, três sessões por semana). Valores do resumo como aumento sobre o repouso: 0,27 ± 0,11 %/dia na semana 1 (p &lt; 0,0001) e 0,10 ± 0,14 %/dia na semana 10 (p = 0,009); diferença entre as duas 0,16 ± 0,18 %/dia (p &lt; 0,001). Nenhum valor lido de uma figura.</figcaption></figure>
+<p>Acima do nível de repouso, a síntese era de 0,27 %/dia no início e de 0,10 %/dia na semana 10: a resposta caiu cerca de dois terços <strong>enquanto o programa aplicava sobrecarga progressiva</strong>. Não é erro de programação, é como a adaptação funciona: o mesmo estímulo, repetido, vale cada vez menos. Aumentar a carga não anula essa curva, e esperar progresso linear por meses é medir o treino com a régua errada. Sobre o ritmo para revisar o programa, <a href="/pt/blog/de-quanto-em-quanto-tempo-mudar-o-treino">de quanto em quanto tempo mudar o treino</a>.</p>
+<h2>O que a pesquisa realmente diz</h2>
+<div class="verdict"><div class="v"><span class="pill no">Desmentido</span><p>"Se o peso não sobe, você não cresce"<br><span class="cap">Plotkin et al., 2022; Chaves et al., 2024 — progredir em repetições com carga fixa deu o mesmo crescimento muscular</span></p></div><div class="v"><span class="pill no">Desmentido</span><p>"Mais carga externa significa mais hipertrofia"<br><span class="cap">Lees et al., 2025 — com esforço igualado, 70-80% e 30-40% do máximo geraram a mesma hipertrofia na mesma pessoa</span></p></div><div class="v"><span class="pill part">Precisa de nuance</span><p>"Carga e repetições são intercambiáveis para qualquer objetivo"<br><span class="cap">Plotkin et al., 2022 — no máximo a estimativa favorece a carga (+2,0 kg), mas o intervalo cruza o zero; a especificidade continua valendo</span></p></div><div class="v"><span class="pill no">Desmentido</span><p>"Com sobrecarga progressiva o progresso continua linear"<br><span class="cap">Lees et al., 2025 — síntese proteica de 0,27 para 0,10 %/dia acima do repouso entre as semanas 1 e 10</span></p></div><div class="v"><span class="pill part">Precisa de nuance</span><p>"Para progredir é preciso chegar à falha"<br><span class="cap">Robinson et al., 2024 — a hipertrofia melhora perto da falha, a força não; Ruple et al., 2023 — com volume igualado, 0-1 e 4-6 RIR deram os mesmos resultados em 5 semanas</span></p></div><div class="v"><span class="pill part">Precisa de nuance</span><p>"A progressão precisa ser escrita e seguida à risca"<br><span class="cap">Larsen et al., 2021 — em 14 estudos e 356 participantes todos os protocolos autorregulados aumentaram o máximo</span></p></div></div>
+<h2>Como aplicar</h2>
+<ol class="steps"><li><strong>Escolha uma alavanca e segure as outras.</strong> Em cada exercício, decida se neste bloco sobe a carga ou as repetições. Mexer em tudo ao mesmo tempo impede saber o que funcionou.</li><li><strong>Use a progressão dupla.</strong> Defina uma faixa (por exemplo 8-12 repetições): acrescente repetições até o topo da faixa em todas as séries, depois aumente a carga e volte ao piso. É o jeito mais simples de usar as duas vias sem escolher.</li><li><strong>Para força máxima, priorize a carga.</strong> Se você compete ou quer subir um máximo, a especificidade conta: as séries pesadas precisam ser pesadas. No resto da sessão, as repetições bastam.</li><li><strong>Para hipertrofia, a moeda é o esforço.</strong> O crescimento melhora quando as séries terminam perto da falha, e isso é possível com qualquer carga. Sobre quantas repetições e quanto descanso colocar em volta, <a href="/pt/blog/quantas-repeticoes-massa-muscular">quantas repetições para a massa muscular</a>.</li><li><strong>Registre carga, repetições e esforço juntos.</strong> Uma linha só com o peso não diz se a demanda subiu. Três números dizem. Sobre o quanto acertamos ao estimar esse esforço, <a href="/pt/blog/rir-precisao-repeticoes-em-reserva">a precisão do seu RIR</a>.</li><li><strong>Se a carga não sobe por três semanas, não force.</strong> Aumente as repetições, acrescente uma série ou reduza o volume por uma semana e tente de novo. Os dados dizem que a segunda via chega ao mesmo lugar; a terceira serve quando falta recuperação, não estímulo.</li></ol>
+<h3>Se você treina outras pessoas a distância</h3>
+<p>A progressão de carga é a mais fácil de prescrever e a mais fácil de o aluno aplicar errado. Dois hábitos que mudam a qualidade do que volta para você:</p>
+<ul><li><strong>Prescreva a faixa, não o peso.</strong> "8-12 repetições; suba a carga quando chegar a 12 em todas as séries" é uma regra que o aluno aplica sozinho até numa semana de sono ruim. Um peso fixo quebra no primeiro imprevisto.</li><li><strong>Leia a progressão como trabalho total, não como máximo.</strong> Um aluno que vai de 60×8 para 60×11 melhorou mais do que outro que vai de 60×8 para 62,5×8. Olhando só a coluna da carga, o primeiro parece parado.</li></ul>
+<div class="app"><div><h3>Nurvan: veja se a demanda realmente aumentou</h3><p>No Nurvan cada série carrega carga, repetições e RIR, e o histórico do exercício alinha as sessões: em dois segundos você vê se está progredindo em peso, em repetições ou em nada. É o dado com que se escolhe a próxima alavanca, para você ou para o coach que monta o seu treino.</p></div><a class="cta" href="https://nurvan.app">Experimente o Nurvan</a></div>
+<h2>Perguntas frequentes</h2>
+<details><summary>Preciso aumentar a carga toda semana?</summary><p>Não, e nenhum estudo mostrou que isso seja necessário. Nos três trabalhos que compararam as duas vias, aumentar repetições com a carga fixa produziu o mesmo crescimento muscular e um ganho de força quase idêntico (30,5% contra 29,3% no máximo em 10 semanas). O que precisa aumentar ao longo do tempo é a demanda total.</p></details>
+<details><summary>É melhor aumentar carga ou repetições?</summary><p>Depende do objetivo. Para hipertrofia as duas alavancas são equivalentes nos dados disponíveis. Para força máxima a estimativa favorece levemente a carga (2,0 kg de diferença entre grupos, intervalo de -2,4 a 7,8), e a especificidade recomenda manter séries pesadas se o alvo é um máximo maior. A progressão dupla usa as duas.</p></details>
+<details><summary>O que é progressão dupla?</summary><p>É a regra que sobe primeiro as repetições e depois a carga. Escolha uma faixa, por exemplo 8-12: fica naquele peso até completar 12 repetições em todas as séries previstas, depois aumenta o menor incremento disponível e recomeça em 8. Não exige cálculo sobre o máximo e absorve os dias ruins.</p></details>
+<details><summary>Por que parei de progredir mesmo aumentando o peso?</summary><p>Porque a adaptação desacelera sozinha: no estudo com água deuterada, a síntese proteica acima do repouso foi de 0,27 para 0,10 %/dia em dez semanas enquanto as cargas subiam. Quando a carga trava, o problema costuma estar na recuperação ou no volume total, não no peso em si. Se a estagnação dura semanas e vem com sintomas físicos, vale conversar com um médico em vez de insistir.</p></details>
+</div>
+<h2>Leia também</h2>
+<ul><li><a href="/pt/blog/quantas-repeticoes-massa-muscular">Quantas repetições para a massa muscular: o mito do 8-12</a> — onde colocar o esforço que você quer fazer crescer.</li><li><a href="/pt/blog/rir-precisao-repeticoes-em-reserva">Qual a precisão do seu RIR? O que dizem os estudos</a> — a alavanca do esforço só serve se você souber medi-la.</li><li><a href="/pt/blog/de-quanto-em-quanto-tempo-mudar-o-treino">De quanto em quanto tempo mudar o treino?</a> — quanto manter um programa antes de julgá-lo.</li></ul>
+<h2>Fontes</h2>
+<ol class="refs"><li>Plotkin D, Coleman M, Van Every D, Maldonado J, Oberlin D, Israetel M, Feather J, Alto A, Vigotsky AD, Schoenfeld BJ, 2022. Progressive overload without progressing load? The effects of load or repetition progression on muscular adaptations. <em>PeerJ</em> 10:e14142. <a href="https://pubmed.ncbi.nlm.nih.gov/36199287/">PMID 36199287</a> · <a href="https://doi.org/10.7717/peerj.14142">DOI 10.7717/peerj.14142</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>Int J Sports Med</em> 45(7):504-510. <a href="https://pubmed.ncbi.nlm.nih.gov/38286426/">PMID 38286426</a> · <a href="https://doi.org/10.1055/a-2256-5857">DOI 10.1055/a-2256-5857</a></li><li>Lees MJ, Mcleod JC, Morton RW, et al., 2025. Resistance training load does not determine resistance training-induced hypertrophy across upper and lower limbs in healthy young males. <em>J Physiol</em>. <a href="https://pubmed.ncbi.nlm.nih.gov/41474371/">PMID 41474371</a> · <a href="https://doi.org/10.1113/JP289684">DOI 10.1113/JP289684</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Ruple BA, Plotkin DL, Smith MA, et al., 2023. The effects of resistance training to near failure on strength, hypertrophy, and motor unit adaptations in previously trained adults. <em>Physiol Rep</em> 11(9):e15679. <a href="https://pubmed.ncbi.nlm.nih.gov/37144554/">PMID 37144554</a> · <a href="https://doi.org/10.14814/phy2.15679">DOI 10.14814/phy2.15679</a></li><li>Larsen S, Kristiansen E, van den Tillaar R, 2021. Effects of subjective and objective autoregulation methods for intensity and volume on enhancing maximal strength during resistance-training interventions: a systematic review. <em>PeerJ</em> 9:e10663. <a href="https://pubmed.ncbi.nlm.nih.gov/33520457/">PMID 33520457</a> · <a href="https://doi.org/10.7717/peerj.10663">DOI 10.7717/peerj.10663</a></li></ol>
+<p>Tema escolhido a partir de sinais de tendência de novembro de 2026 sobre progressão de carga, com conteúdos concorrentes que apresentam o aumento semanal de peso como única forma de sobrecarga progressiva. Fontes científicas consultadas pelo PubMed.</p>
+<p class="note"><strong>Giammaria Loi</strong> é o fundador do Nurvan. Treina com pesos desde 2012, trabalha como personal trainer e coach certificado FIPE desde 2013 e compete em powerlifting em nível nacional desde 2018. Cada artigo que assina parte dos estudos científicos e chega ao que funciona de verdade na academia. <a href="/autore/giammaria-loi">Página do autor</a></p>
+<p class="note">Nota: conteúdo informativo, não substitui a opinião de um médico ou de um profissional qualificado.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

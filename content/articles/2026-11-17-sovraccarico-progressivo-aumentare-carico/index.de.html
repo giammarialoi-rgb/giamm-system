@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Progressive Overload: muss das Gewicht steigen? | Nurvan</title>
+<meta name="description" content="Drei Studien verglichen Gewichts- und Wiederholungssteigerung: gleicher Muskelaufbau, fast gleiche Kraft. Wann mehr Gewicht wirklich den Unterschied macht.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Ernährung</a><a href="#">Supplements</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">App laden</a></div></header>
+<main class="wrap" lang="de">
+<div class="crumb">Blog · Training · Progression</div>
+<h1>Progressive Overload: muss das Gewicht steigen?</h1>
+<p class="lede">"Wird die Stange nicht schwerer, wächst du nicht." Das ist die meistwiederholte Regel im Studio, und sie beginnt mit einem richtigen Prinzip: Anpassung braucht eine Anforderung, die steigt. Der Sprung steckt im Wort <em>schwerer</em>. Drei kontrollierte Studien haben die beiden Wege direkt verglichen — mehr Last oder mehr Wiederholungen — und das Ergebnis verändert, wie man einen Plan schreibt.</p>
+<div class="meta"><span><b>9</b> Min. Lesezeit</span><span><b>6</b> Studien zitiert</span><span>Von <a href="/autore/giammaria-loi">Giammaria Loi</a> · aktualisiert am 17. November 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Mann im Fitnessstudio schiebt vor dem Satz eine Hantelscheibe auf die am Boden liegende Langhantel"><figcaption class="cap">Foto von Ketut Subiyanto — Pexels, Pexels-Lizenz (kostenlose Nutzung)</figcaption></figure>
+<div class="box"><h2>Kurz gefasst</h2><ul><li><strong>Mehr Wiederholungen wirken wie mehr Gewicht.</strong> In 10 Wochen stieg die Maximalkraft bei Anfängern um 30,5 % mit Gewichtssteigerung und um 29,3 % mit Wiederholungssteigerung; der Muskelquerschnitt um 10,3 % und 11,0 %.</li><li><strong>Bei Trainierten gilt dasselbe.</strong> Nach 8 Wochen lagen die Gruppenunterschiede bei 2,8 mm am Rectus femoris (zugunsten der Wiederholungen) und 2,0 kg in der Kniebeuge-Maximalkraft (zugunsten der Last): beide Konfidenzintervalle überschreiten die Null.</li><li><strong>Die äußere Last entscheidet nicht über Hypertrophie.</strong> Bei gleicher Anstrengung brachten 8-12 Wiederholungen mit 70-80 % des Maximums und 20-25 mit 30-40 % im selben Menschen gleich viel Wachstum.</li><li><strong>Progressive Überlastung macht den Fortschritt nicht linear.</strong> In derselben Studie fiel die Proteinsynthese über Ruhewert von 0,27 auf 0,10 %/Tag zwischen Woche 1 und Woche 10, während die Lasten stiegen.</li><li><strong>Wachsen muss die Anforderung, nicht die Zahl auf der Stange.</strong> Wiederholungen, Sätze, Nähe zum Muskelversagen und Bewegungsqualität sind legitime Hebel — für Maximalkraft bleibt die Last der spezifischste.</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="Gewicht oder Wiederholungen steigern: gleiches Ergebnis"><metadata/>
+<rect width="900" height="470" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Gewicht oder Wiederholungen steigern: gleiches Ergebnis</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">39 Anfänger, 10 Wochen Beinstrecker, ein Bein pro Protokoll · Chaves et al., 2024</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">Zunahme gegenüber dem Start</text>
+<rect x="470" y="76" width="14" height="14" fill="#d4af37" rx="2"/>
+<text x="492" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Gewichtssteigerung</text>
+<rect x="680" y="76" width="14" height="14" fill="#f3e5ab" rx="2"/>
+<text x="702" y="88" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Wiederholungssteigerung</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1"/>
+<text x="138" y="396.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0%</text>
+<line x1="150" y1="316.4" x2="860" y2="316.4" stroke="#262626" stroke-width="1"/>
+<text x="138" y="320.44444444444446" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">10%</text>
+<line x1="150" y1="240.9" x2="860" y2="240.9" stroke="#262626" stroke-width="1"/>
+<text x="138" y="244.88888888888889" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">20%</text>
+<line x1="150" y1="165.3" x2="860" y2="165.3" stroke="#262626" stroke-width="1"/>
+<text x="138" y="169.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">30%</text>
+<rect x="230.0" y="161.6" width="96" height="230.4" fill="#d4af37" rx="3"/>
+<text x="278.0" y="149.55555555555554" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+30,5%</text>
+<rect x="340.0" y="170.6" width="96" height="221.4" fill="#f3e5ab" rx="3"/>
+<text x="388.0" y="158.6222222222222" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+29,3%</text>
+<text x="333.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Maximalkraft (1RM)</text>
+<rect x="580.0" y="314.2" width="96" height="77.8" fill="#d4af37" rx="3"/>
+<text x="628.0" y="302.17777777777775" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+10,3%</text>
+<rect x="690.0" y="308.9" width="96" height="83.1" fill="#f3e5ab" rx="3"/>
+<text x="738.0" y="296.8888888888889" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">+11,0%</text>
+<text x="683.0" y="424" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Muskelquerschnitt</text>
+<line x1="150" y1="392.0" x2="860" y2="392.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="456" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Nurvan-Berechnung aus den Mittelwerten vor/nach im Abstract. Kein Unterschied zwischen den Protokollen (p &gt; 0,05).</text>
+</svg>
+</div><figcaption class="cap">Nurvan-Grafik nach Chaves et al., 2024 (39 Anfänger, Within-Subject-Design: jedes Bein zufällig der Gewichts- oder Wiederholungssteigerung zugeteilt). Werte berechnet aus den Mittelwerten vor/nach im Abstract: Maximalkraft 52,90 → 69,05 kg und 51,67 → 66,82 kg; Querschnitt des Vastus lateralis 21,34 → 23,53 cm² und 21,08 → 23,39 cm². Kein Wert aus einer Abbildung abgelesen.</figcaption></figure>
+<h2>Was das Prinzip wirklich verlangt</h2>
+<p>Progressive Überlastung sagt nur eines: Damit die Anpassung weitergeht, muss die Anforderung an den Muskel mit der Zeit steigen. Sie sagt nicht <em>wie</em>. Es gibt mindestens fünf Hebel: die Last, die Wiederholungen pro Satz, die Anzahl der Sätze, die Nähe zum Muskelversagen und die Bewegungsamplitude oder -kontrolle.</p>
+<p>In der Praxis hat der erste Hebel die anderen verdrängt, aus einem banalen Grund: Nur die Last lässt sich an der Stange ablesen. Steht im Plan 4×8 und letzte Woche waren es 60 kg, dann sehen 62,5 kg heute nach Fortschritt aus, während 60 kg für 10 Wiederholungen wirken, als hätte sich "nichts geändert". Eine Buchhaltungsillusion: Im zweiten Fall ist die Arbeit stärker gestiegen.</p>
+<p>Die nützliche Frage ist nicht philosophisch. Drei Studien haben die beiden Wege gegeneinandergestellt, mit gleicher Satzzahl und Frequenz, und Kraft wie Muskel gemessen.</p>
+<h2>Die drei Studien, die beide Wege verglichen haben</h2>
+<table><thead><tr><th>Studie</th><th>Wer</th><th>Dauer</th><th>Vergleich</th><th>Ergebnis</th></tr></thead><tbody><tr><td>Plotkin et al., 2022</td><td>43 Personen mit mindestens 1 Jahr Training</td><td>8 Wochen</td><td>Last ↑ vs Wiederholungen ↑</td><td>vernachlässigbare Unterschiede, Intervalle schließen die Null ein</td></tr><tr><td>Chaves et al., 2024</td><td>39 Anfänger, ein Bein pro Protokoll</td><td>10 Wochen</td><td>Last ↑ vs Wiederholungen ↑</td><td>kein Unterschied bei Kraft und Muskelgröße</td></tr><tr><td>Lees et al., 2025</td><td>20 junge Männer, eine Extremität pro Last</td><td>10 Wochen</td><td>schwere vs leichte Last bei gleicher Anstrengung</td><td>Hypertrophie unabhängig von der Last</td></tr></tbody></table>
+<p><em>Nurvan-Tabelle aus den drei in den Quellen genannten Studien.</em></p>
+<h3>Trainierte: die Unterschiede sind kleiner als die Unsicherheit</h3>
+<p>Bei Plotkin und Kollegen absolvierten 43 Personen mit mindestens einem Jahr Unterkörpertraining 4 Sätze in 4 Übungen, zweimal pro Woche, über 8 Wochen. Eine Gruppe steigerte die Last bei konstanten Wiederholungen, die andere die Wiederholungen bei konstanter Last.</p>
+<p>Die Unterschiede <strong>zwischen den Gruppen</strong>, bereinigt um Ausgangswerte und Geschlecht, betrugen 2,8 mm in der Summe der Rectus-femoris-Messstellen zugunsten der Wiederholungen (95-%-Konfidenzintervall -0,5 bis 5,8) und 2,0 kg in der Kniebeuge an der Multipresse zugunsten der Last (-2,4 bis 7,8). Beide Intervalle enthalten die Null: Mit diesen Zahlen lässt sich kein Sieger benennen. Alles andere lag noch näher beieinander: Muskeldicken unter einem Millimeter, Kraftausdauer unter 1 %, Sprunghöhe 0,1 cm.</p>
+<h3>Anfänger: dieselbe Person, zwei Beine, zwei Protokolle</h3>
+<p>Chaves und Kollegen wählten ein saubereres Design: 39 Untrainierte, jedes Bein zufällig der Gewichts- oder Wiederholungssteigerung zugeteilt, 10 Wochen Beinstrecker. So ist jede Person ihre eigene Kontrolle, und das Problem unterschiedlich reagierender Menschen entfällt.</p>
+<p>Die Maximalkraft stieg von 52,90 auf 69,05 kg mit Gewichtssteigerung und von 51,67 auf 66,82 kg mit Wiederholungssteigerung; der Querschnitt des Vastus lateralis von 21,34 auf 23,53 cm² und von 21,08 auf 23,39 cm². Kein statistischer Unterschied zwischen den Protokollen.</p>
+<h3>Nicht die Last steuert das Wachstum, sondern die Anstrengung</h3>
+<p>Das neueste Puzzleteil kommt aus dem <em>Journal of Physiology</em>: 20 junge Männer, 10 Wochen, einarmige Curls und einbeinige Kniestreckungen, eine Extremität mit schwerer Last (8-12 Wiederholungen, 70-80 % des Maximums) und die andere mit leichter Last (20-25 Wiederholungen, 30-40 %), alle Sätze bis zur willkürlichen Erschöpfung.</p>
+<p>Die Hypertrophie wurde von der Last nicht beeinflusst und blieb <strong>innerhalb</strong> der Person erhalten: Wer am Arm gut wuchs, wuchs auch am Bein gut, unabhängig vom Gewicht. Die relevante Variabilität liegt zwischen Menschen, nicht zwischen Lasten. Ein Detail, das beim Vergleich mit anderen hilft: In derselben Studie war die geteilte Varianz zwischen Größen- und Kraftzuwachs vernachlässigbar. Wachsen und stark werden sind nicht dasselbe Maß.</p>
+<h2>Warum der Fortschritt trotzdem langsamer wird</h2>
+<p>Hier kommt der Teil, den das Prinzip nie versprochen hat. In der Studie im <em>Journal of Physiology</em> wurde die myofibrilläre Proteinsynthese — wie schnell der Muskel kontraktiles Eiweiß aufbaut — mit deuteriertem Wasser in Woche 1 und Woche 10 gemessen.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="Die Antwort flacht ab, obwohl das Gewicht steigt"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Die Antwort flacht ab, obwohl das Gewicht steigt</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">20 Männer, 10 Wochen, drei Einheiten pro Woche mit progressiver Überlastung · Lees et al., 2025</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">myofibrilläre Proteinsynthese über Ruhewert (%/Tag)</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="354.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,0</text>
+<line x1="170" y1="296.7" x2="860" y2="296.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="300.6666666666667" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,1</text>
+<line x1="170" y1="243.3" x2="860" y2="243.3" stroke="#262626" stroke-width="1"/>
+<text x="158" y="247.33333333333334" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,2</text>
+<line x1="170" y1="190.0" x2="860" y2="190.0" stroke="#262626" stroke-width="1"/>
+<text x="158" y="194.0" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,3</text>
+<line x1="170" y1="136.7" x2="860" y2="136.7" stroke="#262626" stroke-width="1"/>
+<text x="158" y="140.66666666666669" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="end">0,4</text>
+<rect x="300.0" y="206.0" width="130" height="144.0" fill="#d4af37" rx="3"/>
+<line x1="365.0" y1="147.3" x2="365.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="147.3" x2="379.0" y2="147.3" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="351.0" y1="264.7" x2="379.0" y2="264.7" stroke="#f0f0f0" stroke-width="2"/>
+<text x="365.0" y="137.33333333333334" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0,27</text>
+<text x="365.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Woche 1</text>
+<rect x="580.0" y="296.7" width="130" height="53.3" fill="#aa8a2e" rx="3"/>
+<line x1="645.0" y1="222.0" x2="645.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="222.0" x2="659.0" y2="222.0" stroke="#f0f0f0" stroke-width="2"/>
+<line x1="631.0" y1="350.0" x2="659.0" y2="350.0" stroke="#f0f0f0" stroke-width="2"/>
+<text x="645.0" y="212.0" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">0,10</text>
+<text x="645.0" y="378" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="700" text-anchor="middle">Woche 10</text>
+<line x1="170" y1="350.0" x2="860" y2="350.0" stroke="#262626" stroke-width="1.5"/>
+<text x="24" y="412" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Vertikale Balken: Standardabweichung. Unterschied zwischen den Wochen 0,16 ± 0,18 %/Tag (p &lt; 0,001).</text>
+</svg>
+</div><figcaption class="cap">Nurvan-Grafik nach Lees et al., 2025 (20 Männer, 10 Wochen, drei Einheiten pro Woche). Werte aus dem Abstract als Anstieg über den Ruhewert: 0,27 ± 0,11 %/Tag in Woche 1 (p &lt; 0,0001) und 0,10 ± 0,14 %/Tag in Woche 10 (p = 0,009); Unterschied zwischen beiden 0,16 ± 0,18 %/Tag (p &lt; 0,001). Kein Wert aus einer Abbildung abgelesen.</figcaption></figure>
+<p>Über dem Ruhewert lag die Synthese zu Beginn bei 0,27 %/Tag und in Woche 10 bei 0,10 %/Tag: Die Antwort flachte um rund zwei Drittel ab, <strong>während das Programm progressive Überlastung anwendete</strong>. Das ist kein Planungsfehler, sondern wie Anpassung funktioniert: Derselbe Reiz ist bei jeder Wiederholung weniger wert. Mehr Gewicht hebt diese Kurve nicht auf, und monatelang linearen Fortschritt zu erwarten heißt, das eigene Training mit dem falschen Maßstab zu messen. Zum Rhythmus, in dem man einen Plan überarbeitet: <a href="/de/blog/wie-oft-trainingsplan-wechseln">wie oft den Trainingsplan wechseln</a>.</p>
+<h2>Was die Forschung wirklich sagt</h2>
+<div class="verdict"><div class="v"><span class="pill no">Widerlegt</span><p>„Steigt das Gewicht nicht, wächst du nicht"<br><span class="cap">Plotkin et al., 2022; Chaves et al., 2024 — Wiederholungssteigerung bei fixer Last brachte denselben Muskelaufbau</span></p></div><div class="v"><span class="pill no">Widerlegt</span><p>„Mehr äußere Last heißt mehr Hypertrophie"<br><span class="cap">Lees et al., 2025 — bei gleicher Anstrengung bauten 70-80 % und 30-40 % des Maximums im selben Menschen gleich viel Muskel auf</span></p></div><div class="v"><span class="pill part">Mit Einschränkung</span><p>„Last und Wiederholungen sind für jedes Ziel austauschbar"<br><span class="cap">Plotkin et al., 2022 — bei der Maximalkraft begünstigt die Schätzung die Last (+2,0 kg), das Intervall überschreitet aber die Null; das Spezifitätsprinzip gilt weiter</span></p></div><div class="v"><span class="pill no">Widerlegt</span><p>„Mit progressiver Überlastung bleibt der Fortschritt linear"<br><span class="cap">Lees et al., 2025 — Proteinsynthese über Ruhewert von 0,27 auf 0,10 %/Tag zwischen Woche 1 und Woche 10</span></p></div><div class="v"><span class="pill part">Mit Einschränkung</span><p>„Für Fortschritt muss man bis zum Muskelversagen gehen"<br><span class="cap">Robinson et al., 2024 — Hypertrophie verbessert sich näher am Versagen, Kraft nicht; Ruple et al., 2023 — bei gleichem Volumen brachten 0-1 und 4-6 RIR in 5 Wochen dieselben Ergebnisse</span></p></div><div class="v"><span class="pill part">Mit Einschränkung</span><p>„Die Progression muss schriftlich festgelegt und exakt befolgt werden"<br><span class="cap">Larsen et al., 2021 — in 14 Studien mit 356 Teilnehmenden steigerte jedes autoregulierte Protokoll die Maximalkraft</span></p></div></div>
+<h2>So wendest du es an</h2>
+<ol class="steps"><li><strong>Wähle einen Hebel und lass die anderen ruhen.</strong> Entscheide pro Übung, ob dieser Block die Last oder die Wiederholungen steigert. Alles gleichzeitig zu bewegen macht es unmöglich zu erkennen, was gewirkt hat.</li><li><strong>Nutze die doppelte Progression.</strong> Lege eine Spanne fest (zum Beispiel 8-12 Wiederholungen): Füge Wiederholungen hinzu, bis du in allen Sätzen die Obergrenze erreichst, dann erhöhe die Last und beginne wieder unten. Der einfachste Weg, beide Routen zu nutzen, ohne zu wählen.</li><li><strong>Für Maximalkraft bevorzuge die Last.</strong> Wer antritt oder ein höheres Maximum will, braucht Spezifität: Schwere Sätze müssen schwer sein. Im Rest der Einheit reichen Wiederholungen.</li><li><strong>Für Hypertrophie zählt die Anstrengung.</strong> Wachstum verbessert sich, wenn Sätze nahe am Versagen enden — und das geht mit jeder Last. Zu Wiederholungen und Pausen rund um diese Anstrengung: <a href="/de/blog/wie-viele-wiederholungen-muskelaufbau">wie viele Wiederholungen für Muskelaufbau</a>.</li><li><strong>Notiere Last, Wiederholungen und Anstrengung zusammen.</strong> Eine Zeile mit nur dem Gewicht sagt nicht, ob die Anforderung gestiegen ist. Drei Zahlen schon. Dazu, wie genau wir diese Anstrengung schätzen: <a href="/de/blog/rir-wie-genau-wiederholungen-in-reserve">wie genau dein RIR ist</a>.</li><li><strong>Wenn die Last drei Wochen stillsteht, erzwinge sie nicht.</strong> Erhöhe die Wiederholungen, füge einen Satz hinzu oder senke das Volumen für eine Woche und versuche es erneut. Die Daten sagen, dass der zweite Weg zum selben Ziel führt; der dritte hilft, wenn Erholung fehlt, nicht Reiz.</li></ol>
+<h3>Wenn du andere aus der Ferne betreust</h3>
+<p>Die Lastprogression ist am leichtesten zu verordnen und am leichtesten falsch umzusetzen. Zwei Gewohnheiten, die die Qualität der Rückmeldung verändern:</p>
+<ul><li><strong>Verordne die Spanne, nicht das Gewicht.</strong> „8-12 Wiederholungen; erhöhe die Last, sobald du in allen Sätzen 12 schaffst" ist eine Regel, die ein Kunde allein anwenden kann, auch in einer Woche mit schlechtem Schlaf. Ein fixes Gewicht bricht beim ersten Zwischenfall.</li><li><strong>Lies die Progression als Gesamtarbeit, nicht als Maximum.</strong> Wer von 60×8 auf 60×11 geht, hat sich stärker verbessert als jemand, der von 60×8 auf 62,5×8 geht. Schaust du nur auf die Lastspalte, wirkt der Erste wie festgefahren.</li></ul>
+<div class="app"><div><h3>Nurvan: sieh nach, ob die Anforderung wirklich gestiegen ist</h3><p>In Nurvan trägt jeder Satz Last, Wiederholungen und RIR, und der Übungsverlauf stellt die Einheiten nebeneinander: In zwei Sekunden siehst du, ob du im Gewicht, in den Wiederholungen oder gar nicht vorankommst. Das ist die Grundlage für den nächsten Hebel — für dich oder für den Coach, der deinen Plan schreibt.</p></div><a class="cta" href="https://nurvan.app">Nurvan testen</a></div>
+<h2>Häufige Fragen</h2>
+<details><summary>Muss ich jede Woche mehr Gewicht nehmen?</summary><p>Nein, und keine Studie hat das als notwendig gezeigt. In den drei Arbeiten, die beide Wege direkt verglichen haben, brachte das Steigern der Wiederholungen bei fixer Last denselben Muskelaufbau und einen fast identischen Kraftzuwachs (30,5 % gegenüber 29,3 % in der Maximalkraft über 10 Wochen). Steigen muss die Gesamtanforderung.</p></details>
+<details><summary>Besser mehr Gewicht oder mehr Wiederholungen?</summary><p>Das hängt vom Ziel ab. Für Hypertrophie sind beide Hebel in den vorliegenden Daten gleichwertig. Für Maximalkraft begünstigt die Schätzung leicht die Last (2,0 kg Gruppenunterschied, Intervall -2,4 bis 7,8), und Spezifität spricht dafür, schwere Sätze schwer zu halten, wenn ein höheres Maximum das Ziel ist. Die doppelte Progression nutzt beides.</p></details>
+<details><summary>Was ist die doppelte Progression?</summary><p>Die Regel, die zuerst die Wiederholungen und dann die Last erhöht. Wähle eine Spanne, etwa 8-12: Du bleibst bei dem Gewicht, bis du in allen vorgesehenen Sätzen 12 Wiederholungen schaffst, dann erhöhst du um den kleinsten verfügbaren Schritt und startest wieder bei 8. Kein Rechnen mit dem Maximum, und schlechte Tage werden abgefedert.</p></details>
+<details><summary>Warum komme ich nicht voran, obwohl ich das Gewicht erhöhe?</summary><p>Weil die Anpassung von selbst langsamer wird: In der Studie mit deuteriertem Wasser fiel die Proteinsynthese über Ruhewert in zehn Wochen von 0,27 auf 0,10 %/Tag, während die Lasten stiegen. Wenn die Last stockt, liegt es meist an Erholung oder Gesamtvolumen, nicht am Gewicht selbst. Hält die Stagnation Wochen an und kommen körperliche Beschwerden dazu, ist ein Arztbesuch sinnvoller als Weitermachen.</p></details>
+</div>
+<h2>Weiterlesen</h2>
+<ul><li><a href="/de/blog/wie-viele-wiederholungen-muskelaufbau">Wie viele Wiederholungen für Muskelaufbau: der 8-12-Mythos</a> — wo die Anstrengung hingehört, die du steigern willst.</li><li><a href="/de/blog/rir-wie-genau-wiederholungen-in-reserve">Wie genau ist dein RIR? Was die Studien sagen</a> — der Anstrengungshebel funktioniert nur, wenn du ihn messen kannst.</li><li><a href="/de/blog/wie-oft-trainingsplan-wechseln">Wie oft sollte man den Trainingsplan wechseln?</a> — wie lange ein Plan stehen bleiben sollte, bevor man ihn beurteilt.</li></ul>
+<h2>Quellen</h2>
+<ol class="refs"><li>Plotkin D, Coleman M, Van Every D, Maldonado J, Oberlin D, Israetel M, Feather J, Alto A, Vigotsky AD, Schoenfeld BJ, 2022. Progressive overload without progressing load? The effects of load or repetition progression on muscular adaptations. <em>PeerJ</em> 10:e14142. <a href="https://pubmed.ncbi.nlm.nih.gov/36199287/">PMID 36199287</a> · <a href="https://doi.org/10.7717/peerj.14142">DOI 10.7717/peerj.14142</a></li><li>Chaves TS, Scarpelli MC, Bergamasco JGA, et al., 2024. Effects of Resistance Training Overload Progression Protocols on Strength and Muscle Mass. <em>Int J Sports Med</em> 45(7):504-510. <a href="https://pubmed.ncbi.nlm.nih.gov/38286426/">PMID 38286426</a> · <a href="https://doi.org/10.1055/a-2256-5857">DOI 10.1055/a-2256-5857</a></li><li>Lees MJ, Mcleod JC, Morton RW, et al., 2025. Resistance training load does not determine resistance training-induced hypertrophy across upper and lower limbs in healthy young males. <em>J Physiol</em>. <a href="https://pubmed.ncbi.nlm.nih.gov/41474371/">PMID 41474371</a> · <a href="https://doi.org/10.1113/JP289684">DOI 10.1113/JP289684</a></li><li>Robinson ZP, Pelland JC, Remmert JF, Refalo MC, Jukic I, Steele J, Zourdos MC, 2024. Exploring the Dose-Response Relationship Between Estimated Resistance Training Proximity to Failure, Strength Gain, and Muscle Hypertrophy: A Series of Meta-Regressions. <em>Sports Med</em> 54(9):2209-2231. <a href="https://pubmed.ncbi.nlm.nih.gov/38970765/">PMID 38970765</a> · <a href="https://doi.org/10.1007/s40279-024-02069-2">DOI 10.1007/s40279-024-02069-2</a></li><li>Ruple BA, Plotkin DL, Smith MA, et al., 2023. The effects of resistance training to near failure on strength, hypertrophy, and motor unit adaptations in previously trained adults. <em>Physiol Rep</em> 11(9):e15679. <a href="https://pubmed.ncbi.nlm.nih.gov/37144554/">PMID 37144554</a> · <a href="https://doi.org/10.14814/phy2.15679">DOI 10.14814/phy2.15679</a></li><li>Larsen S, Kristiansen E, van den Tillaar R, 2021. Effects of subjective and objective autoregulation methods for intensity and volume on enhancing maximal strength during resistance-training interventions: a systematic review. <em>PeerJ</em> 9:e10663. <a href="https://pubmed.ncbi.nlm.nih.gov/33520457/">PMID 33520457</a> · <a href="https://doi.org/10.7717/peerj.10663">DOI 10.7717/peerj.10663</a></li></ol>
+<p>Thema aus Trendsignalen vom November 2026 zur Lastprogression gewählt, da konkurrierende Inhalte die wöchentliche Gewichtssteigerung als einzige Form progressiver Überlastung darstellen. Wissenschaftliche Quellen über PubMed recherchiert.</p>
+<p class="note"><strong>Giammaria Loi</strong> ist der Gründer von Nurvan. Er trainiert seit 2012 mit Gewichten, arbeitet seit 2013 als FIPE-zertifizierter Personal Trainer und Coach und startet seit 2018 national im Powerlifting. Jeder Artikel, den er zeichnet, beginnt bei der Studienlage und endet bei dem, was im Studio wirklich funktioniert. <a href="/autore/giammaria-loi">Autorenseite</a></p>
+<p class="note">Hinweis: informativer Inhalt, er ersetzt nicht die Einschätzung einer Ärztin, eines Arztes oder einer qualifizierten Fachperson.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>
