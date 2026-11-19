@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 动作检查到底准不准？研究给出数字 | Nurvan</title>
+<meta name="description" content="最好的 2D 模型测膝关节角度平均差 9.3°，没有一个达到临床可用精度。一段训练视频到底能告诉你什么，又不能告诉你什么。">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">训练</a><a href="#">营养</a><a href="#">补剂</a><a href="#" class="on">博客</a></nav><a class="cta" href="https://nurvan.app">下载应用</a></div></header>
+<main class="wrap" lang="zh">
+<div class="crumb">博客 · 训练 · 动作技术</div>
+<h1>AI 动作检查到底准不准？研究给出数字</h1>
+<p class="lede">你把手机架好，做完一组，app 回答："膝内扣，深度 92°"。这看起来像一次测量。2026 年这样的 app 出了几十个，而搜索"AI 动作检查"得到的几乎只有应用商店页面。问题在于，屏幕上那些度数有一个实验室里测出来的误差范围，没人把它写在旁边。</p>
+<div class="meta"><span><b>5</b> 分钟阅读</span><span><b>8</b> 篇研究</span><span>作者 <a href="/autore/giammaria-loi">Giammaria Loi</a> · 更新于 2026 年 11 月 19 日</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="三脚架上的手机正面拍摄一位准备硬拉的训练者"><figcaption class="cap">照片：Anete Lusina — Pexels，Pexels 许可（免费使用）</figcaption></figure>
+<div class="box"><h2>要点速览</h2><ul><li><strong>最好的 2D 估计器测膝关节角度平均差 9.3°。</strong> 这是在 220 万帧、11 个开源模型中最理想的结果：受测模型没有一个达到临床解读所需的精度。</li><li><strong>app 里的"3D"常常比 2D 更差。</strong> 关节位置误差从 2D 的 72-122 毫米升到 146-249 毫米，因为模型还要猜深度。</li><li><strong>拍摄角度比算法更重要。</strong> 动作完全落在画面平面内时，肘关节误差为 10.5°；偏离这个平面，精度显著下降。</li><li><strong>人眼同样不是量角器。</strong> 六位资深临床医生看同一批视频，彼此之间的加权 kappa 只有 0.30-0.34，而每个人与自己前后一致为 0.55-0.85。</li><li><strong>视频有用，但适合另一类问题。</strong> 二选一的判断和整体评价是可靠的，小数点后的角度不可靠。该问"膝盖有没有越过鞋的内缘"，而不是"我内扣了几度"。</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="关节角度测量的误差有多大"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">关节角度测量的误差有多大</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">实验室测试报告的平均误差 · 各研究中的最佳值</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">平均误差（度）</text>
+<line x1="300.0" y1="104" x2="300.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="300.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">0°</text>
+<line x1="437.5" y1="104" x2="437.5" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="437.5" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">4°</text>
+<line x1="575.0" y1="104" x2="575.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="575.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">8°</text>
+<line x1="712.5" y1="104" x2="712.5" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="712.5" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">12°</text>
+<line x1="850.0" y1="104" x2="850.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="850.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">16°</text>
+<text x="286" y="128" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">惯性传感器（肘）</text>
+<rect x="300" y="110" width="144.4" height="26" fill="#f3e5ab" rx="3"/>
+<text x="454.375" y="129" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">4.2°</text>
+<text x="286" y="182" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">OpenCap，朝向摄像头</text>
+<rect x="300" y="164" width="209.7" height="26" fill="#f3e5ab" rx="3"/>
+<text x="519.6875" y="183" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">6.1°</text>
+<text x="286" y="236" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">最佳 2D 模型（膝）</text>
+<rect x="300" y="218" width="319.7" height="26" fill="#d4af37" rx="3"/>
+<text x="629.6875" y="237" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">9.3°</text>
+<text x="286" y="290" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">BlazePose，最佳角度（肘）</text>
+<rect x="300" y="272" width="360.9" height="26" fill="#d4af37" rx="3"/>
+<text x="670.9375" y="291" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">10.5°</text>
+<text x="286" y="344" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">最佳 3D 模型（膝）</text>
+<rect x="300" y="326" width="484.7" height="26" fill="#aa8a2e" rx="3"/>
+<text x="794.6875" y="345" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">14.1°</text>
+<text x="24" y="414" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Rode et al., 2025（Sci Rep 与 IEEE ICORR）；Wang et al., 2025 · 关节与任务不同</text>
+</svg></div><figcaption class="cap">Nurvan 图表，数据取自 Rode et al., 2025（Scientific Reports 与 IEEE ICORR）和 Wang et al., 2025。注意：涉及不同关节与不同任务，并非一对一比较。每根柱子都是该研究公布的最佳值。没有任何数值取自图像读数。</figcaption></figure>
+<h2>AI 动作检查 app 到底在做什么</h2>
+<p>几乎所有产品背后都是同一项技术：<em>姿态估计</em>。神经网络看着画面，猜测肩、髋、膝、踝在哪里，再由这些点算出角度。它并没有测量你的身体，而是从像素推断关节中心的位置。</p>
+<p>这个区别很重要。实验室里，关节位置来自反光标记点和多台标定过的摄像机；这里只有一台摄像机，再加上衣物、健身房的灯光，以及一根时不时挡住你的杠铃。</p>
+<h2>最大规模评测的数字</h2>
+<p>2025 年 11 月，苏黎世联邦理工学院的团队在 <em>Scientific Reports</em> 上发表了迄今最广泛的比较：25 名受试者、220 万帧以上的运动画面、11 个开源姿态估计器，测试了 18 个 2D 变体和 26 个 3D 变体，全部与基于标记点的光学系统对照。</p>
+<table><thead><tr><th>指标</th><th>2D 估计器</th><th>3D 估计器</th></tr></thead><tbody><tr><td>关节位置平均误差</td><td>72-122 毫米</td><td>146-249 毫米</td></tr><tr><td>膝关节角度平均误差</td><td>从 9.3° 起</td><td>从 14.1° 起</td></tr><tr><td>肘关节角度平均误差</td><td>从 21.5° 起</td><td>从 16.3° 起</td></tr></tbody></table>
+<p><em>Nurvan 表格，数据取自 Rode et al., 2025（Scientific Reports）。"从…起"表示该类别中表现最好的模型。</em></p>
+<p>两点实用解读。第一：即使最好的情况，膝关节平均误差也在九度左右，作者明确写道，受测模型没有一个低于正确临床解读所需的角度误差。第二：加上第三个维度反而更糟。当模型要用一台摄像机同时猜测深度时，位置误差翻倍。应用说明里的"3D"不是质量保证。</p>
+<p>同一团队又针对肘关节做了一次测试：当动作<strong>完全发生在画面平面内</strong>（理想条件）时，平均误差为 10.5°，均方根误差 14.7°，而佩戴式惯性传感器为 4.2° 和 6.0°。相对摄像机的朝向显著影响精度，并且模型倾向于低估较大的屈曲角度——恰恰是你想知道自己是否蹲够深的那一段。</p>
+<h3>拍摄角度不是小事</h3>
+<p>2025 年 <em>Journal of Biomechanics</em> 的一项研究测试了 OpenCap，这是研究中最常用的智能手机无标记系统，对象是 53 名膝骨关节炎患者和 30 名健康对照。<strong>朝向</strong>摄像机行走时，平均误差为 6.1°，一致性 0.67；反方向行走时，误差出现统计学上的显著恶化。同一个人、同一套软件、同一个房间，变的只是朝向。</p>
+<p>手工 2D 分析同样如此。在身体活跃的女性中，额状面膝内扣角度的有效性取决于深蹲深度、支撑腿是哪一条，以及内扣是否明显。换句话说：同一个测量在一种条件下有效，在另一种条件下未必。</p>
+<h2>那么人类教练更好吗</h2>
+<p>要看你问他什么。在一项针对 72 名成人的意大利研究中，六位资深临床医生用一套经过验证的量表，在三个不同时间点评分同一批单腿深蹲视频。每个人与自己相当一致——加权 kappa 0.55 到 0.85——但评分者<strong>之间</strong>的一致性只有 0.30 到 0.34，按惯例属于"一般"。</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400" role="img" aria-label="六位专家，同一批视频"><metadata/>
+<rect width="900" height="400" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">六位专家，同一批视频</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">单腿深蹲评分的加权 kappa 一致性</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">加权 kappa</text>
+<rect x="300.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="410.0" y1="110" x2="410.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="355.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">很低</text>
+<text x="355.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0.0–0.2</text>
+<rect x="410.0" y="110" width="110.0" height="156.0" fill="#101010"/>
+<line x1="520.0" y1="110" x2="520.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="465.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">一般</text>
+<text x="465.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0.2–0.4</text>
+<rect x="520.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="630.0" y1="110" x2="630.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="575.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">中等</text>
+<text x="575.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0.4–0.6</text>
+<rect x="630.0" y="110" width="110.0" height="156.0" fill="#101010"/>
+<line x1="740.0" y1="110" x2="740.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="685.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">良好</text>
+<text x="685.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0.6–0.8</text>
+<rect x="740.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="850.0" y1="110" x2="850.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="795.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">几乎完全一致</text>
+<text x="795.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0.8–1.0</text>
+<text x="286" y="140" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">同一评分者前后一致</text>
+<rect x="602.5" y="122" width="165.0" height="28" fill="#f3e5ab" rx="3"/>
+<text x="779.5" y="142" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">0.55–0.85</text>
+<text x="286" y="210" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">不同评分者之间</text>
+<rect x="465.0" y="192" width="22.0" height="28" fill="#d4af37" rx="3"/>
+<text x="499.0" y="212" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">0.30–0.34</text>
+<text x="24" y="386" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Gianola et al., 2017 · 72 名成人，6 位资深临床医生，3 次评分</text>
+</svg></div><figcaption class="cap">Nurvan 图表，数据取自 Gianola et al., 2017（72 名成人、六位资深临床医生、三次评分）。kappa 的解释区间采用通行惯例。没有任何数值取自图像读数。</figcaption></figure>
+<p>六位专家、同一段视频，判断却难以对齐。这不是在指责这个行业：用肉眼评判角度和体段本来就是这样。它也解释了为什么两位教练会对同一次硬拉给出两种不同的纠正，而两人都不算外行。</p>
+<p>有用的部分紧随其后。当要求给出<strong>整体</strong>判断、而不是逐段打分时，一致性会提高：在有膝关节旧伤的人群中，三位资深和三位新手评分者用整体法达到了良好一致。而选得好的二元判断经得起与实验室的对照：在青少年运动员中，"膝盖最终落在鞋的内缘以内"这一判断，在识别 3D 测得的内扣时曲线下面积最高达 0.93，远高于其他判断条目。</p>
+<p>视频是回答是非题的好工具，却是糟糕的量角器。</p>
+<h2>研究实际上怎么说</h2>
+<div class="verdict"><div class="v"><span class="pill no">不成立</span><p>"app 像实验室一样测你的角度"<br><span class="cap">Rode et al., 2025 — 11 个受测估计器没有一个达到临床解读所需的角度误差</span></p></div><div class="v"><span class="pill no">不成立</span><p>"标 3D 就更准"<br><span class="cap">Rode et al., 2025 — 2D 位置误差 72-122 毫米，单摄像机 3D 为 146-249 毫米</span></p></div><div class="v"><span class="pill no">不成立</span><p>"拍到就行，角度是小事"<br><span class="cap">Rode et al., 2025；Wang et al., 2025 — 相对摄像机的朝向显著改变误差</span></p></div><div class="v"><span class="pill part">需补充</span><p>"人类教练是客观的"<br><span class="cap">Gianola et al., 2017 — 六位专家看同一批视频，相互一致性仅 0.30-0.34 加权 kappa</span></p></div><div class="v"><span class="pill no">不成立</span><p>"视频动作检查毫无用处"<br><span class="cap">Edwards 与 Liberatore, 2018；Erdman et al., 2024 — 整体判断可靠，二元判断 AUC 最高 0.93</span></p></div><div class="v"><span class="pill nv">无法验证</span><p>"app 能告诉你这个动作对你是否安全"<br><span class="cap">现有研究没有在力量训练人群中检验过损伤预测</span></p></div></div>
+<h2>怎么用</h2>
+<ol class="steps"><li><strong>在动作所在的平面拍摄。</strong> 摄像机与髋同高，垂直于你关心的平面：侧面看深度和背部，正面看膝盖。整个动作从第一帧到最后一帧都要在画面里。</li><li><strong>摄像机固定，位置始终一致。</strong> 只有画面一致，两次训练的对比才有意义。地上做个记号比任何算法都管用。</li><li><strong>提二选一的问题。</strong> "膝盖有没有越过鞋的内缘？""髋有没有低于膝？""杠铃有没有离开身体？"这些问题上，无论人眼还是算法都可靠。</li><li><strong>忽略小数点。</strong> app 写 92.4° 屈曲，就读成"大约 90 度，上下十度"。一个角度一周之间变化 5°，那是噪声，不是进步。</li><li><strong>视频看动作，数字看负荷。</strong> 你到底推得有多狠，单帧画面看不出来。它在重量、次数和 <a href="/zh/blog/rir-guji-zhunque-ma">RIR 的历史记录里——这个估计同样有它的局限</a>。</li><li><strong>疼痛、肿胀或关节打软，不是靠 app 解决的技术问题。</strong> 那需要医疗专业人员，而不是更好的取景。</li></ol>
+<h3>如果你在远程带学员</h3>
+<p>两条规则，能把视频变成数据而不是意见：</p>
+<ul><li><strong>始终要求同样的取景。</strong> 高度、方位、距离说明一次，之后坚持执行。否则你比较的是不同的拍摄，而不是不同的执行。</li><li><strong>看之前先写下判断标准。</strong> 每个动作三个二选一的问题，提前定好。这是最简单的办法，避免今天的判断和上周二对不上——这种事连资深评分者也会遇到。</li></ul>
+<div class="app"><div><h3>Nurvan：视频看形状，历史看负荷</h3><p>在 Nurvan 里，教练能看到每一组的重量、次数和 RIR，动作的历史记录排成一行：这是单帧画面给不了的数据，也是判断训练要求是否真的在上升的依据。视频仍然是它本来的角色——形状检查；训练安排的决定由数字来做。</p></div><a class="cta" href="https://nurvan.app">试试 Nurvan</a></div>
+<h2>常见问题</h2>
+<p><strong>AI 动作检查 app 有用吗？</strong></p>
+<p>用来提示明显偏差有用，用来测量没用。在迄今最大规模的评测中，膝关节角度平均误差最好的 2D 模型为 9.3° 起，3D 模型为 14.1° 起，没有一个达到临床解读所需的精度。如果 app 说某侧膝盖明显往内塌，它多半是对的；如果它给你一个带小数的数字，那个数字不可信。</p>
+<p><strong>深蹲该从哪一侧拍？</strong></p>
+<p>从你想看的事情发生的那一侧。侧面、摄像机与髋同高，看深度、杠铃轨迹和躯干前倾；正面看膝盖的走向。研究中相对摄像机的朝向会显著改变误差，所以斜四十五度拍摄是最快得到无意义数字的方法。</p>
+<p><strong>手机还是佩戴式传感器？</strong></p>
+<p>测角度选惯性传感器：在肘关节的直接比较中，它是 4.2° 平均误差，而视频估计在最佳条件下是 10.5°。要观察一个完整动作，视频仍然更方便、信息更多。</p>
+<p><strong>app 能告诉我动作是不是危险吗？</strong></p>
+<p>不能。现有研究测量的是系统描述动作时与实验室的接近程度，而不是这个动作会不会造成损伤。如果你有疼痛、不稳或突然打软，这是医学问题，应该问医生或物理治疗师。</p>
+<h2>延伸阅读</h2>
+<ul><li><a href="/zh/blog/xianshang-jiaolian-youxiao-ma">线上教练真的有用吗？研究怎么说</a> — 远程教练必须盯住什么，才能顶得上现场带练。</li><li><a href="/zh/blog/rir-guji-zhunque-ma">你的 RIR 估得准吗？研究怎么说</a> — 支撑着半套训练的另一个估计值。</li><li><a href="/zh/blog/ai-shengcheng-jianshen-jihua">AI 健身计划：研究到底怎么说</a> — 人工智能在哪里站得住，在哪里站不住。</li></ul>
+<h2>参考文献</h2>
+<ol class="refs"><li>Rode D, Dunkel A, Willi R, Wolf P, Xiloyannis M, Riener R, 2025. Assessment of monocular human pose estimation models for clinical movement analysis. <em>Scientific Reports</em> 15(1):38767. <a href="https://pubmed.ncbi.nlm.nih.gov/41193590/">PMID 41193590</a> · <a href="https://doi.org/10.1038/s41598-025-22626-7">DOI 10.1038/s41598-025-22626-7</a></li><li>Rode D, Ceccarelli A, Esser A, Wolf P, Riener R, 2025. Accuracy of IMUs and Monocular Human Pose Estimation at Measuring Elbow Flexion. <em>IEEE Int Conf Rehabil Robot</em> 2025:773-778. <a href="https://pubmed.ncbi.nlm.nih.gov/40644081/">PMID 40644081</a> · <a href="https://doi.org/10.1109/ICORR66766.2025.11063086">DOI 10.1109/ICORR66766.2025.11063086</a></li><li>Wang J, Xu W, Wu Z, Zhang H, Wang B, Zhou Z, Wang C, Li K, Nie Y, 2025. Evaluation of a smartphone-based markerless system to measure lower-limb kinematics in patients with knee osteoarthritis. <em>Journal of Biomechanics</em> 181:112529. <a href="https://pubmed.ncbi.nlm.nih.gov/39862716/">PMID 39862716</a> · <a href="https://doi.org/10.1016/j.jbiomech.2025.112529">DOI 10.1016/j.jbiomech.2025.112529</a></li><li>Wade L, Needham L, McGuigan P, Bilzon J, 2022. Applications and limitations of current markerless motion capture methods for clinical gait biomechanics. <em>PeerJ</em> 10:e12995. <a href="https://pubmed.ncbi.nlm.nih.gov/35237469/">PMID 35237469</a> · <a href="https://doi.org/10.7717/peerj.12995">DOI 10.7717/peerj.12995</a></li><li>Gianola S, Castellini G, Stucovitz E, Nardo A, Banfi G, 2017. Single leg squat performance in physically and non-physically active individuals: a cross-sectional study. <em>BMC Musculoskeletal Disorders</em> 18(1):299. <a href="https://pubmed.ncbi.nlm.nih.gov/28709418/">PMID 28709418</a> · <a href="https://doi.org/10.1186/s12891-017-1660-8">DOI 10.1186/s12891-017-1660-8</a></li><li>Edwards S, Liberatore M, 2018. Reliability of a Squat Movement Competency Screen in Individuals With a Previous Knee Injury. <em>Journal of Sport Rehabilitation</em> 27(2). <a href="https://pubmed.ncbi.nlm.nih.gov/28872403/">PMID 28872403</a> · <a href="https://doi.org/10.1123/jsr.2017-0064">DOI 10.1123/jsr.2017-0064</a></li><li>Erdman A, Loewen A, Dressing M, Wyatt C, Oliver G, Butler L, Sugimoto D, Black AM, Tulchin-Francis K, Bazett-Jones DM, Janosky J, Ulman S, 2024. A 2D video-based assessment is associated with 3D biomechanical contributors to dynamic knee valgus in the coronal plane. <em>Frontiers in Sports and Active Living</em> 6:1352286. <a href="https://pubmed.ncbi.nlm.nih.gov/38558858/">PMID 38558858</a> · <a href="https://doi.org/10.3389/fspor.2024.1352286">DOI 10.3389/fspor.2024.1352286</a></li><li>Jamaludin NI, Sahabuddin FNA, Rasudin NS, Shaharudin S, 2022. The Concurrent Validity and Reliability of Single Leg Squat Among Physically Active Females with and without Dynamic Knee Valgus. <em>International Journal of Sports Physical Therapy</em> 17(4):574-584. <a href="https://pubmed.ncbi.nlm.nih.gov/35693857/">PMID 35693857</a> · <a href="https://doi.org/10.26603/001c.35706">DOI 10.26603/001c.35706</a></li></ol>
+<p>选题依据 2026 年 11 月的趋势信号：2026 年各大应用商店上线了数十款"AI 动作检查"应用，而搜索结果首页几乎全是产品页，没有一个精度数字。科学文献通过 PubMed 检索。</p>
+<p class="note"><strong>Giammaria Loi</strong> 是 Nurvan 的创始人。他自 2012 年开始力量训练，2013 年起担任私人教练和 FIPE 认证教练，2018 年起在国家级力量举赛事中参赛。他署名的每篇文章都从研究出发，落到健身房里真正有效的做法。<a href="/autore/giammaria-loi">作者页面</a></p>
+<p class="note">注：本文为科普内容，不能替代医生或专业人士的意见。</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

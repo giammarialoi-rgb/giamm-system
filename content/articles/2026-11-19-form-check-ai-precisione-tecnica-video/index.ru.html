@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ru" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ИИ-разбор техники по видео: насколько он точен | Nurvan</title>
+<meta name="description" content="Лучшая 2D-модель ошибается на колене в среднем на 9,3°, клинической точности не достигает ни одна. Что видео вашей техники может сказать на самом деле.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Тренировки</a><a href="#">Питание</a><a href="#">Добавки</a><a href="#" class="on">Блог</a></nav><a class="cta" href="https://nurvan.app">Скачать приложение</a></div></header>
+<main class="wrap" lang="ru">
+<div class="crumb">Блог · Тренировки · Техника</div>
+<h1>ИИ-разбор техники по видео: насколько он точен</h1>
+<p class="lede">Вы ставите телефон, делаете подход, и приложение отвечает: «вальгус колена, глубина 92°». Похоже на измерение. В 2026 году таких приложений вышли десятки, а по запросу «ИИ разбор техники» выдача состоит из карточек магазина. Проблема в том, что у этих градусов есть погрешность, измеренная в лаборатории, и рядом с ними её никто не пишет.</p>
+<div class="meta"><span><b>8</b> мин чтения</span><span><b>8</b> исследований</span><span>Автор: <a href="/autore/giammaria-loi">Giammaria Loi</a> · обновлено 19 ноября 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Смартфон на штативе снимает спереди человека в стартовой позиции становой тяги"><figcaption class="cap">Фото: Anete Lusina — Pexels, лицензия Pexels (бесплатное использование)</figcaption></figure>
+<div class="box"><h2>Коротко</h2><ul><li><strong>Лучший 2D-оценщик ошибается на угле колена в среднем на 9,3°.</strong> Это самый благоприятный результат на 2,2 миллиона кадров и 11 моделей с открытым кодом: ни одна из протестированных не достигла точности, нужной для клинической интерпретации.</li><li><strong>«3D» в приложении часто хуже, чем 2D.</strong> Ошибка положения суставов растёт с 72-122 мм в 2D до 146-249 мм, когда модель оценивает ещё и глубину.</li><li><strong>Ракурс съёмки важнее алгоритма.</strong> Когда движение целиком лежит в плоскости кадра, ошибка на локте составила 10,5°; вне этой плоскости точность значимо падает.</li><li><strong>Человеческий глаз — тоже не транспортир.</strong> Шесть опытных клиницистов, оценивавших одни и те же видео, согласовались между собой на уровне каппы 0,30-0,34, тогда как каждый сам с собой — на 0,55-0,85.</li><li><strong>Видео полезно, но для других вопросов.</strong> Бинарные критерии и общая оценка движения надёжны, десятые доли градуса — нет. Спрашивайте «колено осталось внутри края кроссовка?», а не «сколько у меня градусов вальгуса».</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="Насколько ошибается измерение угла"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Насколько ошибается измерение угла</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Средняя ошибка в лабораторных тестах · лучшее значение каждого исследования</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">градусов средней ошибки</text>
+<line x1="300.0" y1="104" x2="300.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="300.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">0°</text>
+<line x1="437.5" y1="104" x2="437.5" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="437.5" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">4°</text>
+<line x1="575.0" y1="104" x2="575.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="575.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">8°</text>
+<line x1="712.5" y1="104" x2="712.5" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="712.5" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">12°</text>
+<line x1="850.0" y1="104" x2="850.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="850.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">16°</text>
+<text x="286" y="128" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Инерциальный датчик (локоть)</text>
+<rect x="300" y="110" width="144.4" height="26" fill="#f3e5ab" rx="3"/>
+<text x="454.375" y="129" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">4,2°</text>
+<text x="286" y="182" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">OpenCap, движение к камере</text>
+<rect x="300" y="164" width="209.7" height="26" fill="#f3e5ab" rx="3"/>
+<text x="519.6875" y="183" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">6,1°</text>
+<text x="286" y="236" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Лучшая 2D-модель (колено)</text>
+<rect x="300" y="218" width="319.7" height="26" fill="#d4af37" rx="3"/>
+<text x="629.6875" y="237" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">9,3°</text>
+<text x="286" y="290" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">BlazePose, оптимальный ракурс (локоть)</text>
+<rect x="300" y="272" width="360.9" height="26" fill="#d4af37" rx="3"/>
+<text x="670.9375" y="291" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">10,5°</text>
+<text x="286" y="344" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Лучшая 3D-модель (колено)</text>
+<rect x="300" y="326" width="484.7" height="26" fill="#aa8a2e" rx="3"/>
+<text x="794.6875" y="345" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">14,1°</text>
+<text x="24" y="414" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Rode et al., 2025 (Sci Rep и IEEE ICORR); Wang et al., 2025 · разные суставы и задачи</text>
+</svg></div><figcaption class="cap">График Nurvan по значениям из Rode et al., 2025 (Scientific Reports и IEEE ICORR) и Wang et al., 2025. Внимание: разные суставы и задачи, это не прямое сравнение. Каждый столбец — лучшее опубликованное значение в соответствующем исследовании. Ни одно значение не считано с рисунка.</figcaption></figure>
+<h2>Что на самом деле делает такое приложение</h2>
+<p>Почти за всеми стоит одна и та же технология — <em>оценка позы</em>: нейросеть смотрит на изображение и угадывает, где плечо, таз, колено и голеностоп. По этим точкам приложение считает углы. Оно не измеряет ваше тело, а выводит центры суставов из пикселей.</p>
+<p>Разница существенная. В лаборатории положение сустава получают со светоотражающих маркеров и нескольких откалиброванных камер; здесь — с одной камеры, через одежду, при зальном свете и со штангой, которая временами вас закрывает.</p>
+<h2>Цифры самой масштабной проверки</h2>
+<p>В ноябре 2025 года группа из Швейцарской высшей технической школы Цюриха опубликовала в <em>Scientific Reports</em> самое обширное на сегодня сравнение: 25 участников, более 2,2 миллиона кадров физических упражнений, 11 оценщиков позы с открытым кодом в 18 двумерных и 26 трёхмерных вариантах — все против маркерной оптической системы.</p>
+<table><thead><tr><th>Показатель</th><th>2D-оценщики</th><th>3D-оценщики</th></tr></thead><tbody><tr><td>Средняя ошибка положения суставов</td><td>72-122 мм</td><td>146-249 мм</td></tr><tr><td>Средняя ошибка угла колена</td><td>от 9,3°</td><td>от 14,1°</td></tr><tr><td>Средняя ошибка угла локтя</td><td>от 21,5°</td><td>от 16,3°</td></tr></tbody></table>
+<p><em>Таблица Nurvan по значениям из Rode et al., 2025 (Scientific Reports). «От» — лучшая модель в категории.</em></p>
+<p>Два практических вывода. Первый: даже в лучшем случае средняя ошибка на колене около девяти градусов, и авторы пишут, что ни одна из протестированных моделей не опускается ниже угловой ошибки, необходимой для корректной клинической интерпретации. Второй: третье измерение делает хуже. Когда модель пытается угадать ещё и глубину с одной камеры, ошибка положения удваивается. «3D» в описании приложения — не знак качества.</p>
+<p>Та же группа провела второй тест, нацеленный на локоть: когда движение происходило <strong>целиком в плоскости кадра</strong> — идеальное условие — средняя ошибка составила 10,5°, среднеквадратичная 14,7°, против 4,2° и 6,0° у надетого инерциального датчика. Ориентация относительно камеры значимо влияла на точность, а модель занижала большие углы сгибания: ровно там, где вам и нужно знать, достаточно ли глубоко вы опустились.</p>
+<h3>Ракурс — не мелочь</h3>
+<p>Работа 2025 года в <em>Journal of Biomechanics</em> проверила OpenCap, самую популярную в исследованиях безмаркерную систему для смартфона, на 53 людях с артрозом колена и 30 здоровых. При ходьбе <strong>к</strong> камере средняя ошибка была 6,1° при согласованности 0,67; в обратную сторону она статистически значимо ухудшалась. Тот же человек, та же программа, то же помещение — менялось только направление.</p>
+<p>То же касается ручного 2D-анализа. У физически активных женщин валидность угла вальгуса во фронтальной плоскости зависела от глубины приседа, от опорной ноги и от выраженности самого вальгуса. Перевод: одно и то же измерение может быть валидным в одних условиях и невалидным в других.</p>
+<h2>Значит, живой тренер лучше?</h2>
+<p>Зависит от вопроса. В итальянском исследовании на 72 взрослых шесть опытных клиницистов оценивали одни и те же видео приседа на одной ноге в три разных момента по валидированной шкале. Каждый был достаточно согласован сам с собой — взвешенная каппа от 0,55 до 0,85, — но согласие <strong>между</strong> оценщиками осталось на уровне 0,30-0,34, то есть «удовлетворительное» по общепринятой шкале.</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400" role="img" aria-label="Шесть экспертов, одни и те же видео"><metadata/>
+<rect width="900" height="400" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Шесть экспертов, одни и те же видео</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Согласие по взвешенной каппе при приседе на одной ноге</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">взвешенная каппа</text>
+<rect x="300.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="410.0" y1="110" x2="410.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="355.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">слабое</text>
+<text x="355.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,0–0,2</text>
+<rect x="410.0" y="110" width="110.0" height="156.0" fill="#101010"/>
+<line x1="520.0" y1="110" x2="520.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="465.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">удовлетворительное</text>
+<text x="465.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,2–0,4</text>
+<rect x="520.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="630.0" y1="110" x2="630.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="575.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">умеренное</text>
+<text x="575.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,4–0,6</text>
+<rect x="630.0" y="110" width="110.0" height="156.0" fill="#101010"/>
+<line x1="740.0" y1="110" x2="740.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="685.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">хорошее</text>
+<text x="685.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,6–0,8</text>
+<rect x="740.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="850.0" y1="110" x2="850.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="795.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">почти полное</text>
+<text x="795.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,8–1,0</text>
+<text x="286" y="140" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Каждый эксперт сам с собой</text>
+<rect x="602.5" y="122" width="165.0" height="28" fill="#f3e5ab" rx="3"/>
+<text x="779.5" y="142" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">0,55–0,85</text>
+<text x="286" y="210" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Между разными экспертами</text>
+<rect x="465.0" y="192" width="22.0" height="28" fill="#d4af37" rx="3"/>
+<text x="499.0" y="212" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">0,30–0,34</text>
+<text x="24" y="386" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Gianola et al., 2017 · 72 взрослых, 6 опытных врачей, 3 оценки</text>
+</svg></div><figcaption class="cap">График Nurvan по значениям из Gianola et al., 2017 (72 взрослых, шесть опытных клиницистов, три сессии оценки). Полосы интерпретации каппы — общепринятая конвенция. Ни одно значение не считано с рисунка.</figcaption></figure>
+<p>Шесть экспертов, одно и то же видео, плохо сходящиеся оценки. Это не упрёк профессии: так устроена оценка углов и сегментов на глаз. И это объясняет, почему два тренера могут дать вам две разные поправки на одной и той же тяге, и при этом никто из них не ошибается в ремесле.</p>
+<p>Полезное начинается дальше. Когда просят <strong>общую</strong> оценку движения вместо разбора по сегментам, согласие растёт: у людей с перенесённой травмой колена три опытных и три начинающих оценщика достигли хорошего согласия при общем методе. А удачно выбранный бинарный критерий выдерживает сравнение с лабораторией: у юных спортсменок критерий «колено оказывается внутри внутреннего края кроссовка» дал площадь под кривой до 0,93 при выявлении вальгуса, измеренного в 3D, намного выше других критериев.</p>
+<p>Видео — отличный инструмент для вопросов с коротким ответом. И плохой угломер.</p>
+<h2>Что говорит исследование на самом деле</h2>
+<div class="verdict"><div class="v"><span class="pill no">Опровергнуто</span><p>«Приложение измеряет углы как лаборатория»<br><span class="cap">Rode et al., 2025 — ни один из 11 протестированных оценщиков не достигает угловой ошибки, нужной для клинической интерпретации</span></p></div><div class="v"><span class="pill no">Опровергнуто</span><p>«Если 3D, значит точнее»<br><span class="cap">Rode et al., 2025 — ошибка положения 72-122 мм в 2D против 146-249 мм в 3D с одной камеры</span></p></div><div class="v"><span class="pill no">Опровергнуто</span><p>«Главное попасть в кадр, ракурс — мелочь»<br><span class="cap">Rode et al., 2025; Wang et al., 2025 — ориентация относительно камеры значимо меняет ошибку</span></p></div><div class="v"><span class="pill part">Требует уточнения</span><p>«Живой тренер объективен»<br><span class="cap">Gianola et al., 2017 — шесть экспертов на одних видео: взаимное согласие 0,30-0,34 взвешенной каппы</span></p></div><div class="v"><span class="pill no">Опровергнуто</span><p>«Разбор техники по видео бесполезен»<br><span class="cap">Edwards и Liberatore, 2018; Erdman et al., 2024 — надёжные общие оценки и бинарные критерии с AUC до 0,93</span></p></div><div class="v"><span class="pill nv">Не проверяемо</span><p>«Приложение скажет, безопасно ли вам это движение»<br><span class="cap">Ни одно доступное исследование не проверяло прогноз травм у занимающихся с отягощениями</span></p></div></div>
+<h2>Как это применить</h2>
+<ol class="steps"><li><strong>Снимайте в плоскости движения.</strong> Камера на высоте таза, перпендикулярно нужной плоскости: сбоку — для глубины и спины, спереди — для колена. Всё движение должно помещаться в кадр.</li><li><strong>Камера неподвижна и всегда в одной точке.</strong> Сравнивать две тренировки имеет смысл только при одинаковом кадре. Метка на полу полезнее любого алгоритма.</li><li><strong>Задавайте бинарные вопросы.</strong> «Колено осталось внутри края кроссовка?», «таз ушёл ниже колена?», «штанга отошла от тела?». Именно на таких вопросах глаз — человеческий или искусственный — надёжен.</li><li><strong>Игнорируйте десятые доли.</strong> Если приложение пишет 92,4° сгибания, читайте «около 90, плюс-минус десяток градусов». Угол, изменившийся на 5° за неделю, — это шум, а не прогресс.</li><li><strong>Видео — для техники, цифры — для нагрузки.</strong> Насколько сильно вы на самом деле толкаете, на кадре не видно. Это видно в истории весов, повторений и <a href="/ru/blog/naskolko-tochen-rir">RIR — со всеми ограничениями и этой оценки</a>.</li><li><strong>Боль, отёк или подкашивание — не вопрос техники, решаемый приложением.</strong> Здесь нужен медицинский специалист, а не удачный ракурс.</li></ol>
+<h3>Если вы тренируете людей удалённо</h3>
+<p>Два правила, которые превращают видео в данные, а не в мнение:</p>
+<ul><li><strong>Требуйте один и тот же кадр.</strong> Один раз задайте высоту, сторону и расстояние — и держитесь этого. Иначе вы сравниваете съёмки, а не исполнения.</li><li><strong>Пропишите критерии до просмотра.</strong> Три бинарных вопроса на упражнение, решённых заранее. Это простейший способ не разойтись с собственной оценкой недельной давности — с опытными оценщиками это тоже случается.</li></ul>
+<div class="app"><div><h3>Nurvan: видео показывает форму, история показывает нагрузку</h3><p>В Nurvan тренер видит по каждому подходу вес, повторения и RIR, а история упражнения выстроена в ряд: это те данные, которых не даст ни один кадр и которые показывают, действительно ли растёт требование. Видео остаётся тем, чем является, — проверкой формы; решения по программе принимаются по цифрам.</p></div><a class="cta" href="https://nurvan.app">Попробовать Nurvan</a></div>
+<h2>Частые вопросы</h2>
+<div>
+<details><summary>Работают ли приложения ИИ-разбора техники?</summary><p>Они работают, чтобы заметить грубые отклонения, а не чтобы измерять. В самой масштабной опубликованной проверке средняя ошибка угла колена начинается с 9,3° у лучших 2D-моделей и с 14,1° у 3D, и ни одна не достигает точности, нужной для клинической интерпретации. Если приложение говорит, что колено явно заваливается внутрь, оно, скорее всего, право; если оно даёт число с десятыми, этому числу верить нельзя.</p></details>
+<details><summary>С какой стороны снимать присед?</summary><p>Оттуда, где происходит то, что вы хотите увидеть. Сбоку, камера на высоте таза — для глубины, траектории штанги и наклона корпуса; спереди — для поведения коленей. В исследованиях ориентация относительно камеры значимо меняет ошибку, так что съёмка в три четверти — самый быстрый способ получить бессмысленные числа.</p></details>
+<details><summary>Телефон или носимый датчик?</summary><p>Для измерения угла — инерциальный датчик: в прямом сравнении на локте у него 4,2° средней ошибки против 10,5° у видеооценки в лучших условиях. Чтобы смотреть движение целиком, видео остаётся удобнее и информативнее.</p></details>
+<details><summary>Может ли приложение сказать, что моя техника опасна?</summary><p>Нет. Доступные исследования измеряют, насколько система приближается к лаборатории в описании движения, а не вызовет ли это движение травму. При боли, нестабильности или внезапном подкашивании вопрос медицинский — к врачу или физиотерапевту.</p></details>
+</div>
+<h2>Читайте также</h2>
+<ul><li><a href="/ru/blog/rabotaet-li-onlayn-kouching">Работает ли онлайн-коучинг? Что говорят исследования</a> — что удалённый тренер обязан контролировать, чтобы не уступать залу.</li><li><a href="/ru/blog/naskolko-tochen-rir">Насколько точен ваш RIR? Что говорят исследования</a> — вторая оценка, на которой держится половина тренировки.</li><li><a href="/ru/blog/plan-trenirovok-ot-ii">План тренировок от ИИ: что говорят исследования</a> — где искусственный интеллект держится, а где нет.</li></ul>
+<h2>Источники</h2>
+<ol class="refs"><li>Rode D, Dunkel A, Willi R, Wolf P, Xiloyannis M, Riener R, 2025. Assessment of monocular human pose estimation models for clinical movement analysis. <em>Scientific Reports</em> 15(1):38767. <a href="https://pubmed.ncbi.nlm.nih.gov/41193590/">PMID 41193590</a> · <a href="https://doi.org/10.1038/s41598-025-22626-7">DOI 10.1038/s41598-025-22626-7</a></li><li>Rode D, Ceccarelli A, Esser A, Wolf P, Riener R, 2025. Accuracy of IMUs and Monocular Human Pose Estimation at Measuring Elbow Flexion. <em>IEEE Int Conf Rehabil Robot</em> 2025:773-778. <a href="https://pubmed.ncbi.nlm.nih.gov/40644081/">PMID 40644081</a> · <a href="https://doi.org/10.1109/ICORR66766.2025.11063086">DOI 10.1109/ICORR66766.2025.11063086</a></li><li>Wang J, Xu W, Wu Z, Zhang H, Wang B, Zhou Z, Wang C, Li K, Nie Y, 2025. Evaluation of a smartphone-based markerless system to measure lower-limb kinematics in patients with knee osteoarthritis. <em>Journal of Biomechanics</em> 181:112529. <a href="https://pubmed.ncbi.nlm.nih.gov/39862716/">PMID 39862716</a> · <a href="https://doi.org/10.1016/j.jbiomech.2025.112529">DOI 10.1016/j.jbiomech.2025.112529</a></li><li>Wade L, Needham L, McGuigan P, Bilzon J, 2022. Applications and limitations of current markerless motion capture methods for clinical gait biomechanics. <em>PeerJ</em> 10:e12995. <a href="https://pubmed.ncbi.nlm.nih.gov/35237469/">PMID 35237469</a> · <a href="https://doi.org/10.7717/peerj.12995">DOI 10.7717/peerj.12995</a></li><li>Gianola S, Castellini G, Stucovitz E, Nardo A, Banfi G, 2017. Single leg squat performance in physically and non-physically active individuals: a cross-sectional study. <em>BMC Musculoskeletal Disorders</em> 18(1):299. <a href="https://pubmed.ncbi.nlm.nih.gov/28709418/">PMID 28709418</a> · <a href="https://doi.org/10.1186/s12891-017-1660-8">DOI 10.1186/s12891-017-1660-8</a></li><li>Edwards S, Liberatore M, 2018. Reliability of a Squat Movement Competency Screen in Individuals With a Previous Knee Injury. <em>Journal of Sport Rehabilitation</em> 27(2). <a href="https://pubmed.ncbi.nlm.nih.gov/28872403/">PMID 28872403</a> · <a href="https://doi.org/10.1123/jsr.2017-0064">DOI 10.1123/jsr.2017-0064</a></li><li>Erdman A, Loewen A, Dressing M, Wyatt C, Oliver G, Butler L, Sugimoto D, Black AM, Tulchin-Francis K, Bazett-Jones DM, Janosky J, Ulman S, 2024. A 2D video-based assessment is associated with 3D biomechanical contributors to dynamic knee valgus in the coronal plane. <em>Frontiers in Sports and Active Living</em> 6:1352286. <a href="https://pubmed.ncbi.nlm.nih.gov/38558858/">PMID 38558858</a> · <a href="https://doi.org/10.3389/fspor.2024.1352286">DOI 10.3389/fspor.2024.1352286</a></li><li>Jamaludin NI, Sahabuddin FNA, Rasudin NS, Shaharudin S, 2022. The Concurrent Validity and Reliability of Single Leg Squat Among Physically Active Females with and without Dynamic Knee Valgus. <em>International Journal of Sports Physical Therapy</em> 17(4):574-584. <a href="https://pubmed.ncbi.nlm.nih.gov/35693857/">PMID 35693857</a> · <a href="https://doi.org/10.26603/001c.35706">DOI 10.26603/001c.35706</a></li></ol>
+<p>Тема выбрана по трендовым сигналам ноября 2026 года: десятки приложений «AI form check», вышедших в магазинах в 2026 году, и первая страница выдачи, состоящая почти только из карточек приложений без единой цифры точности. Научные источники найдены через PubMed.</p>
+<p class="note"><strong>Giammaria Loi</strong> — основатель Nurvan. Тренируется с отягощениями с 2012 года, работает персональным тренером и сертифицированным коучем FIPE с 2013 года, выступает в пауэрлифтинге на национальном уровне с 2018 года. Каждая его статья начинается с научных работ и заканчивается тем, что действительно работает в зале. <a href="/autore/giammaria-loi">Страница автора</a></p>
+<p class="note">Примечание: информационный материал, не заменяет консультацию врача или квалифицированного специалиста.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>

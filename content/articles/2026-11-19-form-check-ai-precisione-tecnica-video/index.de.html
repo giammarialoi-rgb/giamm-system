@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KI-Form-Check: Wie genau ist er wirklich? | Nurvan</title>
+<meta name="description" content="Das beste 2D-Modell liegt am Knie im Schnitt 9,3° daneben, keines erreicht klinische Genauigkeit. Was ein Video deiner Technik wirklich zeigen kann.">
+<link rel="alternate" hreflang="ar" href="index.ar.html"><link rel="alternate" hreflang="de" href="index.de.html"><link rel="alternate" hreflang="en" href="index.en.html"><link rel="alternate" hreflang="es" href="index.es.html"><link rel="alternate" hreflang="fr" href="index.fr.html"><link rel="alternate" hreflang="hi" href="index.hi.html"><link rel="alternate" hreflang="it" href="index.it.html"><link rel="alternate" hreflang="pt" href="index.pt.html"><link rel="alternate" hreflang="ru" href="index.ru.html"><link rel="alternate" hreflang="zh" href="index.zh.html">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>:root{
+  --bg:#000000; --surface:#0c0c0c; --surface-2:#151515; --line:#262626;
+  --fg:#f0f0f0; --muted:#a0a0a0; --gold:#d4af37; --gold-soft:#f3e5ab; --gold-dark:#aa8a2e; --red:#ff4d4d;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --body:"Source Serif 4",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.7;margin:0}
+a{color:var(--gold)} a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.site{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.site .in{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;color:var(--fg);text-decoration:none}
+.logo b{color:var(--gold)}
+.site nav{display:flex;gap:20px;font-family:var(--display);font-size:15px;flex-wrap:wrap}
+.site nav a{color:var(--muted);text-decoration:none} .site nav a.on{color:var(--gold)}
+.cta{background:var(--gold);color:#000;border-radius:999px;padding:8px 16px;font-family:var(--display);font-weight:700;font-size:14px;text-decoration:none}
+.wrap{max-width:720px;margin:0 auto;padding-inline:20px;padding-block:48px 80px;overflow-wrap:break-word}
+.crumb{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,6vw,52px);line-height:1.08;margin:.3em 0 .4em;text-wrap:balance}
+h2{font-family:var(--display);font-size:28px;line-height:1.2;margin:2.2em 0 .5em;text-wrap:balance}
+h3{font-family:var(--display);font-size:20px;margin:1.6em 0 .3em}
+.lede{font-size:21px;color:var(--muted)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted);border-block:1px solid var(--line);padding-block:12px;margin-block:28px}
+.meta span b{color:var(--fg);font-weight:500}
+.meta a{color:var(--gold);text-decoration:none}
+.cap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-block:28px}
+.box h2{margin-top:0;font-size:20px;color:var(--gold)}
+.box ul{margin:0;padding-inline-start:1.1em} .box li{margin-block:.35em}
+figure{margin:36px 0}
+figure img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid var(--line)}
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+table{width:100%;border-collapse:collapse;margin-block:24px;font-size:16px}
+table th,table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:start}
+table th{font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.verdict{display:grid;gap:12px;margin-block:20px}
+.v{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:3px 10px;align-self:start;white-space:nowrap}
+.ok{background:#143014;color:#7fd67f}.part{background:#2a220a;color:var(--gold-soft)}
+.no{background:#3a1010;color:#ff8a8a}.nv{background:#1d1d1d;color:var(--muted)}
+.v p{margin:0;font-size:16px;min-width:0}
+ol.steps{padding-inline-start:1.2em} ol.steps li{margin-block:.6em}
+.app{display:flex;gap:20px;align-items:center;flex-wrap:wrap;background:linear-gradient(135deg,#1a1608,#0c0c0c);border:1px solid var(--gold-dark);border-radius:14px;padding:22px;margin-block:32px}
+.app div{flex:1 1 260px;min-width:0} .app h3{margin:0 0 4px;color:var(--gold)} .app p{margin:0;font-size:16px;color:var(--muted)}
+.app .cta{white-space:nowrap}
+details{border-bottom:1px solid var(--line);padding-block:14px}
+summary{font-family:var(--display);font-weight:500;font-size:18px;cursor:pointer}
+details p{margin:.6em 0 0;font-size:17px}
+.refs{font-size:15px;line-height:1.55;padding-inline-start:1.2em} .refs li{margin-block:.7em}
+.refs a{word-break:break-all}
+.note{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px;margin-top:40px}
+footer{border-top:1px solid var(--line);color:var(--muted);font-family:var(--mono);font-size:12px;text-align:center;padding:28px 20px}
+.cover{margin:0 0 8px}
+.cover img{display:block;width:100%;height:auto;border-radius:14px;border:1px solid var(--line);aspect-ratio:16/9;object-fit:cover}
+html{background:var(--bg)}
+[dir="rtl"] .chart svg{direction:ltr}
+@media (max-width:560px){body{font-size:17px}.site nav{display:none}.chart svg{min-width:460px}}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) .meta,:lang(ar) .cap,:lang(ar) table th,:lang(ar) footer,
+:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) .meta,:lang(hi) .cap,:lang(hi) table th,:lang(hi) footer{letter-spacing:normal}
+:lang(ar) .pill,:lang(ar) .crumb,:lang(ar) table th,:lang(hi) .pill,:lang(hi) .crumb,:lang(hi) table th{text-transform:none}
+:lang(ar),:lang(hi),:lang(zh),:lang(ru){font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+:lang(ar) h1,:lang(ar) h2,:lang(ar) h3,:lang(hi) h1,:lang(hi) h2,:lang(hi) h3,:lang(zh) h1,:lang(zh) h2,:lang(zh) h3,:lang(ru) h1,:lang(ru) h2,:lang(ru) h3{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+</style>
+</head>
+<body>
+<header class="site"><div class="in"><a class="logo" href="#">NUR<b>VAN</b></a><nav><a href="#">Training</a><a href="#">Ernährung</a><a href="#">Supplemente</a><a href="#" class="on">Blog</a></nav><a class="cta" href="https://nurvan.app">App laden</a></div></header>
+<main class="wrap" lang="de">
+<div class="crumb">Blog · Training · Technik</div>
+<h1>KI-Form-Check: Wie genau ist er wirklich?</h1>
+<p class="lede">Du stellst das Handy auf, machst den Satz, und die App antwortet: „Knievalgus, Tiefe 92°". Das sieht aus wie eine Messung. 2026 sind Dutzende solcher Apps erschienen, und wer nach „KI Form Check" sucht, findet fast nur Store-Einträge. Das Problem: Diese Gradzahlen haben eine im Labor gemessene Fehlerspanne, und niemand schreibt sie daneben.</p>
+<div class="meta"><span><b>9</b> Min. Lesezeit</span><span><b>8</b> zitierte Studien</span><span>Von <a href="/autore/giammaria-loi">Giammaria Loi</a> · aktualisiert am 19. November 2026</span></div>
+<figure class="cover"><img src="images/cover.jpg" alt="Smartphone auf einem Stativ filmt von vorn eine Person am Start eines Kreuzhebens"><figcaption class="cap">Foto von Anete Lusina — Pexels, Pexels-Lizenz (kostenlose Nutzung)</figcaption></figure>
+<div class="box"><h2>Kurz gefasst</h2><ul><li><strong>Der beste 2D-Schätzer liegt am Knie im Schnitt 9,3° daneben.</strong> Das ist das günstigste Ergebnis über 2,2 Millionen Einzelbilder und 11 Open-Source-Modelle: Keines der getesteten Modelle erreichte die für eine klinische Auswertung nötige Genauigkeit.</li><li><strong>Das „3D" der App ist oft schlechter als 2D.</strong> Der Positionsfehler der Gelenke steigt von 72-122 mm in 2D auf 146-249 mm, sobald das Modell auch die Tiefe schätzen muss.</li><li><strong>Der Kamerawinkel wiegt schwerer als der Algorithmus.</strong> Lag die Bewegung vollständig in der Bildebene, betrug der Fehler am Ellenbogen 10,5°; außerhalb dieser Ebene wurde er deutlich größer.</li><li><strong>Das menschliche Auge ist auch kein Winkelmesser.</strong> Sechs erfahrene Kliniker, die dieselben Videos bewerteten, stimmten untereinander mit einem Kappa von 0,30-0,34 überein, jeder mit sich selbst dagegen mit 0,55 bis 0,85.</li><li><strong>Video nützt — für andere Fragen.</strong> Binäre Kriterien und Gesamturteile sind zuverlässig, Nachkommastellen nicht. Frage „Blieb das Knie innerhalb der Schuhkante?", nicht „Wie viel Grad Valgus habe ich?".</li></ul></div>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="Wie stark die Winkelmessung danebenliegt"><metadata/>
+<rect width="900" height="430" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Wie stark die Winkelmessung danebenliegt</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Mittlerer Fehler aus Labortests · bester Wert jeder Studie</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">Grad mittlerer Fehler</text>
+<line x1="300.0" y1="104" x2="300.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="300.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">0°</text>
+<line x1="437.5" y1="104" x2="437.5" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="437.5" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">4°</text>
+<line x1="575.0" y1="104" x2="575.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="575.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">8°</text>
+<line x1="712.5" y1="104" x2="712.5" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="712.5" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">12°</text>
+<line x1="850.0" y1="104" x2="850.0" y2="370.0" stroke="#262626" stroke-width="1"/>
+<text x="850.0" y="390" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="middle">16°</text>
+<text x="286" y="128" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Inertialsensor (Ellenbogen)</text>
+<rect x="300" y="110" width="144.4" height="26" fill="#f3e5ab" rx="3"/>
+<text x="454.375" y="129" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">4,2°</text>
+<text x="286" y="182" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">OpenCap, zur Kamera hin</text>
+<rect x="300" y="164" width="209.7" height="26" fill="#f3e5ab" rx="3"/>
+<text x="519.6875" y="183" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">6,1°</text>
+<text x="286" y="236" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Bestes 2D-Modell (Knie)</text>
+<rect x="300" y="218" width="319.7" height="26" fill="#d4af37" rx="3"/>
+<text x="629.6875" y="237" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">9,3°</text>
+<text x="286" y="290" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">BlazePose, optimaler Winkel (Ellenbogen)</text>
+<rect x="300" y="272" width="360.9" height="26" fill="#d4af37" rx="3"/>
+<text x="670.9375" y="291" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">10,5°</text>
+<text x="286" y="344" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Bestes 3D-Modell (Knie)</text>
+<rect x="300" y="326" width="484.7" height="26" fill="#aa8a2e" rx="3"/>
+<text x="794.6875" y="345" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">14,1°</text>
+<text x="24" y="414" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Rode et al., 2025 (Sci Rep und IEEE ICORR); Wang et al., 2025 · unterschiedliche Gelenke und Aufgaben</text>
+</svg></div><figcaption class="cap">Nurvan-Grafik nach den Werten in Rode et al., 2025 (Scientific Reports und IEEE ICORR) und Wang et al., 2025. Achtung: unterschiedliche Gelenke und Aufgaben, kein direkter Vergleich. Jeder Balken ist der beste in der jeweiligen Studie veröffentlichte Wert. Kein Wert wurde aus einer Abbildung abgelesen.</figcaption></figure>
+<h2>Was eine Form-Check-App wirklich tut</h2>
+<p>Hinter fast allen steckt dieselbe Technik: die <em>Posenschätzung</em>, ein neuronales Netz, das im Bild rät, wo Schulter, Hüfte, Knie und Sprunggelenk sind. Aus diesen Punkten berechnet die App Winkel. Sie misst nicht deinen Körper, sie leitet Gelenkmittelpunkte aus Pixeln ab.</p>
+<p>Dieser Unterschied wiegt. Im Labor stammt die Gelenkposition aus reflektierenden Markern und mehreren kalibrierten Kameras; hier aus einer einzigen Kamera, mit Kleidung, Studiolicht und einer Hantel, die dich zeitweise verdeckt.</p>
+<h2>Die Zahlen aus dem größten Test</h2>
+<p>Im November 2025 veröffentlichte eine Gruppe der ETH Zürich in <em>Scientific Reports</em> den bislang umfassendsten Vergleich: 25 Teilnehmende, über 2,2 Millionen Einzelbilder von Übungen, 11 Open-Source-Posenschätzer in 18 2D- und 26 3D-Varianten, alle gegen ein markerbasiertes optisches System.</p>
+<table><thead><tr><th>Maß</th><th>2D-Schätzer</th><th>3D-Schätzer</th></tr></thead><tbody><tr><td>Mittlerer Positionsfehler der Gelenke</td><td>72-122 mm</td><td>146-249 mm</td></tr><tr><td>Mittlerer Fehler, Kniewinkel</td><td>ab 9,3°</td><td>ab 14,1°</td></tr><tr><td>Mittlerer Fehler, Ellenbogenwinkel</td><td>ab 21,5°</td><td>ab 16,3°</td></tr></tbody></table>
+<p><em>Nurvan-Tabelle nach den Werten in Rode et al., 2025 (Scientific Reports). „Ab" bezeichnet das beste Modell der Kategorie.</em></p>
+<p>Zwei praktische Lesarten. Erstens: Selbst im besten Fall liegt der mittlere Kniefehler bei rund neun Grad, und die Autoren schreiben, dass keines der getesteten Modelle unter den für eine korrekte klinische Auswertung nötigen Winkelfehler kommt. Zweitens: Die dritte Dimension macht es schlechter. Muss das Modell die Tiefe aus einer einzigen Kamera erraten, verdoppelt sich der Positionsfehler. „3D" in der App-Beschreibung ist kein Qualitätssiegel.</p>
+<p>Dieselbe Gruppe testete gezielt den Ellenbogen: Lag die Bewegung <strong>vollständig in der Bildebene</strong> — der Idealfall —, betrug der mittlere Fehler 10,5° und der quadratische Mittelwert 14,7°, gegenüber 4,2° und 6,0° bei einem getragenen Inertialsensor. Die Ausrichtung zur Kamera beeinflusste die Genauigkeit signifikant, und das Modell unterschätzte große Beugewinkel: genau dort, wo du wissen willst, ob du tief genug warst.</p>
+<h3>Der Kamerawinkel ist kein Detail</h3>
+<p>Eine Arbeit von 2025 im <em>Journal of Biomechanics</em> testete OpenCap, das in der Forschung meistgenutzte markerlose Smartphone-System, an 53 Personen mit Kniearthrose und 30 gesunden Kontrollen. <strong>Zur</strong> Kamera hin betrug der mittlere Fehler 6,1° bei einer Übereinstimmung von 0,67; in die Gegenrichtung wurde er statistisch signifikant schlechter. Dieselbe Person, dieselbe Software, derselbe Raum — nur die Richtung änderte sich.</p>
+<p>Das gilt auch für die händische 2D-Analyse. Bei sportlich aktiven Frauen hing die Gültigkeit des frontalen Valguswinkels von der Kniebeugetiefe ab, vom Standbein und davon, ob der Valgus ausgeprägt war. Übersetzt: Dieselbe Messung kann in einer Bedingung gültig sein und in einer anderen nicht.</p>
+<h2>Ist ein menschlicher Coach also besser?</h2>
+<p>Kommt darauf an, was du ihn fragst. In einer italienischen Studie mit 72 Erwachsenen bewerteten sechs erfahrene Kliniker dieselben Videos einbeiniger Kniebeugen zu drei Zeitpunkten mit einer validierten Skala. Jeder war mit sich selbst recht konsistent — gewichtetes Kappa 0,55 bis 0,85 —, doch die Übereinstimmung <strong>zwischen</strong> den Bewertern blieb bei 0,30 bis 0,34, konventionell „ausreichend".</p>
+<figure><div class="chart"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400" role="img" aria-label="Sechs Experten, dieselben Videos"><metadata/>
+<rect width="900" height="400" fill="#0c0c0c"/>
+<text x="24" y="34" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="19" font-weight="700" text-anchor="start">Sechs Experten, dieselben Videos</text>
+<text x="24" y="56" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="400" text-anchor="start">Übereinstimmung als gewichtetes Kappa beim einbeinigen Squat</text>
+<text x="24" y="86" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="600" text-anchor="start">gewichtetes Kappa</text>
+<rect x="300.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="410.0" y1="110" x2="410.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="355.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">gering</text>
+<text x="355.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,0–0,2</text>
+<rect x="410.0" y="110" width="110.0" height="156.0" fill="#101010"/>
+<line x1="520.0" y1="110" x2="520.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="465.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">ausreichend</text>
+<text x="465.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,2–0,4</text>
+<rect x="520.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="630.0" y1="110" x2="630.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="575.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">mäßig</text>
+<text x="575.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,4–0,6</text>
+<rect x="630.0" y="110" width="110.0" height="156.0" fill="#101010"/>
+<line x1="740.0" y1="110" x2="740.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="685.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">gut</text>
+<text x="685.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,6–0,8</text>
+<rect x="740.0" y="110" width="110.0" height="156.0" fill="#141414"/>
+<line x1="850.0" y1="110" x2="850.0" y2="266.0" stroke="#262626" stroke-width="1"/>
+<text x="795.0" y="286" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">fast perfekt</text>
+<text x="795.0" y="302" fill="#555555" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="10" font-weight="400" text-anchor="middle">0,8–1,0</text>
+<text x="286" y="140" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Jeder Bewerter mit sich selbst</text>
+<rect x="602.5" y="122" width="165.0" height="28" fill="#f3e5ab" rx="3"/>
+<text x="779.5" y="142" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">0,55–0,85</text>
+<text x="286" y="210" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="400" text-anchor="end">Zwischen verschiedenen Bewertern</text>
+<rect x="465.0" y="192" width="22.0" height="28" fill="#d4af37" rx="3"/>
+<text x="499.0" y="212" fill="#f0f0f0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="14" font-weight="700" text-anchor="start">0,30–0,34</text>
+<text x="24" y="386" fill="#a0a0a0" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="400" text-anchor="start">Gianola et al., 2017 · 72 Erwachsene, 6 erfahrene Kliniker, 3 Zeitpunkte</text>
+</svg></div><figcaption class="cap">Nurvan-Grafik nach den Werten in Gianola et al., 2017 (72 Erwachsene, sechs erfahrene Kliniker, drei Bewertungszeitpunkte). Die Interpretationsbereiche des Kappa folgen der üblichen Konvention. Kein Wert wurde aus einer Abbildung abgelesen.</figcaption></figure>
+<p>Sechs Experten, dasselbe Video, kaum deckungsgleiche Urteile. Das ist kein Vorwurf an den Berufsstand: Es ist die Natur der Bewertung von Winkeln und Segmenten nach Augenmaß. Und es erklärt, warum zwei Coaches dir zum selben Kreuzheben zwei verschiedene Korrekturen geben können, ohne dass einer von beiden sein Handwerk verfehlt.</p>
+<p>Der nützliche Teil folgt sofort. Wird ein <strong>Gesamturteil</strong> verlangt statt einer Bewertung Segment für Segment, steigt die Übereinstimmung: Bei Personen mit früherer Knieverletzung erreichten drei erfahrene und drei unerfahrene Bewerter mit der Gesamtmethode eine gute Übereinstimmung. Und ein gut gewähltes binäres Kriterium hält dem Laborvergleich stand: Bei jugendlichen Athletinnen erreichte das Kriterium „das Knie endet innerhalb der Innenkante des Schuhs" eine Fläche unter der Kurve von bis zu 0,93 beim Erkennen des in 3D gemessenen Valgus, deutlich über anderen Kriterien.</p>
+<p>Video ist ein hervorragendes Werkzeug für Ja-Nein-Fragen. Als Winkelmesser taugt es wenig.</p>
+<h2>Was die Forschung wirklich sagt</h2>
+<div class="verdict"><div class="v"><span class="pill no">Widerlegt</span><p>„Die App misst deine Winkel wie ein Labor"<br><span class="cap">Rode et al., 2025 — keiner der 11 getesteten Schätzer erreicht den für klinische Auswertung nötigen Winkelfehler</span></p></div><div class="v"><span class="pill no">Widerlegt</span><p>„3D heißt genauer"<br><span class="cap">Rode et al., 2025 — Positionsfehler 72-122 mm in 2D gegenüber 146-249 mm in 3D mit einer Kamera</span></p></div><div class="v"><span class="pill no">Widerlegt</span><p>„Hauptsache im Bild, der Winkel ist Nebensache"<br><span class="cap">Rode et al., 2025; Wang et al., 2025 — die Ausrichtung zur Kamera verändert den Fehler signifikant</span></p></div><div class="v"><span class="pill part">Zu präzisieren</span><p>„Ein menschlicher Coach ist objektiv"<br><span class="cap">Gianola et al., 2017 — sechs Experten, dieselben Videos: Übereinstimmung 0,30-0,34 gewichtetes Kappa</span></p></div><div class="v"><span class="pill no">Widerlegt</span><p>„Form-Check per Video bringt nichts"<br><span class="cap">Edwards und Liberatore, 2018; Erdman et al., 2024 — zuverlässige Gesamturteile und binäre Kriterien mit AUC bis 0,93</span></p></div><div class="v"><span class="pill nv">Nicht überprüfbar</span><p>„Eine App kann sagen, ob eine Übung für dich sicher ist"<br><span class="cap">Keine verfügbare Studie hat Verletzungsvorhersagen bei Kraftsportlern getestet</span></p></div></div>
+<h2>So setzt du es um</h2>
+<ol class="steps"><li><strong>Filme in der Bewegungsebene.</strong> Kamera auf Hüfthöhe, senkrecht zu der Ebene, die dich interessiert: seitlich für Tiefe und Rücken, frontal für das Knie. Die ganze Bewegung muss im Bild bleiben.</li><li><strong>Kamera still und immer am selben Punkt.</strong> Zwei Einheiten zu vergleichen ergibt nur Sinn, wenn der Bildausschnitt identisch ist. Eine Markierung am Boden hilft mehr als jeder Algorithmus.</li><li><strong>Stelle binäre Fragen.</strong> „Blieb das Knie innerhalb der Schuhkante?", „Ging die Hüfte unter das Knie?", „Entfernte sich die Hantel vom Körper?". Das sind die Fragen, bei denen das Auge — menschlich oder künstlich — zuverlässig ist.</li><li><strong>Ignoriere die Nachkommastellen.</strong> Schreibt die App 92,4° Beugung, lies „etwa 90, plus/minus zehn Grad". Ein Winkel, der sich von Woche zu Woche um 5° ändert, ist Rauschen, kein Fortschritt.</li><li><strong>Video für die Technik, Zahlen für die Last.</strong> Wie stark du wirklich drückst, zeigt kein Einzelbild. Das zeigt der Verlauf von Last, Wiederholungen und <a href="/de/blog/rir-wie-genau-wiederholungen-in-reserve">RIR — mit allen Grenzen, die auch diese Schätzung hat</a>.</li><li><strong>Schmerz, Schwellung oder Wegknicken sind kein Technikproblem für eine App.</strong> Dafür braucht es medizinische Fachleute, nicht den besseren Bildausschnitt.</li></ol>
+<h3>Wenn du andere aus der Ferne betreust</h3>
+<p>Zwei Regeln, die aus Video ein Datum statt einer Meinung machen:</p>
+<ul><li><strong>Verlange immer denselben Bildausschnitt.</strong> Höhe, Seite und Abstand einmal festlegen, dann einfordern. Sonst vergleichst du Aufnahmen, nicht Ausführungen.</li><li><strong>Schreibe die Kriterien auf, bevor du schaust.</strong> Drei binäre Fragen pro Übung, vorab festgelegt. So weicht dein heutiges Urteil nicht von dem vom letzten Dienstag ab — was selbst erfahrenen Bewertern passiert.</li></ul>
+<div class="app"><div><h3>Nurvan: Das Video zeigt die Form, der Verlauf zeigt die Last</h3><p>In Nurvan sieht der Coach zu jedem Satz Last, Wiederholungen und RIR, mit dem Verlauf der Übung in einer Reihe: das Datum, das ein Einzelbild nicht liefern kann und das zeigt, ob die Anforderung wirklich steigt. Das Video bleibt, was es ist — eine Formkontrolle; Programmentscheidungen fallen anhand der Zahlen.</p></div><a class="cta" href="https://nurvan.app">Nurvan testen</a></div>
+<h2>Häufige Fragen</h2>
+<div>
+<details><summary>Funktionieren KI-Form-Check-Apps?</summary><p>Sie funktionieren, um grobe Abweichungen zu melden, nicht zum Messen. Im bislang größten Test beginnt der mittlere Fehler am Kniewinkel bei 9,3° für die besten 2D-Modelle und bei 14,1° für 3D-Modelle, und keines erreicht die für eine klinische Auswertung nötige Genauigkeit. Meldet die App ein deutlich nach innen fallendes Knie, hat sie wahrscheinlich recht; gibt sie dir eine Zahl mit Komma, ist diese Zahl nicht belastbar.</p></details>
+<details><summary>Von welcher Seite filme ich die Kniebeuge?</summary><p>Von dort, wo passiert, was du sehen willst. Seitlich auf Hüfthöhe für Tiefe, Hantelweg und Oberkörperneigung; frontal für das Verhalten der Knie. In den Studien verändert die Ausrichtung zur Kamera den Fehler signifikant — eine Dreiviertelperspektive ist der schnellste Weg zu sinnlosen Zahlen.</p></details>
+<details><summary>Handy oder getragener Sensor?</summary><p>Zum Messen eines Winkels der Inertialsensor: im direkten Vergleich am Ellenbogen 4,2° mittlerer Fehler gegenüber 10,5° der Videoschätzung unter besten Bedingungen. Um eine ganze Bewegung zu betrachten, bleibt Video bequemer und informativer.</p></details>
+<details><summary>Kann eine App sagen, ob meine Technik gefährlich ist?</summary><p>Nein. Die verfügbaren Studien messen, wie nah ein System bei der Beschreibung einer Bewegung an das Labor herankommt, nicht ob diese Bewegung zu einer Verletzung führt. Bei Schmerzen, Instabilität oder plötzlichem Wegknicken ist die Frage medizinisch und gehört zu Ärztin oder Physiotherapeut.</p></details>
+</div>
+<h2>Lies auch</h2>
+<ul><li><a href="/de/blog/funktioniert-online-coaching">Funktioniert Online-Coaching? Was Studien zeigen</a> — was ein Coach aus der Ferne kontrollieren muss, um einem vor Ort gleichzukommen.</li><li><a href="/de/blog/rir-wie-genau-wiederholungen-in-reserve">Wie genau ist dein RIR? Das sagen die Studien</a> — die andere Schätzung, auf der das halbe Training ruht.</li><li><a href="/de/blog/trainingsplan-mit-ki-studien">Trainingsplan mit KI: was die Studien zeigen</a> — wo künstliche Intelligenz trägt und wo nicht.</li></ul>
+<h2>Quellen</h2>
+<ol class="refs"><li>Rode D, Dunkel A, Willi R, Wolf P, Xiloyannis M, Riener R, 2025. Assessment of monocular human pose estimation models for clinical movement analysis. <em>Scientific Reports</em> 15(1):38767. <a href="https://pubmed.ncbi.nlm.nih.gov/41193590/">PMID 41193590</a> · <a href="https://doi.org/10.1038/s41598-025-22626-7">DOI 10.1038/s41598-025-22626-7</a></li><li>Rode D, Ceccarelli A, Esser A, Wolf P, Riener R, 2025. Accuracy of IMUs and Monocular Human Pose Estimation at Measuring Elbow Flexion. <em>IEEE Int Conf Rehabil Robot</em> 2025:773-778. <a href="https://pubmed.ncbi.nlm.nih.gov/40644081/">PMID 40644081</a> · <a href="https://doi.org/10.1109/ICORR66766.2025.11063086">DOI 10.1109/ICORR66766.2025.11063086</a></li><li>Wang J, Xu W, Wu Z, Zhang H, Wang B, Zhou Z, Wang C, Li K, Nie Y, 2025. Evaluation of a smartphone-based markerless system to measure lower-limb kinematics in patients with knee osteoarthritis. <em>Journal of Biomechanics</em> 181:112529. <a href="https://pubmed.ncbi.nlm.nih.gov/39862716/">PMID 39862716</a> · <a href="https://doi.org/10.1016/j.jbiomech.2025.112529">DOI 10.1016/j.jbiomech.2025.112529</a></li><li>Wade L, Needham L, McGuigan P, Bilzon J, 2022. Applications and limitations of current markerless motion capture methods for clinical gait biomechanics. <em>PeerJ</em> 10:e12995. <a href="https://pubmed.ncbi.nlm.nih.gov/35237469/">PMID 35237469</a> · <a href="https://doi.org/10.7717/peerj.12995">DOI 10.7717/peerj.12995</a></li><li>Gianola S, Castellini G, Stucovitz E, Nardo A, Banfi G, 2017. Single leg squat performance in physically and non-physically active individuals: a cross-sectional study. <em>BMC Musculoskeletal Disorders</em> 18(1):299. <a href="https://pubmed.ncbi.nlm.nih.gov/28709418/">PMID 28709418</a> · <a href="https://doi.org/10.1186/s12891-017-1660-8">DOI 10.1186/s12891-017-1660-8</a></li><li>Edwards S, Liberatore M, 2018. Reliability of a Squat Movement Competency Screen in Individuals With a Previous Knee Injury. <em>Journal of Sport Rehabilitation</em> 27(2). <a href="https://pubmed.ncbi.nlm.nih.gov/28872403/">PMID 28872403</a> · <a href="https://doi.org/10.1123/jsr.2017-0064">DOI 10.1123/jsr.2017-0064</a></li><li>Erdman A, Loewen A, Dressing M, Wyatt C, Oliver G, Butler L, Sugimoto D, Black AM, Tulchin-Francis K, Bazett-Jones DM, Janosky J, Ulman S, 2024. A 2D video-based assessment is associated with 3D biomechanical contributors to dynamic knee valgus in the coronal plane. <em>Frontiers in Sports and Active Living</em> 6:1352286. <a href="https://pubmed.ncbi.nlm.nih.gov/38558858/">PMID 38558858</a> · <a href="https://doi.org/10.3389/fspor.2024.1352286">DOI 10.3389/fspor.2024.1352286</a></li><li>Jamaludin NI, Sahabuddin FNA, Rasudin NS, Shaharudin S, 2022. The Concurrent Validity and Reliability of Single Leg Squat Among Physically Active Females with and without Dynamic Knee Valgus. <em>International Journal of Sports Physical Therapy</em> 17(4):574-584. <a href="https://pubmed.ncbi.nlm.nih.gov/35693857/">PMID 35693857</a> · <a href="https://doi.org/10.26603/001c.35706">DOI 10.26603/001c.35706</a></li></ol>
+<p>Thema aus Trendsignalen vom November 2026: Dutzende „AI form check"-Apps, die 2026 in den Stores erschienen sind, und eine erste Suchseite, die fast nur aus Produktseiten ohne jede Genauigkeitsangabe besteht. Wissenschaftliche Quellen über PubMed recherchiert.</p>
+<p class="note"><strong>Giammaria Loi</strong> ist der Gründer von Nurvan. Er trainiert seit 2012 mit Gewichten, arbeitet seit 2013 als Personal Trainer und FIPE-zertifizierter Coach und tritt seit 2018 auf nationaler Ebene im Powerlifting an. Jeder Artikel, den er zeichnet, beginnt bei den Studien und endet bei dem, was im Studio wirklich funktioniert. <a href="/autore/giammaria-loi">Autorenseite</a></p>
+<p class="note">Hinweis: informativer Inhalt, der die Einschätzung einer Ärztin oder einer qualifizierten Fachkraft nicht ersetzt.</p>
+</main>
+<footer>© 2026 Nurvan · nurvan.app</footer>
+</body>
+</html>
